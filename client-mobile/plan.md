@@ -292,22 +292,21 @@ scaffolded and require the axmol SDK (M0) to compile.
 - `proj.android/` — axmol Android project (Gradle + JNI), `cmake/modules/`.
 
 ### Android build status
-- **Native library builds for Android**: `libSurvevMobile.so` compiles and links
-  for `arm64-v8a` (and `x86_64`) against axmol 2.11.5 + NDK r27b, using the
-  top-level `CMakeLists.txt` (axmol-style) and the NDK toolchain:
-  ```sh
-  cmake -S . -B build-android -G Ninja \
-    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.1.12297006/build/cmake/android.toolchain.cmake \
-    -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 -DANDROID_STL=c++_shared \
-    -DANDROID_TOOLCHAIN=clang -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
-    -DANDROID_USE_LEGACY_TOOLCHAIN_FILE=false -DCMAKE_MAKE_PROGRAM=<ninja> \
-    -DCMAKE_BUILD_TYPE=Release -D_AX_ANDROID_PROJECT_DIR=$PWD/proj.android
-  cmake --build build-android --config Release
-  ```
-- **Signed debug APK produced**: `SurvevMobile-debug.apk` via the Gradle-free
-  pipeline `tools/build-apk.ps1` (aapt2 → javac → d8 → zip → zipalign →
-  apksigner), verified with APK Signature Scheme v2/v3. Supports
-  `-Abis arm64-v8a,x86_64`.
+- **Offline / self-contained**: the axmol engine is vendored at `client-mobile/axmol/`
+  (via `tools/vendor-axmol.ps1`, ~590 MB, excludes the desktop `build/`), and game
+  assets are staged into `Content/` (`tools/sync-content.ps1`). The top-level
+  `CMakeLists.txt` auto-detects the embedded `axmol/` engine, so no `AX_ROOT` env
+  and no network fetches are needed at configure/build time.
+- **CMake**: the build uses the **Android SDK's bundled CMake 3.22.1 + ninja**
+  (`$ANDROID_HOME\cmake\3.22.1\bin`), not the system CMake 4.4. axmol 2.11.5's
+  `1k/fetch.cmake` requires 3.23, so `tools/vendor-axmol.ps1` lowers it to 3.22 in
+  the vendored copy.
+- **Native libraries**: `libSurvevMobile.so` builds for **armeabi-v7a** and
+  **arm64-v8a** (x86_64 also supported for the emulator) via
+  `tools/build-native.ps1` (one build dir per ABI: `build-android-<abi>/`).
+- **Signed APK**: `tools/build-apk.ps1` packages `SurvevMobile-debug.apk` with the
+  Gradle-free pipeline (aapt2 → javac → d8 → zip → zipalign → apksigner), verified
+  with APK Signature Scheme v2/v3. See `BUILDING.md` for the full guide.
 
 ### Known environment blocker: Gradle + Astrill VPN
 On this machine, Astrill installs a Winsock LSP (`C:\Windows\System32\ASProxy64.dll`,

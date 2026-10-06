@@ -1,79 +1,90 @@
 # Building the Survev Android app (axmol)
 
-Converted from the web client (`../client`) to native C++ using **axmol 2.11.5**.
-See `plan.md` for architecture and `src/` for the ported code.
+This project is a native C++ conversion of the web client (`../client`) built with
+**axmol 2.11.5**. It is designed to build **offline / self-contained**:
 
-## Prerequisites (this machine)
-- axmol 2.11.5: `E:\work\survev-tools\axmol-2.11.5`
-- Android SDK: `E:\work\survev-tools\Sdk` (platform android-36, build-tools 35.0.0)
-- Android NDK: `E:\work\survev-tools\Sdk\ndk\27.1.12297006`
-- JDK 21: `C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot`
-- CMake 4.4 (system) + ninja (`Sdk\cmake\3.22.1\bin\ninja.exe`)
+- the axmol engine is **vendored into `./axmol`** (no `AX_ROOT` env, no network),
+- game assets are staged into `./Content` (copy of `../client/public`),
+- the build uses the **Android SDK's bundled CMake 3.22.1 + ninja** (not the
+  system CMake), and the NDK toolchain,
+- the APK is produced **without Gradle** (Gradle downloads Maven deps and cannot
+  run here — see "Astrill / Gradle" below).
 
-All of these are wired up by `tools/android-env.ps1`. Dot-source it first:
+See `plan.md` for the architecture and porting status.
+
+## Prerequisites
+| Tool | Location (this machine) |
+|---|---|
+| Android SDK (platform android-36, build-tools 35.0.0, CMake 3.22.1, ninja) | `E:\work\survev-tools\Sdk` |
+| Android NDK r27b | `E:\work\survev-tools\Sdk\ndk\27.1.12297006` |
+| JDK 21 | `C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot` |
+| axmol 2.11.5 source (to vendor) | `E:\work\survev-tools\axmol-2.11.5` |
+
+Everything is wired by `tools/android-env.ps1` (it also puts the SDK's
+`cmake\3.22.1\bin` first on `PATH` so `cmake` is the SDK one).
+
+## One-time setup (offline)
 ```powershell
-. .\tools\android-env.ps1
-```
+# 1. Vendor the engine into ./axmol (copies ~590 MB, patches fetch.cmake for CMake 3.22)
+powershell -File tools\vendor-axmol.ps1 -Source E:\work\survev-tools\axmol-2.11.5
 
-## 1. Host tests (protocol core, no Android needed)
+# 2. Stage the game assets into ./Content
+powershell -File tools\sync-content.ps1
+```
+Both `axmol/` and `Content/` are git-ignored (large); they live on disk to make
+the checkout self-contained.
+
+## Build
 ```powershell
-cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
-cmake --build build-tests --config Release
-.\build-tests\Release\surv_tests.exe    # 22 tests, verified bit-exact vs the TS code
+# 3. Native libraries for the ARM ABIs (armeabi-v7a + arm64-v8a)
+powershell -File tools\build-native.ps1 -Abis "armeabi-v7a,arm64-v8a"
+
+# 4. Package + sign the APK (both ABIs)
+powershell -File tools\build-apk.ps1 -Abis "armeabi-v7a,arm64-v8a"
+# -> SurvevMobile-debug.apk
 ```
+`build-native.ps1` configures one build dir per ABI:
+`build-android-armeabi-v7a/`, `build-android-arm64-v8a/` (and
+`build-android-x86_64/` if you pass `x86_64`). The first build compiles the whole
+axmol engine, so it takes a while; later builds are incremental.
 
-## 2. Stage assets
-```powershell
-Copy-Item -Recurse -Force ..\client\public\* Content\
-```
-(`Content/` is git-ignored; it is the APK asset payload.)
-
-## 3. Build the native library
-```powershell
-$ndk = "$env:ANDROID_HOME\ndk\27.1.12297006"
-$ninja = "$env:ANDROID_HOME\cmake\3.22.1\bin\ninja.exe"
-$cmake = "C:\Program Files\CMake\bin\cmake.exe"
-$proj = (Resolve-Path .\proj.android).Path
-
-foreach ($abi in 'arm64-v8a','x86_64') {
-  $b = if ($abi -eq 'arm64-v8a') { 'build-android' } else { 'build-android-x86_64' }
-  & $cmake -S . -B $b -G Ninja `
-    -DCMAKE_TOOLCHAIN_FILE="$ndk/build/cmake/android.toolchain.cmake" `
-    -DANDROID_ABI=$abi -DANDROID_PLATFORM=android-24 -DANDROID_STL=c++_shared `
-    -DANDROID_TOOLCHAIN=clang -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON `
-    -DANDROID_USE_LEGACY_TOOLCHAIN_FILE=false -DCMAKE_MAKE_PROGRAM="$ninja" `
-    -DCMAKE_BUILD_TYPE=Release -D_AX_ANDROID_PROJECT_DIR="$proj"
-  & $cmake --build $b --config Release
-}
-```
-
-## 4. Package a signed APK
-```powershell
-powershell -File .\tools\build-apk.ps1 -Abis "arm64-v8a,x86_64"
-# -> SurvevMobile-debug.apk (v2/v3 signed)
-```
-
-## 5. Install & run
+## Install & run
 ```powershell
 adb install -r SurvevMobile-debug.apk
 adb shell am start -n com.survev.mobile/dev.axmol.app.AppActivity
 ```
 
-## The Gradle path (standard, but blocked here)
-`cd proj.android; ./gradlew assembleDebug` is the canonical build. It **cannot run
-on this machine while Astrill VPN is active**: Astrill installs a Winsock LSP
-(`C:\Windows\System32\ASProxy64.dll`) that breaks Java NIO, and the Gradle daemon
-communicates over TCP loopback via NIO. Symptom: the JVM crashes with
-`EXCEPTION_ILLEGAL_INSTRUCTION` in `sun.nio.ch.WEPoll.ctl`, or the daemon fails
-with "operation attempted on something that is not a socket".
+## Host tests (protocol core, no Android)
+```powershell
+. .\tools\android-env.ps1
+cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
+cmake --build build-tests --config Release
+.\build-tests\Release\surv_tests.exe     # 22 tests, bit-exact vs the TypeScript code
+```
 
-To use Gradle: stop the Astrill `ASProxy` service (admin) or whitelist `java.exe`,
-then run `gradlew assembleDebug`. `tools/build-apk.ps1` reproduces the Gradle
-packaging steps without Java sockets, so it works regardless.
-
-## Emulator
-An AVD `SurvevTest` (android-35 x86_64, WHPX) can be created/booted with:
+## Emulator (x86_64)
 ```powershell
 & "$env:ANDROID_HOME\emulator\emulator.exe" -avd SurvevTest -no-window -no-audio `
     -no-boot-anim -no-snapshot -gpu swiftshader_indirect -accel on
+# build/package with -Abis "x86_64" to run on it
 ```
+
+## Why not Gradle?
+`cd proj.android; ./gradlew assembleDebug` is the canonical path, but it **cannot
+run on this machine while Astrill VPN is active**: Astrill installs a Winsock LSP
+(`C:\Windows\System32\ASProxy64.dll`) that breaks Java NIO, and the Gradle daemon
+talks over TCP loopback using NIO. Symptoms: `EXCEPTION_ILLEGAL_INSTRUCTION` in
+`sun.nio.ch.WEPoll.ctl`, or "operation attempted on something that is not a
+socket". `tools/build-apk.ps1` reproduces Gradle's packaging with `aapt2`/`javac`/
+`d8`/`zipalign`/`apksigner` (which use no sockets), so it works regardless. To use
+Gradle, stop the Astrill `ASProxy` service (admin) or whitelist `java.exe`.
+
+## Notes
+- **CMake version**: axmol 2.11.5's `1k/fetch.cmake` declares
+  `cmake_minimum_required(3.23...)`, but the Android SDK ships CMake **3.22.1**.
+  `tools/vendor-axmol.ps1` lowers that to `3.22` in the vendored copy so the SDK
+  CMake is used. (The system CMake 4.4 is intentionally not used.)
+- **ABIs**: `armeabi-v7a` and `arm64-v8a` by default; `x86_64` is available for
+  emulator testing. Prebuilt axmol 3rdparty libs exist for all three.
+- **Offline**: after vendoring, configure/build performs no downloads. The axmol
+  `cache/` (prebuilt 3rdparty) is part of `axmol/`.

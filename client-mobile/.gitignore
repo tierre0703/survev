@@ -2,13 +2,16 @@ build/
 build-tests/
 build-android/
 build-android-*/
-build-apk/
 build-win32/
+build-apk/
 .vs/
 *.user
 *.apk
 *.aab
-# Asset staging: copy of ../client/public (run `cp -r ../client/public/* Content/`)
+*.idsig
+# Vendored axmol engine (~590 MB, populated by tools/vendor-axmol.ps1)
+axmol/
+# Asset staging: copy of ../client/public (populated by tools/sync-content.ps1)
 Content/
 proj.android/local.properties
 proj.android/.gradle/

@@ -11,7 +11,7 @@
 #
 # Usage:  pwsh/powershell -File tools/build-apk.ps1 [-Abis arm64-v8a,x86_64]
 param(
-    [string[]]$Abis = @('arm64-v8a')
+    [string[]]$Abis = @('armeabi-v7a', 'arm64-v8a')
 )
 $ErrorActionPreference = 'Stop'
 # normalize -Abis (supports "arm64-v8a,x86_64" or separate args)
@@ -120,8 +120,9 @@ $base.Dispose()
 Add-Entry (Join-Path $dexDir 'classes.dex') 'classes.dex' ([System.IO.Compression.CompressionLevel]::Optimal)
 # native libs per ABI
 $abiMap = @{
-    'arm64-v8a' = @{ build = 'build-android';        sysroot = 'aarch64-linux-android' }
-    'x86_64'    = @{ build = 'build-android-x86_64'; sysroot = 'x86_64-linux-android' }
+    'armeabi-v7a' = @{ build = 'build-android-armeabi-v7a'; sysroot = 'arm-linux-androideabi' }
+    'arm64-v8a'   = @{ build = 'build-android-arm64-v8a';   sysroot = 'aarch64-linux-android' }
+    'x86_64'      = @{ build = 'build-android-x86_64';       sysroot = 'x86_64-linux-android' }
 }
 foreach ($abi in $Abis) {
     if (-not $abiMap.ContainsKey($abi)) { throw "Unsupported ABI: $abi" }
