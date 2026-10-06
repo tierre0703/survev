@@ -4,6 +4,7 @@
 #include "../net/Net.h"
 #include "../render/PixiLike.h"
 #include "../ui/Touch.h"
+#include <atomic>
 #include <memory>
 
 namespace surv {
@@ -31,6 +32,8 @@ class GameScene : public ax::Scene {
 public:
     static GameScene* createScene();
 
+    ~GameScene() override;
+
     bool init() override;
     void update(float delta) override;
 
@@ -40,13 +43,26 @@ public:
     void onTouchEnded(int id);
 
     ax::Node* getGameRoot() const { return _gameRoot; }
+    Game* getGame() const { return _game.get(); }
+
+    // M3: join directly with a ws:// url + join token (from find_game or a
+    // dev/URL param), or discover a match over HTTP first.
+    void connectDirect(const std::string& url, const std::string& joinToken);
+    void connectViaFindGame(const std::string& apiBaseUrl, const std::string& region, int gameModeIdx);
+
+    // App lifecycle hooks (AppDelegate).
+    void pauseGame();
+    void resumeGame();
 
 private:
+    void maybeAutoConnect();
+
     ax::Node* _gameRoot = nullptr;
     std::unique_ptr<Game> _game;
     std::unique_ptr<Touch> _touch;
     std::unique_ptr<TouchPadGfx> _movePad;
     std::unique_ptr<TouchPadGfx> _aimPad;
+    std::shared_ptr<std::atomic<bool>> _alive;
 };
 
 } // namespace surv

@@ -13,7 +13,14 @@
 param(
     [string[]]$Abis = @('armeabi-v7a', 'arm64-v8a')
 )
-$ErrorActionPreference = 'Stop'
+# Native tools (aapt2/javac/d8/zipalign/apksigner) write notes/progress to
+# stderr, which PowerShell turns into a terminating error under 'Stop'. Every
+# native invocation is checked via $LASTEXITCODE below, so keep the preference
+# at Continue and fail explicitly instead.
+$ErrorActionPreference = 'Continue'
+if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+    $PSNativeCommandUseErrorActionPreference = $false
+}
 # normalize -Abis (supports "arm64-v8a,x86_64" or separate args)
 $Abis = @($Abis | ForEach-Object { $_ -split ',' } | Where-Object { $_ -ne '' })
 
@@ -98,25 +105,29 @@ if ($LASTEXITCODE -ne 0) { throw "d8 failed" }
 Write-Host "== 4/7 assemble apk =="
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 Add-Type -AssemblyName System.IO.Compression
-$unsigned = Join-Path $work 'unsigned.apk'
-if (Test-Path $unsigned) { Remove-Item $unsigned -Force }
-$zip = [System.IO.Compression.ZipFile]::Open($unsigned, [System.IO.Compression.ZipArchiveMode]::Create)
+# Unique intermediates per run: a stale handle on a previous run's APK (a
+# crashed build, an editor, or AV holding it) must never block a rebuild.
+$runStamp = [Guid]::NewGuid().ToString('N').Substring(0, 8)
+$unsigned = Join-Path $work "unsigned-$runStamp.apk"
+# Start from aapt2's base.apk: it already stores resources.arsc UNCOMPRESSED,
+# which Android R+ (targetSdk >= 30) requires. Do NOT rebuild the zip from
+# scratch with .NET's ZipArchive: CompressionLevel::NoCompression still emits a
+# deflate stream (method 8), so the platform rejects the install with
+# "resources.arsc ... stored uncompressed and aligned on a 4-byte boundary".
+# Updating base.apk in place preserves the stored resources.arsc; zipalign then
+# aligns it. See https://developer.android.com/about/versions/11/behavior-changes-11#apk-signing
+Copy-Item $baseApk $unsigned -Force -ErrorAction Stop
+$zip = [System.IO.Compression.ZipFile]::Open($unsigned, [System.IO.Compression.ZipArchiveMode]::Update)
+if (-not $zip) { throw "failed to open $unsigned for update" }
 function Add-Entry($src, $name, $level) {
+    $existing = $zip.GetEntry($name)
+    if ($existing) { $existing.Delete() }
     $entry = $zip.CreateEntry($name, $level)
     $es = $entry.Open()
     $fs = [System.IO.File]::OpenRead($src)
     $fs.CopyTo($es)
     $es.Close(); $fs.Close()
 }
-$base = [System.IO.Compression.ZipFile]::OpenRead($baseApk)
-foreach ($e in $base.Entries) {
-    $lvl = if ($e.FullName -in @('resources.arsc', 'AndroidManifest.xml')) {
-        [System.IO.Compression.CompressionLevel]::NoCompression
-    } else { [System.IO.Compression.CompressionLevel]::Optimal }
-    $entry = $zip.CreateEntry($e.FullName, $lvl)
-    $es = $entry.Open(); $s = $e.Open(); $s.CopyTo($es); $es.Close(); $s.Close()
-}
-$base.Dispose()
 Add-Entry (Join-Path $dexDir 'classes.dex') 'classes.dex' ([System.IO.Compression.CompressionLevel]::Optimal)
 # native libs per ABI
 $abiMap = @{
@@ -143,8 +154,7 @@ $zip.Dispose()
 Write-Host ("   unsigned.apk: {0:N1} MB" -f ((Get-Item $unsigned).Length / 1MB))
 
 Write-Host "== 5/7 zipalign =="
-$aligned = Join-Path $work 'aligned.apk'
-if (Test-Path $aligned) { Remove-Item $aligned -Force }
+$aligned = Join-Path $work "aligned-$runStamp.apk"
 & (Join-Path $bt 'zipalign.exe') -p -f 4 $unsigned $aligned
 if ($LASTEXITCODE -ne 0) { throw "zipalign failed" }
 
@@ -162,4 +172,18 @@ if ($LASTEXITCODE -ne 0) { throw "apksigner failed" }
 
 Write-Host "== 7/7 verify =="
 & $java -jar (Join-Path $bt 'lib\apksigner.jar') verify --verbose $signed
+if ($LASTEXITCODE -ne 0) { throw "apksigner verify failed" }
+
+# Android R+ requires resources.arsc stored uncompressed and 4-byte aligned.
+# Catch the regression at build time instead of at adb install time.
+$alignOut = & (Join-Path $bt 'zipalign.exe') -c -v 4 $signed 2>&1
+$arscLine = $alignOut | Select-String -Pattern 'resources\.arsc' | Select-Object -First 1
+Write-Host "   $arscLine"
+if (-not $arscLine -or ($arscLine -match 'compressed|BAD')) {
+    throw "resources.arsc must be stored uncompressed and 4-byte aligned (got: $arscLine)"
+}
+
+# Intermediates are per-run; clean them up (best-effort, ignore stale locks).
+Remove-Item $unsigned, $aligned -Force -ErrorAction SilentlyContinue
+
 Write-Host ("`nAPK: {0}  ({1:N1} MB)" -f $signed, ((Get-Item $signed).Length / 1MB))

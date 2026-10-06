@@ -49,12 +49,18 @@ bool AppDelegate::applicationDidFinishLaunching() {
 
 void AppDelegate::applicationDidEnterBackground() {
     Director::getInstance()->stopAnimation();
-    // TODO(M6): pause game ticker + graceful WebSocket close (plan.md 5.8).
+    // Pause the game ticker + close the WebSocket gracefully (plan.md 5.8).
+    if (auto* scene = dynamic_cast<surv::GameScene*>(Director::getInstance()->getRunningScene())) {
+        scene->pauseGame();
+    }
 }
 
 void AppDelegate::applicationWillEnterForeground() {
     Director::getInstance()->startAnimation();
-    // TODO(M6): resume ticker; re-sync via server snapshot.
+    // Resume the ticker; the game rejoins and re-syncs from the server snapshot.
+    if (auto* scene = dynamic_cast<surv::GameScene*>(Director::getInstance()->getRunningScene())) {
+        scene->resumeGame();
+    }
 }
 
 void AppDelegate::applicationWillQuit() {}

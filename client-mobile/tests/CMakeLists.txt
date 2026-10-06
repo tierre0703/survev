@@ -20,7 +20,9 @@ add_executable(surv_tests
     test_main.cpp
     test_bitbuffer.cpp
     test_messages.cpp
+    test_game.cpp
     ${SURV_SRC}/net/Net.cpp
+    ${SURV_SRC}/game/Game.cpp
 )
 target_include_directories(surv_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

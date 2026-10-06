@@ -1,5 +1,8 @@
 #include "GameScene.h"
+#include "DevConfig.h"
+#include "../net/Api.h"
 #include "../net/Messages.h"
+#include "../net/WebSocketConnection.h"
 
 USING_NS_AX;
 
@@ -95,13 +98,88 @@ bool GameScene::init() {
     _movePad = std::make_unique<TouchPadGfx>(this);
     _aimPad = std::make_unique<TouchPadGfx>(this);
 
+    _alive = std::make_shared<std::atomic<bool>>(true);
+
     _game = std::make_unique<Game>();
-    _game->init(this);
+    _game->init(this, createWebSocketConnection);
+
+    // M3: with no menu UI yet, auto-connect if a join target is configured.
+    maybeAutoConnect();
 
     // Drive update() every frame.
     this->scheduleUpdate();
 
     return true;
+}
+
+GameScene::~GameScene() {
+    if (_alive) {
+        *_alive = false;
+    }
+    if (_game) {
+        _game->free();
+    }
+}
+
+void GameScene::maybeAutoConnect() {
+    auto* ud = ax::UserDefault::getInstance();
+    const std::string url(ud->getStringForKey(dev::kKeyJoinUrl, dev::kJoinUrl));
+    const std::string token(ud->getStringForKey(dev::kKeyJoinToken, dev::kJoinToken));
+    const std::string apiUrl(ud->getStringForKey(dev::kKeyApiUrl, dev::kApiBaseUrl));
+    const std::string region(ud->getStringForKey(dev::kKeyRegion, dev::kRegion));
+
+    if (!url.empty()) {
+        AXLOGI("Connecting to dev join url {}", url);
+        connectDirect(url, token);
+    } else if (!apiUrl.empty()) {
+        AXLOGI("Finding a game via {}", apiUrl);
+        connectViaFindGame(apiUrl, region, dev::kGameModeIdx);
+    } else {
+        AXLOGI("No dev join target configured (set UserDefault surv_joinUrl or surv_apiUrl)");
+    }
+}
+
+void GameScene::connectDirect(const std::string& url, const std::string& joinToken) {
+    if (_game) {
+        _game->tryJoinGame(url, joinToken);
+    }
+}
+
+void GameScene::connectViaFindGame(const std::string& apiBaseUrl,
+                                   const std::string& region,
+                                   int gameModeIdx) {
+    FindGameBody body;
+    body.region = region;
+    body.version = defs::kProtocolVersion;
+    body.playerCount = 1;
+    body.autoFill = true;
+    body.gameModeIdx = gameModeIdx;
+
+    // Guard against the HTTP callback outliving the scene.
+    std::weak_ptr<std::atomic<bool>> weak = _alive;
+    findGame(apiBaseUrl, body, [this, weak](FindGameResult result) {
+        const auto alive = weak.lock();
+        if (!alive || !*alive) {
+            return;
+        }
+        if (result.ok && !result.data.urls.empty()) {
+            connectDirect(result.data.urls.front(), result.data.joinToken);
+        } else {
+            AXLOGW("find_game failed: {}", result.error);
+        }
+    });
+}
+
+void GameScene::pauseGame() {
+    if (_game) {
+        _game->pause();
+    }
+}
+
+void GameScene::resumeGame() {
+    if (_game) {
+        _game->resume();
+    }
 }
 
 void GameScene::update(float delta) {

@@ -2,10 +2,16 @@
 // Port of client/src/game.ts core (M3+): connection lifecycle, message
 // dispatch, and the per-tick simulation update. The network protocol
 // (net/*) is ported and verified; simulation/render are scaffolded here.
+//
+// This class is intentionally axmol-free: the concrete WebSocket adapter is
+// injected as a ConnectionFactory (see net/Connection.h), which keeps the
+// join/pump/dispatch flow host-testable against captured replays.
+#include "../net/Connection.h"
 #include "../net/Messages.h"
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace ax {
@@ -16,26 +22,74 @@ namespace surv {
 
 class GameScene;
 
-struct ActivePlayerData;
-struct UpdateMsg;
+// Compact, deterministic view of the state the headless client holds after a
+// sequence of messages. Used to diff a native replay against the web client.
+struct PlayerInfoSnapshot {
+    uint16_t playerId = 0;
+    uint8_t teamId = 0;
+    uint8_t groupId = 0;
+    std::string name;
+};
+
+struct ObjectSnapshot {
+    uint16_t id = 0;
+    uint8_t type = 0;
+    Vec2 pos;
+};
+
+struct GameStateSnapshot {
+    uint16_t activePlayerId = 0;
+    uint16_t localPlayerId = 0;
+    bool playing = false;
+    float health = 0.0f;
+    std::vector<PlayerInfoSnapshot> players;
+    std::vector<ObjectSnapshot> objects;
+};
 
 class Game {
 public:
     Game();
     ~Game();
 
-    void init(GameScene* scene);
+    void init(GameScene* scene, ConnectionFactory factory = nullptr);
     void free();
 
     void update(float dt);
 
     // Connection lifecycle (JoinMsg -> JoinedMsg -> UpdateMsg stream).
+    // Mirrors client/src/game.ts tryJoinGame(): ignored while connecting or
+    // connected, and any previous connection is closed first.
     void tryJoinGame(const std::string& url, const std::string& joinToken);
 
-    uint16_t getActivePlayerId() const { return _activePlayerId; }
+    // App lifecycle (plan.md 5.8): close gracefully when backgrounded and
+    // rejoin (server sends a fresh snapshot) when foregrounded again.
+    void pause();
+    void resume();
+    bool isPaused() const { return _paused; }
 
-    // Message sink for the connection thread -> main thread.
+    uint16_t getActivePlayerId() const { return _activePlayerId; }
+    uint16_t getLocalPlayerId() const { return _localPlayerId; }
+    bool isPlaying() const { return _playing; }
+    bool isConnected() const {
+        return _connection && _connection->state() == ConnectionState::Open;
+    }
+
+    // Sends a protocol message on the current connection (no-op unless open).
+    void sendMessage(MsgType type, Msg& msg, size_t maxLen = 128);
+    void sendInput(InputMsg& msg) { sendMessage(MsgType_Input, msg, 128); }
+
+    // Message sink for the connection pump -> dispatch (main thread).
     void onServerMessage(uint8_t type, NetBitStream& s);
+
+    // Headless state snapshot for replay verification.
+    GameStateSnapshot snapshot() const;
+    // Deterministic text form of snapshot(), suitable for diffing a native
+    // replay against a web-client state dump.
+    std::string snapshotText() const;
+
+    // Last close info (code/reason) for UI/retry decisions.
+    uint16_t getCloseCode() const { return _closeCode; }
+    const std::string& getCloseReason() const { return _closeReason; }
 
 private:
     void handleJoined(NetBitStream& s);
@@ -45,14 +99,48 @@ private:
     void handlePickup(NetBitStream& s);
     void handleMap(NetBitStream& s);
 
+    void onOpen();
+    void onFrame(std::vector<uint8_t>&& frame);
+    void onClose(uint16_t code, const std::string& reason);
+    void sendJoinMessage();
+
     GameScene* _scene = nullptr;
+    ConnectionFactory _factory;
+
+    std::unique_ptr<Connection> _connection;
+    bool _connecting = false;
+    bool _connected = false;
+    bool _playing = false;
+    bool _paused = false;
+    uint16_t _closeCode = 0;
+    std::string _closeReason;
+
+    // Join info retained so a foreground resume can rejoin.
+    std::string _lastUrl;
+    std::string _lastToken;
+    std::string _playerName = "Player";
+
     uint16_t _activePlayerId = 0;
+    uint16_t _localPlayerId = 0;
+    uint8_t _teamMode = 0;
+    bool _started = false;
+    std::vector<std::string> _emotes;
     uint32_t _inputSeq = 0;
 
     // Joined/Update state populated from the wire (game simulation source).
+    // Players/objects persist across ticks, mirroring the web client's barns:
+    // full objects create/update, partial objects update, and del lists remove.
     ActivePlayerData _activePlayer;
-    std::vector<FullObjectData> _fullObjects;
-    std::vector<PartObjectData> _partObjects;
+    std::unordered_map<uint16_t, PlayerInfo> _playersById;
+    std::unordered_map<uint16_t, ObjectSnapshot> _objectsById;
+
+    // Full last update (bullets/explosions/gas/... for M4+ rendering).
+    UpdateMsg _lastUpdate;
+    bool _hasUpdate = false;
+
+    // MapMsg for M4 terrain; kept here so the headless client can report it.
+    MapMsg _map;
+    bool _hasMap = false;
 };
 
 } // namespace surv

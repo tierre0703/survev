@@ -280,6 +280,41 @@ scaffolded and require the axmol SDK (M0) to compile.
 - **Tests** (`tests/`): 22 tests, all passing (`surv_tests`, exit 0), including
   the full `UpdateMsg` roundtrip (serialize → deserialize → re-serialize).
 
+### M3 networking + headless sim (implemented, host-verified)
+- `src/net/Connection.h` — engine-independent port of
+  `shared/net/connection.ts` (`ConnectionState`, callbacks, `pump()`,
+  `resetAndClose()`), plus the `ConnectionFactory` used to inject a transport.
+- `src/net/WebSocketConnection.{h,cpp}` — `ax::network::WebSocket` adapter
+  (binary frames). Delegate events are queued and delivered by `pump()` on the
+  main thread, so the join/pump/dispatch flow is testable and thread-safe.
+- `src/net/Api.{h,cpp}` — `find_game` over `ax::network::HttpClient` +
+  rapidjson (port of `api.ts` + `main.ts findGame()`), posting to
+  `/api/find_game_v2`.
+- `src/game/Game.{h,cpp}` — `tryJoinGame()` creates the connection and sends
+  the `JoinMsg` on open; `update()` pumps frames and dispatches
+  `Joined`/`Update`/`Kill`/`GameOver`/`Pickup`/`Map`; `pause()`/`resume()`
+  implement the background/foreground lifecycle; `snapshot()` /
+  `snapshotText()` expose a deterministic headless state for replay diffing.
+- `src/app/GameScene.{h,cpp}` — injects `createWebSocketConnection`, and
+  auto-connects from a dev join target (`DevConfig.h` / UserDefault keys
+  `surv_joinUrl`/`surv_joinToken`/`surv_apiUrl`/`surv_region`).
+- `src/app/AppDelegate.cpp` — background pauses the ticker + closes the socket
+  gracefully; foreground resumes and rejoins (server replay/snapshot).
+- `tests/test_game.cpp` (+ `FakeConnection.h`) — drives the whole flow through
+  an in-memory connection: JoinMsg bytes, multi-message frames, state snapshot,
+  pause/close/resume, GameOver. All 29 `surv_tests` pass.
+
+**Verifying the M3 gate against a dev server** (`pnpm dev:server` starts the API
+on `:8000` and a game process on `:9000`):
+1. Build+install the APK (see `BUILDING.md`).
+2. For an emulator, use host loopback `10.0.2.2`; for a device, the dev
+   machine's LAN IP. Either set `DevConfig.h` before building, or write the
+   UserDefault keys above (e.g. `surv_joinUrl=ws://10.0.2.2:9000/play` with a
+   token from `POST /api/find_game_v2`, or `surv_apiUrl=http://10.0.2.2:8000`
+   to discover one).
+3. `adb logcat` shows the join + update stream; `Game::snapshotText()` can be
+   logged per tick and diffed against the web client's state on the same replay.
+
 ### Scaffolded, needs the axmol SDK (M0 → M5)
 - `src/app/AppDelegate.{h,cpp}` — axmol entry point (scene, landscape lock,
   lifecycle hooks).
@@ -287,8 +322,6 @@ scaffolded and require the axmol SDK (M0) to compile.
 - `src/ui/Touch.h` — engine-independent dual-joystick port of `client/src/ui/touch.ts`
   (move/aim pads, dead-zone, locked/anywhere styles, throwable latch, aim-line).
 - `src/render/PixiLike.h` — PIXI→axmol adapter surface for the M4 rendering port.
-- `src/game/Game.{h,cpp}` — connection/message-dispatch skeleton on top of the
-  verified net core.
 - `proj.android/` — axmol Android project (Gradle + JNI), `cmake/modules/`.
 
 ### Android build status
@@ -334,8 +367,9 @@ client-mobile/build-tests/Release/surv_tests.exe
 ```
 
 ### Next work items (in dependency order)
-1. **M3**: implement `ax::network::WebSocket` connection (binary frames) and the
-   Join/Input message flow; replay-verify against a dev server.
+1. **M3**: net flow is implemented and host-verified (see above); remaining is
+   on-device replay verification against a dev server, plus URL fallback when a
+   join URL in `find_game`'s list fails.
 2. **M4**: rendering port against `PixiLike.h` (map, barns, renderer z-sort).
 3. **M5**: wire axmol touch events into `Touch` + `InputMsg` (pads are already
    drawn and events are wired; movement→InputMsg is the remaining step).
