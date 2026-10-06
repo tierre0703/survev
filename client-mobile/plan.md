@@ -289,19 +289,55 @@ scaffolded and require the axmol SDK (M0) to compile.
 - `src/render/PixiLike.h` — PIXI→axmol adapter surface for the M4 rendering port.
 - `src/game/Game.{h,cpp}` — connection/message-dispatch skeleton on top of the
   verified net core.
-- `app/CMakeLists.txt`, `proj.android/README.md` — axmol/Android build wiring.
+- `proj.android/` — axmol Android project (Gradle + JNI), `cmake/modules/`.
+
+### Android build status
+- **Native library builds for Android**: `libSurvevMobile.so` compiles and links
+  for `arm64-v8a` (and `x86_64`) against axmol 2.11.5 + NDK r27b, using the
+  top-level `CMakeLists.txt` (axmol-style) and the NDK toolchain:
+  ```sh
+  cmake -S . -B build-android -G Ninja \
+    -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/27.1.12297006/build/cmake/android.toolchain.cmake \
+    -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 -DANDROID_STL=c++_shared \
+    -DANDROID_TOOLCHAIN=clang -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
+    -DANDROID_USE_LEGACY_TOOLCHAIN_FILE=false -DCMAKE_MAKE_PROGRAM=<ninja> \
+    -DCMAKE_BUILD_TYPE=Release -D_AX_ANDROID_PROJECT_DIR=$PWD/proj.android
+  cmake --build build-android --config Release
+  ```
+- **Signed debug APK produced**: `SurvevMobile-debug.apk` via the Gradle-free
+  pipeline `tools/build-apk.ps1` (aapt2 → javac → d8 → zip → zipalign →
+  apksigner), verified with APK Signature Scheme v2/v3. Supports
+  `-Abis arm64-v8a,x86_64`.
+
+### Known environment blocker: Gradle + Astrill VPN
+On this machine, Astrill installs a Winsock LSP (`C:\Windows\System32\ASProxy64.dll`,
+"ASProxy over MSAFD Tcpip"). It breaks Java NIO:
+- default selector (`WEPoll`) → JVM `EXCEPTION_ILLEGAL_INSTRUCTION` in
+  `sun.nio.ch.WEPoll.ctl`;
+- legacy `WindowsSelectorProvider` → `select()` fails with "operation attempted
+  on something that is not a socket".
+
+Gradle's daemon communicates over TCP loopback via NIO, so **`gradlew` cannot run
+while Astrill is active**. `tools/build-apk.ps1` bypasses Gradle using the Android
+build tools directly (those run fine). To use the standard Gradle path instead,
+stop/disable the Astrill `ASProxy` service (admin) or whitelist `java.exe`, then:
+```sh
+cd proj.android && ./gradlew assembleDebug
+```
+Note: `proj.android/gradle.properties` was given a `SelectorProvider` override to
+avoid the JVM crash in the client JVM; the daemon still needs Astrill disabled.
 
 ### How to run the tests (host, no Android SDK needed)
 ```sh
-cmake -S client-mobile -B client-mobile/build -G "Visual Studio 17 2022" -A x64
-cmake --build client-mobile/build --config Release
-client-mobile/build/Release/surv_tests.exe
+cmake -S client-mobile/tests -B client-mobile/build-tests -G "Visual Studio 17 2022" -A x64
+cmake --build client-mobile/build-tests --config Release
+client-mobile/build-tests/Release/surv_tests.exe
 ```
 
 ### Next work items (in dependency order)
-1. **M0**: install Android SDK/NDK, scaffold `proj.android/` from the axmol
-   template, get `surv_app` compiling.
-2. **M3**: implement `ax::network::WebSocket` connection (binary frames) and the
+1. **M3**: implement `ax::network::WebSocket` connection (binary frames) and the
    Join/Input message flow; replay-verify against a dev server.
-3. **M4**: rendering port against `PixiLike.h` (map, barns, renderer z-sort).
-4. **M5**: wire axmol touch events into `Touch` + `InputMsg`.
+2. **M4**: rendering port against `PixiLike.h` (map, barns, renderer z-sort).
+3. **M5**: wire axmol touch events into `Touch` + `InputMsg` (pads are already
+   drawn and events are wired; movement→InputMsg is the remaining step).
+4. **M7**: UI (menu/loadout/team) — the DOM UI needs porting or a WebView overlay.

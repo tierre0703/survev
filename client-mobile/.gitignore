@@ -1,3 +1,17 @@
 build/
+build-tests/
+build-android/
+build-android-*/
+build-apk/
+build-win32/
 .vs/
 *.user
+*.apk
+*.aab
+# Asset staging: copy of ../client/public (run `cp -r ../client/public/* Content/`)
+Content/
+proj.android/local.properties
+proj.android/.gradle/
+proj.android/app/build/
+proj.android/build/
+hs_err_pid*.log
