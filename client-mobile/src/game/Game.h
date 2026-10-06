@@ -74,9 +74,17 @@ public:
         return _connection && _connection->state() == ConnectionState::Open;
     }
 
+    // True while the active player has the throwable slot equipped. Drives the
+    // Touch throwable priming latch (client/src/ui/touch.ts).
+    bool isHoldingThrowable() const {
+        return _activePlayer.curWeapIdx == WeaponSlot_Throwable;
+    }
+
     // Sends a protocol message on the current connection (no-op unless open).
     void sendMessage(MsgType type, Msg& msg, size_t maxLen = 128);
-    void sendInput(InputMsg& msg) { sendMessage(MsgType_Input, msg, 128); }
+    // Sends an input message, assigning the next sequence number when the
+    // previous one has been acknowledged (mirrors game.ts seq/seqInFlight).
+    void sendInput(InputMsg& msg);
 
     // Message sink for the connection pump -> dispatch (main thread).
     void onServerMessage(uint8_t type, NetBitStream& s);
@@ -126,6 +134,7 @@ private:
     bool _started = false;
     std::vector<std::string> _emotes;
     uint32_t _inputSeq = 0;
+    bool _inputSeqInFlight = false;
 
     // Joined/Update state populated from the wire (game simulation source).
     // Players/objects persist across ticks, mirroring the web client's barns:

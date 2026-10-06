@@ -32,6 +32,8 @@ void Game::free() {
     _teamMode = 0;
     _started = false;
     _emotes.clear();
+    _inputSeq = 0;
+    _inputSeqInFlight = false;
     _playersById.clear();
     _objectsById.clear();
     _lastUpdate = UpdateMsg{};
@@ -113,7 +115,6 @@ void Game::update(float dt) {
     if (_connection) {
         _connection->pump();
     }
-    // TODO(M5): collect Touch input, build an InputMsg and sendInput() it.
 }
 
 void Game::sendMessage(MsgType type, Msg& msg, size_t maxLen) {
@@ -127,6 +128,20 @@ void Game::sendMessage(MsgType type, Msg& msg, size_t maxLen) {
     if (!buf.empty()) {
         _connection->send(buf.data(), buf.size());
     }
+}
+
+void Game::sendInput(InputMsg& msg) {
+    if (!isConnected()) {
+        return;
+    }
+    // Mirrors game.ts: only advance the sequence once the previous input has
+    // been acked by the server (UpdateMsg.ack).
+    if (!_inputSeqInFlight) {
+        _inputSeq = (_inputSeq + 1) % 256;
+        _inputSeqInFlight = true;
+    }
+    msg.seq = static_cast<uint8_t>(_inputSeq);
+    sendMessage(MsgType_Input, msg, 128);
 }
 
 void Game::onOpen() {
@@ -174,6 +189,7 @@ void Game::onClose(uint16_t code, const std::string& reason) {
     _connecting = false;
     _connected = false;
     _playing = false;
+    _inputSeqInFlight = false;
     // TODO(M7): if this was not an intentional pause/quit, surface `reason`
     // (GameWsDisconnectReason) and retry another URL like main.ts joinGame().
 }
@@ -218,6 +234,11 @@ void Game::handleJoined(NetBitStream& s) {
 void Game::handleUpdate(NetBitStream& s) {
     UpdateMsg m;
     m.deserialize(s);
+    // Latency/ack tracking (mirrors game.ts m_processGameUpdate): the server
+    // echoes the last input seq it consumed.
+    if (_inputSeqInFlight && m.ack == static_cast<uint8_t>(_inputSeq)) {
+        _inputSeqInFlight = false;
+    }
     if (m.activePlayerIdDirty) {
         _activePlayerId = m.activePlayerId;
     }

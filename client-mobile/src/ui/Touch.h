@@ -55,6 +55,10 @@ public:
     TouchStyle::Value moveStyle = TouchStyle::Locked;
     TouchStyle::Value aimStyle = TouchStyle::Locked;
     bool touchAimLine = true;
+    // While moving without touching the aim pad, the aim direction follows the
+    // move direction once this cooldown has elapsed (port of touch.ts).
+    float turnDirCooldown = 0.5f;
+    float turnDirTicker = 0.0f;
 
     TouchPoint touches[4];
 
@@ -241,6 +245,11 @@ public:
 
     void setAimStyle(TouchStyle::Value style) {
         aimStyle = style;
+    }
+
+    // Overrides the current aim direction (used by the turn-to-move logic).
+    void setAimDir(const Vec2& dir) {
+        aimMovement.toAimDir = v2Copy(dir);
     }
 
     void toggleAimLine() {

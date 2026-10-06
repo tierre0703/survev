@@ -202,11 +202,36 @@ void GameScene::update(float delta) {
         }
     }
 
-    if (_game->getActivePlayerId() != 0) {
-        const Touch::Movement move = _touch->getMovement(getContentSize().width);
-        (void)move;
+    if (_game->isPlaying() && _game->getActivePlayerId() != 0) {
+        updateInput(delta);
     }
     _touch->m_update(*_movePad, *_aimPad);
+}
+
+void GameScene::updateInput(float dt) {
+    const ax::Size size = getContentSize();
+
+    // Feed the dual-joystick state into an InputMsg. isHoldingThrowable drives
+    // the throwable priming latch in Touch::getAim; the aim line direction is
+    // taken from Touch's aim movement (see TouchInput::build).
+    InputMsg msg = _touchInput.build(*_touch,
+                                     size.width,
+                                     _game->isHoldingThrowable(),
+                                     size.width < size.height,
+                                     dt);
+
+    // A quick tap can begin and end between two sends; latch shootStart so the
+    // server still observes the press.
+    _shootStartPending = _shootStartPending || msg.shootStart;
+
+    // Send at the server's net-sync/input rate rather than once per frame.
+    _inputMsgTimeout -= dt;
+    if (_inputMsgTimeout < 0.0f) {
+        msg.shootStart = _shootStartPending;
+        _shootStartPending = false;
+        _game->sendInput(msg);
+        _inputMsgTimeout = 1.0f / kNetSyncTps;
+    }
 }
 
 void GameScene::onTouchBegan(float x, float y, int id) {

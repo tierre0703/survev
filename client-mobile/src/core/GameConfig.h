@@ -135,4 +135,13 @@ enum FactionTeam : uint8_t {
     FactionTeam_Blue = 2,
 };
 
+// Port of the GameConfig.player values used by touch input.
+struct PlayerConfig {
+    static constexpr float throwableMaxMouseDist = 18.0f;
+};
+
+// Server net-sync/input rate (server/src/.../config.ts netSyncTps). The client
+// sends InputMsg at this cadence instead of once per rendered frame.
+inline constexpr float kNetSyncTps = 33.0f;
+
 } // namespace surv

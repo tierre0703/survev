@@ -304,6 +304,23 @@ scaffolded and require the axmol SDK (M0) to compile.
   an in-memory connection: JoinMsg bytes, multi-message frames, state snapshot,
   pause/close/resume, GameOver. All 29 `surv_tests` pass.
 
+### M5 input → InputMsg (implemented, host-verified)
+- `src/game/TouchInput.h` — engine-independent port of the touch branch of
+  `client/src/game.ts update()`: turns `Touch::getMovement`/`getAim` into an
+  `InputMsg` (`touchMoveDir`/`touchMoveLen`, `toMouseDir`/`toMouseLen`,
+  `shootStart`/`shootHold`, `portrait`), including the turn-to-move aim
+  cooldown and the throwable priming latch.
+- `src/app/GameScene.cpp` — `updateInput()` builds the message every frame and
+  sends it via `Game::sendInput()` at the server net-sync/input rate
+  (`kNetSyncTps` = 33), latching a quick `shootStart` tap so it isn't dropped
+  between sends. `Game` now assigns input seq/ack (`UpdateMsg.ack`), mirroring
+  `game.ts` `seq`/`seqInFlight`.
+- `src/ui/Touch.h` — added `turnDirCooldown`/`turnDirTicker`/`setAimDir` used by
+  the turn-to-move aim logic.
+- `tests/test_touch_input.cpp` — 4 tests covering move/aim scaling, zero-move,
+  and the throwable latch (all 33 `surv_tests` pass). On-device move/aim/fire
+  verification against a dev server remains (needs M4 rendering).
+
 **Verifying the M3 gate against a dev server** (`pnpm dev:server` starts the API
 on `:8000` and a game process on `:9000`):
 1. Build+install the APK (see `BUILDING.md`).
@@ -383,6 +400,7 @@ client-mobile/build-tests/Release/surv_tests.exe
    on-device replay verification against a dev server, plus URL fallback when a
    join URL in `find_game`'s list fails.
 2. **M4**: rendering port against `PixiLike.h` (map, barns, renderer z-sort).
-3. **M5**: wire axmol touch events into `Touch` + `InputMsg` (pads are already
-   drawn and events are wired; movement→InputMsg is the remaining step).
+3. **M5**: input → `InputMsg` is implemented and host-tested (`TouchInput.h` +
+   `GameScene::updateInput`); remaining is on-device verification of
+   move/aim/fire once M4 rendering lands.
 4. **M7**: UI (menu/loadout/team) — the DOM UI needs porting or a WebView overlay.

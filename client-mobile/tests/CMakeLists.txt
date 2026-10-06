@@ -21,6 +21,7 @@ add_executable(surv_tests
     test_bitbuffer.cpp
     test_messages.cpp
     test_game.cpp
+    test_touch_input.cpp
     ${SURV_SRC}/net/Net.cpp
     ${SURV_SRC}/game/Game.cpp
 )

@@ -1,6 +1,7 @@
 #pragma once
 #include "axmol.h"
 #include "../game/Game.h"
+#include "../game/TouchInput.h"
 #include "../net/Net.h"
 #include "../render/PixiLike.h"
 #include "../ui/Touch.h"
@@ -56,6 +57,8 @@ public:
 
 private:
     void maybeAutoConnect();
+    // M5: build an InputMsg from Touch and send it at the server's input rate.
+    void updateInput(float dt);
 
     ax::Node* _gameRoot = nullptr;
     std::unique_ptr<Game> _game;
@@ -65,6 +68,10 @@ private:
     std::shared_ptr<std::atomic<bool>> _alive;
     bool _wasConnected = false;
     bool _wasPlaying = false;
+
+    TouchInput _touchInput;
+    float _inputMsgTimeout = 0.0f;
+    bool _shootStartPending = false;
 };
 
 } // namespace surv
