@@ -339,6 +339,33 @@ TEST(renderer_z_sort) {
 }
 
 // ---------------------------------------------------------------------------
+TEST(renderer_reparents_between_layers) {
+    pix::NullPixiFactory factory;
+    Renderer renderer(&factory, false);
+    Camera camera;
+    Map map(&factory, false);
+
+    pix::Sprite* a = factory.createSprite();
+    renderer.addPIXIObj(a, 0, 5, 1);
+    auto* layer0 = static_cast<pix::NullContainer*>(renderer.layers[0]);
+    auto* layer1 = static_cast<pix::NullContainer*>(renderer.layers[1]);
+    CHECK_EQ(layer0->children.size(), 1u);
+
+    // Moving to another layer must reparent (remove from the old layer), like
+    // PIXI's Container.addChild; otherwise axmol ends up with two parents.
+    renderer.addPIXIObj(a, 1, 5, 1);
+    CHECK_EQ(layer0->children.size(), 0u);
+    CHECK_EQ(layer1->children.size(), 1u);
+    CHECK_EQ(layer1->children[0], a);
+
+    // Re-adding with a changed zIdx must not duplicate the child.
+    renderer.addPIXIObj(a, 1, 5, 2);
+    CHECK_EQ(layer1->children.size(), 1u);
+    renderer.addPIXIObj(a, 1, 5, 2);
+    CHECK_EQ(layer1->children.size(), 1u);
+}
+
+// ---------------------------------------------------------------------------
 TEST(generated_defs_provider) {
     installGeneratedDefs();
     const DefProvider* provider = getDefProvider();

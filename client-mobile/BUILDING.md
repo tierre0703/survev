@@ -88,3 +88,13 @@ Gradle, stop the Astrill `ASProxy` service (admin) or whitelist `java.exe`.
   emulator testing. Prebuilt axmol 3rdparty libs exist for all three.
 - **Offline**: after vendoring, configure/build performs no downloads. The axmol
   `cache/` (prebuilt 3rdparty) is part of `axmol/`.
+- **Shaders (`axslc`)**: the engine build (`build-native.ps1`) compiles the
+  axmol GLSL into `proj.android/build/runtime/axslc`, and `build-apk.ps1` now
+  packages those files as `assets/axslc/**` (matching the Gradle build). If they
+  are missing, axmol compiles empty shaders and the app renders a **black
+  screen** with `The vertex attribute 'a_position' ... not exist` warnings in
+  logcat.
+- **M4 rendering status (on-device)**: terrain/ground/grid/labels render; the
+  sprite atlas pipeline (web `client/atlas-builder`) is not yet wired into the
+  native app, so obstacles/loot/player/particle sprites do not draw yet. See
+  `plan.md` §M4 for the full list of remaining polish.

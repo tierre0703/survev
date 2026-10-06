@@ -46,7 +46,26 @@ public:
     ax::ClippingNode* _clipper = nullptr;
     bool _maskInverted = false;
 
+    ~AxNodeImpl() override {
+        // Release the reference taken in ownNode(). axmol nodes are
+        // autoreleased by create(); wrappers that are never added to a parent
+        // (e.g. the layer mask, which is only used as a ClippingNode stencil)
+        // would otherwise be freed when the frame's pool drains.
+        if (_node) {
+            _node->release();
+        }
+    }
+
     ax::Node* axNode() const { return _node; }
+
+    // Take ownership of a create()'d axmol node (retain it for the wrapper's
+    // lifetime; released in the destructor).
+    void ownNode(ax::Node* node) {
+        _node = node;
+        if (_node) {
+            _node->retain();
+        }
+    }
 
     void setPosition(float x, float y) override { _node->setPosition(x, y); }
     void setScale(float x, float y) override { _node->setScale(x, y); }
@@ -70,11 +89,19 @@ public:
     int getSortIdx() const override { return _sortIdx; }
 
     void addChild(Node* child) override {
+        if (!child) {
+            return;
+        }
+        detachForReparent(child);
         _node->addChild(static_cast<ax::Node*>(child->native()));
         child->setParent(this);
         _children.push_back(child);
     }
     void addChildAt(Node* child, int index) override {
+        if (!child) {
+            return;
+        }
+        detachForReparent(child);
         _node->addChild(static_cast<ax::Node*>(child->native()));
         child->setParent(this);
         if (index < 0 || index > static_cast<int>(_children.size())) {
@@ -165,6 +192,26 @@ public:
     void* native() override { return _node; }
 
 protected:
+    // PIXI's Container.addChild removes the child from its current parent first
+    // (and re-appends when it is already a child). axmol's Node::addChild
+    // asserts instead, so without this an object moved between render layers
+    // (or re-added with a new zIdx) ends up with two parents / duplicate
+    // entries, corrupting the scene graph. Mirror the PIXI semantics here.
+    void detachForReparent(Node* child) {
+        Node* parent = child->getParent();
+        if (parent == this) {
+            _node->removeChild(static_cast<ax::Node*>(child->native()));
+            for (auto it = _children.begin(); it != _children.end(); ++it) {
+                if (*it == child) {
+                    _children.erase(it);
+                    break;
+                }
+            }
+        } else if (parent) {
+            parent->removeChild(child);
+        }
+    }
+
     // Assign a distinct localZOrder per child matching the pix child order, so
     // axmol's own z-sort reproduces the RenderGroup ordering.
     void reindex() {
@@ -177,8 +224,8 @@ protected:
 class AxGraphics : public AxNodeImpl<Graphics> {
 public:
     AxGraphics() {
-        _draw = ax::DrawNode::create();
-        _node = _draw;
+        ownNode(ax::DrawNode::create());
+        _draw = static_cast<ax::DrawNode*>(_node);
     }
 
     void clear() override {
@@ -194,7 +241,12 @@ public:
     }
     void endFill() override {
         if (_path.size() >= 3) {
-            _draw->drawSolidPoly(_path.data(), static_cast<unsigned int>(_path.size()), _fillColor);
+            // Force the convex-fan triangulation. drawSolidPoly defaults to
+            // isconvex=false, which makes axmol run poly2tri CDT; that crashes
+            // on degenerate/concave masks (the layer mask) and is overkill for
+            // the canvas-fallback fills this port emits.
+            _draw->drawSolidPoly(_path.data(), static_cast<unsigned int>(_path.size()), _fillColor,
+                                 0.0f, ax::Color4F(0, 0, 0, 0), true);
         }
         _path.clear();
         _fillActive = false;
@@ -253,7 +305,8 @@ public:
             pts.push_back(ax::Vec2(points[i].x, points[i].y));
         }
         if (_fillActive && count >= 3) {
-            _draw->drawSolidPoly(pts.data(), static_cast<unsigned int>(count), _fillColor);
+            _draw->drawSolidPoly(pts.data(), static_cast<unsigned int>(count), _fillColor, 0.0f,
+                                 ax::Color4F(0, 0, 0, 0), true);
         } else if (_hasLine) {
             _draw->drawPoly(pts.data(), static_cast<unsigned int>(count), true, _lineColor);
         }
@@ -274,12 +327,12 @@ private:
 class AxSprite : public AxNodeImpl<Sprite> {
 public:
     AxSprite() {
-        _sprite = ax::Sprite::create();
-        _node = _sprite;
+        ownNode(ax::Sprite::create());
+        _sprite = static_cast<ax::Sprite*>(_node);
     }
     explicit AxSprite(const std::string& frame) {
-        _sprite = ax::Sprite::create();
-        _node = _sprite;
+        ownNode(ax::Sprite::create());
+        _sprite = static_cast<ax::Sprite*>(_node);
         setFrame(frame);
     }
     void setFrame(const std::string& frameName) override {
@@ -303,8 +356,8 @@ private:
 class AxText : public AxNodeImpl<Text> {
 public:
     AxText() {
-        _label = ax::Label::createWithSystemFont("", "Arial", 24);
-        _node = _label;
+        ownNode(ax::Label::createWithSystemFont("", "Arial", 24));
+        _label = static_cast<ax::Label*>(_node);
     }
     void setText(const std::string& text) override { _label->setString(text); }
     void setFontSize(float size) override { _label->setSystemFontSize(size); }
@@ -324,7 +377,7 @@ private:
 
 class AxContainer : public AxNodeImpl<Container> {
 public:
-    AxContainer() { _node = ax::Node::create(); }
+    AxContainer() { ownNode(ax::Node::create()); }
 
     void sortChildren() override {
         std::stable_sort(_children.begin(), _children.end(), [](Node* a, Node* b) {
@@ -340,9 +393,16 @@ public:
 
 class AxRenderTexture : public RenderTexture {
 public:
-    explicit AxRenderTexture(int w, int h) { _rt = ax::RenderTexture::create(w, h); }
+    explicit AxRenderTexture(int w, int h) {
+        _rt = ax::RenderTexture::create(w, h);
+        if (_rt) {
+            _rt->retain();
+        }
+    }
     ~AxRenderTexture() override {
-        // ax::RenderTexture is ref-counted; nothing to do.
+        if (_rt) {
+            _rt->release();
+        }
     }
     void resize(float width, float height) override {
         _rt->setContentSize(ax::Size(width, height));

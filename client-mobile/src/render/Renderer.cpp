@@ -50,6 +50,12 @@ void Renderer::addPIXIObj(pix::Node* obj, int layer_, int zOrd, int zIdx_) {
     if (onStairs) {
         layerIdx = zOrd >= 100 ? 3 : 2;
     }
+    // layers[] has 4 entries; never index out of range on a bad server value.
+    if (layerIdx < 0) {
+        layerIdx = 0;
+    } else if (layerIdx > 3) {
+        layerIdx = 3;
+    }
 
     auto it = _objLayer.find(obj);
     const int prevLayer = it == _objLayer.end() ? -1 : it->second;
@@ -104,8 +110,13 @@ void Renderer::redrawLayerMask(Camera& camera, Map& map) {
     if (layerMaskDirty) {
         layerMaskDirty = false;
         layerMask->clear();
+        // axmol DrawNode has no polygon holes, so use the canvas fallback
+        // (same as the _canvasMode branch below): the full-map rect plus each
+        // structure mask as separate solid rects. Emitting this as one giant
+        // polygon (with no-op beginHole/endHole) both loses the holes and made
+        // axmol's poly2tri triangulation crash.
         layerMask->beginFill(0xffffff, 1.0f);
-        traceRect(layerMask, 0.0f, 0.0f, Constants::MaxPosition, Constants::MaxPosition);
+        layerMask->drawRect(0.0f, 0.0f, Constants::MaxPosition, Constants::MaxPosition);
         for (auto* structure : structures) {
             if (!structure->active) {
                 continue;
@@ -113,13 +124,8 @@ void Renderer::redrawLayerMask(Camera& camera, Map& map) {
             for (const auto& m : structure->mask) {
                 const Vec2 halfExtents = v2Mul(v2Sub(m.max, m.min), 0.5f);
                 const Vec2 center = v2Add(m.min, halfExtents);
-                const float x = center.x - halfExtents.x;
-                const float y = center.y - halfExtents.y;
-                const float w = halfExtents.x * 2.0f;
-                const float h = halfExtents.y * 2.0f;
-                layerMask->beginHole();
-                traceRect(layerMask, x, y, w, h);
-                layerMask->endHole();
+                layerMask->drawRect(center.x - halfExtents.x, center.y - halfExtents.y,
+                                    halfExtents.x * 2.0f, halfExtents.y * 2.0f);
             }
         }
         layerMask->endFill();

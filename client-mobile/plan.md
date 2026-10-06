@@ -391,6 +391,43 @@ Remaining for M4 polish: faithful `Graphics` polygon holes (currently the
 canvas fallback), full building floor/ceiling rendering + vision fade, full
 `particles.ts` emitters, and the complete `player.ts` pose/outfit rendering.
 
+**On-device verification (emulator) — critical fixes.** The axmol adapter had
+never been compiled/run, and the first on-device run exposed four bugs that are
+now fixed and verified:
+- **Scene-graph corruption / SIGSEGV.** `Renderer::addPIXIObj` re-adds objects
+  (e.g. bullets, whose `zIdx` changes) without reparenting, and axmol's
+  `Node::addChild` asserts (a no-op in release) when a child already has a
+  parent. Both adapters (`AxmolPixi.h`, `NullPixi.h`) now mirror PIXI's
+  `Container.addChild` (remove from the old parent / re-append). `layers[]` is
+  also bounds-clamped.
+- **Dangling native nodes / SIGSEGV.** Wrapper nodes created with `create()` are
+  autoreleased; nodes never added to a parent (notably the layer mask, used only
+  as a `ClippingNode` stencil) were freed when the frame pool drained. The
+  wrappers now retain their `ax::Node` (`ownNode()`/destructor).
+- **`drawSolidPoly` poly2tri crash.** axmol's `drawSolidPoly` defaults to
+  `isconvex=false`, which runs poly2tri CDT and crashed on the layer mask. The
+  adapter now requests the convex-fan path, and the layer mask is drawn as
+  separate `drawRect`s (the documented canvas fallback) instead of one polygon.
+- **Black screen: missing shader cache.** `ProgramManager` loads precompiled
+  shaders from `axslc/`. The Gradle-free `build-apk.ps1` never packaged
+  `proj.android/build/runtime/axslc`, so every shader was empty (all vertex
+  attributes "not exist") and nothing rendered. The APK now ships
+  `assets/axslc/**` (as `proj.android/app/build.gradle` does).
+- **`build-native.ps1`**: quote `-DANDROID_ABI` (it was passed literally on a
+  fresh build dir).
+
+With those fixes the app renders the terrain (water/beach/grass), ground
+patches, grid, joystick overlay and name labels on-device, and stays connected.
+
+**Key remaining blocker for sprite rendering: the atlas pipeline.** The web
+client builds virtual texture atlases from `public/img/**/*.svg` via
+`client/atlas-builder` (Vite plugin), and every `*.img` sprite name resolves to
+an atlas frame. The native app only stages the raw `.svg` files and never calls
+`SpriteFrameCache::addSpriteFramesWithFile`, so obstacles/loot/player/particles
+draw nothing. Next step: build the atlas (PNG + frame data) and load it in the
+app, then the player/obstacle/loot sprites will appear. `Player` now has an
+outfit body sprite (rotates to face aim) ready for that.
+
 ### Scaffolded, needs the axmol SDK (M0 → M5)
 - `src/app/AppDelegate.{h,cpp}` — axmol entry point (scene, landscape lock,
   lifecycle hooks).

@@ -51,10 +51,18 @@ public:
     int getSortIdx() const override { return sortIdx; }
 
     void addChild(Node* child) override {
+        if (!child) {
+            return;
+        }
+        detachForReparent(child);
         child->setParent(this);
         children.push_back(child);
     }
     void addChildAt(Node* child, int index) override {
+        if (!child) {
+            return;
+        }
+        detachForReparent(child);
         child->setParent(this);
         if (index < 0 || index > static_cast<int>(children.size())) {
             index = static_cast<int>(children.size());
@@ -113,6 +121,21 @@ public:
     bool maskInverted = false;
 
 protected:
+    // Mirror PIXI's Container.addChild reparenting (see AxmolPixi.h).
+    void detachForReparent(Node* child) {
+        Node* parent = child->getParent();
+        if (parent == this) {
+            for (auto it = children.begin(); it != children.end(); ++it) {
+                if (*it == child) {
+                    children.erase(it);
+                    break;
+                }
+            }
+        } else if (parent) {
+            parent->removeChild(child);
+        }
+    }
+
     void reindex() {
         for (size_t i = 0; i < children.size(); i++) {
             children[i]->setLocalZOrder(static_cast<int>(i));

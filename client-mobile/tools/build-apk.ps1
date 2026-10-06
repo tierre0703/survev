@@ -146,9 +146,22 @@ foreach ($abi in $Abis) {
     Add-Entry $cxx "lib/$abi/libc++_shared.so" ([System.IO.Compression.CompressionLevel]::NoCompression)
 }
 $contentRoot = Join-Path $root 'Content'
-Get-ChildItem $contentRoot -Recurse -File | ForEach-Object {
+Get-ChildItem $contentRoot -Recurse -File | Where-Object { $_.Extension -ne '.gz' } | ForEach-Object {
     $rel = $_.FullName.Substring($contentRoot.Length + 1).Replace('\', '/')
     Add-Entry $_.FullName "assets/$rel" ([System.IO.Compression.CompressionLevel]::Optimal)
+}
+
+# Precompiled shaders. The engine build (axslcc) writes them to
+# proj.android/build/runtime/axslc; the Gradle build copies them to
+# assets/axslc (see proj.android/app/build.gradle). Without them axmol compiles
+# empty shaders, every vertex attribute is "not exist", and the screen is black.
+$axslcDir = Join-Path $root 'proj.android\build\runtime\axslc'
+if (-not (Test-Path $axslcDir)) {
+    throw "Missing axslc shader cache: $axslcDir (build the native lib first)"
+}
+Get-ChildItem $axslcDir -Recurse -File | ForEach-Object {
+    $rel = $_.FullName.Substring($axslcDir.Length + 1).Replace('\', '/')
+    Add-Entry $_.FullName "assets/axslc/$rel" ([System.IO.Compression.CompressionLevel]::Optimal)
 }
 $zip.Dispose()
 Write-Host ("   unsigned.apk: {0:N1} MB" -f ((Get-Item $unsigned).Length / 1MB))

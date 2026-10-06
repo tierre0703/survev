@@ -36,7 +36,7 @@ foreach ($abi in $Abis) {
     Write-Host "== configure $abi -> $b =="
     & $env:SURV_CMAKE -S . -B $b -G Ninja `
         -DCMAKE_TOOLCHAIN_FILE="$ndk/build/cmake/android.toolchain.cmake" `
-        -DANDROID_ABI=$abi -DANDROID_PLATFORM=android-24 -DANDROID_STL=c++_shared `
+        "-DANDROID_ABI=$abi" -DANDROID_PLATFORM=android-24 -DANDROID_STL=c++_shared `
         -DANDROID_TOOLCHAIN=clang -DANDROID_ARM_NEON=TRUE `
         -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON -DANDROID_USE_LEGACY_TOOLCHAIN_FILE=false `
         -DCMAKE_MAKE_PROGRAM="$env:SURV_NINJA" -DCMAKE_BUILD_TYPE=Release `

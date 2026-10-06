@@ -604,6 +604,16 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
     animType = data.animType;
 
     ensureSprite(ctx, container, bodySprite);
+    // Outfit body sprite (player.ts bodySprite). The full skeletal pose/anim
+    // port is still pending; this renders the outfit at the web client's 0.25
+    // body scale so players are visible and rotate to face their aim.
+    const GameObjRenderDef* outfitDef = gameDefFor(outfit);
+    if (outfitDef && outfitDef->hasImg && !outfitDef->img.sprite.empty()) {
+        bodySprite->setFrame(outfitDef->img.sprite);
+        bodySprite->setTint(outfitDef->img.tint);
+        bodySprite->setAlpha(outfitDef->img.alpha);
+        bodySprite->setScale(0.25f, 0.25f);
+    }
     if (!nameText) {
         nameText = ctx.factory()->createText();
         nameText->setAnchor(0.5f, -1.0f);
@@ -624,7 +634,10 @@ void PlayerBarn::update(float dt, GameWorld& ctx) {
         const float s = ctx.camera().m_pixels(1.0f);
         p->container->setPosition(screenPos.x, screenPos.y);
         p->container->setScale(s, s);
-        p->container->setRotation(std::atan2(p->dir.y, p->dir.x) - 3.14159265358979f * 0.5f);
+        // Rotate the body to face the aim, leaving the name label upright.
+        if (p->bodySprite) {
+            p->bodySprite->setRotation(std::atan2(p->dir.y, p->dir.x) - 3.14159265358979f * 0.5f);
+        }
         p->container->setVisible(!p->dead);
         if (p->nameText) {
             auto it = names.find(p->__id);
