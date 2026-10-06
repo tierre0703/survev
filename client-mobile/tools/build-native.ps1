@@ -7,7 +7,13 @@
 param(
     [string[]]$Abis = @('armeabi-v7a', 'arm64-v8a')
 )
-$ErrorActionPreference = 'Stop'
+# CMake/Ninja write warnings to stderr, which PowerShell turns into a
+# terminating error under 'Stop'. Every invocation is checked via
+# $LASTEXITCODE below, so keep the preference at Continue and fail explicitly.
+$ErrorActionPreference = 'Continue'
+if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue) {
+    $PSNativeCommandUseErrorActionPreference = $false
+}
 $Abis = @($Abis | ForEach-Object { $_ -split ',' } | Where-Object { $_ -ne '' })
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
