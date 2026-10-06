@@ -1,0 +1,36 @@
+# Host-only test build for the ported protocol core (src/core + src/net).
+# Independent of the axmol app build (see ../CMakeLists.txt).
+#
+#   cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
+#   cmake --build build-tests --config Release
+#   build-tests/Release/surv_tests.exe
+cmake_minimum_required(VERSION 3.20)
+project(surv_tests LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
+
+set(SURV_SRC ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+
+add_executable(surv_tests
+    test_main.cpp
+    test_bitbuffer.cpp
+    test_messages.cpp
+    ${SURV_SRC}/net/Net.cpp
+)
+target_include_directories(surv_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${SURV_SRC}
+)
+if(MSVC)
+    target_compile_options(surv_tests PRIVATE /W4)
+else()
+    target_compile_options(surv_tests PRIVATE -Wall -Wextra)
+endif()
+
+enable_testing()
+add_test(NAME surv_tests COMMAND surv_tests)

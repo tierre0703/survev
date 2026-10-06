@@ -142,6 +142,9 @@ inline const DefinitionRegistry& MapObjectDefs() {
     return reg;
 }
 
+// Defined in Net.cpp. Builds the registry tables eagerly at startup.
+void initDefinitionRegistries();
+
 //
 // BitStream with the shared/net/net.ts extensions.
 //

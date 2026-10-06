@@ -1,60 +1,67 @@
-cmake_minimum_required(VERSION 3.20)
-project(survev_mobile LANGUAGES CXX)
+# /****************************************************************************
+# Survev mobile (axmol) - converted from the web client.
+# Based on the axmol cpp project template.
+# ****************************************************************************/
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+cmake_minimum_required(VERSION 3.22...4.1)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug)
+set(APP_NAME SurvevMobile)
+
+project(${APP_NAME})
+
+if(XCODE)
+  set(CMAKE_XCODE_GENERATE_TOP_LEVEL_PROJECT_ONLY TRUE)
 endif()
 
-# ---------------------------------------------------------------
-# surv_core: platform-independent port of shared/ (BitBuffer, math,
-# defs registry, net messages). Compiles and tests on the host.
-# ---------------------------------------------------------------
-add_library(surv_core STATIC
-    src/net/Net.cpp
-    src/core/BitBuffer.h
-    src/core/Collider.h
-    src/core/GameConfig.h
-    src/core/MathUtil.h
-    src/core/Vec2.h
-    src/net/Net.h
-    src/net/ObjectSerializeFns.h
-    src/net/Messages.h
-    src/net/generatedDefs.inc
+set(_is_axmol_embed FALSE)
+set(_AX_USE_PREBUILT FALSE)
+
+set(CMAKE_MODULE_PATH
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules
 )
-target_include_directories(surv_core PUBLIC src)
-if(MSVC)
-    target_compile_options(surv_core PRIVATE /W4)
-else()
-    target_compile_options(surv_core PRIVATE -Wall -Wextra)
-endif()
 
-# ---------------------------------------------------------------
-# surv_tests: host-run protocol compatibility tests.
-# ---------------------------------------------------------------
-add_executable(surv_tests
-    tests/test_main.cpp
-    tests/test_bitbuffer.cpp
-    tests/test_messages.cpp
+# NOTE: The order of the cmake module "include(AXGame...)" statements matters
+include(AXGameEngineOptions)
+include(AXGameEngineSetup)
+
+# Ported game code (formerly client/src + the shared/ port) lives under src/.
+file(GLOB_RECURSE GAME_HEADER
+  src/*.h src/*.hpp
 )
-target_include_directories(surv_tests PRIVATE tests)
-target_link_libraries(surv_tests PRIVATE surv_core)
-if(MSVC)
-    target_compile_options(surv_tests PRIVATE /W4)
-else()
-    target_compile_options(surv_tests PRIVATE -Wall -Wextra)
+
+file(GLOB_RECURSE GAME_SOURCE
+  src/*.cpp src/*.c
+)
+
+# src/app holds AppDelegate.h, which the platform jni/win32 main.cpp includes.
+set(GAME_INC_DIRS
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/app"
+)
+
+set(content_folder
+  "${CMAKE_CURRENT_SOURCE_DIR}/Content"
+)
+
+if(APPLE)
+  ax_mark_multi_resources(common_content_files RES_TO "Resources" FOLDERS ${content_folder})
+elseif(WINDOWS)
+  ax_mark_multi_resources(common_content_files RES_TO "Content" FOLDERS ${content_folder})
 endif()
 
-enable_testing()
-add_test(NAME surv_tests COMMAND surv_tests)
+include(AXGameSourceSetup)
 
-# ---------------------------------------------------------------
-# surv_app: axmol-dependent app (game loop, renderer, UI). Built
-# only when SURV_BUILD_APP=ON (requires the axmol SDK).
-# ---------------------------------------------------------------
-option(SURV_BUILD_APP "Build the axmol app (requires axmol SDK)" OFF)
-if(SURV_BUILD_APP)
-    add_subdirectory(app)
-endif()
+set(APP_SOURCES
+  ${GAME_HEADER}
+  ${GAME_SOURCE}
+)
+
+include(AXGameTargetSetup)
+
+ax_setup_app_config(${APP_NAME})
+
+# Default Platform-specific setup
+include(AXGamePlatformSetup)
+
+# Make sure the AXGameFinalSetup is included at the end of this file
+include(AXGameFinalSetup)

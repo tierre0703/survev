@@ -1,0 +1,5 @@
+engine_version=2.11.5
+project_type=cpp
+package_name=com.survev.mobile
+
+ndk=r27b

@@ -1,37 +1,48 @@
 #include "AppDelegate.h"
-#include "../game/Game.h"
-#include "../net/Net.h"
 #include "GameScene.h"
+#include "../net/Net.h"
 
-USING_NS_AX;
+using namespace ax;
 
-namespace surv {
+static ax::Size designResolutionSize = ax::Size(1280, 720);
 
-void AppDelegate::initGLContextAttrs() {
-    // OpenGL context attributes: red, green, blue, alpha, depth, stencil, msaa
-    GLContextAttrs glContextAttrs = {8, 8, 8, 8, 24, 8, 0};
-    glContextAttrs.vsync = true;
-    GLView::setGLContextAttrs(glContextAttrs);
+AppDelegate::AppDelegate() {}
+
+AppDelegate::~AppDelegate() {}
+
+void AppDelegate::initGfxContextAttrs() {
+    // red, green, blue, alpha, depth, stencil, multisamplesCount
+    GfxContextAttrs gfxContextAttrs = {8, 8, 8, 8, 24, 8, 0};
+    RenderView::setGfxContextAttrs(gfxContextAttrs);
 }
 
 bool AppDelegate::applicationDidFinishLaunching() {
-    // Surface data errors at startup rather than mid-game.
-    initDefinitionRegistries();
+    // Surface definition-registry data errors at startup rather than mid-game.
+    surv::initDefinitionRegistries();
 
     auto director = Director::getInstance();
-    auto glview = director->getGLView();
-    if (!glview) {
-        glview = GLViewImpl::create("Survev Mobile");
-        director->setGLView(glview);
+    auto renderView = director->getRenderView();
+    if (!renderView) {
+#if (AX_TARGET_PLATFORM != AX_PLATFORM_ANDROID) && (AX_TARGET_PLATFORM != AX_PLATFORM_IOS)
+        renderView = RenderViewImpl::createWithRect(
+            "SurvevMobile",
+            ax::Rect(0, 0, designResolutionSize.width, designResolutionSize.height));
+#else
+        renderView = RenderViewImpl::create("SurvevMobile");
+#endif
+        director->setRenderView(renderView);
     }
 
-    // Lock to landscape like the web client's mobile layout.
-    glview->setDesignResolutionSize(1280, 720, ResolutionPolicy::NO_BORDER);
+    director->setStatsDisplay(false);
+    director->setAnimationInterval(1.0f / 60);
 
-    director->setDisplayStats(false);
-    director->setAnimationInterval(1.0f / 60.0f);
+    // Lock the mobile layout to landscape (like the web client's mobile CSS).
+    renderView->setDesignResolutionSize(
+        designResolutionSize.width,
+        designResolutionSize.height,
+        ResolutionPolicy::NO_BORDER);
 
-    auto scene = GameScene::createScene();
+    auto scene = surv::GameScene::createScene();
     director->runWithScene(scene);
     return true;
 }
@@ -39,22 +50,11 @@ bool AppDelegate::applicationDidFinishLaunching() {
 void AppDelegate::applicationDidEnterBackground() {
     Director::getInstance()->stopAnimation();
     // TODO(M6): pause game ticker + graceful WebSocket close (plan.md 5.8).
-    // Game::getInstance()->onAppBackground();
 }
 
 void AppDelegate::applicationWillEnterForeground() {
     Director::getInstance()->startAnimation();
     // TODO(M6): resume ticker; re-sync via server snapshot.
-    // Game::getInstance()->onAppForeground();
 }
 
-void AppDelegate::applicationScreenSizeChanged(int newWidth, int newHeight) {
-    auto director = Director::getInstance();
-    auto glview = director->getGLView();
-    if (glview && !glview->getFrameSize().equals(Size(newWidth, newHeight))) {
-        glview->setFrameSize(newWidth, newHeight);
-        // TODO: propagate to device.onResize() equivalent (plan.md 5.8).
-    }
-}
-
-} // namespace surv
+void AppDelegate::applicationWillQuit() {}

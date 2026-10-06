@@ -1,16 +1,16 @@
 #pragma once
+// axmol application entry point (global namespace, matching the platform
+// jni/win32 main.cpp glue). Game code lives in namespace surv.
 #include "axmol.h"
 
-namespace surv {
-
-// axmol app entry point. Mirrors the axmol template AppDelegate.
-class AppDelegate : public ax::Application {
+class AppDelegate : private ax::Application {
 public:
+    AppDelegate();
+    ~AppDelegate() override;
+
+    void initGfxContextAttrs() override;
     bool applicationDidFinishLaunching() override;
     void applicationDidEnterBackground() override;
     void applicationWillEnterForeground() override;
-    void applicationScreenSizeChanged(int newWidth, int newHeight) override;
-    void initGLContextAttrs() override;
+    void applicationWillQuit() override;
 };
-
-} // namespace surv

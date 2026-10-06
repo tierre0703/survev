@@ -5,24 +5,17 @@ USING_NS_AX;
 
 namespace surv {
 
-namespace {
-const char* kPadTexture = "img/gui/pad.img";
-const char* kDotTexture = "img/gui/dot.img";
-}
-
 // ---------------------------------------------------------------------------
-// TouchPadGfx
+// TouchPadGfx (vector-drawn joystick pads; no external texture required)
 // ---------------------------------------------------------------------------
 TouchPadGfx::TouchPadGfx(ax::Node* parent) {
-    _center = ax::Sprite::create(kPadTexture);
-    _center->setAnchorPoint(Vec2(0.5f, 0.5f));
-    _center->setOpacity(50); // alpha ~0.2
+    _center = ax::DrawNode::create();
+    _center->drawDot(ax::Vec2(0, 0), 24.0f, ax::Color4F(1.0f, 1.0f, 1.0f, 0.20f));
     _center->setVisible(false);
     parent->addChild(_center, 1000);
 
-    _touch = ax::Sprite::create(kPadTexture);
-    _touch->setAnchorPoint(Vec2(0.5f, 0.5f));
-    _touch->setColor(Color3B(255, 255, 255));
+    _touch = ax::DrawNode::create();
+    _touch->drawDot(ax::Vec2(0, 0), 12.0f, ax::Color4F(1.0f, 1.0f, 1.0f, 0.90f));
     _touch->setVisible(false);
     parent->addChild(_touch, 1001);
 }
@@ -33,11 +26,11 @@ void TouchPadGfx::setVisible(bool visible) {
 }
 
 void TouchPadGfx::setCenterPos(float x, float y) {
-    _center->setPosition(Vec2(x, y));
+    _center->setPosition(ax::Vec2(x, y));
 }
 
 void TouchPadGfx::setTouchPos(float x, float y) {
-    _touch->setPosition(Vec2(x, y));
+    _touch->setPosition(ax::Vec2(x, y));
 }
 
 void TouchPadGfx::setCenterScale(float s) {
@@ -53,13 +46,13 @@ void TouchPadGfx::update() {}
 // ---------------------------------------------------------------------------
 // GameScene
 // ---------------------------------------------------------------------------
-ax::Scene* GameScene::createScene() {
+GameScene* GameScene::createScene() {
     auto scene = new GameScene();
     if (scene && scene->init()) {
         scene->autorelease();
         return scene;
     }
-    delete scene;
+    AX_SAFE_DELETE(scene);
     return nullptr;
 }
 
@@ -68,19 +61,35 @@ bool GameScene::init() {
         return false;
     }
 
-    const Size visible = Director::getInstance()->getVisibleSize();
+    const ax::Size visible = ax::Director::getInstance()->getVisibleSize();
     const bool isLandscape = visible.width >= visible.height;
 
     _gameRoot = ax::Node::create();
     this->addChild(_gameRoot);
 
-    // Touch input (dual joystick). In axmol, touch events are delivered via
-    // EventListenerTouchOneByOne; wire them here (TODO M5):
-    //   auto listener = EventListenerTouchOneByOne::create();
-    //   listener->onTouchBegan = [this](Touch* t, Event*) {
-    //       onTouchBegan(t->getLocation().x, t->getLocation().y, 0); return true; };
-    //   listener->onTouchMoved = ...; listener->onTouchEnded = ...;
-    //   _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
+    // Dual-joystick touch input (multi-touch).
+    auto listener = ax::EventListenerTouchAllAtOnce::create();
+    listener->onTouchesBegan = [this](const std::vector<ax::Touch*>& touches, ax::Event*) {
+        for (auto* t : touches) {
+            onTouchBegan(t->getLocation().x, t->getLocation().y, t->getID() & 3);
+        }
+    };
+    listener->onTouchesMoved = [this](const std::vector<ax::Touch*>& touches, ax::Event*) {
+        for (auto* t : touches) {
+            onTouchMoved(t->getLocation().x, t->getLocation().y, t->getID() & 3);
+        }
+    };
+    listener->onTouchesEnded = [this](const std::vector<ax::Touch*>& touches, ax::Event*) {
+        for (auto* t : touches) {
+            onTouchEnded(t->getID() & 3);
+        }
+    };
+    listener->onTouchesCancelled = [this](const std::vector<ax::Touch*>& touches, ax::Event*) {
+        for (auto* t : touches) {
+            onTouchEnded(t->getID() & 3);
+        }
+    };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
     _touch = std::make_unique<Touch>(visible.width, visible.height, isLandscape);
     _movePad = std::make_unique<TouchPadGfx>(this);
@@ -89,13 +98,15 @@ bool GameScene::init() {
     _game = std::make_unique<Game>();
     _game->init(this);
 
+    // Drive update() every frame.
+    this->scheduleUpdate();
+
     return true;
 }
 
 void GameScene::update(float delta) {
     _game->update(delta);
     if (_game->getActivePlayerId() != 0) {
-        // Feed current joystick state into the input message (see Game::update).
         const Touch::Movement move = _touch->getMovement(getContentSize().width);
         (void)move;
     }
