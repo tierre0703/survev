@@ -184,6 +184,24 @@ void GameScene::resumeGame() {
 
 void GameScene::update(float delta) {
     _game->update(delta);
+
+    // Low-noise lifecycle logging (once per transition) for the M3 net gate.
+    const bool connected = _game->isConnected();
+    if (connected != _wasConnected) {
+        _wasConnected = connected;
+        if (connected) {
+            AXLOGI("Connected to game server");
+        } else {
+            AXLOGI("Disconnected: code={} reason={}", _game->getCloseCode(), _game->getCloseReason());
+        }
+    }
+    if (_game->isPlaying() != _wasPlaying) {
+        _wasPlaying = _game->isPlaying();
+        if (_wasPlaying) {
+            AXLOGI("Receiving game updates: activePlayerId={}", _game->getActivePlayerId());
+        }
+    }
+
     if (_game->getActivePlayerId() != 0) {
         const Touch::Movement move = _touch->getMovement(getContentSize().width);
         (void)move;

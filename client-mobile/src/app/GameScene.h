@@ -63,6 +63,8 @@ private:
     std::unique_ptr<TouchPadGfx> _movePad;
     std::unique_ptr<TouchPadGfx> _aimPad;
     std::shared_ptr<std::atomic<bool>> _alive;
+    bool _wasConnected = false;
+    bool _wasPlaying = false;
 };
 
 } // namespace surv

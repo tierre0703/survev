@@ -307,13 +307,25 @@ scaffolded and require the axmol SDK (M0) to compile.
 **Verifying the M3 gate against a dev server** (`pnpm dev:server` starts the API
 on `:8000` and a game process on `:9000`):
 1. Build+install the APK (see `BUILDING.md`).
-2. For an emulator, use host loopback `10.0.2.2`; for a device, the dev
-   machine's LAN IP. Either set `DevConfig.h` before building, or write the
-   UserDefault keys above (e.g. `surv_joinUrl=ws://10.0.2.2:9000/play` with a
-   token from `POST /api/find_game_v2`, or `surv_apiUrl=http://10.0.2.2:8000`
-   to discover one).
-3. `adb logcat` shows the join + update stream; `Game::snapshotText()` can be
+2. Point the client at the server. The server advertises its region address
+   (`127.0.0.1:9000/play` in dev), so the simplest emulator path is
+   `adb reverse` (no server-config change):
+   ```sh
+   adb reverse tcp:8000 tcp:8000
+   adb reverse tcp:9000 tcp:9000
+   ```
+   then set `DevConfig.h` `kApiBaseUrl = "http://127.0.0.1:8000"` (or the
+   `surv_apiUrl` UserDefault) and rebuild. The client then calls
+   `/api/find_game_v2` and joins the returned URL, which `adb reverse` maps back
+   to the host. For a physical device on the same LAN, set the server region
+   `address` to the machine's LAN IP (or use `surv_joinUrl` with a direct token)
+   instead. Join tokens are single-use and expire after 10s, so prefer the
+   `find_game` discovery path.
+3. `adb logcat` shows the join + update stream (`Connected to game server`,
+   `Receiving game updates: activePlayerId=...`); `Game::snapshotText()` can be
    logged per tick and diffed against the web client's state on the same replay.
+   Verified on an emulator (API `127.0.0.1:8000` → game `127.0.0.1:9000`, stable
+   update stream).
 
 ### Scaffolded, needs the axmol SDK (M0 → M5)
 - `src/app/AppDelegate.{h,cpp}` — axmol entry point (scene, landscape lock,

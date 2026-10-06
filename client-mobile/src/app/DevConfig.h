@@ -16,7 +16,10 @@ namespace dev {
 
 inline constexpr const char* kJoinUrl = "";      // direct ws:// join URL
 inline constexpr const char* kJoinToken = "";    // join token for kJoinUrl
-inline constexpr const char* kApiBaseUrl = "";   // e.g. "http://10.0.2.2:8000"
+// M3 dev gate: with `adb reverse tcp:8000 tcp:8000` (and tcp:9000) the emulator
+// reaches the host dev server on 127.0.0.1, so find_game's advertised
+// ws://127.0.0.1:9000/play works without changing the server region config.
+inline constexpr const char* kApiBaseUrl = "http://127.0.0.1:8000";
 inline constexpr const char* kRegion = "local";  // find_game region
 inline constexpr int kGameModeIdx = 0;           // index into server modes
 
