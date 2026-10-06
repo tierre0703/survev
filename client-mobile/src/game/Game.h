@@ -89,6 +89,13 @@ public:
     // Message sink for the connection pump -> dispatch (main thread).
     void onServerMessage(uint8_t type, NetBitStream& s);
 
+    // M4 render hooks: invoked on the main thread as map/update messages are
+    // dispatched, so the render layer can build terrain and apply object deltas.
+    using MapCallback = std::function<void(const MapMsg&)>;
+    using UpdateCallback = std::function<void(const UpdateMsg&)>;
+    void setMapCallback(MapCallback cb) { _mapCallback = std::move(cb); }
+    void setUpdateCallback(UpdateCallback cb) { _updateCallback = std::move(cb); }
+
     // Headless state snapshot for replay verification.
     GameStateSnapshot snapshot() const;
     // Deterministic text form of snapshot(), suitable for diffing a native
@@ -150,6 +157,9 @@ private:
     // MapMsg for M4 terrain; kept here so the headless client can report it.
     MapMsg _map;
     bool _hasMap = false;
+
+    MapCallback _mapCallback;
+    UpdateCallback _updateCallback;
 };
 
 } // namespace surv

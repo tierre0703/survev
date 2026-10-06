@@ -22,8 +22,17 @@ add_executable(surv_tests
     test_messages.cpp
     test_game.cpp
     test_touch_input.cpp
+    test_render.cpp
     ${SURV_SRC}/net/Net.cpp
     ${SURV_SRC}/game/Game.cpp
+    ${SURV_SRC}/render/Terrain.cpp
+    ${SURV_SRC}/render/Renderer.cpp
+    ${SURV_SRC}/render/Defs.cpp
+    ${SURV_SRC}/render/GeneratedDefs.cpp
+    ${SURV_SRC}/game/Map.cpp
+    ${SURV_SRC}/game/GameWorld.cpp
+    ${SURV_SRC}/game/objects/Structure.cpp
+    ${SURV_SRC}/game/objects/Barns.cpp
 )
 target_include_directories(surv_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

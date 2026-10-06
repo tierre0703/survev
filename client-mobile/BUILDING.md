@@ -59,7 +59,7 @@ adb shell am start -n com.survev.mobile/dev.axmol.app.AppActivity
 . .\tools\android-env.ps1
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
-.\build-tests\Release\surv_tests.exe     # 22 tests, bit-exact vs the TypeScript code
+.\build-tests\Release\surv_tests.exe     # 40 tests, bit-exact vs the TypeScript code
 ```
 
 ## Emulator (x86_64)

@@ -8,7 +8,16 @@
 #include <atomic>
 #include <memory>
 
+namespace ax {
+class Node;
+}
+namespace pix {
+class Factory;
+}
+
 namespace surv {
+
+class GameWorld;
 
 // axmol PadGraphics implementation (draws the joystick circles).
 class TouchPadGfx : public PadGraphics {
@@ -62,6 +71,8 @@ private:
 
     ax::Node* _gameRoot = nullptr;
     std::unique_ptr<Game> _game;
+    std::unique_ptr<pix::Factory> _pixiFactory;
+    std::unique_ptr<GameWorld> _world;
     std::unique_ptr<Touch> _touch;
     std::unique_ptr<TouchPadGfx> _movePad;
     std::unique_ptr<TouchPadGfx> _aimPad;

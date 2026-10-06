@@ -271,6 +271,9 @@ void Game::handleUpdate(NetBitStream& s) {
     _activePlayer = m.activePlayerData;
     _lastUpdate = std::move(m);
     _hasUpdate = true;
+    if (_updateCallback) {
+        _updateCallback(_lastUpdate);
+    }
     // TODO(M4+): interpolate objects with _lastUpdate.
 }
 
@@ -301,6 +304,9 @@ void Game::handleMap(NetBitStream& s) {
     m.deserialize(s);
     _map = std::move(m);
     _hasMap = true;
+    if (_mapCallback) {
+        _mapCallback(_map);
+    }
     // TODO(M4): construct map / terrain from _map (seed + rivers + objects).
 }
 

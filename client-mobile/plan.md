@@ -344,6 +344,53 @@ on `:8000` and a game process on `:9000`):
    Verified on an emulator (API `127.0.0.1:8000` → game `127.0.0.1:9000`, stable
    update stream).
 
+### M4 rendering port (implemented, host-verified; axmol adapter needs M0)
+- `src/render/PixiLike.h` — expanded PIXI→axmol adapter surface (`Node`,
+  `Graphics`, `Sprite`, `Text`, `Container`, `RenderTexture`, `Renderer`,
+  `Factory`), including `setMask`/ClippingNode semantics.
+- `src/render/AxmolPixi.h` — the axmol implementation: `DrawNode` (immediate
+  vector fills/lines/circles), `Sprite` + `SpriteFrameCache`, `Label`,
+  `Node` z-order (RenderGroup sort key → `localZOrder`), `ClippingNode` for
+  masks, `RenderTexture` for the minimap.
+- `src/render/NullPixi.h` — headless recording adapter used by the host tests
+  (draw-command capture + z-sort bookkeeping).
+- `src/render/Camera.h` — exact port of `camera.ts` (point/screen transforms,
+  zoom/ppu, shake).
+- `src/render/Terrain.{h,cpp}` — exact ports of `spline.ts`, `river.ts`,
+  `terrainGen.ts` (Catmull-Rom spline, river polygons, jagged shore/grass),
+  verified against TS fixtures (`terrain`, `spline`).
+- `src/render/Renderer.{h,cpp}` — port of `renderer.ts`: 4 z-sorted layers,
+  the `layer & 2` stairs remap, layer/ground alpha fades, structure layer mask,
+  and `addPIXIObj` `__zOrd`/`__zIdx` early-out.
+- `src/game/Map.{h,cpp}` — port of `map.ts`: terrain from `MapMsg`
+  (seed + rivers + objects + ground patches), ground render (water/beach/grass,
+  riverbank/water, grid, order-0/1 patches; hole-less canvas fallback), minimap
+  transform, and the obstacle/building/structure pools + queries.
+- `src/game/objects/GameObject.h` — port of `objectPool.ts` (`AbstractObject`,
+  pooled `Pool<T>`, `ObjectCreator` full/part/delete routing).
+- `src/game/objects/Structure.{h,cpp}` — structure layers/stairs/mask
+  transforms (uses `mapHelpers.getBoundingCollider` output).
+- `src/game/objects/Barns.{h,cpp}` — ported barns/visuals for obstacle,
+  building (collision/ceiling subset), loot, dead body, projectile, smoke
+  (+ `SmokeParticle`), bullet (trail visual), explosion, player (render
+  subset) and a particle-emitter stub.
+- `src/game/GameWorld.{h,cpp}` — the in-game render context (`Ctx`): owns the
+  camera/renderer/map/barns, registers the type→pool map, applies `UpdateMsg`
+  object deltas, spawns bullets/explosions, and drives per-frame updates.
+- `src/render/Defs.{h,cpp}` + `tools/codegen_render_defs.mjs` →
+  `src/render/GeneratedDefs.cpp` — codegen'd `DefProvider` (biome colors,
+  map-object images/colliders, structure layers/stairs/mask, loot images).
+- `src/app/GameScene.cpp` — builds the `AxPixiFactory`/`GameWorld`, attaches
+  the ground + layers, installs the generated defs, wires the `Game` map/update
+  callbacks, and follows the active player with the camera.
+- Tests (`tests/test_render.cpp`): camera transform, terrain + spline vs TS
+  fixtures, pool reuse, structure mask transform, renderer z-sort/stairs
+  remap/layer fade, and the generated defs provider. All 40 `surv_tests` pass.
+
+Remaining for M4 polish: faithful `Graphics` polygon holes (currently the
+canvas fallback), full building floor/ceiling rendering + vision fade, full
+`particles.ts` emitters, and the complete `player.ts` pose/outfit rendering.
+
 ### Scaffolded, needs the axmol SDK (M0 → M5)
 - `src/app/AppDelegate.{h,cpp}` — axmol entry point (scene, landscape lock,
   lifecycle hooks).
@@ -399,7 +446,9 @@ client-mobile/build-tests/Release/surv_tests.exe
 1. **M3**: net flow is implemented and host-verified (see above); remaining is
    on-device replay verification against a dev server, plus URL fallback when a
    join URL in `find_game`'s list fails.
-2. **M4**: rendering port against `PixiLike.h` (map, barns, renderer z-sort).
+2. **M4**: rendering port is implemented and host-verified against the adapter
+   (map/terrain, renderer z-sort, barns, codegen'd defs); remaining is on-device
+   visual verification (and the M4 polish list above).
 3. **M5**: input → `InputMsg` is implemented and host-tested (`TouchInput.h` +
    `GameScene::updateInput`); remaining is on-device verification of
    move/aim/fire once M4 rendering lands.

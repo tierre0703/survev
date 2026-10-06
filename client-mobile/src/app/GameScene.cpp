@@ -3,6 +3,11 @@
 #include "../net/Api.h"
 #include "../net/Messages.h"
 #include "../net/WebSocketConnection.h"
+#include "../game/GameWorld.h"
+#include "../game/Map.h"
+#include "../game/objects/Barns.h"
+#include "../render/AxmolPixi.h"
+#include "../render/GeneratedDefs.h"
 
 USING_NS_AX;
 
@@ -103,6 +108,18 @@ bool GameScene::init() {
     _game = std::make_unique<Game>();
     _game->init(this, createWebSocketConnection);
 
+    // M4: render world (terrain + z-sorted object layers) driven by the map /
+    // update messages the game dispatches.
+    installGeneratedDefs();
+    _pixiFactory = std::make_unique<pix::AxPixiFactory>();
+    _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
+    pix::Container* worldRoot = _pixiFactory->createContainer();
+    _world->attachTo(worldRoot);
+    _gameRoot->addChild(static_cast<ax::Node*>(worldRoot->native()));
+    _world->setScreenSize(visible.width, visible.height);
+    _game->setMapCallback([this](const MapMsg& msg) { _world->loadMap(msg); });
+    _game->setUpdateCallback([this](const UpdateMsg& msg) { _world->applyUpdate(msg); });
+
     // M3: with no menu UI yet, auto-connect if a join target is configured.
     maybeAutoConnect();
 
@@ -184,6 +201,14 @@ void GameScene::resumeGame() {
 
 void GameScene::update(float delta) {
     _game->update(delta);
+
+    if (_world) {
+        _world->update(delta);
+        if (Player* active = _world->activePlayer()) {
+            // Camera follows the active player (M5 adds the smoothing/shake).
+            _world->camera().m_pos = active->pos;
+        }
+    }
 
     // Low-noise lifecycle logging (once per transition) for the M3 net gate.
     const bool connected = _game->isConnected();

@@ -140,6 +140,18 @@ struct PlayerConfig {
     static constexpr float throwableMaxMouseDist = 18.0f;
 };
 
+// Port of GameConfig.map (terrain generation + grid).
+struct MapConfig {
+    static constexpr float gridSize = 16.0f;
+    static constexpr float shoreVariation = 3.0f;
+    static constexpr float grassVariation = 2.0f;
+};
+
+// Port of GameConfig.projectile used by the projectile object barn.
+struct ProjectileConfig {
+    static constexpr float maxHeight = 256.0f;
+};
+
 // Server net-sync/input rate (server/src/.../config.ts netSyncTps). The client
 // sends InputMsg at this cadence instead of once per rendered frame.
 inline constexpr float kNetSyncTps = 33.0f;

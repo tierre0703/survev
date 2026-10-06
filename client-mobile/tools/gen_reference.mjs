@@ -414,6 +414,62 @@ const fixtures = [];
     fixtures.push(["msgstream-join", hexOf(stream.stream)]);
 }
 
+// ---- 16. Terrain generation + spline (M4 renderer) ----
+{
+    const terrainGen = await import(pathToFile(sharedDir, "utils/terrainGen.ts"));
+    const splineMod = await import(pathToFile(sharedDir, "utils/spline.ts"));
+    const fmt = (v) => Number(v).toFixed(4);
+
+    const t = terrainGen.generateTerrain(
+        512,
+        512,
+        4,
+        2,
+        [
+            { width: 3, looped: false, points: [{ x: 10, y: 20 }, { x: 30, y: 40 }] },
+            {
+                width: 5,
+                looped: true,
+                points: [
+                    { x: 100, y: 100 },
+                    { x: 150, y: 120 },
+                    { x: 200, y: 100 },
+                    { x: 150, y: 80 },
+                ],
+            },
+        ],
+        123456,
+    );
+    const parts = [];
+    parts.push("shore:" + t.shore.length);
+    for (const p of t.shore) parts.push(fmt(p.x) + "," + fmt(p.y));
+    parts.push("grass:" + t.grass.length);
+    for (const p of t.grass) parts.push(fmt(p.x) + "," + fmt(p.y));
+    parts.push("rivers:" + t.rivers.length);
+    for (const r of t.rivers) {
+        parts.push("aabb:" + fmt(r.aabb.min.x) + "," + fmt(r.aabb.min.y) + "," + fmt(r.aabb.max.x) + "," + fmt(r.aabb.max.y));
+        parts.push("wp:" + r.waterPoly.length);
+        for (const p of r.waterPoly) parts.push(fmt(p.x) + "," + fmt(p.y));
+        parts.push("sp:" + r.shorePoly.length);
+        for (const p of r.shorePoly) parts.push(fmt(p.x) + "," + fmt(p.y));
+    }
+    fixtures.push(["terrain", parts.join(";")]);
+
+    const spline = new splineMod.Spline(
+        [{ x: 0, y: 0 }, { x: 10, y: 5 }, { x: 20, y: 0 }, { x: 30, y: 5 }],
+        false,
+    );
+    const spos = [];
+    spos.push("total:" + fmt(spline.totalArcLen));
+    for (let i = 0; i <= 8; i++) {
+        const p = spline.getPos(i / 8);
+        spos.push(fmt(p.x) + "," + fmt(p.y));
+    }
+    const closeT = spline.getClosestTtoPoint({ x: 12, y: 3 });
+    spos.push("closeT:" + fmt(closeT));
+    fixtures.push(["spline", spos.join(";")]);
+}
+
 let out = `// GENERATED FILE - do not edit. Run tools/gen_reference.mjs to regenerate.
 #pragma once
 #include <string>
