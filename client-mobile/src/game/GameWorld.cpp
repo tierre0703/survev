@@ -145,10 +145,20 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
     for (const auto& info : msg.playerInfos) {
         _playerNames[info.playerId] = info.name;
         _playerBarn->names[info.playerId] = info.name;
+        _playerBarn->teams[info.playerId] = info.teamId;
     }
 
     for (const auto& bullet : msg.bullets) {
         _bulletBarn->spawn(_factory, bullet);
+        if (bullet.shotFx) {
+            auto* p = _playerBarn->getPlayerById(bullet.playerId);
+            const auto* defs = getDefProvider();
+            const auto* weapon = defs ? defs->gameObject(bullet.shotSourceType) : nullptr;
+            if (p && weapon && weapon->category == "gun") {
+                if (!weapon->isDual || bullet.shotOffhand) p->gunRecoil[0] += weapon->recoil;
+                if (!weapon->isDual || !bullet.shotOffhand) p->gunRecoil[1] += weapon->recoil;
+            }
+        }
     }
 
     for (const auto& ex : msg.explosions) {

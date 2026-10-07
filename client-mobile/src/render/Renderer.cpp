@@ -29,7 +29,9 @@ Renderer::Renderer(pix::Factory* factory, bool canvasMode)
     }
     ground = factory->createGraphics();
     layerMask = factory->createGraphics();
-    ground->setAlpha(0.0f);
+    // Alpha is in the rebuilt vertices. Keep node opacity at one so axmol
+    // versions with a DrawNode u_alpha uniform do not multiply it by zero.
+    ground->setAlpha(1.0f);
 }
 
 void Renderer::m_free() {
@@ -81,7 +83,7 @@ void Renderer::resize(Map& map, Camera& camera) {
 // does not fade the drawn rect. Rebuild the ground rect with the current alpha.
 void Renderer::redrawGround(Camera& camera) {
     ground->clear();
-    ground->beginFill(_groundColor, _groundAlphaDrawn);
+    ground->beginFill(_groundColor, groundAlpha);
     ground->drawRect(0.0f, 0.0f, camera.m_screenWidth, camera.m_screenHeight);
     ground->endFill();
 }
@@ -115,8 +117,8 @@ void Renderer::redrawLayerMask(Camera& camera, Map& map) {
         layerMaskDirty = false;
         layerMask->clear();
         // T5: the layer mask is the full map with the structure masks punched
-        // out as holes. AxGraphics implements beginHole/endHole with axis-
-        // aligned rect subtraction (no poly2tri), so this matches the web
+        // out as holes. AxGraphics tessellates the fill directly (no
+        // poly2tri), so this matches the web
         // client's non-canvas branch.
         layerMask->beginFill(0xffffff, 1.0f);
         layerMask->drawRect(0.0f, 0.0f, Constants::MaxPosition, Constants::MaxPosition);

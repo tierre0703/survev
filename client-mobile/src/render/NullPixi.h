@@ -3,6 +3,7 @@
 // tests. It mirrors the transform/z-order bookkeeping of the axmol adapter and
 // records draw commands so renderer/map output can be asserted without a GPU.
 #include "PixiLike.h"
+#include "FillGeometry.h"
 
 #include <algorithm>
 #include <memory>
@@ -12,7 +13,7 @@
 namespace pix {
 
 struct DrawCommand {
-    enum Kind { BeginFill, EndFill, MoveTo, LineTo, ClosePath, Rect, Circle, Dot, Polygon, LineStyle };
+    enum Kind { BeginFill, EndFill, BeginHole, EndHole, MoveTo, LineTo, ClosePath, Rect, Circle, Dot, Polygon, LineStyle };
     Kind kind;
     float a = 0.0f, b = 0.0f, c = 0.0f, d = 0.0f;
     uint color = 0;
@@ -57,6 +58,7 @@ public:
         detachForReparent(child);
         child->setParent(this);
         children.push_back(child);
+        reindex();
     }
     void addChildAt(Node* child, int index) override {
         if (!child) {
@@ -68,6 +70,7 @@ public:
             index = static_cast<int>(children.size());
         }
         children.insert(children.begin() + index, child);
+        reindex();
     }
     void removeChild(Node* child) override {
         for (auto it = children.begin(); it != children.end(); ++it) {
@@ -145,37 +148,58 @@ protected:
 
 class NullGraphics : public NullNodeImpl<Graphics> {
 public:
-    void clear() override { commands.clear(); }
+    std::vector<FillTriangle> fillTriangles;
+    void clear() override { commands.clear(); fillTriangles.clear(); geometry.clear(); filling = false; line = false; }
     void beginFill(uint color, float a) override {
+        if (filling) endFill();
+        geometry.clear();
+        filling = true;
         commands.push_back({DrawCommand::BeginFill, 0, 0, 0, 0, color, a});
     }
-    void endFill() override { commands.push_back({DrawCommand::EndFill}); }
-    void beginHole() override {}
-    void endHole() override {}
+    void endFill() override {
+        if (filling) {
+            auto triangles = geometry.triangles();
+            fillTriangles.insert(fillTriangles.end(), triangles.begin(), triangles.end());
+        }
+        filling = false;
+        commands.push_back({DrawCommand::EndFill});
+    }
+    void beginHole() override { geometry.beginHole(); commands.push_back({DrawCommand::BeginHole}); }
+    void endHole() override { geometry.endHole(); commands.push_back({DrawCommand::EndHole}); }
     void lineStyle(float w, uint color, float a) override {
         commands.push_back({DrawCommand::LineStyle, w, 0, 0, 0, color, a});
+        line = a > 0.0f;
     }
     void moveTo(float mx, float my) override {
         commands.push_back({DrawCommand::MoveTo, mx, my});
+        if (filling && !line) geometry.moveTo(mx, my);
     }
     void lineTo(float lx, float ly) override {
         commands.push_back({DrawCommand::LineTo, lx, ly});
+        if (filling && !line) geometry.lineTo(lx, ly);
     }
-    void closePath() override { commands.push_back({DrawCommand::ClosePath}); }
+    void closePath() override { if (filling && !line) geometry.closePath(); commands.push_back({DrawCommand::ClosePath}); }
     void drawRect(float rx, float ry, float w, float h) override {
         commands.push_back({DrawCommand::Rect, rx, ry, w, h});
+        if (filling && !line) geometry.rect(rx, ry, w, h);
     }
     void drawCircle(float cx, float cy, float r) override {
         commands.push_back({DrawCommand::Circle, cx, cy, r});
+        if (filling && !line) geometry.circle(cx, cy, r);
     }
     void drawDot(float dx, float dy, float r) override {
         commands.push_back({DrawCommand::Dot, dx, dy, r});
+        if (filling) geometry.circle(dx, dy, r);
     }
     void drawPolygon(const surv::Vec2* pts, int count) override {
+        if (filling && !line) geometry.polygon(pts, count);
         for (int i = 0; i < count; i++) {
             commands.push_back({DrawCommand::Polygon, pts[i].x, pts[i].y});
         }
     }
+private:
+    FillGeometry geometry;
+    bool filling = false, line = false;
 };
 
 class NullSprite : public NullNodeImpl<Sprite> {

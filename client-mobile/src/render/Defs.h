@@ -7,6 +7,7 @@
 #include "../core/Collider.h"
 #include "../core/Vec2.h"
 #include <cstdint>
+#include <array>
 #include <string>
 #include <vector>
 
@@ -131,6 +132,7 @@ struct BiomeColors {
     uint32_t lakeWater = 0x3a6ea5;
     uint32_t lakeWaterRipple = 0x5a8ec5;
     uint32_t underground = 0x1b0e0b;
+    uint32_t playerGhillie = 0x5a9e4c;
 };
 
 struct MapRenderDef {
@@ -152,7 +154,42 @@ struct MapRenderDef {
     std::string ambienceWaves;
 };
 
-// Game-object (item/player) render fields used by loot/dead bodies.
+// player.ts uses skinImg/worldImg, not the item's lootImg.
+struct SkinRenderDef {
+    std::string baseSprite, handL, handR, footSprite, backpackSprite;
+    uint32_t baseTint = 0xffffff, handTint = 0xffffff, footTint = 0xffffff;
+    uint32_t backpackTint = 0xffffff, baseTintRed = 0xffffff, baseTintBlue = 0xffffff;
+    float spriteScale = 0.15f;
+};
+
+struct HeldImageDef {
+    std::string sprite;
+    Vec2 pos;
+    Vec2 scale{1.0f, 1.0f};
+    float rot = 0.0f;
+    uint32_t tint = 0xffffff;
+    bool renderOnHand = false, leftHandOnTop = false, handsBelow = false;
+};
+
+constexpr int PlayerBoneCount = 6; // HandL/R, FootL/R, MeleeL/R (animData.ts)
+struct BonePose {
+    Vec2 pivot;
+    float rot = 0.0f;
+    Vec2 pos;
+};
+using PlayerPose = std::array<BonePose, PlayerBoneCount>;
+enum class PoseEasing { Linear, InSine, OutSine, InOutSine, OutQuart, OutBounce, OutQuad };
+struct PoseKeyframe {
+    float time = 0.0f;
+    unsigned mask = 0;
+    PlayerPose bones{};
+    PoseEasing easing = PoseEasing::Linear;
+};
+struct PlayerAnimationDef {
+    std::vector<PoseKeyframe> keyframes;
+};
+
+// Game-object (item/player) render fields.
 struct GameObjRenderDef {
     std::string type;
     std::string category; // "gun" | "melee" | "heal" | "boost" | "outfit" | ...
@@ -160,6 +197,18 @@ struct GameObjRenderDef {
     bool hasImg = false;
     // loot.ts: `itemDef.type == "xp" && itemDef.emitter`.
     std::string emitter;
+    SkinRenderDef skin, visor;
+    HeldImageDef worldImg, hipImg;
+    std::array<std::array<HeldImageDef, 2>, 3> handImgs{}; // equip/cook/throwing, L/R
+    bool ghillie = false, isDual = false;
+    int level = 0;
+    Vec2 gunOffset, leftHandOffset;
+    std::string magSprite;
+    Vec2 magPos;
+    bool magTop = false;
+    float recoil = 0.0f;
+    std::string idlePose = "fists";
+    std::vector<std::string> attackAnims, deployAnims, idleAnims;
 };
 
 // A [min,max] range or a constant (both stored as min==max for constants).
@@ -230,6 +279,8 @@ public:
     // them (e.g. host-test fakes) keep compiling.
     virtual const ParticleDef* particle(const std::string&) const { return nullptr; }
     virtual const EmitterDef* emitter(const std::string&) const { return nullptr; }
+    virtual const PlayerPose* playerPose(const std::string&) const { return nullptr; }
+    virtual const PlayerAnimationDef* playerAnimation(const std::string&) const { return nullptr; }
 };
 
 // Process-wide provider, installed by the app/generated code. May be null.

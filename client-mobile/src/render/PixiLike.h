@@ -8,9 +8,9 @@
 // Mapping summary (plan.md section 5.3):
 //   PIXI.Application        -> ax::Scene (created in GameScene)
 //   PIXI.Container          -> ax::Node (setLocalZOrder for __zOrd/__zIdx)
-//   PIXI.Graphics           -> ax::DrawNode (vector paths; holes via ClippingNode)
+//   PIXI.Graphics           -> ax::DrawNode (tessellated polygon fills/holes)
 //   PIXI.Sprite             -> ax::Sprite (+ SpriteFrameCache for atlases)
-//   mask / beginHole        -> ax::ClippingNode (stencil)
+//   mask                    -> ax::ClippingNode (stencil)
 //   tint / alpha / blend    -> Sprite::setColor / setOpacity / BlendFunc
 //   PIXI.Text               -> ax::Label (BMFont/TTF)
 #include "../core/Vec2.h"

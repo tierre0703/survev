@@ -344,7 +344,7 @@ on `:8000` and a game process on `:9000`):
    Verified on an emulator (API `127.0.0.1:8000` → game `127.0.0.1:9000`, stable
    update stream).
 
-### M4 rendering port (implemented, host-verified; axmol adapter needs M0)
+### M4 rendering port (implemented, host- and emulator-verified)
 - `src/render/PixiLike.h` — expanded PIXI→axmol adapter surface (`Node`,
   `Graphics`, `Sprite`, `Text`, `Container`, `RenderTexture`, `Renderer`,
   `Factory`), including `setMask`/ClippingNode semantics.
@@ -387,9 +387,10 @@ on `:8000` and a game process on `:9000`):
   fixtures, pool reuse, structure mask transform, renderer z-sort/stairs
   remap/layer fade, and the generated defs provider. All 40 `surv_tests` pass.
 
-Remaining for M4 polish: faithful `Graphics` polygon holes (currently the
-canvas fallback), full building floor/ceiling rendering + vision fade, full
-`particles.ts` emitters, and the complete `player.ts` pose/outfit rendering.
+The rendering follow-up is implemented: atlases, building floors/ceilings with
+vision fade, particles/emitters, general polygon holes and skeletal player
+pose/outfit rendering. See `M4_REMAINING.md` §7 for current coverage, limitations
+and emulator verification (60 host tests pass).
 
 **On-device verification (emulator) — critical fixes.** The axmol adapter had
 never been compiled/run, and the first on-device run exposed four bugs that are

@@ -34,6 +34,7 @@ add_executable(surv_tests
     ${SURV_SRC}/game/GameWorld.cpp
     ${SURV_SRC}/game/objects/Structure.cpp
     ${SURV_SRC}/game/objects/Barns.cpp
+    ${SURV_SRC}/game/objects/PlayerRender.cpp
     ${SURV_SRC}/audio/SoundDefs.cpp
     ${SURV_SRC}/audio/AudioManager.cpp
     ${SURV_SRC}/audio/Ambiance.cpp

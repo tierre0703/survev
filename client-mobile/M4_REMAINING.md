@@ -6,6 +6,9 @@ regressed, the exact build/test workflow, and the remaining tasks with enough
 spec to implement them. Read `plan.md` §"M4 rendering port" for the original
 module map.
 
+**Latest implementation/verification: see §7.** Sections 1–6 record the prior
+handoff; their outstanding player/polygon tasks have now been implemented.
+
 ---
 
 ## 1. Current status (verified on-device)
@@ -254,3 +257,48 @@ node tools/build-atlas.mjs --res low                                # sprite atl
 `Content/` is gitignored, so run `build-atlas.mjs` before packaging the APK
 (`build-apk.ps1` ships everything under `Content/`).
 
+## 7. Remaining rendering implementation (2026-10-07)
+
+- **T4 skeletal pose/outfit rendering implemented** in
+  `src/game/objects/PlayerRender.cpp`. The renderer now uses the outfit's
+  `skinImg` (not the loot shirt), with body, separate hand/foot containers,
+  backpack, chest, helmet, role visor, hip pan, melee, gun/magazine and throwable
+  sprites. Equipment ordering, dual weapons, downed/revive hiding, ghillie
+  colors, perk armor, player scale, stairs sorting and upright names are handled.
+- `codegen_render_defs.mjs` imports `client/src/animData.ts` and emits the idle
+  poses and animation keyframes/easing, plus item skin/held-image definitions.
+  Melee attack/deploy/inspect, cooking/throwing, crawl and revive animations are
+  interpolated per frame. Network sequence changes restart animations; repeated
+  full updates do not. Partial updates preserve equipment, and pooled players
+  reuse their sprites without duplicate children. Shot messages drive gun recoil;
+  heal/haste emitter positions follow the player.
+  Regeneration is reproducible (including deterministic particle-color
+  sampling); two successive runs produce the same generated-file hash.
+- **T5 general polygon holes implemented** in `src/render/FillGeometry.h`,
+  shared by both adapters. Concave contours and overlapping/clipped holes are
+  tessellated directly into convex triangles, without poly2tri. The native map
+  uses an actual island hole; canvas retains its overpaint fallback. Rectangular
+  layer masks remain supported. Adapter child insertion now updates native
+  z-order, and masked nodes retain their clipping wrapper and preserve its
+  z-order when masking/reparenting changes.
+- **Preserved:** native-node ownership, reparenting, layer clamping, shader APK
+  packaging and vertex-alpha underground fade. Container opacity cascades to
+  equipment sprites so ceiling-parented particles and render-layer fades work.
+  The ground node keeps opacity one so axmol's `u_alpha` does not multiply the
+  rebuilt vertex alpha by its old, permanently-zero node opacity.
+
+### Verification
+
+- **60 host tests, 1,430 assertions, zero failures.** Added coverage for polygon
+  hole area/coverage, concavity, overlapping/intersecting holes, negative-size
+  rectangles, skin versus loot images, gear, pose interpolation, animation
+  sequences, pool reuse, throwing/melee, dual recoil, emitters and missing defs.
+- x86_64 native library builds/links; APK packages, signs and installs.
+- Verified on the x86_64 emulator via API discovery → join: all three map
+  atlases load, updates remain stable, and the native crash log is empty.
+  Screenshots show terrain/objects and the body/hands player, then the building
+  floor revealed after joystick movement into a nearby building.
+- Specialized browser-player presentation (e.g. aura UI, submerge overlays,
+  frozen/team-patch overlays and animation-triggered collision/audio effects)
+  is not part of this skeletal render port. Gear/animation variants are covered
+  by host tests; not every variant has been exercised on-device.

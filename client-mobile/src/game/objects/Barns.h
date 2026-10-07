@@ -381,7 +381,7 @@ public:
     void update(float dt, GameWorld& ctx);
 };
 
-// --- player.ts (render subset) --------------------------------------------
+// --- player.ts skeletal rendering -----------------------------------------
 class Player : public AbstractObject {
 public:
     Vec2 pos;
@@ -389,25 +389,60 @@ public:
     int layer = 0;
     std::string name;
     std::string outfit;
+    std::string backpack, helmet, chest, activeWeapon, role;
+    float scale = 1.0f;
+    bool wearingPan = false;
+    bool healEffect = false;
+    int hasteType = HasteType_None;
+    int hasteSeq = -1;
+    std::array<float, 2> gunRecoil{};
+    Emitter* healEmitter = nullptr;
+    Emitter* hasteEmitter = nullptr;
+    std::vector<ObjectData::Perk> perks;
     bool dead = false;
     bool downed = false;
     uint8_t teamId = 0;
     int animType = 0;
+    int animSeq = -1;
+    int currentAnim = 0;
+    float animTicker = 0.0f;
+    bool animMirror = false;
+    std::string animation;
+    PlayerPose bones{}, animBones{};
+    unsigned animMask = 0;
+    bool visualsDirty = true;
+    int throwableState = 0;
 
     pix::Container* container = nullptr;
+    pix::Container* bodyContainer = nullptr;
+    std::array<pix::Container*, 4> boneContainers{};
     pix::Sprite* bodySprite = nullptr;
+    pix::Sprite* backpackSprite = nullptr;
+    pix::Sprite* chestSprite = nullptr;
+    pix::Sprite* helmetSprite = nullptr;
+    pix::Sprite* visorSprite = nullptr;
+    pix::Sprite* hipSprite = nullptr;
+    pix::Sprite* meleeSprite = nullptr;
+    pix::Sprite* flakSprite = nullptr;
+    pix::Sprite* steelskinSprite = nullptr;
+    std::array<pix::Sprite*, 4> limbSprites{};
+    std::array<pix::Container*, 2> gunContainers{};
+    std::array<pix::Sprite*, 2> gunSprites{}, magSprites{}, objectSprites{};
     pix::Text* nameText = nullptr;
 
     void m_init() override;
     void m_free() override;
     void m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) override;
     void update(float dt, Ctx& ctx);
+    void playAnim(int type, int seq);
+    void updateVisuals(Ctx& ctx);
 };
 
 class PlayerBarn {
 public:
     Pool<Player> playerPool;
     std::unordered_map<uint16_t, std::string> names;
+    std::unordered_map<uint16_t, uint8_t> teams;
     void update(float dt, GameWorld& ctx);
     std::string getPlayerName(uint16_t playerId, uint16_t activePlayerId, bool anon);
     Player* getPlayerById(uint16_t playerId);

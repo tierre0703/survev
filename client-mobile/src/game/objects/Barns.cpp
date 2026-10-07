@@ -821,68 +821,19 @@ void ExplosionBarn::update(float dt, GameWorld& ctx) {
 }
 
 // ---------------------------------------------------------------------------
-// Player (render subset)
+// Player barn (skeletal runtime is in PlayerRender.cpp)
 // ---------------------------------------------------------------------------
-void Player::m_init() {
-    dead = false;
-    downed = false;
-}
-
-void Player::m_free() {
-    if (container) {
-        container->setVisible(false);
-    }
-}
-
-void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) {
-    (void)isNew;
-    pos = data.pos;
-    dir = data.dir;
-    if (!fullUpdate) {
-        return;
-    }
-    layer = data.layer;
-    outfit = data.outfit;
-    dead = data.dead;
-    downed = data.downed;
-    animType = data.animType;
-
-    ensureSprite(ctx, container, bodySprite);
-    // Outfit body sprite (player.ts bodySprite). The full skeletal pose/anim
-    // port is still pending; this renders the outfit at the web client's 0.25
-    // body scale so players are visible and rotate to face their aim.
-    const GameObjRenderDef* outfitDef = gameDefFor(outfit);
-    if (outfitDef && outfitDef->hasImg && !outfitDef->img.sprite.empty()) {
-        bodySprite->setFrame(outfitDef->img.sprite);
-        bodySprite->setTint(outfitDef->img.tint);
-        bodySprite->setAlpha(outfitDef->img.alpha);
-        bodySprite->setScale(0.25f, 0.25f);
-    }
-    if (!nameText) {
-        nameText = ctx.factory()->createText();
-        nameText->setAnchor(0.5f, -1.0f);
-        nameText->setScale(0.5f, 0.5f);
-        nameText->setColor(0xffffff, 0x000000, 1.0f, true);
-        container->addChild(nameText);
-    }
-}
-
 void PlayerBarn::update(float dt, GameWorld& ctx) {
-    (void)dt;
     for (auto* p : playerPool.m_getPool()) {
         if (!p->active || !p->container) {
             continue;
         }
-        ctx.renderer().addPIXIObj(p->container, p->layer, 10, p->__id);
-        const Vec2 screenPos = ctx.camera().m_pointToScreen(p->pos);
-        const float s = ctx.camera().m_pixels(1.0f);
-        p->container->setPosition(screenPos.x, screenPos.y);
-        p->container->setScale(s, s);
-        // Rotate the body to face the aim, leaving the name label upright.
-        if (p->bodySprite) {
-            p->bodySprite->setRotation(std::atan2(p->dir.y, p->dir.x) - 3.14159265358979f * 0.5f);
+        auto team = teams.find(p->__id);
+        if (team != teams.end() && p->teamId != team->second) {
+            p->teamId = team->second;
+            p->visualsDirty = true;
         }
-        p->container->setVisible(!p->dead);
+        p->update(dt, ctx);
         if (p->nameText) {
             auto it = names.find(p->__id);
             p->nameText->setText(it == names.end() ? std::string() : it->second);

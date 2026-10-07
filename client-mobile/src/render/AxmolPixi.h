@@ -11,6 +11,7 @@
 // NOTE: this file is only compiled in the axmol app build (CMakeLists globs
 // src/*.cpp), never by the host test build.
 #include "PixiLike.h"
+#include "FillGeometry.h"
 #include "axmol.h"
 
 #include <algorithm>
@@ -51,6 +52,9 @@ public:
         // autoreleased by create(); wrappers that are never added to a parent
         // (e.g. the layer mask, which is only used as a ClippingNode stencil)
         // would otherwise be freed when the frame's pool drains.
+        if (_clipper) {
+            _clipper->release();
+        }
         if (_node) {
             _node->release();
         }
@@ -64,6 +68,7 @@ public:
         _node = node;
         if (_node) {
             _node->retain();
+            _node->setCascadeOpacityEnabled(true);
         }
     }
 
@@ -80,7 +85,7 @@ public:
     void setVisible(bool visible) override { _node->setVisible(visible); }
     void setTint(uint color) override { _node->setColor(detail::toColor3B(color)); }
     void setBlendMode(BlendMode) override {}
-    void setLocalZOrder(int z) override { _node->setLocalZOrder(z); }
+    void setLocalZOrder(int z) override { (_clipper ? static_cast<ax::Node*>(_clipper) : _node)->setLocalZOrder(z); }
     void setSortKey(int ord, int idx) override {
         _sortOrd = ord;
         _sortIdx = idx;
@@ -96,6 +101,7 @@ public:
         _node->addChild(static_cast<ax::Node*>(child->native()));
         child->setParent(this);
         _children.push_back(child);
+        reindex();
     }
     void addChildAt(Node* child, int index) override {
         if (!child) {
@@ -108,6 +114,7 @@ public:
             index = static_cast<int>(_children.size());
         }
         _children.insert(_children.begin() + index, child);
+        reindex();
     }
     void removeChild(Node* child) override {
         _node->removeChild(static_cast<ax::Node*>(child->native()));
@@ -159,16 +166,20 @@ public:
         ax::Node* stencil = static_cast<ax::Node*>(mask->native());
         if (!_clipper) {
             _clipper = ax::ClippingNode::create();
-            _clipper->setInverted(_maskInverted);
+            _clipper->retain();
+            const int z = _node->getLocalZOrder();
+            _clipper->setLocalZOrder(z);
             ax::Node* parent = _node->getParent();
             _node->retain();
             _node->removeFromParent();
             _clipper->addChild(_node);
+            _node->setLocalZOrder(0);
             _node->release();
             if (parent) {
                 parent->addChild(_clipper);
             }
         }
+        _clipper->setInverted(_maskInverted);
         _clipper->setStencil(stencil);
     }
     void clearMask() override {
@@ -176,7 +187,9 @@ public:
             return;
         }
         _node->retain();
+        const int z = _clipper->getLocalZOrder();
         _node->removeFromParent();
+        _node->setLocalZOrder(z);
         ax::Node* parent = _clipper->getParent();
         if (parent) {
             parent->addChild(_node);
@@ -185,11 +198,14 @@ public:
         if (_clipper->getParent()) {
             _clipper->removeFromParent();
         }
+        _clipper->release();
         _clipper = nullptr;
         _maskNode = nullptr;
     }
 
-    void* native() override { return _node; }
+    // A masked node's scene-graph handle is the wrapper, not its inner node;
+    // otherwise reparenting or z-index changes silently bypass the stencil.
+    void* native() override { return _clipper ? static_cast<ax::Node*>(_clipper) : _node; }
 
 protected:
     // PIXI's Container.addChild removes the child from its current parent first
@@ -230,61 +246,31 @@ public:
 
     void clear() override {
         _draw->clear();
-        _path.clear();
-        _fillRects.clear();
-        _holes.clear();
+        _geometry.clear();
         _fillActive = false;
         _hasLine = false;
-        _inHole = false;
+        _haveLineStart = false;
     }
     void beginFill(uint color, float alpha) override {
+        if (_fillActive) endFill();
         _fillColor = detail::toColor4F(color, alpha);
         _fillActive = true;
-        _path.clear();
-        _fillRects.clear();
-        _holes.clear();
-        _inHole = false;
+        _geometry.clear();
     }
     void endFill() override {
         if (_fillActive) {
-            // Rect fills support holes (T5): subtract each hole rect from the
-            // outer rects and emit the remaining axis-aligned pieces. This is
-            // the layer mask's shape and avoids DrawNode's poly2tri path.
-            for (const auto& outer : _fillRects) {
-                std::vector<RectF> pieces{outer};
-                for (const auto& hole : _holes) {
-                    std::vector<RectF> next;
-                    next.reserve(pieces.size() + 4);
-                    for (const auto& piece : pieces) {
-                        subtractRect(next, piece, hole);
-                    }
-                    pieces.swap(next);
-                }
-                for (const auto& piece : pieces) {
-                    if (piece.w > 0.0f && piece.h > 0.0f) {
-                        _draw->drawSolidRect(ax::Vec2(piece.x, piece.y),
-                                             ax::Vec2(piece.x + piece.w, piece.y + piece.h),
-                                             _fillColor);
-                    }
-                }
-            }
-            if (_path.size() >= 3) {
-                // Force the convex-fan triangulation. drawSolidPoly defaults to
-                // isconvex=false, which makes axmol run poly2tri CDT; that
-                // crashes on degenerate/concave masks and is overkill for the
-                // canvas-fallback fills this port emits.
-                _draw->drawSolidPoly(_path.data(), static_cast<unsigned int>(_path.size()),
-                                     _fillColor, 0.0f, ax::Color4F(0, 0, 0, 0), true);
+            for (const auto& triangle : _geometry.triangles()) {
+                // Convex triangles only: never enter axmol's poly2tri CDT.
+                _draw->drawTriangle(ax::Vec2(triangle[0].x, triangle[0].y),
+                                    ax::Vec2(triangle[1].x, triangle[1].y),
+                                    ax::Vec2(triangle[2].x, triangle[2].y), _fillColor);
             }
         }
-        _path.clear();
-        _fillRects.clear();
-        _holes.clear();
+        _geometry.clear();
         _fillActive = false;
-        _inHole = false;
     }
-    void beginHole() override { _inHole = true; }
-    void endHole() override { _inHole = false; }
+    void beginHole() override { _geometry.beginHole(); }
+    void endHole() override { _geometry.endHole(); }
 
     void lineStyle(float width, uint color, float alpha) override {
         _lineWidth = width;
@@ -296,8 +282,7 @@ public:
             _lineStart = ax::Vec2(x, y);
             _haveLineStart = true;
         } else {
-            _path.clear();
-            _path.push_back(ax::Vec2(x, y));
+            _geometry.moveTo(x, y);
         }
     }
     void lineTo(float x, float y) override {
@@ -305,33 +290,29 @@ public:
             if (_haveLineStart) {
                 _draw->drawLine(_lineStart, ax::Vec2(x, y), _lineColor);
             }
+            _lineStart = ax::Vec2(x, y);
         } else {
-            _path.push_back(ax::Vec2(x, y));
+            _geometry.lineTo(x, y);
         }
     }
-    void closePath() override {}
+    void closePath() override { _geometry.closePath(); }
     void drawRect(float x, float y, float w, float h) override {
         if (_hasLine) {
             _draw->drawRect(ax::Vec2(x, y), ax::Vec2(x + w, y + h), _lineColor);
         } else if (_fillActive) {
-            // Defer so beginHole()/endHole() can subtract holes at endFill().
-            if (_inHole) {
-                _holes.push_back(RectF{x, y, w, h});
-            } else {
-                _fillRects.push_back(RectF{x, y, w, h});
-            }
+            _geometry.rect(x, y, w, h);
         }
     }
     void drawCircle(float x, float y, float radius) override {
         if (_hasLine) {
             _draw->drawCircle(ax::Vec2(x, y), radius, 0.0f, 64, false, _lineColor);
         } else if (_fillActive) {
-            _draw->drawSolidCircle(ax::Vec2(x, y), radius, 0.0f, 64, _fillColor);
+            _geometry.circle(x, y, radius);
         }
     }
     void drawDot(float x, float y, float radius) override {
-        _draw->drawDot(ax::Vec2(x, y), radius,
-                       _fillActive ? _fillColor : ax::Color4F(1, 1, 1, 1));
+        if (_fillActive) _geometry.circle(x, y, radius);
+        else _draw->drawDot(ax::Vec2(x, y), radius, ax::Color4F(1, 1, 1, 1));
     }
     void drawPolygon(const surv::Vec2* points, int count) override {
         std::vector<ax::Vec2> pts;
@@ -339,55 +320,21 @@ public:
         for (int i = 0; i < count; i++) {
             pts.push_back(ax::Vec2(points[i].x, points[i].y));
         }
-        if (_fillActive && count >= 3) {
-            _draw->drawSolidPoly(pts.data(), static_cast<unsigned int>(count), _fillColor, 0.0f,
-                                 ax::Color4F(0, 0, 0, 0), true);
+        if (_fillActive && count >= 3 && !_hasLine) {
+            _geometry.polygon(points, count);
         } else if (_hasLine) {
             _draw->drawPoly(pts.data(), static_cast<unsigned int>(count), true, _lineColor);
         }
     }
 
 private:
-    struct RectF {
-        float x, y, w, h;
-    };
-
-    // Emit the parts of `r` that are not covered by axis-aligned `hole`.
-    static void subtractRect(std::vector<RectF>& out, const RectF& r, const RectF& hole) {
-        const float ix = r.x > hole.x ? r.x : hole.x;
-        const float iy = r.y > hole.y ? r.y : hole.y;
-        const float ix2 = (r.x + r.w) < (hole.x + hole.w) ? (r.x + r.w) : (hole.x + hole.w);
-        const float iy2 = (r.y + r.h) < (hole.y + hole.h) ? (r.y + r.h) : (hole.y + hole.h);
-        if (ix2 <= ix || iy2 <= iy) {
-            out.push_back(r);
-            return;
-        }
-        if (hole.y > r.y) {
-            out.push_back(RectF{r.x, r.y, r.w, hole.y - r.y});
-        }
-        const float holeBottom = hole.y + hole.h;
-        if (holeBottom < r.y + r.h) {
-            out.push_back(RectF{r.x, holeBottom, r.w, (r.y + r.h) - holeBottom});
-        }
-        if (hole.x > r.x) {
-            out.push_back(RectF{r.x, iy, hole.x - r.x, iy2 - iy});
-        }
-        const float holeRight = hole.x + hole.w;
-        if (holeRight < r.x + r.w) {
-            out.push_back(RectF{holeRight, iy, (r.x + r.w) - holeRight, iy2 - iy});
-        }
-    }
-
     ax::DrawNode* _draw = nullptr;
-    std::vector<ax::Vec2> _path;
-    std::vector<RectF> _fillRects;
-    std::vector<RectF> _holes;
+    FillGeometry _geometry;
     ax::Color4F _fillColor = ax::Color4F(1, 1, 1, 1);
     ax::Color4F _lineColor = ax::Color4F(0, 0, 0, 1);
     float _lineWidth = 1.0f;
     bool _fillActive = false;
     bool _hasLine = false;
-    bool _inHole = false;
     bool _haveLineStart = false;
     ax::Vec2 _lineStart;
 };

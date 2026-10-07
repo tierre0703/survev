@@ -99,16 +99,23 @@ void Map::renderTerrain(pix::Graphics* g, float gridThickness, bool canvasMode, 
     g->drawRect(w, -120.0f, 120.0f, h + 240.0f);
     g->endFill();
 
-    // The web client draws the beach, then the full-map water with a hole for
-    // the island (PIXI holes). axmol DrawNode has no polygon holes, so we use
-    // the canvas fallback: water first, then beach/grass on top.
-    g->beginFill(colors.water);
-    g->drawRect(0.0f, 0.0f, w, h);
-    g->endFill();
-
+    // Canvas retains the overpaint fallback; native supports true island holes.
+    if (canvasMode) {
+        g->beginFill(colors.water);
+        g->drawRect(0.0f, 0.0f, w, h);
+        g->endFill();
+    }
     g->beginFill(colors.beach);
     tracePath(g, terrain.shore);
     g->endFill();
+    if (!canvasMode) {
+        g->beginFill(colors.water);
+        g->drawRect(0.0f, 0.0f, w, h);
+        g->beginHole();
+        tracePath(g, terrain.shore);
+        g->endHole();
+        g->endFill();
+    }
 
     g->beginFill(colors.grass);
     tracePath(g, terrain.grass);
@@ -127,15 +134,15 @@ void Map::renderTerrain(pix::Graphics* g, float gridThickness, bool canvasMode, 
     for (const auto& river : terrain.rivers) {
         g->beginFill(river.looped ? colors.lakeRiverbank : colors.riverbank);
         tracePath(g, river.shorePoly);
+        g->endFill();
     }
-    g->endFill();
 
     // River water.
     for (const auto& river : terrain.rivers) {
         g->beginFill(river.looped ? colors.lakeWater : colors.water);
         tracePath(g, river.waterPoly);
+        g->endFill();
     }
-    g->endFill();
 
     // Grid.
     g->lineStyle(gridThickness, 0, 0.15f);

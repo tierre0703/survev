@@ -525,6 +525,7 @@ TEST(renderer_ground_fade) {
     // T6: the ground geometry must be redrawn with the faded alpha (DrawNode
     // bakes vertex alpha), not just the node opacity.
     auto* g = static_cast<pix::NullGraphics*>(renderer.ground);
+    CHECK_NEAR(g->alpha, 1.0f, 1e-5f);
     float maxFillAlpha = 0.0f;
     bool hasRect = false;
     for (const auto& cmd : g->commands) {
@@ -537,4 +538,269 @@ TEST(renderer_ground_fade) {
     }
     CHECK(hasRect);
     CHECK(maxFillAlpha > 0.9f);
+}
+
+namespace {
+double filledArea(const std::vector<pix::FillTriangle>& triangles) {
+    double area = 0;
+    for (const auto& t : triangles) {
+        area += std::fabs((double(t[1].x) - t[0].x) * (double(t[2].y) - t[0].y) -
+                          (double(t[1].y) - t[0].y) * (double(t[2].x) - t[0].x)) / 2;
+    }
+    return area;
+}
+ObjectData playerData() {
+    ObjectData d;
+    d.pos = Vec2(50, 50);
+    d.dir = Vec2(1, 0);
+    d.outfit = "outfitBase";
+    d.activeWeapon = "fists";
+    return d;
+}
+pix::NullSprite* sprite(pix::Sprite* s) { return static_cast<pix::NullSprite*>(s); }
+pix::NullContainer* container(pix::Container* c) { return static_cast<pix::NullContainer*>(c); }
+}
+
+TEST(graphics_polygon_hole) {
+    pix::NullGraphics g;
+    g.beginFill(0xffffff, 1);
+    g.drawRect(0, 0, 10, 10);
+    g.beginHole();
+    const Vec2 diamond[] = {{5, 1}, {9, 5}, {5, 9}, {1, 5}, {5, 1}};
+    g.drawPolygon(diamond, 5);
+    g.endHole();
+    g.endFill();
+    CHECK_NEAR(filledArea(g.fillTriangles), 68.0, 1e-5);
+    // All triangle centroids must be outside the diamond hole.
+    for (const auto& t : g.fillTriangles) {
+        const Vec2 center = v2Mul(v2Add(v2Add(t[0], t[1]), t[2]), 1.0f / 3.0f);
+        CHECK(std::fabs(center.x - 5) + std::fabs(center.y - 5) >= 4 - 1e-5f);
+    }
+    CHECK_EQ(g.commands[2].kind, pix::DrawCommand::BeginHole);
+    g.clear();
+    CHECK(g.fillTriangles.empty());
+}
+
+TEST(graphics_concave_path_and_holes) {
+    pix::NullGraphics g;
+    g.beginFill(0xffffff, 1);
+    // L-shape, reversed winding, with duplicate/collinear vertices.
+    const Vec2 points[] = {{0, 0}, {0, 6}, {2, 6}, {2, 2}, {4, 2}, {6, 2}, {6, 0}, {0, 0}};
+    for (size_t i = 0; i < 8; ++i) {
+        if (i == 0) g.moveTo(points[i].x, points[i].y);
+        else g.lineTo(points[i].x, points[i].y);
+    }
+    g.closePath();
+    g.beginHole();
+    // Negative-size rect (camera's flipped Y), partially outside the fill.
+    g.drawRect(1, 3, 2, -2);
+    g.endHole();
+    g.endFill();
+    CHECK_NEAR(filledArea(g.fillTriangles), 17.0, 1e-5);
+}
+
+TEST(graphics_overlapping_holes_and_fills) {
+    pix::NullGraphics g;
+    g.beginFill(0xffffff, 1);
+    g.drawRect(0, 0, 10, 10);
+    g.drawRect(0, 0, 10, 10); // union, no double alpha
+    g.beginHole(); g.drawRect(2, 2, 4, 4); g.endHole();
+    g.beginHole(); g.drawRect(4, 4, 4, 4); g.endHole();
+    g.endFill();
+    CHECK_NEAR(filledArea(g.fillTriangles), 72.0, 1e-5);
+    g.clear();
+    g.beginFill(0xffffff, 1); g.drawRect(0, 0, 10, 10);
+    g.beginHole(); g.drawRect(-1, -1, 12, 12); g.endHole(); g.endFill();
+    CHECK(g.fillTriangles.empty());
+}
+
+TEST(graphics_intersecting_polygon_holes) {
+    pix::NullGraphics g;
+    g.beginFill(0xffffff, 1); g.drawRect(0, 0, 10, 10);
+    const Vec2 a[] = {{2, 2}, {8, 2}, {5, 8}};
+    const Vec2 b[] = {{2, 8}, {8, 8}, {5, 2}};
+    g.beginHole(); g.drawPolygon(a, 3); g.endHole();
+    g.beginHole(); g.drawPolygon(b, 3); g.endHole();
+    g.endFill();
+    CHECK_NEAR(filledArea(g.fillTriangles), 73.0, 1e-5);
+}
+
+TEST(player_skin_and_equipment) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    d.backpack = "backpack02"; d.helmet = "helmet01"; d.chest = "chest01";
+    d.activeWeapon = "ak47";
+    p.m_updateData(d, true, true, world);
+    p.update(0, world);
+    CHECK_EQ(sprite(p.bodySprite)->frame, std::string("player-base-01.img"));
+    CHECK_EQ(sprite(p.bodySprite)->tint, 0xf8c574u);
+    CHECK_EQ(sprite(p.limbSprites[0])->frame, std::string("player-hands-01.img"));
+    CHECK(sprite(p.backpackSprite)->visible);
+    CHECK(sprite(p.helmetSprite)->visible);
+    CHECK(sprite(p.chestSprite)->visible);
+    CHECK(!sprite(p.limbSprites[2])->visible);
+    CHECK(container(p.gunContainers[1])->visible);
+    CHECK(!container(p.gunContainers[0])->visible);
+    CHECK_EQ(sprite(p.gunSprites[1])->frame, getDefProvider()->gameObject("ak47")->worldImg.sprite);
+    CHECK(sprite(p.gunSprites[1])->frame != getDefProvider()->gameObject("ak47")->img.sprite);
+    CHECK_NEAR(container(p.boneContainers[0])->x, 28.0f + getDefProvider()->gameObject("ak47")->leftHandOffset.x, 1e-4f);
+    CHECK_NEAR(container(p.boneContainers[1])->x, 14.0f, 1e-4f);
+    d.dir = Vec2(0, 1);
+    p.m_updateData(d, false, false, world);
+    p.update(0, world);
+    CHECK_NEAR(container(p.bodyContainer)->rotation, -3.14159265358979f / 2, 1e-4f);
+    CHECK_NEAR(container(p.container)->rotation, 0, 1e-4f); // name stays upright
+    CHECK_EQ(p.activeWeapon, std::string("ak47"));
+    CHECK_EQ(p.container->getSortOrd(), 18);
+}
+
+TEST(player_animation_sequence_and_interpolation) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    p.m_updateData(d, true, true, world);
+    p.update(0, world);
+    d.animType = Anim_Melee; d.animSeq = 1;
+    p.m_updateData(d, true, false, world);
+    p.animMirror = false;
+    p.update(0.05f, world);
+    CHECK_NEAR(p.bones[1].pivot.x, 21.875f, 1e-4f); // midway to the punch
+    CHECK_NEAR(container(p.boneContainers[1])->x, 21.875f, 1e-4f);
+    p.m_updateData(d, true, false, world);
+    CHECK_NEAR(p.animTicker, 0.05f, 1e-5f); // same seq never restarts
+    p.update(1.0f, world);
+    CHECK_EQ(p.currentAnim, Anim_None);
+    p.update(0, world);
+    CHECK_NEAR(p.bones[1].pivot.x, 14.0f, 1e-4f);
+    d.animSeq = 2;
+    p.m_updateData(d, true, false, world);
+    CHECK_EQ(p.currentAnim, Anim_Melee);
+    CHECK_NEAR(p.animTicker, 0, 1e-5f);
+}
+
+TEST(player_downed_gear_and_pool_reuse) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    d.activeWeapon = "ak47"; d.backpack = "backpack03"; d.downed = true;
+    p.m_updateData(d, true, true, world); p.update(0, world);
+    CHECK(sprite(p.limbSprites[2])->visible);
+    CHECK(!sprite(p.backpackSprite)->visible);
+    CHECK(!container(p.gunContainers[1])->visible);
+    CHECK(p.bodyContainer->getChildIndex(p.boneContainers[0]) < p.bodyContainer->getChildIndex(p.bodySprite));
+    p.m_free();
+    CHECK(!container(p.container)->visible);
+    const size_t childCount = p.bodyContainer->childCount();
+    p.m_init();
+    d = playerData();
+    p.m_updateData(d, true, true, world); p.update(0, world);
+    CHECK(container(p.container)->visible);
+    CHECK(!sprite(p.limbSprites[2])->visible);
+    CHECK(p.bodyContainer->getChildIndex(p.boneContainers[0]) > p.bodyContainer->getChildIndex(p.bodySprite));
+    CHECK_EQ(p.bodyContainer->childCount(), childCount);
+    CHECK_EQ(p.animSeq, 0);
+}
+
+TEST(player_throwable_and_melee_pose) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    Player p;
+    p.m_init();
+    auto d = playerData(); d.activeWeapon = "frag"; d.animType = Anim_Cook; d.animSeq = 1;
+    p.m_updateData(d, true, true, world); p.update(0.2f, world);
+    CHECK_EQ(p.throwableState, 1);
+    CHECK_EQ(sprite(p.objectSprites[1])->frame, getDefProvider()->gameObject("frag")->handImgs[1][1].sprite);
+    d.activeWeapon = "katana"; d.animType = Anim_None; d.animSeq = 2;
+    p.m_updateData(d, true, false, world); p.update(0, world);
+    CHECK(sprite(p.meleeSprite)->visible);
+    CHECK(!sprite(p.objectSprites[1])->visible);
+    CHECK_NEAR(p.bones[0].pivot.x, 8.5f, 1e-5f);
+    CHECK_NEAR(p.bones[1].pivot.x, -3.0f, 1e-5f);
+    d.dead = true;
+    p.m_updateData(d, true, false, world); p.update(0, world);
+    CHECK(!container(p.container)->visible);
+}
+
+TEST(player_generated_animation_tables) {
+    installGeneratedDefs();
+    const auto* defs = getDefProvider();
+    CHECK(defs->playerPose("rifle") != nullptr);
+    CHECK(defs->playerPose("missing") == nullptr);
+    const auto* deploy = defs->playerAnimation("karambit_spin");
+    CHECK(deploy != nullptr);
+    CHECK_EQ(deploy->keyframes.size(), 3u);
+    CHECK_EQ(deploy->keyframes[1].easing, PoseEasing::OutSine);
+    CHECK((deploy->keyframes[1].mask & (1u << 5)) != 0);
+    CHECK(defs->gameObject("fists") != nullptr); // fists has no lootImg
+    CHECK_EQ(defs->gameObject("fists")->attackAnims[0], std::string("fists"));
+}
+
+TEST(player_dual_recoil_and_emitters) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    auto d = playerData();
+    d.__type = ObjectType_Player; d.__id = 42; d.activeWeapon = "m9_dual";
+    d.healEffect = true;
+    UpdateMsg msg;
+    FullObjectData full;
+    full.data = d;
+    msg.fullObjects.push_back(full);
+    PlayerInfo info;
+    info.playerId = 42; info.teamId = 2; info.name = "Test";
+    msg.playerInfos.push_back(info);
+    Bullet bullet;
+    bullet.playerId = 42; bullet.shotFx = true; bullet.shotSourceType = "m9_dual";
+    bullet.shotOffhand = true;
+    msg.bullets.push_back(bullet);
+    world.applyUpdate(msg);
+    auto* p = world.playerBarn().getPlayerById(42);
+    CHECK(p != nullptr);
+    if (!p) return;
+    CHECK(p->gunRecoil[0] > 0);
+    CHECK_NEAR(p->gunRecoil[1], 0, 1e-5f);
+    world.playerBarn().update(0, world);
+    CHECK_EQ(p->teamId, 2);
+    CHECK(container(p->gunContainers[0])->visible);
+    CHECK(container(p->gunContainers[1])->visible);
+    CHECK(p->healEmitter != nullptr);
+    CHECK(p->healEmitter->active);
+    const float recoil = p->gunRecoil[0];
+    p->update(0.1f, world);
+    CHECK(p->gunRecoil[0] < recoil);
+    auto* e = p->healEmitter;
+    p->m_free();
+    CHECK_EQ(e->duration, e->ticker);
+    CHECK(p->healEmitter == nullptr);
+}
+
+TEST(player_revive_and_missing_defs) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    d.outfit = "unknown_outfit"; d.activeWeapon = "ak47";
+    d.animType = Anim_Revive; d.animSeq = 3;
+    p.m_updateData(d, true, true, world); p.update(0.2f, world);
+    CHECK_EQ(sprite(p.bodySprite)->frame, std::string("player-base-01.img"));
+    CHECK(!container(p.gunContainers[1])->visible);
+    CHECK_NEAR(p.bones[0].pivot.x, 24.5f, 1e-4f);
+    setDefProvider(nullptr);
+    p.playAnim(Anim_Melee, 4);
+    p.update(0.1f, world); // an unavailable def must terminate, not crash
+    CHECK_EQ(p.currentAnim, Anim_None);
+    installGeneratedDefs();
 }

@@ -1,7 +1,8 @@
 // Generates src/render/GeneratedDefs.cpp from the real shared/ TS defs. Emits a
 // concrete DefProvider (biome colors, map-object images/colliders, structure
 // layers/stairs/mask, building floor/ceiling images + vision, loot images, and
-// the particles.ts particle/emitter tables) used by the M4 rendering port.
+// the particles.ts particle/emitter tables, player skins/held images, and
+// animData.ts idle poses/animation keyframes) used by the M4 rendering port.
 //
 // Usage: node --experimental-transform-types tools/codegen_render_defs.mjs
 import { fileURLToPath } from "node:url";
@@ -21,6 +22,7 @@ const { MapDefs } = await import(pathToFile(sharedDir, "defs/mapDefs.ts"));
 const { util } = await import(pathToFile(sharedDir, "utils/util.ts"));
 const { math } = await import(pathToFile(sharedDir, "utils/math.ts"));
 const { v2 } = await import(pathToFile(sharedDir, "utils/v2.ts"));
+const { IdlePoses, Animations } = await import(pathToFile(clientDir, "src/animData.ts"));
 
 const mapTypes = MapObjectDefs.getAllTypes();
 const gameTypes = GameObjectDefs.getAllTypes();
@@ -268,8 +270,34 @@ for (const [name, def] of Object.entries(MapDefs)) {
     )},${str(amb.waves || "")}},\n`;
 }
 
-// Game object render defs (loot images).
+// Game object render defs (loot images and separate player skin/held images).
 let gameEntries = "";
+let playerEntries = "";
+const fp = (v, d = 0) => {
+    const value = String(f(v, d));
+    return `${value.includes(".") || /e/i.test(value) ? value : value + ".0"}f`;
+};
+const vec = (v, d = 0) => `Vec2(${fp(v?.x, d)},${fp(v?.y, d)})`;
+function skinAssignments(s, dst) {
+    if (!s) return "";
+    return `${dst}.baseSprite=${str(s.baseSprite)};
+        ${dst}.handL=${str(typeof s.handSprite === "string" ? s.handSprite : s.handSprite?.left)};
+        ${dst}.handR=${str(typeof s.handSprite === "string" ? s.handSprite : s.handSprite?.right)};
+        ${dst}.footSprite=${str(s.footSprite)}; ${dst}.backpackSprite=${str(s.backpackSprite)};
+        ${dst}.baseTint=${n(s.baseTint, 0xffffff)}; ${dst}.handTint=${n(s.handTint, 0xffffff)};
+        ${dst}.footTint=${n(s.footTint, 0xffffff)}; ${dst}.backpackTint=${n(s.backpackTint, 0xffffff)};
+        ${dst}.baseTintRed=${n(s.baseTintRed, n(s.baseTint, 0xffffff))};
+        ${dst}.baseTintBlue=${n(s.baseTintBlue, n(s.baseTint, 0xffffff))};
+        ${dst}.spriteScale=${fp(s.spriteScale, 0.15)};`;
+}
+function heldAssignments(im, dst) {
+    if (!im) return "";
+    const scale = typeof im.scale === "number" ? { x: im.scale, y: im.scale } : im.scale;
+    return `${dst}.sprite=${str(im.sprite)}; ${dst}.pos=${vec(im.pos)};
+        ${dst}.scale=${vec(scale, 1)}; ${dst}.rot=${fp(im.rot)}; ${dst}.tint=${n(im.tint, 0xffffff)};
+        ${dst}.renderOnHand=${!!im.renderOnHand}; ${dst}.leftHandOnTop=${!!im.leftHandOntop};
+        ${dst}.handsBelow=${!!im.handsBelow};`;
+}
 for (const type of gameTypes) {
     let def;
     try {
@@ -279,8 +307,46 @@ for (const type of gameTypes) {
     }
     if (!def) continue;
     const img = def.lootImg || def.img || null;
-    if (!img || !img.sprite) continue;
-    gameEntries += `    {${str(type)},${str(def.type || "")},${imgInit(img)},1,${str(def.emitter || "")}},\n`;
+    gameEntries += `    {${str(type)},${str(def.type || "")},${imgInit(img)},${img?.sprite ? 1 : 0},${str(def.emitter || "")}},\n`;
+    if (!def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack") continue;
+    let idlePose = def.anim?.idlePose || "fists";
+    if (def.type === "gun") idlePose = def.pistol ? (def.isDual ? "dualPistol" : "pistol")
+        : def.isBullpup ? "bullpup" : def.isLauncher ? "launcher" : def.isMinigun ? "minigun"
+        : def.isDual ? "dualRifle" : "rifle";
+    if (def.type === "throwable") idlePose = "throwable";
+    playerEntries += `        { auto& d = _gameObjs.at(${str(type)});
+        ${skinAssignments(def.skinImg, "d.skin")} ${skinAssignments(def.visorImg, "d.visor")}
+        ${heldAssignments(def.worldImg, "d.worldImg")} ${heldAssignments(def.hipImg, "d.hipImg")}
+        d.ghillie=${!!def.ghillie}; d.isDual=${!!def.isDual}; d.level=${n(def.level)};
+        d.gunOffset=${vec(def.worldImg?.gunOffset)}; d.leftHandOffset=${vec(def.worldImg?.leftHandOffset)};
+        d.magSprite=${str(def.worldImg?.magImg?.sprite)}; d.magPos=${vec(def.worldImg?.magImg?.pos)};
+        d.magTop=${!!def.worldImg?.magImg?.top}; d.idlePose=${str(idlePose)};
+        d.recoil=${fp(def.worldImg?.recoil)};
+        d.attackAnims={${(def.anim?.attackAnims || []).map(str).join(",")}};
+        d.deployAnims={${(def.anim?.deployAnims || []).map(str).join(",")}};
+        d.idleAnims={${(def.anim?.idleAnims || []).map(str).join(",")}};
+        ${["equip", "cook", "throwing"].flatMap((state, i) => ["left", "right"].map((side, j) =>
+            heldAssignments(def.handImg?.[state]?.[side], `d.handImgs[${i}][${j}]`))).join("\n")}
+        }\n`;
+}
+
+const boneInit = (p) => `{${vec(p?.pivot)},${fp(p?.rot)},${vec(p?.pos)}}`;
+const poseInit = (bones) => `{{${Array.from({ length: 6 }, (_, i) => boneInit(bones[i])).join(",")}}}`;
+const easings = [[math.easeInSine, "InSine"], [math.easeOutSine, "OutSine"],
+    [math.easeInOutSine, "InOutSine"], [math.easeOutQuart, "OutQuart"],
+    [math.easeOutBounce, "OutBounce"], [math.easeOutQuad, "OutQuad"]];
+let poseEntries = "";
+for (const [name, bones] of Object.entries(IdlePoses)) {
+    poseEntries += `        _poses[${str(name)}]=${poseInit(bones)};\n`;
+}
+for (const [name, animation] of Object.entries(Animations)) {
+    const frames = animation.keyframes.map((frame) => {
+        const mask = Object.keys(frame.bones).reduce((bits, key) => bits | (1 << Number(key)), 0);
+        const easing = easings.find(([fn]) => fn === frame.easing)?.[1] || "Linear";
+        if (frame.easing && easing === "Linear") throw new Error(`Unknown easing in ${name}`);
+        return `{${fp(frame.time)},${mask},${poseInit(frame.bones)},PoseEasing::${easing}}`;
+    });
+    poseEntries += `        _animations[${str(name)}].keyframes={${frames.join(",")}};\n`;
 }
 
 // --- particles.ts particle/emitter defs -----------------------------------
@@ -342,11 +408,23 @@ function sampleColor(color) {
         let g = 0;
         let b = 0;
         const samples = 16;
-        for (let i = 0; i < samples; i++) {
-            const c = color() & 0xffffff;
-            r += (c >> 16) & 0xff;
-            g += (c >> 8) & 0xff;
-            b += c & 0xff;
+        // Keep generated files reproducible when rebuilding the player tables.
+        // Restore the global immediately after sampling the color closure.
+        const random = Math.random;
+        let seed = 0x4d34504f;
+        Math.random = () => {
+            seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+            return seed / 0x100000000;
+        };
+        try {
+            for (let i = 0; i < samples; i++) {
+                const c = color() & 0xffffff;
+                r += (c >> 16) & 0xff;
+                g += (c >> 8) & 0xff;
+                b += c & 0xff;
+            }
+        } finally {
+            Math.random = random;
         }
         r = Math.round(r / samples);
         g = Math.round(g / samples);
@@ -612,6 +690,8 @@ public:
             d.emitter = r.emitter ? r.emitter : "";
             _gameObjs[d.type] = d;
         }
+${playerEntries}${poseEntries}
+${Object.entries(MapDefs).map(([name, d]) => `        _mapRenders.at(${str(name)}).colors.playerGhillie=${n(d.biome?.colors?.playerGhillie, 0x5a9e4c)};`).join("\n")}
         for (const auto& r : kParticles) {
             ParticleDef d;
             d.images.reserve(static_cast<size_t>(r.imageCount));
@@ -678,6 +758,14 @@ public:
         auto it = _emitters.find(type);
         return it == _emitters.end() ? nullptr : &it->second;
     }
+    const PlayerPose* playerPose(const std::string& type) const override {
+        auto it = _poses.find(type);
+        return it == _poses.end() ? nullptr : &it->second;
+    }
+    const PlayerAnimationDef* playerAnimation(const std::string& type) const override {
+        auto it = _animations.find(type);
+        return it == _animations.end() ? nullptr : &it->second;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
@@ -685,6 +773,8 @@ private:
     std::unordered_map<std::string, GameObjRenderDef> _gameObjs;
     std::unordered_map<std::string, ParticleDef> _particles;
     std::unordered_map<std::string, EmitterDef> _emitters;
+    std::unordered_map<std::string, PlayerPose> _poses;
+    std::unordered_map<std::string, PlayerAnimationDef> _animations;
 };
 
 } // namespace
@@ -698,7 +788,7 @@ void installGeneratedDefs() {
 `;
 
 const dest = path.join(here, "../src/render/GeneratedDefs.cpp");
-fs.writeFileSync(dest, out);
+fs.writeFileSync(dest, out.replace(/[ \t]+$/gm, ""));
 console.log(`wrote ${dest}`);
 console.log(
     `mapObjs=${mapTypes.length} layers arrays=${emittedLayers.length} maps=${
