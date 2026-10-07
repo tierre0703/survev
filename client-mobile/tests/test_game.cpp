@@ -77,6 +77,14 @@ struct Harness {
 
 TEST(game_join_sends_joinmsg) {
     Harness h;
+    // M7: the menu supplies the join identity; check a custom loadout round-trips.
+    Game::JoinInfo info;
+    info.name = "Player";
+    info.outfit = "outfitBase";
+    info.melee = "fists";
+    info.heal = "bandage";
+    info.boost = "soda";
+    h.game.setJoinInfo(info);
     h.game.tryJoinGame("ws://dev.example:9000/play", "tok-123");
     CHECK_EQ(h.created.size(), static_cast<size_t>(1));
     CHECK_EQ(h.conn()->url, std::string("ws://dev.example:9000/play"));

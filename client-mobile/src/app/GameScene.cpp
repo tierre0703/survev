@@ -13,6 +13,7 @@
 #include "../audio/Ambiance.h"
 #include "../audio/AxmolAudioBackend.h"
 #include "../audio/GeneratedSoundDefs.h"
+#include "../ui/UiOverlay.h"
 
 #include <set>
 #include <sstream>
@@ -183,8 +184,10 @@ bool GameScene::init() {
     });
     _game->setUpdateCallback([this](const UpdateMsg& msg) { _world->applyUpdate(msg); });
 
-    // M3: with no menu UI yet, auto-connect if a join target is configured.
-    maybeAutoConnect();
+    // M7: the menu starts a game via enterWithJoin()/enterWithFindGame().
+    _gameRoot->setVisible(false);
+    _movePad->setVisible(false);
+    _aimPad->setVisible(false);
 
     // Drive update() every frame.
     this->scheduleUpdate();
@@ -201,51 +204,95 @@ GameScene::~GameScene() {
     }
 }
 
-void GameScene::maybeAutoConnect() {
-    auto* ud = ax::UserDefault::getInstance();
-    const std::string url(ud->getStringForKey(dev::kKeyJoinUrl, dev::kJoinUrl));
-    const std::string token(ud->getStringForKey(dev::kKeyJoinToken, dev::kJoinToken));
-    const std::string apiUrl(ud->getStringForKey(dev::kKeyApiUrl, dev::kApiBaseUrl));
-    const std::string region(ud->getStringForKey(dev::kKeyRegion, dev::kRegion));
+void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::string& joinToken) {
+    if (!_game || urls.empty()) {
+        return;
+    }
+    clearError();
+    _inGame = true;
+    _gameRoot->setVisible(true);
+    _movePad->setVisible(true);
+    _aimPad->setVisible(true);
+    _game->setJoinInfo(_joinInfo);
+    tryJoinUrls(urls, joinToken, 0);
+}
 
-    if (!url.empty()) {
-        AXLOGI("Connecting to dev join url {}", url);
-        connectDirect(url, token);
-    } else if (!apiUrl.empty()) {
-        AXLOGI("Finding a game via {}", apiUrl);
-        connectViaFindGame(apiUrl, region, dev::kGameModeIdx);
-    } else {
-        AXLOGI("No dev join target configured (set UserDefault surv_joinUrl or surv_apiUrl)");
+void GameScene::enterWithFindGame(const std::string& region, int gameModeIdx) {
+    _region = region;
+    _gameModeIdx = gameModeIdx;
+    _pendingFind = true;
+    _findAttempts = 0;
+    _lastAttemptClock = 0.0;
+    _findDelay = 0.0f;
+    _findTime = 0.0f;
+    // First request fires on the next update tick (main.ts uses a 0ms timeout
+    // on the first attempt so it can be skipped).
+}
+
+void GameScene::leaveGame() {
+    clearError();
+    if (_game && _game->isConnected()) {
+        _game->free();
+    }
+    _inGame = false;
+    _pendingFind = false;
+    _gameRoot->setVisible(false);
+    _movePad->setVisible(false);
+    _aimPad->setVisible(false);
+    if (_audio) {
+        _audio->stopAll();
     }
 }
 
-void GameScene::connectDirect(const std::string& url, const std::string& joinToken) {
-    if (_game) {
-        _game->tryJoinGame(url, joinToken);
+void GameScene::setError(const std::string& key, const std::string& fallback) {
+    if (_overlay) {
+        _overlay->setMenuError(key, fallback);
     }
 }
 
-void GameScene::connectViaFindGame(const std::string& apiBaseUrl,
-                                   const std::string& region,
-                                   int gameModeIdx) {
-    FindGameBody body;
-    body.region = region;
-    body.version = defs::kProtocolVersion;
-    body.playerCount = 1;
-    body.autoFill = true;
-    body.gameModeIdx = gameModeIdx;
+void GameScene::clearError() {
+    if (_overlay) {
+        _overlay->setMenuError("", "");
+    }
+}
 
-    // Guard against the HTTP callback outliving the scene.
+void GameScene::tryJoinUrls(const std::vector<std::string>& urls, const std::string& joinToken,
+                            size_t index) {
+    if (!_game || index >= urls.size()) {
+        setError("index-failed-joining-game", "Failed to join game");
+        leaveGame();
+        return;
+    }
+    _game->tryJoinGame(urls[index], joinToken);
+}
+
+void GameScene::runFindGameAttempt() {
+    if (!_findGameRequest) {
+        setError("index-failed-finding-game", "Failed to find game");
+        return;
+    }
+    _findAttempts++;
+    _findTime = 0.0f;
     std::weak_ptr<std::atomic<bool>> weak = _alive;
-    findGame(apiBaseUrl, body, [this, weak](FindGameResult result) {
+    const std::string region = _region;
+    const int mode = _gameModeIdx;
+    _findGameRequest(region, mode, [this, weak](const FindGameResultInfo& result) {
         const auto alive = weak.lock();
         if (!alive || !*alive) {
             return;
         }
-        if (result.ok && !result.data.urls.empty()) {
-            connectDirect(result.data.urls.front(), result.data.joinToken);
+        if (result.ok && !result.urls.empty()) {
+            _pendingFind = false;
+            _findAttempts = 0;
+            enterWithJoin(result.urls, result.joinToken);
+            return;
+        }
+        setError("index-failed-finding-game", "Failed to find game");
+        // main.ts retries every 500ms until maxAttempts (2).
+        if (_findAttempts < 2) {
+            _findDelay = 0.5f;
         } else {
-            AXLOGW("find_game failed: {}", result.error);
+            _pendingFind = false;
         }
     });
 }
@@ -267,6 +314,16 @@ void GameScene::resumeGame() {
 
 void GameScene::update(float delta) {
     _game->update(delta);
+
+    // M7 quick-start: wait out the anti-spam delay, then issue the request.
+    if (_pendingFind) {
+        if (_findDelay > 0.0f) {
+            _findDelay -= delta;
+        } else {
+            _pendingFind = false;
+            runFindGameAttempt();
+        }
+    }
 
     if (_world) {
         _world->update(delta);
@@ -294,6 +351,35 @@ void GameScene::update(float delta) {
                 _ambiance->onGameStart();
             }
         }
+    }
+
+    // A closed game socket (not an intentional leave) returns to the menu with
+    // a localized reason, mirroring main.ts onQuit().
+    if (_inGame && !_game->isConnected() && _game->getCloseCode() != 0) {
+        static const struct {
+            uint16_t code;
+            const char* key;
+        } kCloseKeys[] = {
+            {4001, "index-invalid-token"},      {4002, "index-invalid-protocol"},
+            {4003, "index-invalid-packet"},     {4004, "index-behind-proxy"},
+            {4005, "index-player-not-found"},   {4006, "index-ip-banned"},
+            {4007, "index-rate-limited"},       {4008, "index-server-crashed"},
+            {4009, "index-server-restart"},     {4010, "index-invalid-captcha"},
+            {4011, "index-failed-finding-game"},
+        };
+        const char* key = "index-host-closed";
+        for (const auto& entry : kCloseKeys) {
+            if (entry.code == _game->getCloseCode()) {
+                key = entry.key;
+                break;
+            }
+        }
+        setError(key, "Connection lost");
+        leaveGame();
+    }
+
+    if (_overlay) {
+        _overlay->update(delta, isStarted(), isPlaying(), isConnected(), _game.get());
     }
 
     if (_game->isPlaying() && _game->getActivePlayerId() != 0) {

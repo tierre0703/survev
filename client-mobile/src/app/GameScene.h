@@ -14,6 +14,9 @@ class Node;
 namespace pix {
 class Factory;
 }
+namespace ui {
+class UiOverlay; // M7 in-game UI (HUD + pause menu)
+}
 
 namespace surv {
 
@@ -61,19 +64,51 @@ public:
     ax::Node* getGameRoot() const { return _gameRoot; }
     Game* getGame() const { return _game.get(); }
 
-    // M3: join directly with a ws:// url + join token (from find_game or a
-    // dev/URL param), or discover a match over HTTP first.
-    void connectDirect(const std::string& url, const std::string& joinToken);
-    void connectViaFindGame(const std::string& apiBaseUrl, const std::string& region, int gameModeIdx);
+    // M7: the menu owns the join flow; `enterWithJoin`/`enterWithFindGame`
+    // start a game (replacing the old DevConfig auto-connect).
+    struct FindGameResultInfo {
+        bool ok = false;
+        std::vector<std::string> urls;
+        std::string joinToken;
+        std::string error;
+    };
+    using FindGameDone = std::function<void(const FindGameResultInfo&)>;
+    using FindGameRequest =
+        std::function<void(const std::string& region, int gameModeIdx, FindGameDone done)>;
+    void setFindGameRequest(FindGameRequest request) { _findGameRequest = std::move(request); }
+
+    // Direct join (dev/URL param or team `joinGame`).
+    void enterWithJoin(const std::vector<std::string>& urls, const std::string& joinToken);
+    // Quick-start a mode: discover a match with the locale's backoff, then join.
+    void enterWithFindGame(const std::string& region, int gameModeIdx);
+    void leaveGame();
+
+    bool isInGame() const { return _inGame; }
+    bool isStarted() const { return _game && _game->hasJoined(); }
+    bool isConnected() const { return _game && _game->isConnected(); }
+    bool isPlaying() const { return _game && _game->isPlaying(); }
+
+    // UI overlay (HUD + pause menu). Not owned by the scene.
+    void setOverlay(ui::UiOverlay* overlay) { _overlay = overlay; }
+    // Player name + loadout used for the next join (mirrors main.ts
+    // setConfigFromDOM + JoinMsg fields).
+    void setJoinInfo(const Game::JoinInfo& info) { _joinInfo = info; }
+    const Game::JoinInfo& joinInfo() const { return _joinInfo; }
 
     // App lifecycle hooks (AppDelegate).
     void pauseGame();
     void resumeGame();
 
 private:
-    void maybeAutoConnect();
     // M5: build an InputMsg from Touch and send it at the server's input rate.
     void updateInput(float dt);
+    // Retries the next url with the same token (main.ts joinGame()).
+    void tryJoinUrls(const std::vector<std::string>& urls, const std::string& joinToken, size_t index = 0);
+    // Pending quick-start: waits out the anti-spam delay, then calls the
+    // injected find_game request.
+    void runFindGameAttempt();
+    void setError(const std::string& key, const std::string& fallback = "");
+    void clearError();
 
     ax::Node* _gameRoot = nullptr;
     std::unique_ptr<Game> _game;
@@ -88,6 +123,19 @@ private:
     std::shared_ptr<std::atomic<bool>> _alive;
     bool _wasConnected = false;
     bool _wasPlaying = false;
+    bool _inGame = false;
+
+    // M7: matchmaking state (findGameAttempts/timers mirrored from main.ts).
+    FindGameRequest _findGameRequest;
+    ui::UiOverlay* _overlay = nullptr;
+    Game::JoinInfo _joinInfo;
+    bool _pendingFind = false;
+    float _findDelay = 0.0f;
+    int _findAttempts = 0;
+    float _findTime = 0.0f;
+    double _lastAttemptClock = 0.0;
+    std::string _region = "na";
+    int _gameModeIdx = 0;
 
     TouchInput _touchInput;
     float _inputMsgTimeout = 0.0f;

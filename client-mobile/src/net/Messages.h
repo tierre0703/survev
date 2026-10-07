@@ -1335,7 +1335,6 @@ if ((flags & UpdateExtFlags::Bullets) != 0) {
         }
         ack = s.readUint8();
     }
-
 private:
     static void serializeBullet(NetBitStream& s, const Bullet& bullet) {
         s.writeUint16(bullet.playerId);

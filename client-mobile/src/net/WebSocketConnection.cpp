@@ -157,4 +157,11 @@ std::unique_ptr<Connection> createWebSocketConnection(const std::string& url) {
     return std::make_unique<WebSocketConnectionImpl>(url);
 }
 
+std::unique_ptr<Connection> createWebSocketConnectionTo(const std::string& url) {
+    // axmol's WebSocket::open accepts the full ws(s)://host:port/path URL (it
+    // parses it with Uri::parse), so this is the same transport as the game
+    // connection; the alias exists so the UI code reads clearly.
+    return createWebSocketConnection(url);
+}
+
 } // namespace surv

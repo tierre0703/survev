@@ -24,7 +24,9 @@ add_executable(surv_tests
     test_touch_input.cpp
     test_render.cpp
     test_audio.cpp
+    test_ui.cpp
     ${SURV_SRC}/net/Net.cpp
+    ${SURV_SRC}/net/WsUrl.cpp
     ${SURV_SRC}/game/Game.cpp
     ${SURV_SRC}/render/Terrain.cpp
     ${SURV_SRC}/render/Renderer.cpp
@@ -40,6 +42,10 @@ add_executable(surv_tests
     ${SURV_SRC}/audio/AudioManager.cpp
     ${SURV_SRC}/audio/Ambiance.cpp
     ${SURV_SRC}/audio/GeneratedSoundDefs.cpp
+    ${SURV_SRC}/ui/Config.cpp
+    ${SURV_SRC}/ui/Device.cpp
+    ${SURV_SRC}/ui/Localization.cpp
+    ${SURV_SRC}/ui/TeamMenu.cpp
 )
 target_include_directories(surv_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

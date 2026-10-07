@@ -17,6 +17,11 @@ void Game::init(GameScene* scene, ConnectionFactory factory) {
     _factory = std::move(factory);
 }
 
+void Game::setJoinInfo(const JoinInfo& info) {
+    _joinInfo = info;
+    _emotes = info.emotes;
+}
+
 void Game::free() {
     if (_connection) {
         _connection->resetAndClose();
@@ -31,7 +36,8 @@ void Game::free() {
     _localPlayerId = 0;
     _teamMode = 0;
     _started = false;
-    _emotes.clear();
+    _joined = false;
+    _emotes = _joinInfo.emotes;
     _inputSeq = 0;
     _inputSeqInFlight = false;
     _playersById.clear();
@@ -151,19 +157,20 @@ void Game::onOpen() {
 }
 
 void Game::sendJoinMessage() {
-    // Mirrors game.ts onOpen(): build the JoinMsg from config/device.
+    // Mirrors game.ts onOpen(): build the JoinMsg from the menu's join info
+    // (M7) plus the device capabilities.
     JoinMsg msg;
     msg.protocol = defs::kProtocolVersion;
     msg.joinToken = _lastToken;
-    msg.name = _playerName;  // TODO(M7): from UI/config
+    msg.name = _joinInfo.name;
     msg.useTouch = true;     // mobile build always uses touch
     msg.isMobile = true;
     msg.bot = false;
-    msg.outfit = "outfitBase";
-    msg.melee = "fists";
-    msg.heal = "bandage";
-    msg.boost = "soda";
-    msg.emotes = _emotes;
+    msg.outfit = _joinInfo.outfit;
+    msg.melee = _joinInfo.melee;
+    msg.heal = _joinInfo.heal;
+    msg.boost = _joinInfo.boost;
+    msg.emotes = _joinInfo.emotes;
     sendMessage(MsgType_Join, msg, 8192);
 }
 
@@ -189,9 +196,10 @@ void Game::onClose(uint16_t code, const std::string& reason) {
     _connecting = false;
     _connected = false;
     _playing = false;
+    _joined = false;
     _inputSeqInFlight = false;
-    // TODO(M7): if this was not an intentional pause/quit, surface `reason`
-    // (GameWsDisconnectReason) and retry another URL like main.ts joinGame().
+    // M7: the UI observes isConnected()/isPlaying() transitions and surfaces
+    // `reason` (GameWsDisconnectReason) with a localized message.
 }
 
 void Game::onServerMessage(uint8_t type, NetBitStream& s) {
@@ -228,7 +236,7 @@ void Game::handleJoined(NetBitStream& s) {
     _localPlayerId = m.playerId;
     _started = m.started;
     _emotes = std::move(m.emotes);
-    // TODO(M7): onJoin() UI transition + emote wheel + waiting-for-players.
+    _joined = true;
 }
 
 void Game::handleUpdate(NetBitStream& s) {
@@ -242,6 +250,7 @@ void Game::handleUpdate(NetBitStream& s) {
     if (m.activePlayerIdDirty) {
         _activePlayerId = m.activePlayerId;
     }
+    _joined = true;
     _playing = true;
 
     // Mirror m_processGameUpdate(): delete objects, apply full then partial

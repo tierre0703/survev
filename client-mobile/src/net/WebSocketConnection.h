@@ -14,4 +14,8 @@ namespace surv {
 // Returns nullptr if the URL cannot be opened.
 std::unique_ptr<Connection> createWebSocketConnection(const std::string& url);
 
+// Same transport, named for the M7 UI: used for the game socket (`/play`) and
+// the team socket (`/team_v2`). `url` is the full ws(s):// URL.
+std::unique_ptr<Connection> createWebSocketConnectionTo(const std::string& url);
+
 } // namespace surv

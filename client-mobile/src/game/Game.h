@@ -54,6 +54,23 @@ public:
     void init(GameScene* scene, ConnectionFactory factory = nullptr);
     void free();
 
+    // M7: join identity supplied by the menu (name + loadout). Read when the
+    // JoinMsg is built on socket open.
+    struct JoinInfo {
+        std::string name = "Player";
+        std::string outfit = "outfitBase";
+        std::string melee = "fists";
+        std::string heal = "heal_basic";
+        std::string boost = "boost_basic";
+        std::vector<std::string> emotes;
+    };
+    void setJoinInfo(const JoinInfo& info);
+    const JoinInfo& getJoinInfo() const { return _joinInfo; }
+    // True once the server has accepted us (JoinedMsg or first UpdateMsg).
+    bool hasJoined() const { return _joined; }
+    // True while the client is attempting to open the game socket.
+    bool isConnecting() const { return _connecting; }
+
     void update(float dt);
 
     // Connection lifecycle (JoinMsg -> JoinedMsg -> UpdateMsg stream).
@@ -133,12 +150,13 @@ private:
     // Join info retained so a foreground resume can rejoin.
     std::string _lastUrl;
     std::string _lastToken;
-    std::string _playerName = "Player";
 
     uint16_t _activePlayerId = 0;
     uint16_t _localPlayerId = 0;
     uint8_t _teamMode = 0;
     bool _started = false;
+    JoinInfo _joinInfo;
+    bool _joined = false;
     std::vector<std::string> _emotes;
     uint32_t _inputSeq = 0;
     bool _inputSeqInFlight = false;
