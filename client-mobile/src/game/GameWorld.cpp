@@ -1,5 +1,6 @@
 #include "GameWorld.h"
 
+#include "Gas.h"
 #include "Map.h"
 #include "objects/Barns.h"
 #include "objects/GameObject.h"
@@ -7,7 +8,16 @@
 #include "../audio/Ambiance.h"
 #include "../audio/AudioManager.h"
 
+#include <chrono>
+
 namespace surv {
+
+namespace {
+double updateClockSeconds() {
+    using clock = std::chrono::steady_clock;
+    return std::chrono::duration<double>(clock::now().time_since_epoch()).count();
+}
+} // namespace
 
 // --- ObjectCreator ---------------------------------------------------------
 AbstractObject* ObjectCreator::updateObjFull(uint8_t type, uint16_t id, const ObjectData& data,
@@ -84,6 +94,11 @@ void GameWorld::attachTo(pix::Node* root) {
     root->addChild(_renderer->layers[1]);
     root->addChild(_renderer->layers[2]);
     root->addChild(_renderer->layers[3]);
+    // The gas overlay draws above the world (gas.ts m_render runs after the
+    // map/objects, before the UI).
+    if (_gas.gasRenderer.display) {
+        root->addChild(_gas.gasRenderer.display);
+    }
 }
 
 void GameWorld::setScreenSize(float width, float height) {
@@ -102,6 +117,7 @@ void GameWorld::loadMap(const MapMsg& msg) {
     _map->loadMap(msg, _camera);
     _particleBarn->valueAdjust = _map->mapDef.valueAdjust;
     _renderer->resize(*_map, _camera);
+    _gas.m_init(_factory);
 
     // map.ts: spawn the biome camera particle emitter (falling leaves/snow/...).
     if (_map->cameraEmitter) {
@@ -131,6 +147,17 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
     if (msg.activePlayerIdDirty) {
         _activePlayerId = msg.activePlayerId;
     }
+
+    // camera.m_interpInterval tracks the wall-clock spacing of update messages
+    // (game.ts m_processGameUpdate); the object interpolation uses it.
+    if (_lastUpdateTimeValid) {
+        const float interval = static_cast<float>(updateClockSeconds() - _lastUpdateTime);
+        if (interval > 0.0f) {
+            _camera.m_interpInterval = interval;
+        }
+    }
+    _lastUpdateTime = updateClockSeconds();
+    _lastUpdateTimeValid = true;
 
     for (uint16_t id : msg.delObjIds) {
         _creator->deleteObj(id);
@@ -181,6 +208,13 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
         }
     }
 
+    if (msg.gasDirty) {
+        _gas.setFullState(msg.gasT, msg.gasData);
+    }
+    if (msg.gasTDirty) {
+        _gas.setProgress(msg.gasT);
+    }
+
     _activePlayer = _playerBarn->getPlayerById(_activePlayerId);
 }
 
@@ -200,6 +234,7 @@ void GameWorld::update(float dt) {
 
     _renderer->m_update(dt, _camera, *_map, false);
     _map->m_render(_camera);
+    _gas.m_render(_factory, dt, _camera);
 
     // M6: drive the audio manager + ambience (game.ts update order).
     if (_activePlayer) {

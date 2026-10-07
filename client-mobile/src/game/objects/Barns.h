@@ -1,15 +1,18 @@
-#pragma once
-// Ports of the client object barns (client/src/objects/*.ts): obstacle,
-// building, loot, deadBody, projectile, smoke, bullet, explosion, player and
-// the particle emitter. Draw calls go through the PixiLike adapter so the
+// Ports of the more involved client object barns (client/src/objects/*.ts):
+// obstacle, building, loot, deadBody, projectile, smoke, bullet and explosion,
+// plus the particles.ts runtime. Player skeletal rendering lives in
+// PlayerRender.cpp. Draw calls go through the PixiLike adapter so the
 // geometry/order mirrors the web client.
+#pragma once
+#include "GameObject.h"
 #include "../../core/Collider.h"
 #include "../../core/Vec2.h"
 #include "../../render/Camera.h"
 #include "../../render/Defs.h"
-#include "GameObject.h"
+#include <array>
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace pix {
@@ -24,6 +27,7 @@ class Factory;
 namespace surv {
 
 class GameWorld;
+class Gas;
 
 struct Bullet; // shared/net Messages.h
 class Emitter; // particles.ts
@@ -51,14 +55,33 @@ public:
     bool isSkin = false;
     uint16_t skinPlayerId = 0;
 
-    pix::Container* container = nullptr;
+    // obstacle.ts runtime visual state.
+    bool isNew = false;
+    bool dead = false;
+    bool exploded = false;
+    float rot = 0.0f;
+    float imgRot = 0.0f;
+    float imgScale = 1.0f;
+    bool imgMirrorX = false;
+    bool imgMirrorY = false;
+    int zOrd = 0;
+    bool doorHasInterp = false;
+    Vec2 doorInterpPos;
+    float doorInterpRot = 0.0f;
+
     pix::Sprite* sprite = nullptr;
+    pix::Sprite* casingSprite = nullptr;
+    Emitter* smokeEmitter = nullptr;
     std::string frame;
 
     void m_init() override;
     void m_free() override;
     void m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) override;
     void update(float dt, Ctx& ctx);
+    void render(Ctx& ctx, int activeLayer);
+
+private:
+    bool _firstUpdate = true;
 };
 
 // --- building.ts -----------------------------------------------------------
@@ -101,6 +124,7 @@ public:
 
     std::vector<Img> imgs;
     pix::Sprite* residue = nullptr;
+    bool residueCreated = false;
 
     struct Surface {
         std::string type;
@@ -134,6 +158,12 @@ public:
     uint8_t count = 0;
     bool hasOwner = false;
     uint16_t ownerId = 0;
+    float rad = 1.0f;
+    float imgScale = 1.0f;
+    float ticker = 0.0f;
+    Vec2 visualPosOld;
+    float posInterpTicker = 0.0f;
+    bool updatedData = false;
 
     pix::Container* container = nullptr;
     pix::Sprite* sprite = nullptr;

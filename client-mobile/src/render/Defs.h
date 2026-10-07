@@ -98,6 +98,13 @@ struct MapObjectDef {
     bool isButton = false;
     bool isTree = false;
     bool isWall = false;
+    // obstacle.ts `randomRotation`: rotate the obstacle image by __id % 360.
+    bool randomRotation = false;
+    // obstacle.ts `explosion` particle (hasExplosion gates the health smoke).
+    bool hasExplosion = false;
+    std::string explosionParticle;
+    // obstacle.ts door.slideOffset (used to compute the open door position).
+    float doorSlideOffset = 0.0f;
 
     std::vector<MapShapeDef> mapShapes;
 

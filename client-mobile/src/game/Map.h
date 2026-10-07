@@ -6,10 +6,19 @@
 #include "../render/Defs.h"
 #include "../render/PixiLike.h"
 #include "../render/Terrain.h"
-#include "objects/Barns.h"
-#include "objects/Structure.h"
 #include <string>
 #include <vector>
+
+namespace pix {
+class Sprite;
+class Graphics;
+class Container;
+class Text;
+class Factory;
+} // namespace pix
+
+#include "objects/Barns.h"
+#include "objects/Structure.h"
 
 namespace surv {
 
@@ -36,6 +45,13 @@ public:
     std::vector<GroundPatch> groundPatches;
 
     bool mapLoaded = false;
+
+    // map.ts bookkeeping: suppress one-shot destroy/drop effects for objects
+    // that were already destroyed before this client joined.
+    std::vector<uint16_t> deadObstacleIds;
+    std::vector<uint16_t> deadCeilingIds;
+    std::vector<uint16_t> solvedPuzzleIds;
+    std::vector<uint16_t> lootDropSfxIds;
 
     // biome camera particle emitter (map.ts cameraEmitter), driven per frame.
     Emitter* cameraEmitter = nullptr;

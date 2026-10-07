@@ -1,5 +1,8 @@
 #include "Map.h"
 #include "GameWorld.h"
+#include "Gas.h"
+#include "objects/Barns.h"
+#include "objects/Structure.h"
 
 #include "../core/GameConfig.h"
 #include "../core/MathUtil.h"
@@ -173,9 +176,11 @@ void Map::m_render(const Camera& camera) {
 }
 
 void Map::update(float dt, GameWorld& ctx) {
+    const int activeLayer = ctx.activePlayer() ? ctx.activePlayer()->layer : 0;
     for (auto* obstacle : obstaclePool.m_getPool()) {
         if (obstacle->active) {
             obstacle->update(dt, ctx);
+            obstacle->render(ctx, activeLayer);
         }
     }
     for (auto* building : buildingPool.m_getPool()) {

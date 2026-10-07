@@ -950,6 +950,11 @@ struct UpdateMsg : Msg {
     bool killLeaderDirty = false;
     uint8_t ack = 0;
 
+    // --- server-side fields not carried by UpdateMsg -----------------------
+    // The mobile port applies the same map updates the web client does, but we
+    // only track the one-time ids here (used to skip destroy/drop FX on join).
+    float updateInterval = 0.0f; // seconds since the previous UpdateMsg
+
     void serialize(NetBitStream& s) override {
         uint32_t flags = 0;
         const size_t flagsIdx = s.byteIndex();

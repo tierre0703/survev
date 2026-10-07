@@ -2,6 +2,7 @@
 // The in-game render context (the web client's Game `Ctx`). Owns the camera,
 // renderer, map and object barns, applies UpdateMsg object deltas, and drives
 // the per-frame object updates that position scene nodes.
+#include "Gas.h"
 #include "../net/Messages.h"
 #include "../render/Camera.h"
 #include "../render/PixiLike.h"
@@ -24,6 +25,7 @@ class BulletBarn;
 class ExplosionBarn;
 class PlayerBarn;
 class ParticleBarn;
+class Gas;
 
 namespace audio {
 class AudioManager;
@@ -56,6 +58,7 @@ public:
     ExplosionBarn& explosionBarn() { return *_explosionBarn; }
     PlayerBarn& playerBarn() { return *_playerBarn; }
     ParticleBarn& particleBarn() { return *_particleBarn; }
+    Gas& gas() { return _gas; }
 
     Player* activePlayer() { return _activePlayer; }
     void setActivePlayer(Player* p) { _activePlayer = p; }
@@ -81,6 +84,8 @@ private:
 
     pix::Factory* _factory = nullptr;
     Camera _camera;
+    double _lastUpdateTime = 0.0;
+    bool _lastUpdateTimeValid = false;
     std::unique_ptr<Renderer> _renderer;
     std::unique_ptr<Map> _map;
     std::unique_ptr<LootBarn> _lootBarn;
@@ -91,6 +96,7 @@ private:
     std::unique_ptr<ExplosionBarn> _explosionBarn;
     std::unique_ptr<PlayerBarn> _playerBarn;
     std::unique_ptr<ParticleBarn> _particleBarn;
+    Gas _gas;
     std::unique_ptr<ObjectCreator> _creator;
 
     Player* _activePlayer = nullptr;

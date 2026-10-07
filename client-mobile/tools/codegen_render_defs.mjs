@@ -227,6 +227,10 @@ for (let i = 0; i < mapTypes.length; i++) {
     entries += `    {${str(type)},${imgInit(img)},${hasImg ? 1 : 0},${colInit(collision)},${
         hasCollision ? 1 : 0
     },${def.isDoor ? 1 : 0},${def.isButton ? 1 : 0},${def.isTree ? 1 : 0},${def.isWall ? 1 : 0},${
+        def.img && def.img.randomRotation ? 1 : 0
+    },${def.explosion !== undefined ? 1 : 0},${str(
+        Array.isArray(def.explosion) ? def.explosion[0] : def.explosion,
+    )},${n(def.door?.slideOffset, 0)},${
         map && map.display === false ? 0 : 1
     },${map && map.color !== undefined ? 1 : 0},${n(map?.color, 0)},${n(map?.scale, 1)},${colInit(
         bounds,
@@ -503,7 +507,9 @@ struct RawStair { RawCollider col; float dx, dy; int noCeilingReveal; int lootOn
 struct RawShape { RawCollider col; float scale; unsigned color; };
 struct RawMapObj {
     const char* type; RawImg img; int hasImg; RawCollider collision; int hasCollision;
-    int isDoor, isButton, isTree, isWall; int mapDisplay, mapHasColor; unsigned mapColor; float mapScale;
+    int isDoor, isButton, isTree, isWall; int randomRotation, hasExplosion; const char* explosionParticle;
+    float doorSlideOffset;
+    int mapDisplay, mapHasColor; unsigned mapColor; float mapScale;
     RawCollider bounding; int hasBounding;
     const RawLayer* layers; int layerCount;
     const RawStair* stairs; int stairCount;
@@ -601,6 +607,10 @@ public:
             d.isButton = r.isButton != 0;
             d.isTree = r.isTree != 0;
             d.isWall = r.isWall != 0;
+            d.randomRotation = r.randomRotation != 0;
+            d.hasExplosion = r.hasExplosion != 0;
+            d.explosionParticle = r.explosionParticle ? r.explosionParticle : "";
+            d.doorSlideOffset = r.doorSlideOffset;
             d.map.display = r.mapDisplay != 0;
             d.map.hasColor = r.mapHasColor != 0;
             d.map.color = r.mapColor;
