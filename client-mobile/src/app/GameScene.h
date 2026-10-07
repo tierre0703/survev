@@ -136,6 +136,12 @@ private:
     double _lastAttemptClock = 0.0;
     std::string _region = "na";
     int _gameModeIdx = 0;
+    // URL fallback (main.ts joinGame): retry the next advertised host when a
+    // join fails before the server ever accepted us.
+    bool _awaitingJoin = false;
+    std::vector<std::string> _joinRetryUrls;
+    std::string _joinRetryToken;
+    size_t _joinRetryIndex = 0;
 
     TouchInput _touchInput;
     float _inputMsgTimeout = 0.0f;

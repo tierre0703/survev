@@ -214,6 +214,8 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
     _movePad->setVisible(true);
     _aimPad->setVisible(true);
     _game->setJoinInfo(_joinInfo);
+    _awaitingJoin = true;
+    _joinRetryUrls.clear();
     tryJoinUrls(urls, joinToken, 0);
 }
 
@@ -236,6 +238,8 @@ void GameScene::leaveGame() {
     }
     _inGame = false;
     _pendingFind = false;
+    _awaitingJoin = false;
+    _joinRetryUrls.clear();
     _gameRoot->setVisible(false);
     _movePad->setVisible(false);
     _aimPad->setVisible(false);
@@ -263,6 +267,12 @@ void GameScene::tryJoinUrls(const std::vector<std::string>& urls, const std::str
         leaveGame();
         return;
     }
+    // main.ts keeps a failure callback per URL so a dead host falls through to
+    // the next advertised address; the socket close path marks the attempt.
+    _joinRetryUrls = urls;
+    _joinRetryToken = joinToken;
+    _joinRetryIndex = index;
+    _awaitingJoin = true;
     _game->tryJoinGame(urls[index], joinToken);
 }
 
@@ -356,6 +366,19 @@ void GameScene::update(float delta) {
     // A closed game socket (not an intentional leave) returns to the menu with
     // a localized reason, mirroring main.ts onQuit().
     if (_inGame && !_game->isConnected() && _game->getCloseCode() != 0) {
+        // If the server never accepted us, try the next advertised URL with the
+        // same join token (main.ts joinGame()) before giving up.
+        if (_awaitingJoin && !_game->hasJoined()
+            && _joinRetryIndex + 1 < _joinRetryUrls.size()) {
+            _awaitingJoin = false;
+            const size_t next = _joinRetryIndex + 1;
+            const std::vector<std::string> urls = _joinRetryUrls;
+            const std::string token = _joinRetryToken;
+            AXLOGW("Join failed (code={}); trying next url", _game->getCloseCode());
+            tryJoinUrls(urls, token, next);
+            return;
+        }
+        _awaitingJoin = false;
         static const struct {
             uint16_t code;
             const char* key;
@@ -376,6 +399,8 @@ void GameScene::update(float delta) {
         }
         setError(key, "Connection lost");
         leaveGame();
+    } else if (_game->hasJoined()) {
+        _awaitingJoin = false;
     }
 
     if (_overlay) {
