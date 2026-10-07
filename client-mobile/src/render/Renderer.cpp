@@ -71,15 +71,19 @@ void Renderer::addPIXIObj(pix::Node* obj, int layer_, int zOrd, int zIdx_) {
 }
 
 void Renderer::resize(Map& map, Camera& camera) {
-    const uint32_t undergroundColor =
-        map.mapLoaded ? map.mapDef.colors.underground : 1772803u;
+    _groundColor = map.mapLoaded ? map.mapDef.colors.underground : 1772803u;
+    _groundAlphaDrawn = -1.0f;
+    redrawGround(camera);
+    layerMaskDirty = true;
+}
 
+// T6: DrawNode bakes vertex alpha into the geometry, so setAlpha() on the node
+// does not fade the drawn rect. Rebuild the ground rect with the current alpha.
+void Renderer::redrawGround(Camera& camera) {
     ground->clear();
-    ground->beginFill(undergroundColor);
+    ground->beginFill(_groundColor, _groundAlphaDrawn);
     ground->drawRect(0.0f, 0.0f, camera.m_screenWidth, camera.m_screenHeight);
     ground->endFill();
-
-    layerMaskDirty = true;
 }
 
 void Renderer::redrawLayerMask(Camera& camera, Map& map) {
@@ -110,11 +114,10 @@ void Renderer::redrawLayerMask(Camera& camera, Map& map) {
     if (layerMaskDirty) {
         layerMaskDirty = false;
         layerMask->clear();
-        // axmol DrawNode has no polygon holes, so use the canvas fallback
-        // (same as the _canvasMode branch below): the full-map rect plus each
-        // structure mask as separate solid rects. Emitting this as one giant
-        // polygon (with no-op beginHole/endHole) both loses the holes and made
-        // axmol's poly2tri triangulation crash.
+        // T5: the layer mask is the full map with the structure masks punched
+        // out as holes. AxGraphics implements beginHole/endHole with axis-
+        // aligned rect subtraction (no poly2tri), so this matches the web
+        // client's non-canvas branch.
         layerMask->beginFill(0xffffff, 1.0f);
         layerMask->drawRect(0.0f, 0.0f, Constants::MaxPosition, Constants::MaxPosition);
         for (auto* structure : structures) {
@@ -124,8 +127,10 @@ void Renderer::redrawLayerMask(Camera& camera, Map& map) {
             for (const auto& m : structure->mask) {
                 const Vec2 halfExtents = v2Mul(v2Sub(m.max, m.min), 0.5f);
                 const Vec2 center = v2Add(m.min, halfExtents);
+                layerMask->beginHole();
                 layerMask->drawRect(center.x - halfExtents.x, center.y - halfExtents.y,
                                     halfExtents.x * 2.0f, halfExtents.y * 2.0f);
+                layerMask->endHole();
             }
         }
         layerMask->endFill();
@@ -177,7 +182,13 @@ void Renderer::m_update(float dt, Camera& camera, Map& map, bool debugLayerMaskE
     layers[1]->setAlpha(layerAlpha);
     layers[2]->setAlpha(1.0f);
     layers[3]->setAlpha(1.0f);
-    ground->setAlpha(groundAlpha);
+
+    // T6: rebuild the ground geometry when the fade changes (DrawNode bakes
+    // vertex alpha, so node opacity alone does not fade it).
+    if (std::fabs(groundAlpha - _groundAlphaDrawn) > 0.001f) {
+        _groundAlphaDrawn = groundAlpha;
+        redrawGround(camera);
+    }
 
     layers[0]->setVisible(groundAlpha < 1.0f);
     layers[1]->setVisible(layerAlpha > 0.0f);

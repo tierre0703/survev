@@ -4,6 +4,8 @@
 #include "objects/Barns.h"
 #include "objects/GameObject.h"
 #include "render/Renderer.h"
+#include "../audio/Ambiance.h"
+#include "../audio/AudioManager.h"
 
 namespace surv {
 
@@ -98,7 +100,31 @@ bool GameWorld::mapLoaded() const {
 
 void GameWorld::loadMap(const MapMsg& msg) {
     _map->loadMap(msg, _camera);
+    _particleBarn->valueAdjust = _map->mapDef.valueAdjust;
     _renderer->resize(*_map, _camera);
+
+    // map.ts: spawn the biome camera particle emitter (falling leaves/snow/...).
+    if (_map->cameraEmitter) {
+        _map->cameraEmitter->stop();
+        _map->cameraEmitter = nullptr;
+    }
+    if (!_map->mapDef.cameraEmitter.empty()) {
+        EmitterOptions opts;
+        opts.pos = Vec2(0.0f, 0.0f);
+        opts.dir = Vec2(0.70710678f, -0.70710678f);
+        opts.layer = 99999;
+        _map->cameraEmitter = _particleBarn->addEmitter(_factory, _map->mapDef.cameraEmitter, opts);
+    }
+
+    // M6: point the ambience mixer at this map's tracks.
+    if (_ambiance && _audio) {
+        audio::AmbienceMap amb;
+        amb.music = _map->mapDef.ambienceMusic;
+        amb.wind = _map->mapDef.ambienceWind;
+        amb.river = _map->mapDef.ambienceRiver;
+        amb.waves = _map->mapDef.ambienceWaves;
+        _ambiance->setMap(amb, *_audio);
+    }
 }
 
 void GameWorld::applyUpdate(const UpdateMsg& msg) {
@@ -131,6 +157,18 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
         e->type = ex.type;
         e->layer = ex.layer;
         e->t = 0.0f;
+
+        // M6: explosion SFX (explosion.ts picks a per-def sound; a generic
+        // explosion works until the explosion defs are ported).
+        if (_audio) {
+            audio::PlaySoundOptions opts;
+            opts.channel = "sfx";
+            opts.hasSoundPos = true;
+            opts.soundPos = ex.pos;
+            opts.hasLayer = true;
+            opts.layer = ex.layer;
+            _audio->playSound("explosion_01", opts);
+        }
     }
 
     _activePlayer = _playerBarn->getPlayerById(_activePlayerId);
@@ -152,6 +190,23 @@ void GameWorld::update(float dt) {
 
     _renderer->m_update(dt, _camera, *_map, false);
     _map->m_render(_camera);
+
+    // M6: drive the audio manager + ambience (game.ts update order).
+    if (_activePlayer) {
+        const bool underground = _map->isUnderground(_activePlayer->pos, _activePlayer->layer);
+        _renderer->setUnderground(underground);
+        if (_audio) {
+            _audio->activeLayer = _activePlayer->layer;
+            _audio->underground = underground;
+        }
+    }
+    if (_audio) {
+        _audio->cameraPos = _camera.m_pos;
+        _audio->update(dt);
+    }
+    if (_ambiance && _audio) {
+        _ambiance->update(dt, *_audio, true);
+    }
 }
 
 const std::string& GameWorld::getPlayerName(uint16_t playerId) const {

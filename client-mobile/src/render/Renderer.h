@@ -42,10 +42,16 @@ public:
     void m_update(float dt, Camera& camera, Map& map, bool debugLayerMaskEnabled);
 
 private:
+    void redrawGround(Camera& camera);
+
     bool _canvasMode = false;
     pix::Factory* _factory = nullptr;
     bool _layerDirty[4] = {true, true, true, true};
     std::unordered_map<pix::Node*, int> _objLayer;
+    // T6: DrawNode bakes vertex alpha, so the ground fade is applied by
+    // rebuilding the rect with the current alpha rather than setAlpha().
+    uint32_t _groundColor = 0x1b0e0b;
+    float _groundAlphaDrawn = -1.0f;
 };
 
 } // namespace surv

@@ -181,6 +181,20 @@ void Map::update(float dt, GameWorld& ctx) {
             // Structures only do debug rendering in the web client.
         }
     }
+
+    // map.ts cameraEmitter: follow the camera, scale radius/rate by zoom.
+    if (cameraEmitter && ctx.activePlayer()) {
+        cameraEmitter->pos = ctx.camera().m_pos;
+        cameraEmitter->enabled = true;
+        const float maxRadius = 120.0f;
+        const float camRadius = ctx.camera().m_zoom * 2.5f;
+        cameraEmitter->radius = math::min(camRadius, maxRadius);
+        const float ratio = (cameraEmitter->radius * cameraEmitter->radius) / (maxRadius * maxRadius);
+        cameraEmitter->rateMult = ratio > 0.0f ? 1.0f / ratio : 1.0f;
+        const float alphaTarget = ctx.activePlayer()->layer == 0 ? 1.0f : 0.0f;
+        cameraEmitter->alpha =
+            math::lerp(dt * 6.0f, cameraEmitter->alpha, alphaTarget);
+    }
 }
 
 Building* Map::getBuildingById(uint16_t id) {
@@ -216,6 +230,24 @@ bool Map::insideBuildingCeiling(const Collider& c, bool checkVisible) const {
                                                    !building->ceilingDead)) &&
             building->isInsideCeiling(c)) {
             return true;
+        }
+    }
+    return false;
+}
+
+bool Map::isUnderground(const Vec2& pos, int layer) const {
+    if (layer != 1) {
+        return false;
+    }
+    const Collider c = Collider::createCircle(pos, 1.0f);
+    for (auto* structure : structurePool.m_getPool()) {
+        if (!structure->active) {
+            continue;
+        }
+        for (const auto& l : structure->layers) {
+            if (l.underground && colliderIntersect(l.collision, c)) {
+                return true;
+            }
         }
     }
     return false;

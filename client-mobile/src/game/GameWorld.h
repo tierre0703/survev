@@ -25,6 +25,11 @@ class ExplosionBarn;
 class PlayerBarn;
 class ParticleBarn;
 
+namespace audio {
+class AudioManager;
+class Ambiance;
+} // namespace audio
+
 class GameWorld {
 public:
     GameWorld(pix::Factory* factory, bool canvasMode);
@@ -57,6 +62,13 @@ public:
     uint16_t activePlayerId() const { return _activePlayerId; }
     void setActivePlayerId(uint16_t id) { _activePlayerId = id; }
 
+    // M6: audio is owned by the app (GameScene) and driven here.
+    void setAudio(audio::AudioManager* audio, audio::Ambiance* ambiance) {
+        _audio = audio;
+        _ambiance = ambiance;
+    }
+    audio::AudioManager* audio() { return _audio; }
+
     void setPlayerName(uint16_t playerId, const std::string& name) {
         _playerNames[playerId] = name;
     }
@@ -85,6 +97,8 @@ private:
     uint16_t _activePlayerId = 0;
     std::unordered_map<uint16_t, std::string> _playerNames;
     std::string _emptyName;
+    audio::AudioManager* _audio = nullptr;
+    audio::Ambiance* _ambiance = nullptr;
 };
 
 } // namespace surv

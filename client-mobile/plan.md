@@ -428,6 +428,11 @@ draw nothing. Next step: build the atlas (PNG + frame data) and load it in the
 app, then the player/obstacle/loot sprites will appear. `Player` now has an
 outfit body sprite (rotates to face aim) ready for that.
 
+> **Handoff:** the full, self-contained work order for the remaining M4 tasks
+> (atlas pipeline, buildings, particles, full player pose, polygon holes,
+> underground fade), including the build/test workflow and implementation specs,
+> is in **`M4_REMAINING.md`**.
+
 ### Scaffolded, needs the axmol SDK (M0 → M5)
 - `src/app/AppDelegate.{h,cpp}` — axmol entry point (scene, landscape lock,
   lifecycle hooks).

@@ -231,30 +231,60 @@ public:
     void clear() override {
         _draw->clear();
         _path.clear();
+        _fillRects.clear();
+        _holes.clear();
         _fillActive = false;
         _hasLine = false;
+        _inHole = false;
     }
     void beginFill(uint color, float alpha) override {
         _fillColor = detail::toColor4F(color, alpha);
         _fillActive = true;
         _path.clear();
+        _fillRects.clear();
+        _holes.clear();
+        _inHole = false;
     }
     void endFill() override {
-        if (_path.size() >= 3) {
-            // Force the convex-fan triangulation. drawSolidPoly defaults to
-            // isconvex=false, which makes axmol run poly2tri CDT; that crashes
-            // on degenerate/concave masks (the layer mask) and is overkill for
-            // the canvas-fallback fills this port emits.
-            _draw->drawSolidPoly(_path.data(), static_cast<unsigned int>(_path.size()), _fillColor,
-                                 0.0f, ax::Color4F(0, 0, 0, 0), true);
+        if (_fillActive) {
+            // Rect fills support holes (T5): subtract each hole rect from the
+            // outer rects and emit the remaining axis-aligned pieces. This is
+            // the layer mask's shape and avoids DrawNode's poly2tri path.
+            for (const auto& outer : _fillRects) {
+                std::vector<RectF> pieces{outer};
+                for (const auto& hole : _holes) {
+                    std::vector<RectF> next;
+                    next.reserve(pieces.size() + 4);
+                    for (const auto& piece : pieces) {
+                        subtractRect(next, piece, hole);
+                    }
+                    pieces.swap(next);
+                }
+                for (const auto& piece : pieces) {
+                    if (piece.w > 0.0f && piece.h > 0.0f) {
+                        _draw->drawSolidRect(ax::Vec2(piece.x, piece.y),
+                                             ax::Vec2(piece.x + piece.w, piece.y + piece.h),
+                                             _fillColor);
+                    }
+                }
+            }
+            if (_path.size() >= 3) {
+                // Force the convex-fan triangulation. drawSolidPoly defaults to
+                // isconvex=false, which makes axmol run poly2tri CDT; that
+                // crashes on degenerate/concave masks and is overkill for the
+                // canvas-fallback fills this port emits.
+                _draw->drawSolidPoly(_path.data(), static_cast<unsigned int>(_path.size()),
+                                     _fillColor, 0.0f, ax::Color4F(0, 0, 0, 0), true);
+            }
         }
         _path.clear();
+        _fillRects.clear();
+        _holes.clear();
         _fillActive = false;
+        _inHole = false;
     }
-    // DrawNode cannot express polygon holes; the ported map falls back to the
-    // canvas behaviour (draw the grass polygon on top) so these are no-ops.
-    void beginHole() override {}
-    void endHole() override {}
+    void beginHole() override { _inHole = true; }
+    void endHole() override { _inHole = false; }
 
     void lineStyle(float width, uint color, float alpha) override {
         _lineWidth = width;
@@ -284,7 +314,12 @@ public:
         if (_hasLine) {
             _draw->drawRect(ax::Vec2(x, y), ax::Vec2(x + w, y + h), _lineColor);
         } else if (_fillActive) {
-            _draw->drawSolidRect(ax::Vec2(x, y), ax::Vec2(x + w, y + h), _fillColor);
+            // Defer so beginHole()/endHole() can subtract holes at endFill().
+            if (_inHole) {
+                _holes.push_back(RectF{x, y, w, h});
+            } else {
+                _fillRects.push_back(RectF{x, y, w, h});
+            }
         }
     }
     void drawCircle(float x, float y, float radius) override {
@@ -313,13 +348,46 @@ public:
     }
 
 private:
+    struct RectF {
+        float x, y, w, h;
+    };
+
+    // Emit the parts of `r` that are not covered by axis-aligned `hole`.
+    static void subtractRect(std::vector<RectF>& out, const RectF& r, const RectF& hole) {
+        const float ix = r.x > hole.x ? r.x : hole.x;
+        const float iy = r.y > hole.y ? r.y : hole.y;
+        const float ix2 = (r.x + r.w) < (hole.x + hole.w) ? (r.x + r.w) : (hole.x + hole.w);
+        const float iy2 = (r.y + r.h) < (hole.y + hole.h) ? (r.y + r.h) : (hole.y + hole.h);
+        if (ix2 <= ix || iy2 <= iy) {
+            out.push_back(r);
+            return;
+        }
+        if (hole.y > r.y) {
+            out.push_back(RectF{r.x, r.y, r.w, hole.y - r.y});
+        }
+        const float holeBottom = hole.y + hole.h;
+        if (holeBottom < r.y + r.h) {
+            out.push_back(RectF{r.x, holeBottom, r.w, (r.y + r.h) - holeBottom});
+        }
+        if (hole.x > r.x) {
+            out.push_back(RectF{r.x, iy, hole.x - r.x, iy2 - iy});
+        }
+        const float holeRight = hole.x + hole.w;
+        if (holeRight < r.x + r.w) {
+            out.push_back(RectF{holeRight, iy, (r.x + r.w) - holeRight, iy2 - iy});
+        }
+    }
+
     ax::DrawNode* _draw = nullptr;
     std::vector<ax::Vec2> _path;
+    std::vector<RectF> _fillRects;
+    std::vector<RectF> _holes;
     ax::Color4F _fillColor = ax::Color4F(1, 1, 1, 1);
     ax::Color4F _lineColor = ax::Color4F(0, 0, 0, 1);
     float _lineWidth = 1.0f;
     bool _fillActive = false;
     bool _hasLine = false;
+    bool _inHole = false;
     bool _haveLineStart = false;
     ax::Vec2 _lineStart;
 };

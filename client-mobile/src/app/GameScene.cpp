@@ -7,11 +7,59 @@
 #include "../game/Map.h"
 #include "../game/objects/Barns.h"
 #include "../render/AxmolPixi.h"
+#include "../render/Defs.h"
 #include "../render/GeneratedDefs.h"
+#include "../audio/AudioManager.h"
+#include "../audio/Ambiance.h"
+#include "../audio/AxmolAudioBackend.h"
+#include "../audio/GeneratedSoundDefs.h"
+
+#include <set>
+#include <sstream>
 
 USING_NS_AX;
 
 namespace surv {
+
+// M4/T1: register the sprite atlases a map needs with the SpriteFrameCache.
+// tools/build-atlas.mjs writes Content/atlas/<atlas>/{*.plist,index.txt}; the
+// plist frame keys are the web client's `*.img` names, so AxSprite::setFrame()
+// resolves them directly. Loading is deferred until the map arrives because the
+// map def lists its atlases.
+static void loadAtlasesForMap(const std::string& mapName) {
+    const DefProvider* provider = getDefProvider();
+    const MapRenderDef* mapDef = provider ? provider->mapRender(mapName) : nullptr;
+    if (!mapDef) {
+        return;
+    }
+    static std::set<std::string> loaded;
+    auto* cache = ax::SpriteFrameCache::getInstance();
+    auto* fileUtils = ax::FileUtils::getInstance();
+    for (const auto& atlas : mapDef->atlases) {
+        if (atlas.empty() || loaded.count(atlas)) {
+            continue;
+        }
+        const std::string index = "atlas/" + atlas + "/index.txt";
+        const std::string list = fileUtils->getStringFromFile(index);
+        if (list.empty()) {
+            AXLOGW("Atlas index missing ({}); run tools/build-atlas.mjs", index);
+            continue;
+        }
+        std::istringstream stream(list);
+        std::string line;
+        while (std::getline(stream, line)) {
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+            if (line.empty()) {
+                continue;
+            }
+            cache->addSpriteFramesWithFile(line);
+        }
+        loaded.insert(atlas);
+        AXLOGI("Loaded atlas {}", atlas);
+    }
+}
 
 // ---------------------------------------------------------------------------
 // TouchPadGfx (vector-drawn joystick pads; no external texture required)
@@ -111,13 +159,28 @@ bool GameScene::init() {
     // M4: render world (terrain + z-sorted object layers) driven by the map /
     // update messages the game dispatches.
     installGeneratedDefs();
+    // The atlas converter emits the low-resolution sheets (the web client's
+    // mobile path); 0.5 makes axmol render those frames at full point size.
+    ax::Director::getInstance()->setContentScaleFactor(0.5f);
+
+    // M6: audio backend + manager + ambience mixer.
+    audio::installGeneratedSoundDefs();
+    _audioBackend = std::make_unique<audio::AxmolAudioBackend>();
+    _audio = std::make_unique<audio::AudioManager>(_audioBackend.get());
+    _ambiance = std::make_unique<audio::Ambiance>();
+    _audio->preloadSounds();
+
     _pixiFactory = std::make_unique<pix::AxPixiFactory>();
     _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
+    _world->setAudio(_audio.get(), _ambiance.get());
     pix::Container* worldRoot = _pixiFactory->createContainer();
     _world->attachTo(worldRoot);
     _gameRoot->addChild(static_cast<ax::Node*>(worldRoot->native()));
     _world->setScreenSize(visible.width, visible.height);
-    _game->setMapCallback([this](const MapMsg& msg) { _world->loadMap(msg); });
+    _game->setMapCallback([this](const MapMsg& msg) {
+        loadAtlasesForMap(msg.mapName);
+        _world->loadMap(msg);
+    });
     _game->setUpdateCallback([this](const UpdateMsg& msg) { _world->applyUpdate(msg); });
 
     // M3: with no menu UI yet, auto-connect if a join target is configured.
@@ -191,6 +254,9 @@ void GameScene::pauseGame() {
     if (_game) {
         _game->pause();
     }
+    if (_audio) {
+        _audio->stopAll();
+    }
 }
 
 void GameScene::resumeGame() {
@@ -224,6 +290,9 @@ void GameScene::update(float delta) {
         _wasPlaying = _game->isPlaying();
         if (_wasPlaying) {
             AXLOGI("Receiving game updates: activePlayerId={}", _game->getActivePlayerId());
+            if (_ambiance) {
+                _ambiance->onGameStart();
+            }
         }
     }
 

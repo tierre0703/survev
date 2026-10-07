@@ -13,6 +13,7 @@
 #include <vector>
 
 namespace pix {
+class Node;
 class Container;
 class Sprite;
 class Graphics;
@@ -25,6 +26,7 @@ namespace surv {
 class GameWorld;
 
 struct Bullet; // shared/net Messages.h
+class Emitter; // particles.ts
 
 // --- obstacle.ts -----------------------------------------------------------
 class Obstacle : public AbstractObject {
@@ -59,21 +61,46 @@ public:
     void update(float dt, Ctx& ctx);
 };
 
-// --- building.ts (collision/ceiling subset) --------------------------------
+// --- building.ts -----------------------------------------------------------
+// Full floor/ceiling rendering port: per-image sprites created on isNew,
+// ceiling vision fade, removeOnDamaged, and the ceiling.destroy residue.
 class Building : public AbstractObject {
 public:
+    // One building.ts `imgs[]` entry (floor or ceiling image).
+    struct Img {
+        pix::Sprite* sprite = nullptr;
+        bool isCeiling = false;
+        bool removeOnDamaged = false;
+        int zOrd = 0;
+        int zIdx = 0;
+        Vec2 posOffset;
+        float rotOffset = 0.0f;
+        float imgAlpha = 1.0f;
+        float defScale = 1.0f;
+        bool mirrorX = false;
+        bool mirrorY = false;
+    };
+
     std::string type;
     Vec2 pos;
     int ori = 0;
+    float rot = 0.0f;
     float scale = 1.0f;
     int layer = 0;
     int zIdx = 0;
+    bool isNew = false;
     bool ceilingDead = false;
     bool occupied = false;
     bool ceilingDamaged = false;
     bool hasPuzzle = false;
     bool puzzleSolved = false;
     int puzzleErrSeq = 0;
+    bool playedCeilingDeadFx = false;
+    bool playedSolvedPuzzleFx = false;
+    bool puzzleErrSeqModified = false;
+
+    std::vector<Img> imgs;
+    pix::Sprite* residue = nullptr;
 
     struct Surface {
         std::string type;
@@ -82,9 +109,11 @@ public:
     std::vector<Surface> surfaces;
     Collider aabb;
     bool hasAabb = false;
-    std::vector<Collider> ceilingRegions;
+    std::vector<Collider> ceilingRegions; // transformed ceiling zoomIn regions
+    CeilingVisionDef vision;
     float ceilingVisionTicker = 0.0f;
-    float ceilingFadeAlpha = 0.0f;
+    float ceilingFadeAlpha = 1.0f;
+    std::vector<Emitter*> particleEmitters;
 
     void m_init() override;
     void m_free() override;
@@ -108,6 +137,7 @@ public:
 
     pix::Container* container = nullptr;
     pix::Sprite* sprite = nullptr;
+    Emitter* emitter = nullptr;
 
     void m_init() override;
     void m_free() override;
@@ -252,35 +282,102 @@ public:
     void update(float dt, GameWorld& ctx);
 };
 
-// --- particles.ts (emitter subset) ----------------------------------------
+// --- particles.ts ----------------------------------------------------------
+// Port of the Particle/Emitter runtime. Defs come from the DefProvider
+// (generated from client/src/objects/particles.ts by codegen_render_defs.mjs).
 class Particle {
 public:
     bool active = false;
-    Vec2 pos, vel;
-    float life = 0.0f, lifeMax = 1.0f;
-    float rad = 0.0f;
-    uint32_t tint = 0xffffff;
+    float ticker = 0.0f;
+    const ParticleDef* def = nullptr;
     pix::Sprite* sprite = nullptr;
+    bool hasParent = false;
+
+    Vec2 pos, vel;
+    float rot = 0.0f;
+    float delay = 0.0f;
+    float life = 1.0f;
+    float drag = 0.0f;
+    float rotVel = 0.0f;
+    float rotDrag = 0.0f;
+
+    bool scaleUseExp = false;
+    float scale = 1.0f;
+    float scaleEnd = 0.0f;
+    float scaleExp = 0.0f;
+
+    bool alphaUseExp = false;
+    float alpha = 1.0f;
+    float alphaEnd = 0.0f;
+    float alphaExp = 0.0f;
+
+    bool alphaIn = false;
+    float alphaInStart = 0.0f;
+    float alphaInEnd = 0.0f;
+
+    int emitterIdx = -1;
+    float valueAdjust = 1.0f;
+    int layer = 0;
+    int zOrd = 20;
+
+    void m_init(pix::Factory* factory, const std::string& type, int layer_, const Vec2& pos_,
+                const Vec2& vel_, float scaleParam, float rot_, pix::Node* parent, int zOrd_,
+                float valueAdjust_);
+    void m_free();
+    void setColor(uint32_t color);
+};
+
+// Options mirroring particles.ts EmitterOptions.
+struct EmitterOptions {
+    Vec2 pos;
+    Vec2 dir{0.0f, 1.0f};
+    float scale = 1.0f;
+    int layer = 0;
+    float duration = 3.402823466e+38f;
+    float radius = -1.0f; // <0 => EmitterDef.radius
+    float rateMult = 1.0f;
+    pix::Node* parent = nullptr;
+    bool hasColor = false;
+    uint32_t color = 0xffffff;
 };
 
 class Emitter {
 public:
-    bool enabled = false;
-    Vec2 pos, dir;
-    int layer = 0;
-    float radius = 0.0f;
-    float rateMult = 1.0f;
-    float alpha = 1.0f;
+    bool active = false;
+    bool enabled = true;
     std::string type;
+    const EmitterDef* def = nullptr;
+    Vec2 pos, dir;
+    float scale = 1.0f;
+    int layer = 0;
+    float duration = 3.402823466e+38f;
+    float radius = 0.0f;
+    float ticker = 0.0f;
+    float nextSpawn = 0.0f;
+    float spawnCount = 0.0f;
+    pix::Node* parent = nullptr;
+    float alpha = 1.0f;
+    float rateMult = 1.0f;
+    int zOrd = 20;
+    bool hasColor = false;
+    uint32_t color = 0xffffff;
+
+    void m_init(const std::string& type, const EmitterOptions& opts);
+    void m_free();
+    void stop() { duration = ticker; }
 };
 
 class ParticleBarn {
 public:
     std::vector<Particle*> particles;
     std::vector<Emitter*> emitters;
+    float valueAdjust = 1.0f;
 
-    Emitter* addEmitter(pix::Factory* factory, const std::string& type, const Vec2& pos,
-                        const Vec2& dir, int layer);
+    Particle* addParticle(pix::Factory* factory, const std::string& type, int layer, const Vec2& pos,
+                          const Vec2& vel, float scale = 1.0f, float rot = -1.0f,
+                          pix::Node* parent = nullptr, int zOrd = -1);
+    Particle* addRippleParticle(pix::Factory* factory, const Vec2& pos, int layer, uint32_t color);
+    Emitter* addEmitter(pix::Factory* factory, const std::string& type, const EmitterOptions& opts);
     void update(float dt, GameWorld& ctx);
 };
 

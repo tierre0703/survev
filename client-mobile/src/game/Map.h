@@ -37,6 +37,9 @@ public:
 
     bool mapLoaded = false;
 
+    // biome camera particle emitter (map.ts cameraEmitter), driven per frame.
+    Emitter* cameraEmitter = nullptr;
+
     Pool<Obstacle> obstaclePool;
     Pool<Building> buildingPool;
     Pool<Structure> structurePool;
@@ -52,6 +55,8 @@ public:
     bool insideStructureStairs(const Collider& c) const;
     bool insideStructureMask(const Collider& c) const;
     bool insideBuildingCeiling(const Collider& c, bool checkVisible) const;
+    // M6: true when a layer-1 point is inside an underground structure layer.
+    bool isUnderground(const Vec2& pos, int layer) const;
 
 private:
     bool _canvasMode = false;

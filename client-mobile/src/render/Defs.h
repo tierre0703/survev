@@ -2,7 +2,7 @@
 // Render-facing definition tables. The web client reads these from the large
 // TypeScript defs modules; here they are exposed through a small provider
 // interface so the ported map/objects stay decoupled from codegen (and the
-// host tests can run without any generated data). `tools/codegen_defs.mjs`
+// host tests can run without any generated data). `tools/codegen_render_defs.mjs`
 // can emit a concrete provider for the app build.
 #include "../core/Collider.h"
 #include "../core/Vec2.h"
@@ -53,6 +53,39 @@ struct StairDef {
     bool lootOnly = false;
 };
 
+// One floor/ceiling image (building.ts createSpriteFromDef). `pos`/`rot` are
+// the per-image offsets; `removeOnDamaged` is ceiling-only.
+struct BuildingImageDef {
+    std::string sprite;
+    float scale = 1.0f;
+    float alpha = 1.0f;
+    uint32_t tint = 0xffffff;
+    Vec2 pos;
+    float rot = 0.0f;
+    bool mirrorX = false;
+    bool mirrorY = false;
+    bool removeOnDamaged = false;
+};
+
+// building.ts `ceiling.vision` (defaults applied in the def loader).
+struct CeilingVisionDef {
+    float dist = 5.5f;
+    float width = 2.75f;
+    float linger = 0.0f;
+    float fadeRate = 12.0f;
+};
+
+// building.ts `occupiedEmitters` entry.
+struct BuildingEmitterDef {
+    std::string type;
+    Vec2 pos;
+    float rot = 0.0f;
+    float scale = 1.0f;
+    int layer = 0;
+    bool parentToCeiling = false;
+    Vec2 dir{1.0f, 0.0f};
+};
+
 // Union of the render-relevant fields of ObstacleDef/BuildingDef/StructureDef.
 struct MapObjectDef {
     std::string type; // "obstacle" | "building" | "structure" | "decal" | "loot_spawner"
@@ -71,6 +104,16 @@ struct MapObjectDef {
     std::vector<StructureLayerDef> layers;
     std::vector<StairDef> stairs;
     std::vector<Collider> mask;
+
+    // buildings
+    int zIdx = 0;
+    std::vector<BuildingImageDef> floorImgs;
+    std::vector<BuildingImageDef> ceilingImgs;
+    // ceiling.zoomRegions[].zoomIn (the reveal regions used for vision).
+    std::vector<Collider> ceilingZoomIn;
+    CeilingVisionDef ceilingVision;
+    std::string ceilingDestroyResidue;
+    std::vector<BuildingEmitterDef> occupiedEmitters;
 
     // pre-computed bounding collider (mapHelpers.getBoundingCollider)
     Collider boundingCollider;
@@ -96,6 +139,17 @@ struct MapRenderDef {
     bool potatoMode = false;
     bool perkMode = false;
     bool turkeyMode = false;
+    // biome.valueAdjust (darkens sprite tints for night maps).
+    float valueAdjust = 1.0f;
+    // biome.particles.camera (map.ts cameraEmitter).
+    std::string cameraEmitter;
+    // mapDef.assets.atlases (which sprite atlases the map needs).
+    std::vector<std::string> atlases;
+    // biome.ambience (ambiance.ts tracks).
+    std::string ambienceMusic;
+    std::string ambienceWind;
+    std::string ambienceRiver;
+    std::string ambienceWaves;
 };
 
 // Game-object (item/player) render fields used by loot/dead bodies.
@@ -104,6 +158,66 @@ struct GameObjRenderDef {
     std::string category; // "gun" | "melee" | "heal" | "boost" | "outfit" | ...
     ImgDef img;
     bool hasImg = false;
+    // loot.ts: `itemDef.type == "xp" && itemDef.emitter`.
+    std::string emitter;
+};
+
+// A [min,max] range or a constant (both stored as min==max for constants).
+struct RangeDef {
+    float min = 0.0f;
+    float max = 0.0f;
+    bool isConstant = true;
+    float random() const;
+    float value() const { return min; }
+};
+
+// particles.ts ParticleDef. Ranges are stored flattened (particles.ts wraps
+// some fields in a Range class; the codegen flattens both forms).
+struct ParticleDef {
+    std::vector<std::string> images;
+    int zOrd = 20;
+
+    RangeDef life;
+    RangeDef drag;
+    RangeDef rotVel;
+
+    RangeDef scaleStart;
+    RangeDef scaleEnd;
+    RangeDef scaleLerp;
+    bool scaleUseExp = false;
+    float scaleExp = 0.0f;
+
+    float alphaStart = 1.0f;
+    float alphaEnd = 0.0f;
+    RangeDef alphaLerp;
+    bool alphaUseExp = false;
+    float alphaExp = 0.0f;
+
+    bool hasAlphaIn = false;
+    float alphaInStart = 0.0f;
+    float alphaInEnd = 0.0f;
+    RangeDef alphaInLerp;
+
+    bool hasColor = false;
+    uint32_t color = 0xffffff;
+    bool ignoreValueAdjust = false;
+};
+
+// particles.ts EmitterDef.
+struct EmitterDef {
+    std::string particle;
+    RangeDef rate;
+    float radius = 0.0f;
+    RangeDef speed;
+    float angle = 0.0f;
+    bool hasRot = false;
+    RangeDef rot;
+    float maxCount = 3.402823466e+38f;
+    bool hasMaxRate = false;
+    RangeDef maxRate;
+    float maxElapsed = 0.0f;
+    bool hasZOrd = false;
+    int zOrd = 0;
 };
 
 class DefProvider {
@@ -112,6 +226,10 @@ public:
     virtual const MapObjectDef* mapObject(const std::string& type) const = 0;
     virtual const MapRenderDef* mapRender(const std::string& mapName) const = 0;
     virtual const GameObjRenderDef* gameObject(const std::string& type) const = 0;
+    // Particle/emitter tables. Default to null so providers that don't emit
+    // them (e.g. host-test fakes) keep compiling.
+    virtual const ParticleDef* particle(const std::string&) const { return nullptr; }
+    virtual const EmitterDef* emitter(const std::string&) const { return nullptr; }
 };
 
 // Process-wide provider, installed by the app/generated code. May be null.

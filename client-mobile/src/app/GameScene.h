@@ -19,6 +19,12 @@ namespace surv {
 
 class GameWorld;
 
+namespace audio {
+class AxmolAudioBackend;
+class AudioManager;
+class Ambiance;
+} // namespace audio
+
 // axmol PadGraphics implementation (draws the joystick circles).
 class TouchPadGfx : public PadGraphics {
 public:
@@ -73,6 +79,9 @@ private:
     std::unique_ptr<Game> _game;
     std::unique_ptr<pix::Factory> _pixiFactory;
     std::unique_ptr<GameWorld> _world;
+    std::unique_ptr<audio::AxmolAudioBackend> _audioBackend;
+    std::unique_ptr<audio::AudioManager> _audio;
+    std::unique_ptr<audio::Ambiance> _ambiance;
     std::unique_ptr<Touch> _touch;
     std::unique_ptr<TouchPadGfx> _movePad;
     std::unique_ptr<TouchPadGfx> _aimPad;

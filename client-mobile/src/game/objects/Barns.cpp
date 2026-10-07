@@ -3,6 +3,7 @@
 #include "../GameWorld.h"
 #include "../Map.h"
 #include "../../render/Renderer.h"
+#include "../../audio/AudioManager.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -108,50 +109,284 @@ void Obstacle::update(float dt, Ctx& ctx) {
 // ---------------------------------------------------------------------------
 // Building
 // ---------------------------------------------------------------------------
-void Building::m_init() {
-    ceilingVisionTicker = 0.0f;
-    ceilingFadeAlpha = 0.0f;
+static uint32_t adjustValue(uint32_t tint, float value) {
+    if (value >= 1.0f) {
+        return tint;
+    }
+    const int r = static_cast<int>(std::lround(((tint >> 16) & 0xff) * value));
+    const int g = static_cast<int>(std::lround(((tint >> 8) & 0xff) * value));
+    const int b = static_cast<int>(std::lround((tint & 0xff) * value));
+    return (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) |
+           static_cast<uint32_t>(b);
 }
 
-void Building::m_free() {}
+static bool sameLayer(int a, int b) {
+    return ((a & 0x1) == (b & 0x1)) || ((a & 0x2) != 0 && (b & 0x2) != 0);
+}
 
-void Building::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) {
-    (void)isNew;
-    if (!fullUpdate) {
-        pos = data.pos;
-        return;
+static float stepToward(float cur, float target, float rate) {
+    const float delta = target - cur;
+    const float s = delta * rate;
+    return std::fabs(s) < 0.001f ? delta : s;
+}
+
+void Building::m_init() {
+    isNew = false;
+    residue = nullptr;
+    ceilingDead = false;
+    ceilingDamaged = false;
+    playedCeilingDeadFx = false;
+    playedSolvedPuzzleFx = false;
+    hasPuzzle = false;
+    puzzleErrSeqModified = false;
+    puzzleErrSeq = 0;
+    puzzleSolved = false;
+    ceilingVisionTicker = 0.0f;
+    ceilingFadeAlpha = 1.0f;
+    imgs.clear();
+    surfaces.clear();
+    ceilingRegions.clear();
+    particleEmitters.clear();
+    hasAabb = false;
+}
+
+void Building::m_free() {
+    for (auto& img : imgs) {
+        if (img.sprite) {
+            img.sprite->setVisible(false);
+        }
     }
-    type = data.type;
-    pos = data.pos;
-    ori = data.ori;
-    scale = data.scale;
-    layer = data.layer;
+    for (auto* e : particleEmitters) {
+        if (e) {
+            e->stop();
+        }
+    }
+    particleEmitters.clear();
+    imgs.clear();
+    if (residue) {
+        residue->setVisible(false);
+        residue = nullptr;
+    }
+}
+
+void Building::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_, Ctx& ctx) {
+    if (fullUpdate) {
+        type = data.type;
+        pos = data.pos;
+        ori = data.ori;
+        rot = math::oriToRad(data.ori);
+        scale = 1.0f;
+        layer = data.layer;
+    }
     ceilingDead = data.ceilingDead;
-    occupied = data.occupied;
     ceilingDamaged = data.ceilingDamaged;
+    occupied = data.occupied;
     hasPuzzle = data.hasPuzzle;
-    puzzleSolved = data.puzzleSolved;
-    puzzleErrSeq = data.puzzleErrSeq;
+    if (hasPuzzle) {
+        puzzleErrSeqModified = data.puzzleErrSeq != puzzleErrSeq;
+        puzzleSolved = data.puzzleSolved;
+        puzzleErrSeq = data.puzzleErrSeq;
+    }
 
     const MapObjectDef* def = mapDefFor(type);
-    if (def) {
-        zIdx = def->img.zIdx;
+    if (isNew_ && def) {
+        isNew = true;
+        playedCeilingDeadFx = false;
+        playedSolvedPuzzleFx = hasPuzzle && puzzleSolved;
+
         aabb = colliderTransform(def->hasBounding ? def->boundingCollider
                                                    : Collider::createAabb(Vec2(), Vec2()),
-                                 pos, math::oriToRad(ori), scale);
+                                 pos, rot, scale);
         hasAabb = def->hasBounding;
+        zIdx = def->zIdx;
+
+        vision = def->ceilingVision;
+
         ceilingRegions.clear();
-        for (const auto& shape : def->mapShapes) {
-            ceilingRegions.push_back(shape.collider);
+        for (const auto& zoomIn : def->ceilingZoomIn) {
+            ceilingRegions.push_back(colliderTransform(zoomIn, pos, rot, scale));
+        }
+
+        const float valueAdjust = ctx.map().mapDef.valueAdjust;
+
+        auto createImg = [&](const BuildingImageDef& imgDef, bool isCeiling, int index) {
+            Img out;
+            out.sprite = ctx.factory()->createSprite();
+            out.sprite->setAnchor(0.5f, 0.5f);
+            if (!imgDef.sprite.empty() && imgDef.sprite != "none") {
+                out.sprite->setFrame(imgDef.sprite);
+            }
+            uint32_t tint = imgDef.tint;
+            if (valueAdjust < 1.0f) {
+                tint = adjustValue(tint, valueAdjust);
+            }
+            out.sprite->setTint(tint);
+            out.posOffset = v2Rotate(imgDef.pos, rot);
+            out.rotOffset = math::oriToRad(static_cast<int>(imgDef.rot));
+            out.imgAlpha = imgDef.alpha;
+            out.defScale = imgDef.scale;
+            out.mirrorX = imgDef.mirrorX;
+            out.mirrorY = imgDef.mirrorY;
+            out.isCeiling = isCeiling;
+            out.removeOnDamaged = isCeiling && imgDef.removeOnDamaged;
+            out.zOrd = isCeiling ? (750 - zIdx) : zIdx;
+            out.zIdx = __id * 100 + index;
+            out.sprite->setVisible(true);
+            out.sprite->setAlpha(imgDef.alpha);
+            return out;
+        };
+
+        imgs.clear();
+        for (size_t i = 0; i < def->floorImgs.size(); i++) {
+            imgs.push_back(createImg(def->floorImgs[i], false, static_cast<int>(i)));
+        }
+        for (size_t i = 0; i < def->ceilingImgs.size(); i++) {
+            imgs.push_back(createImg(def->ceilingImgs[i], true, static_cast<int>(i)));
+        }
+
+        // Occupied particle emitters.
+        particleEmitters.clear();
+        for (const auto& e : def->occupiedEmitters) {
+            const float r = rot + e.rot;
+            Vec2 epos = v2Add(pos, v2Rotate(e.pos, r));
+            Vec2 edir = v2Rotate(e.dir, r);
+            float escale = e.scale;
+            pix::Node* parent = nullptr;
+            if (e.parentToCeiling) {
+                int lastIdx = -1;
+                for (size_t b = 0; b < imgs.size(); b++) {
+                    if (imgs[b].isCeiling) {
+                        lastIdx = static_cast<int>(b);
+                    }
+                }
+                if (lastIdx >= 0) {
+                    parent = imgs[lastIdx].sprite;
+                    // Parented sprites use a different coordinate system.
+                    epos = v2Mul(e.pos, 32.0f);
+                    epos.y *= -1.0f;
+                    edir = v2Rotate(Vec2(1.0f, 0.0f), e.rot);
+                    escale = 1.0f / imgs[lastIdx].defScale;
+                }
+            }
+            EmitterOptions opts;
+            opts.pos = epos;
+            opts.dir = edir;
+            opts.scale = escale;
+            opts.layer = e.layer;
+            opts.parent = parent;
+            particleEmitters.push_back(
+                ctx.particleBarn().addEmitter(ctx.factory(), e.type, opts));
         }
     }
     ctx.renderer().layerMaskDirty = true;
 }
 
 void Building::update(float dt, Ctx& ctx) {
-    (void)ctx;
-    if (ceilingVisionTicker > 0.0f) {
-        ceilingVisionTicker = math::max(0.0f, ceilingVisionTicker - dt);
+    // Destroy ceiling fx (audio/particles are stubbed; the residue + reveal
+    // below carry the visual).
+    if (ceilingDead && !playedCeilingDeadFx) {
+        playedCeilingDeadFx = true;
+        if (!isNew && ctx.audio()) {
+            audio::PlaySoundOptions opts;
+            opts.channel = "sfx";
+            opts.hasSoundPos = true;
+            opts.soundPos = pos;
+            opts.hasLayer = true;
+            opts.layer = layer;
+            ctx.audio()->playSound("ceiling_break_01", opts);
+        }
+    }
+    isNew = false;
+
+    // Residue left behind by a destroyed ceiling.
+    if (ceilingDead && !residue) {
+        const MapObjectDef* def = mapDefFor(type);
+        if (def && !def->ceilingDestroyResidue.empty() && def->ceilingDestroyResidue != "none" &&
+            !imgs.empty() && imgs[0].sprite) {
+            residue = ctx.factory()->createSprite(def->ceilingDestroyResidue);
+            residue->setAnchor(0.5f, 0.5f);
+            residue->setPosition(0.0f, 0.0f);
+            residue->setScale(1.0f, 1.0f);
+            residue->setRotation(0.0f);
+            residue->setTint(0xffffff);
+            residue->setVisible(true);
+            imgs[0].sprite->addChild(residue);
+        }
+    }
+
+    // Determine ceiling visibility.
+    ceilingVisionTicker -= dt;
+    Player* ap = ctx.activePlayer();
+    bool canSeeInside = false;
+    if (ap) {
+        const bool layerMatch = (layer == ap->layer) || ((ap->layer & 2) != 0);
+        if (layerMatch) {
+            const Collider scan = Collider::createCircle(ap->pos, vision.width);
+            for (const auto& zoomIn : ceilingRegions) {
+                if (colliderIntersect(zoomIn, scan)) {
+                    canSeeInside = true;
+                    break;
+                }
+            }
+            if (!canSeeInside && hasAabb &&
+                getDistanceToBuilding(ap->pos, vision.dist) < vision.dist) {
+                canSeeInside = true;
+            }
+        }
+    }
+    if (ceilingDead) {
+        canSeeInside = true;
+    }
+    if (canSeeInside) {
+        ceilingVisionTicker = vision.linger + 0.0001f;
+    }
+
+    const bool visible = ceilingVisionTicker > 0.0f;
+    ceilingFadeAlpha += stepToward(ceilingFadeAlpha, visible ? 0.0f : 1.0f,
+                                   dt * (visible ? 12.0f : vision.fadeRate));
+
+    // Immediately reveal a ceiling when on stairs and able to see the other layer.
+    if (canSeeInside && ap && (ap->layer & 2) != 0 && !sameLayer(ap->layer, layer)) {
+        ceilingFadeAlpha = 0.0f;
+    }
+
+    for (auto* e : particleEmitters) {
+        if (e) {
+            e->enabled = occupied;
+        }
+    }
+
+    // Position sprites for rendering.
+    for (auto& img : imgs) {
+        if (!img.sprite) {
+            continue;
+        }
+        const float alpha = img.isCeiling ? ceilingFadeAlpha : 1.0f;
+        const Vec2 screenPos = ctx.camera().m_pointToScreen(v2Add(pos, img.posOffset));
+        const float screenScale = ctx.camera().m_pixels(scale * img.defScale);
+        img.sprite->setPosition(screenPos.x, screenPos.y);
+        float sx = screenScale;
+        float sy = screenScale;
+        if (img.mirrorY) {
+            sy *= -1.0f;
+        }
+        if (img.mirrorX) {
+            sx *= -1.0f;
+        }
+        img.sprite->setScale(sx, sy);
+        img.sprite->setRotation(-rot + img.rotOffset);
+        img.sprite->setAlpha(img.imgAlpha * alpha);
+
+        if (img.removeOnDamaged && ceilingDamaged) {
+            img.sprite->setVisible(!ceilingDamaged);
+        }
+
+        int renderLayer = layer;
+        if (img.isCeiling && ap &&
+            (layer == ap->layer || (((ap->layer & 2) != 0) && layer == 1))) {
+            renderLayer |= 2;
+        }
+        ctx.renderer().addPIXIObj(img.sprite, renderLayer, img.zOrd, img.zIdx);
     }
 }
 
@@ -185,10 +420,13 @@ void Loot::m_free() {
     if (container) {
         container->setVisible(false);
     }
+    if (emitter) {
+        emitter->stop();
+        emitter = nullptr;
+    }
 }
 
 void Loot::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) {
-    (void)isNew;
     pos = data.pos;
     if (!fullUpdate) {
         return;
@@ -206,6 +444,12 @@ void Loot::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx
     if (def && def->hasImg && !def->img.sprite.empty()) {
         sprite->setFrame(def->img.sprite);
         sprite->setTint(def->img.tint);
+    }
+    if (isNew && def && !def->emitter.empty()) {
+        EmitterOptions opts;
+        opts.pos = pos;
+        opts.layer = layer;
+        emitter = ctx.particleBarn().addEmitter(ctx.factory(), def->emitter, opts);
     }
 }
 
@@ -664,29 +908,289 @@ Player* PlayerBarn::getPlayerById(uint16_t playerId) {
 }
 
 // ---------------------------------------------------------------------------
-// ParticleBarn (emitter subset)
+// ParticleBarn (particles.ts)
 // ---------------------------------------------------------------------------
-Emitter* ParticleBarn::addEmitter(pix::Factory* factory, const std::string& type, const Vec2& pos,
-                                  const Vec2& dir, int layer) {
+static Vec2 randomPointInCircle(float rad) {
+    float a = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+    float b = static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX);
+    if (b < a) {
+        const float c = a;
+        a = b;
+        b = c;
+    }
+    const float angle = (2.0f * 3.14159265358979f * a) / b;
+    return Vec2(b * rad * std::cos(angle), b * rad * std::sin(angle));
+}
+
+void Particle::m_init(pix::Factory* factory, const std::string& type, int layer_, const Vec2& pos_,
+                      const Vec2& vel_, float scaleParam, float rot_, pix::Node* parent, int zOrd_,
+                      float valueAdjust_) {
+    const DefProvider* provider = getDefProvider();
+    def = provider ? provider->particle(type) : nullptr;
+    active = true;
+    ticker = 0.0f;
+    if (!sprite) {
+        sprite = factory->createSprite();
+        sprite->setAnchor(0.5f, 0.5f);
+        sprite->setScale(1.0f, 1.0f);
+    }
+    if (parent) {
+        hasParent = true;
+        parent->addChild(sprite);
+    } else {
+        hasParent = false;
+        sprite->removeFromParent();
+    }
+    pos = pos_;
+    vel = vel_;
+    rot = rot_;
+    delay = 0.0f;
+    emitterIdx = -1;
+    layer = layer_;
+    zOrd = zOrd_ != -1 ? zOrd_ : (def ? def->zOrd : 20);
+    valueAdjust = valueAdjust_;
+
+    if (!def) {
+        // Unknown particle type: don't leave the slot active forever.
+        active = false;
+        sprite->setVisible(false);
+        return;
+    }
+    life = def->life.random();
+    drag = def->drag.random();
+    rotVel = def->rotVel.random() * ((std::rand() % 2 == 0) ? -1.0f : 1.0f);
+    rotDrag = def->drag.random() / 2.0f;
+    scaleUseExp = def->scaleUseExp;
+    scale = def->scaleStart.random() * scaleParam;
+    scaleEnd = scaleUseExp ? 0.0f : def->scaleEnd.random() * scaleParam;
+    scaleExp = scaleUseExp ? def->scaleExp : 0.0f;
+    alphaUseExp = def->alphaUseExp;
+    alpha = def->alphaStart;
+    alphaEnd = alphaUseExp ? 0.0f : def->alphaEnd;
+    alphaExp = alphaUseExp ? def->alphaExp : 0.0f;
+    alphaIn = def->hasAlphaIn;
+    alphaInStart = alphaIn ? def->alphaInStart : 0.0f;
+    alphaInEnd = alphaIn ? def->alphaInEnd : 0.0f;
+
+    if (!def->images.empty()) {
+        const size_t idx = def->images.size() == 1 ? 0 : static_cast<size_t>(std::rand()) % def->images.size();
+        sprite->setFrame(def->images[idx]);
+    }
+    sprite->setVisible(false);
+    if (def->hasColor) {
+        setColor(def->color);
+    } else {
+        sprite->setTint(0xffffff);
+    }
+}
+
+void Particle::m_free() {
+    active = false;
+    if (sprite) {
+        sprite->setVisible(false);
+    }
+}
+
+void Particle::setColor(uint32_t color) {
+    if (valueAdjust < 1.0f) {
+        color = adjustValue(color, valueAdjust);
+    }
+    if (sprite) {
+        sprite->setTint(color);
+    }
+}
+
+Emitter* ParticleBarn::addEmitter(pix::Factory* factory, const std::string& type,
+                                  const EmitterOptions& opts) {
     (void)factory;
-    auto* e = new Emitter();
-    e->type = type;
-    e->pos = pos;
-    e->dir = dir;
-    e->layer = layer;
-    e->enabled = false;
-    e->radius = 0.0f;
-    e->rateMult = 1.0f;
-    e->alpha = 1.0f;
-    emitters.push_back(e);
+    Emitter* e = nullptr;
+    for (auto* existing : emitters) {
+        if (!existing->active) {
+            e = existing;
+            break;
+        }
+    }
+    if (!e) {
+        e = new Emitter();
+        emitters.push_back(e);
+    }
+    e->m_init(type, opts);
     return e;
 }
 
+void Emitter::m_init(const std::string& type_, const EmitterOptions& opts) {
+    const DefProvider* provider = getDefProvider();
+    def = provider ? provider->emitter(type_) : nullptr;
+    active = true;
+    enabled = true;
+    type = type_;
+    pos = opts.pos;
+    dir = opts.dir;
+    scale = opts.scale;
+    layer = opts.layer;
+    duration = opts.duration;
+    radius = opts.radius >= 0.0f ? opts.radius : (def ? def->radius : 0.0f);
+    ticker = 0.0f;
+    nextSpawn = 0.0f;
+    spawnCount = 0.0f;
+    parent = opts.parent;
+    alpha = 1.0f;
+    rateMult = opts.rateMult;
+    hasColor = opts.hasColor;
+    color = opts.color;
+
+    int zOrd_ = 20;
+    if (def) {
+        if (def->hasZOrd) {
+            zOrd_ = def->zOrd;
+        } else {
+            const ParticleDef* pd = provider ? provider->particle(def->particle) : nullptr;
+            if (pd) {
+                zOrd_ = pd->zOrd;
+            }
+        }
+    }
+    zOrd = zOrd_;
+}
+
+void Emitter::m_free() {
+    active = false;
+}
+
+Particle* ParticleBarn::addParticle(pix::Factory* factory, const std::string& type, int layer,
+                                    const Vec2& pos, const Vec2& vel, float scale, float rot,
+                                    pix::Node* parent, int zOrd) {
+    Particle* p = nullptr;
+    for (auto* existing : particles) {
+        if (!existing->active) {
+            p = existing;
+            break;
+        }
+    }
+    if (!p) {
+        p = new Particle();
+        particles.push_back(p);
+    }
+    const float r = rot >= 0.0f
+                        ? rot
+                        : (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) *
+                              3.14159265358979f * 2.0f;
+    int z = zOrd;
+    if (z < 0) {
+        const DefProvider* provider = getDefProvider();
+        const ParticleDef* pd = provider ? provider->particle(type) : nullptr;
+        z = (pd && pd->zOrd != 0) ? pd->zOrd : 20;
+    }
+    p->m_init(factory, type, layer, pos, vel, scale, r, parent, z, valueAdjust);
+    return p;
+}
+
+Particle* ParticleBarn::addRippleParticle(pix::Factory* factory, const Vec2& pos, int layer,
+                                          uint32_t color) {
+    Particle* p = addParticle(factory, "waterRipple", layer, pos, Vec2(0.0f, 0.0f), 1.0f, 0.0f,
+                              nullptr, -1);
+    p->setColor(color);
+    return p;
+}
+
 void ParticleBarn::update(float dt, GameWorld& ctx) {
-    (void)dt;
-    (void)ctx;
-    // Minimal emitter handling: emitters exist and are driven by the map, but
-    // particle spawning is not yet ported (see plan.md M4 status).
+    Camera& camera = ctx.camera();
+
+    // Update emitters.
+    for (size_t i = 0; i < emitters.size(); i++) {
+        Emitter* e = emitters[i];
+        if (!e->active || !e->enabled || !e->def) {
+            continue;
+        }
+        e->ticker += dt;
+        e->nextSpawn -= dt;
+        const EmitterDef* def = e->def;
+        while (e->nextSpawn <= 0.0f && e->spawnCount < def->maxCount) {
+            const float rad = e->scale * e->radius;
+            const Vec2 pos = v2Add(e->pos, randomPointInCircle(rad));
+            const float jitter = (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX) -
+                                  0.5f) *
+                                 def->angle;
+            const Vec2 dir = v2Rotate(e->dir, jitter);
+            const Vec2 vel = v2Mul(dir, def->speed.random());
+            const float rot = def->hasRot ? def->rot.random() : -1.0f;
+            Particle* particle = addParticle(ctx.factory(), def->particle, e->layer, pos, vel, e->scale,
+                                             rot, e->parent, e->zOrd);
+            if (e->hasColor) {
+                particle->setColor(e->color);
+            }
+            particle->emitterIdx = static_cast<int>(i);
+            float rate = def->rate.random();
+            if (def->hasMaxRate) {
+                const float w = math::easeInExpo(
+                    math::min(1.0f, def->maxElapsed > 0.0f ? e->ticker / def->maxElapsed : 1.0f));
+                const float maxRate = def->maxRate.random();
+                rate = math::lerp(w, rate, maxRate);
+            }
+            e->nextSpawn += rate * e->rateMult;
+            e->spawnCount += 1.0f;
+            // Defensive: a non-positive step would spin forever.
+            if (rate * e->rateMult <= 0.0f) {
+                break;
+            }
+        }
+        if (e->ticker >= e->duration) {
+            e->m_free();
+        }
+    }
+
+    // Update particles.
+    for (size_t i = 0; i < particles.size(); i++) {
+        Particle* p = particles[i];
+        if (!p->active) {
+            continue;
+        }
+        p->ticker += dt;
+        if (p->ticker < p->delay || !p->def) {
+            continue;
+        }
+        const ParticleDef* def = p->def;
+        const float t = math::min((p->ticker - p->delay) / p->life, 1.0f);
+        p->vel = v2Mul(p->vel, 1.0f / (1.0f + dt * p->drag));
+        p->pos = v2Add(p->pos, v2Mul(p->vel, dt));
+        p->rotVel *= 1.0f / (1.0f + dt * p->rotDrag);
+        p->rot += p->rotVel * dt;
+        if (p->scaleUseExp) {
+            p->scale += dt * p->scaleExp;
+        }
+        if (p->alphaUseExp) {
+            p->alpha = math::max(p->alpha + dt * p->alphaExp, 0.0f);
+        }
+        const Vec2 screenPos = p->hasParent ? p->pos : camera.m_pointToScreen(p->pos);
+        float scale = p->scaleUseExp
+                          ? p->scale
+                          : math::remap(t, def->scaleLerp.min, def->scaleLerp.max, p->scale,
+                                        p->scaleEnd);
+        float alpha = p->alphaUseExp
+                          ? p->alpha
+                          : math::remap(t, def->alphaLerp.min, def->alphaLerp.max, p->alpha,
+                                        p->alphaEnd);
+        if (p->alphaIn && t < def->alphaInLerp.max) {
+            alpha = math::remap(t, def->alphaInLerp.min, def->alphaInLerp.max, p->alphaInStart,
+                                p->alphaInEnd);
+        }
+        if (p->emitterIdx >= 0 && p->emitterIdx < static_cast<int>(emitters.size())) {
+            alpha *= emitters[p->emitterIdx]->alpha;
+        }
+        if (!p->hasParent) {
+            scale = camera.m_pixels(scale);
+            ctx.renderer().addPIXIObj(p->sprite, p->layer, p->zOrd);
+        }
+        p->sprite->setPosition(screenPos.x, screenPos.y);
+        p->sprite->setScale(scale, scale);
+        p->sprite->setRotation(p->rot);
+        p->sprite->setAlpha(alpha);
+        p->sprite->setVisible(true);
+
+        if (t >= 1.0f) {
+            p->m_free();
+        }
+    }
 }
 
 } // namespace surv

@@ -405,4 +405,136 @@ TEST(generated_defs_provider) {
         CHECK(ak->hasImg);
         CHECK(!ak->img.sprite.empty());
     }
+
+    // T2: a building exposes floor/ceiling images + vision.
+    const MapObjectDef* bank = provider->mapObject("bank_01");
+    CHECK(bank != nullptr);
+    if (bank) {
+        CHECK(!bank->floorImgs.empty());
+        CHECK(!bank->ceilingImgs.empty());
+        CHECK(bank->ceilingVision.dist > 0.0f);
+    }
+
+    // T3: particle/emitter tables are emitted.
+    const ParticleDef* splat = provider->particle("bloodSplat");
+    CHECK(splat != nullptr);
+    if (splat) {
+        CHECK(!splat->images.empty());
+    }
+    const EmitterDef* campfire = provider->emitter("campfire_smoke");
+    CHECK(campfire != nullptr);
+    if (campfire) {
+        CHECK_EQ(campfire->particle, std::string("cabinSmoke"));
+    }
+}
+
+// ---------------------------------------------------------------------------
+TEST(building_floor_ceiling_render) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.camera().m_screenWidth = 800.0f;
+    world.camera().m_screenHeight = 600.0f;
+
+    Building b;
+    b.active = true;
+    b.__id = 7;
+    ObjectData data;
+    data.type = "bank_01";
+    data.pos = Vec2(100.0f, 100.0f);
+    data.ori = 0;
+    data.layer = 0;
+    data.__id = 7;
+    b.m_updateData(data, true, true, world);
+
+    CHECK(b.imgs.size() >= 2u);
+    CHECK(b.zIdx != 0 || !b.imgs.empty());
+    // Floor zOrd == def zIdx; ceiling zOrd == 750 - zIdx.
+    for (const auto& img : b.imgs) {
+        CHECK_EQ(img.zOrd, img.isCeiling ? (750 - b.zIdx) : b.zIdx);
+    }
+    CHECK(b.ceilingFadeAlpha == 1.0f);
+
+    b.update(0.016f, world);
+    auto* layer0 = static_cast<pix::NullContainer*>(world.renderer().layers[0]);
+    CHECK(layer0->children.size() >= b.imgs.size());
+
+    // Reveal: with the active player at the building, the ceiling fades out.
+    Player ap;
+    ap.pos = Vec2(100.0f, 100.0f);
+    ap.layer = 0;
+    world.setActivePlayer(&ap);
+    for (int i = 0; i < 120; i++) {
+        b.update(0.016f, world);
+    }
+    CHECK(b.ceilingFadeAlpha < 0.5f);
+    world.setActivePlayer(nullptr);
+}
+
+// ---------------------------------------------------------------------------
+TEST(particles_emitter_spawns) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+
+    EmitterOptions opts;
+    opts.pos = Vec2(50.0f, 50.0f);
+    opts.dir = Vec2(0.0f, 1.0f);
+    Emitter* e = world.particleBarn().addEmitter(&factory, "campfire_smoke", opts);
+    CHECK(e != nullptr);
+    CHECK(e->active);
+
+    for (int i = 0; i < 10; i++) {
+        world.particleBarn().update(0.05f, world);
+    }
+    int active = 0;
+    for (auto* p : world.particleBarn().particles) {
+        if (p->active) {
+            active++;
+        }
+    }
+    CHECK(active > 0);
+
+    // Direct addParticle also resolves its def + frame.
+    Particle* p = world.particleBarn().addParticle(&factory, "bloodSplat", 0, Vec2(0.0f, 0.0f),
+                                                  Vec2(1.0f, 0.0f));
+    CHECK(p != nullptr);
+    CHECK(p->active);
+    CHECK(p->def != nullptr);
+}
+
+// ---------------------------------------------------------------------------
+TEST(renderer_ground_fade) {
+    pix::NullPixiFactory factory;
+    Renderer renderer(&factory, false);
+    Camera camera;
+    camera.m_screenWidth = 800.0f;
+    camera.m_screenHeight = 600.0f;
+    Map map(&factory, false);
+    map.mapLoaded = true;
+    map.mapDef.colors.underground = 0x1b0e0b;
+
+    renderer.resize(map, camera);
+    renderer.setUnderground(true);
+    renderer.setActiveLayer(1);
+    for (int i = 0; i < 400; i++) {
+        renderer.m_update(0.016f, camera, map, false);
+    }
+    CHECK_NEAR(renderer.groundAlpha, 1.0f, 1e-2f);
+
+    // T6: the ground geometry must be redrawn with the faded alpha (DrawNode
+    // bakes vertex alpha), not just the node opacity.
+    auto* g = static_cast<pix::NullGraphics*>(renderer.ground);
+    float maxFillAlpha = 0.0f;
+    bool hasRect = false;
+    for (const auto& cmd : g->commands) {
+        if (cmd.kind == pix::DrawCommand::BeginFill && cmd.alpha > maxFillAlpha) {
+            maxFillAlpha = cmd.alpha;
+        }
+        if (cmd.kind == pix::DrawCommand::Rect) {
+            hasRect = true;
+        }
+    }
+    CHECK(hasRect);
+    CHECK(maxFillAlpha > 0.9f);
 }
