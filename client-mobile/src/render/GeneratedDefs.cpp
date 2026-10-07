@@ -18,6 +18,7 @@ struct RawMapObj {
     int isDoor, isButton, isTree, isWall; int randomRotation, hasExplosion; const char* explosionParticle;
     float doorSlideOffset;
     const char* doorCasingSprite; float doorCasingPx, doorCasingPy, doorCasingScale; unsigned doorCasingTint; float doorCasingAlpha;
+    float doorSpriteAnchorX, doorSpriteAnchorY;
     int mapDisplay, mapHasColor; unsigned mapColor; float mapScale;
     RawCollider bounding; int hasBounding;
     const RawLayer* layers; int layerCount;
@@ -39,7 +40,7 @@ struct RawMapRender {
     const char* const* atlases; int atlasCount;
     const char* ambMusic; const char* ambWind; const char* ambRiver; const char* ambWaves;
 };
-struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; };
+struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -2645,1077 +2646,1077 @@ static const char* const kParticleImgs_26984[] = {"part-boost-basic.img"};
 static const char* const kParticleImgs_27175[] = {"part-boost-basic.img"};
 
 static const RawMapObj kMapObjs[] = {
-    {"house_door_01",{"map-door-01.img",0.5,1,14671839,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_door_02",{"map-door-01.img",0.5,1,4934475,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_door_03",{"map-door-03.img",0.5,1,14671839,15,0,0,0},1,{1,-0.5,0.25,0.5,3.75},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,-0.5,0.25,0.5,3.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_door_05",{"map-door-05.img",0.5,1,14671839,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crossing_door_01",{"map-door-01.img",0.5,1,3159362,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cell_door_01",{"map-door-01.img",0.5,1,1776411,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"eye_door_01",{"map-door-01.img",0.5,1,921102,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_door_01",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_door_02",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",-3.75,"map-door-slot-01.img",6,0,0.5,1316379,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_door_03",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_door_locked_01",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_door_chrys",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_main",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_chrys_01",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_chrys_02",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_reserve",{"map-door-06.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,10},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,2,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_eye",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_door_secret",{"map-door-04.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,0,0.75,4},1,0,0,0,0,0,0,"",4.5,"",0,0,1,16777215,1,1,0,0,1,{1,-0.75,0,0.75,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_door_01",{"map-door-01.img",0.5,0.95,14537141,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-02.img",-2,0,0.5,3211264,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"secret_door_club",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_bathhouse",{"map-door-01.img",0.5,1,4934475,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_window_01",{"map-building-house-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,4456448,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_window_01",{"map-building-house-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,1316379,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stairs_01",{"map-stairs-broken-01.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stairs_02",{"map-stairs-broken-02.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-4,2.5,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-4,2.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stairs_03",{"map-stairs-broken-03.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_window_01",{"map-building-boarded-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,7886127,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_window_01",{"map-building-bank-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_window_01",{"map-building-reserve-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-3.5,0.4,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-3.5,0.4,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_window_broken_01",{"map-building-reserve-window-res-01.img",0.5,1,1316379,10,0,0,0},1,{1,-0.4,-4,0.4,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-4,0.4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"container_05_collider",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-6,2.75,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.75,-6,2.75,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hedgehog_wall",{"",1,1,16777215,0,0,0,0},0,{1,-3,-0.5,3,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,1,5854285,1,{1,-3,-0.5,3,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_4",{"map-wall-04.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_5",{"map-wall-05.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_6",{"map-wall-06.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_7",{"map-wall-07.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_10",{"map-wall-10.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_12",{"map-wall-12.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_14",{"map-wall-14.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_window_open_01",{"map-building-house-window-res-01.img",0.5,1,7681026,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_wall_side",{"",1,1,16777215,0,0,0,0},0,{1,-25,-0.6,25,0.6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-25,-0.6,25,0.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_wall_edge",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-3.2,0.6,3.2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.6,-3.2,0.6,3.2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_wall_edge_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-6.5,0.6,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.6,-6.5,0.6,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_wall_int",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-1,0.6,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.6,-1,0.6,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_column",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-0.6,0.6,0.6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.6,-0.6,0.6,0.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_right",{"",1,1,16777215,0,0,0,0},0,{1,-20,-0.5,20,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-20,-0.5,20,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_edge",{"",1,1,16777215,0,0,0,0},0,{1,-4,-0.5,4,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-4,-0.5,4,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_mid_1",{"",1,1,16777215,0,0,0,0},0,{1,-7.25,-0.5,7.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-7.25,-0.5,7.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_mid_2",{"",1,1,16777215,0,0,0,0},0,{1,-8,-0.5,8,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-8,-0.5,8,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_mid_3",{"",1,1,16777215,0,0,0,0},0,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_bot",{"",1,1,16777215,0,0,0,0},0,{1,-8.75,-0.5,8.75,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-8.75,-0.5,8.75,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_room_1",{"",1,1,16777215,0,0,0,0},0,{1,-4.25,-0.5,4.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-4.25,-0.5,4.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_room_2",{"",1,1,16777215,0,0,0,0},0,{1,-2.25,-0.5,2.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.25,-0.5,2.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_room_3",{"",1,1,16777215,0,0,0,0},0,{1,-4.5,-0.5,4.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-4.5,-0.5,4.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_room_4",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-0.5,2.75,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.75,-0.5,2.75,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_left",{"",1,1,16777215,0,0,0,0},0,{1,-15.5,-0.5,15.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-15.5,-0.5,15.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cobalt_wall_int_4",{"map-wall-04-cobalt.img",0.5,1,16777215,10,0,0,0},1,{1,-0.6,-2,0.6,2},1,0,0,0,1,0,1,"explosion_cobalt",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.6,-2,0.6,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"archway_column_1",{"map-column-01.img",0.5,1,7290644,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_top",{"map-wall-shack-top.img",0.5,1,16777215,10,0,0,0},1,{1,-5.6,-0.35,5.6,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-5.6,-0.35,5.6,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_side_left",{"map-wall-shack-left.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.43,0.35,3.43},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.35,-3.43,0.35,3.43},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_side_right",{"map-wall-shack-right.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.8,0.35,3.8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.35,-3.8,0.35,3.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_bot",{"map-wall-shack-bot.img",0.5,1,16777215,10,0,0,0},1,{1,-3.75,-0.35,3.75,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-3.75,-0.35,3.75,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_ext_2",{"map-wall-02.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_ext_5",{"map-wall-05.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_ext_9",{"map-wall-09.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_ext_10",{"map-wall-10.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_ext_14",{"map-wall-14.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"outhouse_wall_top",{"map-wall-outhouse-top.img",0.5,1,16777215,10,0,0,0},1,{1,-3.2,-0.35,3.2,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-3.2,-0.35,3.2,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"outhouse_wall_side",{"map-wall-outhouse-side.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.1,0.35,3.1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.35,-3.1,0.35,3.1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"outhouse_wall_bot",{"map-wall-outhouse-bot.img",0.5,1,16777215,10,0,0,0},1,{1,-1.15,-0.35,1.15,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.15,-0.35,1.15,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_1",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_12_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.25,0.5,6.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.25,0.5,6.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_19",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9.5,0.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-9.5,0.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_20",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10,0.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-10,0.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_21",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10.5,0.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-10.5,0.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_33",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-16.5,0.5,16.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-16.5,0.5,16.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_41",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-20.5,0.5,20.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-20.5,0.5,20.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_short_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_16",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8,1.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-8,1.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_24",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12,1.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-12,1.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thin_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.375,-3,0.375,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.375,-3,0.375,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_1_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.75,0.5,0.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-0.75,0.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_9_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.75,0.5,4.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4.75,0.5,4.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_10_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.25,0.5,5.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5.25,0.5,5.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_11_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.75,0.5,5.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5.75,0.5,5.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_24",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12,0.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-12,0.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_25",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12.5,0.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-12.5,0.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_2x8",{"",1,1,16777215,0,0,0,0},0,{1,-1,-4,1,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-4,1,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_4x8",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4,2,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2,-4,2,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_4x9",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4.5,2,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2,-4.5,2,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_4x24",{"",1,1,16777215,0,0,0,0},0,{1,-2,-12,2,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2,-12,2,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_5x10",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-5,2.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-5,2.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_7x10",{"",1,1,16777215,0,0,0,0},0,{1,-3.5,-5,3.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-3.5,-5,3.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_8x3",{"",1,1,16777215,0,0,0,0},0,{1,-4,-1.5,4,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-4,-1.5,4,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thick_11",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5.5,1,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_11",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5.5,1.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-5.5,1.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_14",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_17",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8.5,1.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-8.5,1.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_19",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9.5,1.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-9.5,1.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_22",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11,1.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-11,1.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_27",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13.5,1.5,13.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-13.5,1.5,13.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_30",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15,1.5,15},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-15,1.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_31",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15.5,1.5,15.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-15.5,1.5,15.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_42",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-21,1.5,21},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-21,1.5,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_54",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-27,1.5,27},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-27,1.5,27},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_2x2",{"",1,1,16777215,0,0,0,0},0,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_12_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.25,0.5,6.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.25,0.5,6.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_1x15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_43",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-21.5,0.5,21.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-21.5,0.5,21.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_short_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_short_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_5",{"",1,1,16777215,0,0,0,0},0,{1,-1,-2.5,1,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-2.5,1,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_2x5_5",{"",1,1,16777215,0,0,0,0},0,{1,-1,-2.75,1,2.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-2.75,1,2.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_6",{"",1,1,16777215,0,0,0,0},0,{1,-1,-3,1,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-3,1,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_8",{"",1,1,16777215,0,0,0,0},0,{1,-1,-4,1,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-4,1,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_12",{"",1,1,16777215,0,0,0,0},0,{1,-1,-6,1,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-6,1,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_16",{"",1,1,16777215,0,0,0,0},0,{1,-1,-8,1,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-8,1,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_20",{"",1,1,16777215,0,0,0,0},0,{1,-1,-10,1,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-10,1,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_23",{"",1,1,16777215,0,0,0,0},0,{1,-1,-11.5,1,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-11.5,1,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_28",{"",1,1,16777215,0,0,0,0},0,{1,-1,-14,1,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-14,1,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_1_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-0.75,1.5,0.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-0.75,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_11",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5.5,1.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-5.5,1.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_14",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_16",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8,1.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-8,1.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_17",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8.5,1.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-8.5,1.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_18",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9,1.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-9,1.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_19",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9.5,1.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-9.5,1.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_20",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10,1.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-10,1.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_22",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11,1.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-11,1.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_23",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11.5,1.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-11.5,1.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_24",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12,1.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-12,1.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_25",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12.5,1.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-12.5,1.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_26",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13,1.5,13},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-13,1.5,13},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_27",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13.5,1.5,13.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-13.5,1.5,13.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_28",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-14,1.5,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-14,1.5,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_29",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-14.5,1.5,14.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-14.5,1.5,14.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_30",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15,1.5,15},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-15,1.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_32",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-16,1.5,16},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-16,1.5,16},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_34",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-17,1.5,17},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-17,1.5,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_35",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-17.5,1.5,17.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-17.5,1.5,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_42",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-21,1.5,21},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-21,1.5,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_48",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-24,1.5,24},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-24,1.5,24},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_49",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-7,2.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-7,2.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x6",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-3,2.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-3,2.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x10",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-5,2.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-5,2.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x13",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-6.5,2.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-6.5,2.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x22_5",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-11.25,2.5,11.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-11.25,2.5,11.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x23",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-11.5,2.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-11.5,2.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x26",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-13,2.5,13},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-13,2.5,13},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_6x8",{"",1,1,16777215,0,0,0,0},0,{1,-3,-4,3,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-3,-4,3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_9",{"map-wall-glass-9.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_10",{"map-wall-glass-10.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_12",{"map-wall-glass-12.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_12_2",{"map-wall-glass-12-2.img",0.5,1,16777215,10,0,0,0},1,{1,-1,-6,1,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-6,1,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_13",{"map-wall-glass-13.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_1x19",{"map-wall-glass-1x19.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-9.5,0.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-9.5,0.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_1x23",{"map-wall-glass-1x23.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_2",{"map-wall-02-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_2_5",{"map-wall-02-5-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-1.25,0.5,1.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1.25,0.5,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_4",{"map-wall-04-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_5",{"map-wall-05-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_6",{"map-wall-06-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_7",{"map-wall-07-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_8",{"map-wall-08-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_11",{"map-wall-11-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_13",{"map-wall-13-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_column_1",{"map-column-01.img",0.5,1,2764060,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_wall_int_3",{"map-wall-03-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_wall_int_4",{"map-wall-04-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_wall_int_5",{"map-wall-05-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_wall_int_8",{"map-wall-08-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_1",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_20",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10,0.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-10,0.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_22",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11,0.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-11,0.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_25",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12.5,0.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-12.5,0.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_38",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-19,0.5,19},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-19,0.5,19},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_2x11",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5.5,1,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_2x10",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5,1,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-5,1,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_3x4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_3x13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_3",{"map-wall-03-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_4",{"map-wall-04-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_5",{"map-wall-05-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_6",{"map-wall-06-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_8",{"map-wall-08-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_9",{"map-wall-09-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_10",{"map-wall-10-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_12",{"map-wall-12-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_13",{"map-wall-13-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_16",{"map-wall-16-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_bar_small",{"",0.5,1,16777215,10,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_bar_large",{"map-reserve-bar-large.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_bar_back",{"map-reserve-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-6.5,0.75,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.75,-6.5,0.75,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_2",{"map-wall-02-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_3",{"map-wall-03-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_4",{"map-wall-04-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_6",{"map-wall-06-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_7",{"map-wall-07-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_8",{"map-wall-08-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_10",{"map-wall-10-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_4",{"map-wall-04-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_5",{"map-wall-05-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_8",{"map-wall-08-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_9",{"map-wall-09-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_11",{"map-wall-11-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_14",{"map-wall-14-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_column_1",{"map-column-01.img",0.5,1,5587506,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cabin_wall_int_5",{"map-wall-05-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cabin_wall_int_10",{"map-wall-10-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cabin_wall_int_13",{"map-wall-13-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_1",{"map-wall-01-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_5",{"map-wall-05-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_6",{"map-wall-06-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_7",{"map-wall-07-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_8",{"map-wall-08-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_9",{"map-wall-09-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_10",{"map-wall-10-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_11",{"map-wall-11-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_12",{"map-wall-12-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_13",{"map-wall-13-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_column_1",{"map-column-01.img",0.5,1,7432016,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_column_1",{"map-column-01.img",0.5,1,1710618,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_bar_small",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_bar_large",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_bar_back_large",{"map-saloon-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-5,0.75,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.75,-5,0.75,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_bar_back_small",{"map-saloon-bar-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-1.5,0.75,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.75,-1.5,0.75,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_wall_int_4",{"map-wall-04-stone.img",0.5,1,16777215,10,0,0,0},1,{1,-0.6,-2,0.6,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.6,-2,0.6,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_column_4x8",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4,2,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2,-4,2,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_column_5x12",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-6,2.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-6,2.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_35",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-17.5,0.5,17.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-17.5,0.5,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_18",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9,1.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-9,1.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_3",{"map-wall-03.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_4",{"map-wall-04.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_5",{"map-wall-05.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_7",{"map-wall-07.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_12",{"map-wall-12.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_13",{"map-wall-13.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_14",{"map-wall-14.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_18",{"map-wall-18.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_window_open_01",{"map-building-house-window-res-01.img",0.5,1,12216619,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_wall_3",{"map-wall-03-grassy.img",0.5,1,16777215,10,0,0,0},1,{1,-0.375,-1.5,0.375,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,1,7282176,1,{1,-0.375,-1.5,0.375,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_wall_8",{"map-wall-08-grassy.img",0.5,1,16777215,10,0,0,0},1,{1,-0.375,-4,0.375,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,1,7282176,1,{1,-0.375,-4,0.375,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_wall_int_6",{"map-wall-06-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_wall_int_10",{"map-wall-10-rounded.img",0.5,1,7218988,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_bar_small",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_bar_large",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_bar_back_large",{"map-club-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-7.5,0.75,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.75,-7.5,0.75,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bathhouse_column_1",{"map-bathhouse-column-01.img",0.5,1,13481337,10,0,0,0},1,{1,-2,-2,2,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bathhouse_column_2",{"map-bathhouse-column-02.img",0.5,1,13481337,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_lg_under_column",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-10,2.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-10,2.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_5x4",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-2,2.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_rail_3",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"rail_4",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-2.5,0.4,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-2.5,0.4,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_rail_12",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-6.5,0.4,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-6.5,0.4,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_xlg_under_column",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-14,2.5,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.5,-14,2.5,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_9x4",{"",1,1,16777215,0,0,0,0},0,{1,-4.5,-2,4.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_rail_20",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-10,0.4,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-10,0.4,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_rail_28",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-14,0.4,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.4,-14,0.4,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_3_0_low",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_11_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.75,0.5,5.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.5,-5.75,0.5,5.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"container_wall_top",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-0.4,2.75,0.4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.75,-0.4,2.75,0.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"container_wall_side",{"",1,1,16777215,0,0,0,0},0,{1,-0.4,-5.5,0.4,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.4,-5.5,0.4,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"container_wall_side_open",{"",1,1,16777215,0,0,0,0},0,{1,-0.4,-6,0.4,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.4,-6,0.4,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_01",{"map-case-deagle-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_02",{"map-case-deagle-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_03",{"map-case-hatchet-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_04",{"map-case-flare-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_05",{"map-case-meteor-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_06",{"map-case-chrys-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_07",{"map-case-ring-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_07de",{"map-case-ring-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_08",{"map-case-crow-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_08sv",{"map-case-crow-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_09",{"map-case-twins-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_10",{"map-case-cloud-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_01",{"map-chest-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_01cb",{"map-chest-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_02",{"map-chest-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03",{"map-chest-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03cb",{"map-chest-03cb.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03d",{"map-chest-03d.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03f",{"map-chest-03f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03sv",{"map-chest-03sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03x",{"map-chest-03x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03tr",{"map-chest-03tr.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_04",{"map-case-basement-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_04d",{"map-case-basement-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_01",{"map-crate-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_01x",{"map-crate-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02",{"map-crate-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02sv",{"map-crate-02sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,16760832,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02sv_lake",{"map-crate-02sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,16760832,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02x",{"map-crate-02x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02f",{"map-crate-02f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,13369344,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02d",{"map-crate-02f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,13369344,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_03",{"map-crate-03.img",0.35,1,16777215,10,0,0,0},1,{1,-1.575,-1.575,1.575,1.575},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5066014,0.875,{1,-1.575,-1.575,1.575,1.575},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_03x",{"map-crate-03x.img",0.35,1,16777215,10,0,0,0},1,{1,-1.575,-1.575,1.575,1.575},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,31863,0.875,{1,-1.575,-1.575,1.575,1.575},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_04",{"map-crate-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5468244,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_05",{"map-crate-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2,-2,2,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_06",{"map-crate-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.1,2.25,1.1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-1.1,2.25,1.1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_07",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_07b",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_07sv",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_08",{"map-crate-08.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_09",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_09bh",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_09de",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_10",{"map-crate-10.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_11",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_11h",{"map-crate-11h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_10sv",{"map-crate-10.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_11sv",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_11de",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_11tr",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_12",{"map-crate-12.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_12po",{"map-crate-12.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_12dev",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_13",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_13po",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_14",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_14a",{"map-crate-14a.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_15",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_16",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_17",{"map-crate-17.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_18",{"map-crate-18.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,12867840,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_19",{"map-crate-19.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4500224,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_20",{"map-crate-20.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.7,1.7,1.7},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,3884335,1,{1,-1.7,-1.7,1.7,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_21",{"map-crate-21.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,18799,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_21b",{"map-crate-21.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,18799,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_22",{"map-crate-22.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,32511,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_22d",{"map-crate-22.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,32511,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_01",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_03",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_03po",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_03dev",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_04",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_04po",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_05",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_01sv",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02sv",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02de",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02h",{"map-airdrop-01h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02tr",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_01x",{"map-airdrop-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02x",{"map-airdrop-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_shell_01",{"map-class-shell-01a.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_shell_02",{"map-class-shell-02a.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_shell_03",{"map-class-shell-03a.img",0.5,1,16777215,20,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_scout",{"map-class-crate-scout.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_sniper",{"map-class-crate-sniper.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_healer",{"map-class-crate-healer.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_demo",{"map-class-crate-demo.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_assault",{"map-class-crate-assault.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_tank",{"map-class-crate-tank.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_classless",{"map-class-crate-classless.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_scout",{"map-class-crate-scout.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_sniper",{"map-class-crate-sniper.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_healer",{"map-class-crate-healer.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_demo",{"map-class-crate-demo.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_assault",{"map-class-crate-assault.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_tank",{"map-class-crate-tank.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_classless",{"map-class-crate-classless.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_mythic",{"map-class-crate-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mil_crate_01",{"map-crate-mil-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mil_crate_02",{"map-crate-mil-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mil_crate_03",{"map-crate-mil-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mil_crate_04",{"map-crate-mil-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mil_crate_05",{"map-crate-mil-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,3622438,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_02",{"map-barrel-02.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11235106,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_03",{"map-barrel-03.img",0.45,1,16777215,10,0,0,0},1,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11235106,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_04",{"map-barrel-04.img",0.45,1,16777215,10,0,0,0},1,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11235106,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_05",{"map-barrel-05.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11235106,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bathhouse_rocks_01",{"map-bathrocks-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.55,-1.55,1.55,1.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.55,-1.55,1.55,1.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bed_sm_01",{"map-bed-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.4,-3.4,1.4,3.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-1.4,-3.4,1.4,3.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bed_lg_01",{"map-bed-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.8,-3.4,2.8,3.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.8,-3.4,2.8,3.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bookshelf_01",{"map-bookshelf-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-1,3.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3.5,-1,3.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bookshelf_02",{"map-bookshelf-02.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-1,3.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3.5,-1,3.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chair_01",{"map-chair-01.img",0.5,1,16777215,5,0,0,0},1,{1,-1,-1.25,1,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-1,-1.25,1,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chair_02",{"map-chair-02.img",0.5,1,16777215,5,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"couch_01",{"map-couch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4.5,-1.5,4.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-4.5,-1.5,4.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"couch_02",{"map-couch-02.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.5,3,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3,-1.5,3,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"couch_02b",{"map-couch-02.img",0.5,1,16777215,10,0,1,0},1,{1,-3,-1.5,3,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3,-1.5,3,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"couch_03",{"map-couch-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_01",{"map-bottle-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02",{"map-bottle-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_04",{"map-bottle-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_05",{"map-bottle-05.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"candle_01",{"map-candle-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,16777215,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"deposit_box_01",{"map-deposit-box-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"deposit_box_02",{"map-deposit-box-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"deposit_box_03",{"map-deposit-box-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"drawers_01",{"map-drawers-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-1.1,2.5,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-1.1,2.5,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"drawers_02",{"map-drawers-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-1.1,2.5,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-1.1,2.5,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"fire_ext_01",{"map-fire-ext-01.img",0.5,1,16777215,10,0,0,0},1,{0,0.35,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0.35,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grill_01",{"map-grill-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.55,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,1,14935011,0.875,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_empty",{"map-gun-mount-empty.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_01",{"map-gun-mount-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_02",{"map-gun-mount-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_03",{"map-gun-mount-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_04",{"map-gun-mount-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_05",{"map-gun-mount-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_06",{"map-gun-mount-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_07",{"map-gun-mount-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"locker_01",{"map-locker-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"locker_02",{"map-locker-02.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"locker_03",{"map-locker-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"oven_01",{"map-oven-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1500000000000001,1.7,1.45},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,1,14935011,0.875,{1,-1.7,-1.1500000000000001,1.7,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"piano_01",{"map-piano-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.75,-1,3.75,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3.75,-1,3.75,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_01",{"map-planter-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_02",{"map-planter-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_03",{"map-planter-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_04",{"map-planter-04.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_06",{"map-planter-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_07",{"map-planter-07.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_01",{"map-pot-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_02",{"map-pot-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_03",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_03b",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_03c",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_04",{"map-pot-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_05",{"map-pot-05.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"rack_01",{"map-rack-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2,-1.05,2,1.45},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2,-1.05,2,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"refrigerator_01",{"map-refrigerator-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7733259,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"refrigerator_01b",{"map-refrigerator-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7733259,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"safe_01",{"map-safe-01.img",0.4,1,16777215,10,0,0,0},1,{1,-1.25,-1.15,1.25,1.35},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,1512466,1,{1,-1.25,-1.15,1.25,1.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"safe_01de",{"map-safe-01.img",0.4,1,16777215,10,0,0,0},1,{1,-1.25,-1.15,1.25,1.35},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,1512466,1,{1,-1.25,-1.15,1.25,1.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"screen_01",{"map-screen-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-0.15000000000000002,4,0.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-4,-0.15000000000000002,4,0.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"sink_01",{"map-sink-01.img",0.35,1,16777215,10,0,0,0},1,{1,-2,-1.5,2,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{1,-2,-1.5,2,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stand_01",{"map-stand-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.25,-1.1,1.25,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-1.25,-1.1,1.25,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"power_box_01",{"map-power-box-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stove_01",{"map-stove-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-2.25,3,2.25},1,0,0,0,0,0,1,"explosion_stove",0,"",0,0,1,16777215,1,0,0,0,1,{1,-3,-2.25,3,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stove_02",{"map-stove-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,1,"explosion_stove",0,"",0,0,1,16777215,1,0,0,0,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_01",{"map-table-01.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_01x",{"map-table-01x.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_01d",{"map-table-01d.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2.5,2.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_02",{"map-table-02.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2.5,4.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-4.5,-2.5,4.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_02x",{"map-table-02x.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2.5,4.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-4.5,-2.5,4.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_03",{"map-table-03.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_03x",{"map-table-03x.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_04",{"map-table-04.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2,4.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_05",{"map-table-05.img",0.5,1,16777215,60,0,0,0},1,{1,-9,-2.75,9,2.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-9,-2.75,9,2.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_06",{"map-table-06.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-2,4,2},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-4,-2,4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_07",{"map-table-07.img",0.5,1,16777215,10,0,0,0},1,{1,-3.3000000000000003,-1.35,3.4,1.15},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-3.3000000000000003,-1.35,3.4,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_08",{"map-table-08.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-1.55,4,1.45},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-4,-1.55,4,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_09",{"map-table-09.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-2.05,3,1.95},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-3,-2.05,3,1.95},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_01",{"map-toilet-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_02",{"map-toilet-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_02b",{"map-toilet-02.img",0.5,1,11842740,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_03",{"map-toilet-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_04",{"map-toilet-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_05",{"map-toilet-05.img",0.66,1,16777215,10,0,0,0},1,{0,0,0.25,1.56,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0.25,1.56,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"towelrack_01",{"map-towelrack-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1,3,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{1,-3,-1,3,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vat_01",{"map-vat-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vat_02",{"map-vat-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,3.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11776947,1,{0,0,0,3.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vat_03",{"map-vat-03.img",0.5,1,16777215,50,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11776947,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vat_04",{"map-vat-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vat_05",{"map-vat-05.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vending_01",{"map-vending-soda-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,10925,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wheel_01",{"map-wheel-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wheel_02",{"map-wheel-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wheel_03",{"map-wheel-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_01",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_02",{"map-control-panel-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_02b",{"map-control-panel-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_03",{"map-control-panel-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.25,-1.2,1.25,1.2},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-1.25,-1.2,1.25,1.2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_04",{"map-control-panel-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_06",{"map-control-panel-06.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.4,3,1.4},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-3,-1.4,3,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_07de",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_07sv",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_01",{"map-switch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_01o",{"map-switch-01o.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_01p",{"map-switch-01p.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_01y",{"map-switch-01y.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_02",{"map-switch-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_03",{"map-switch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02r",{"map-bottle-02.img",0.5,1,13172736,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02o",{"map-bottle-02.img",0.5,1,16734720,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02y",{"map-bottle-02.img",0.5,1,16776960,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02g",{"map-bottle-02.img",0.5,1,32768,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02b",{"map-bottle-02.img",0.5,1,27903,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02i",{"map-bottle-02.img",0.5,1,4915330,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02v",{"map-bottle-02.img",0.5,1,15631086,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"button_01",{"map-button-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"button_01g",{"map-button-01g.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"button_01b",{"map-button-01b.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_01",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_02",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_03",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_04",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_05",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_06",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_07",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_08",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_09",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_10",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_11",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_12",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_13",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_14",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_switch_01",{"map-tree-switch-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_switch_02",{"map-tree-switch-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_switch_03",{"map-tree-switch-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01",{"map-barrel-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01b",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01w",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01bh",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01f",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01bd",{"map-barrel-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"propane_01",{"map-propane-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,1,1,24516,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bollard_01",{"map-bollard-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6310464,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01",{"map-bush-01.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01b",{"map-bush-01.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01cb",{"map-bush-01cb.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2518873,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01f",{"map-bush-01f.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,1793032,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01sv",{"map-bush-01sv.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,7569455,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brush_01sv",{"map-brush-01sv.img",0.5,0.97,16777215,60,0,0,0},1,{1,-1.75,-1.75,1.75,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5207588,1.5,{1,-1.75,-1.75,1.75,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brush_02sv",{"map-brush-02sv.img",0.5,0.97,16777215,60,0,0,0},1,{1,-1.75,-1.75,1.75,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5207588,1.5,{1,-1.75,-1.75,1.75,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01x",{"map-bush-01x.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4545840,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_02",{"map-bush-01.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_03",{"map-bush-03.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_04",{"map-bush-04.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_04cb",{"map-bush-04cb.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2784099,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_05",{"map-bush-05.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6971965,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_06",{"map-bush-06.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,16489473,1.5,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_06tr",{"map-bush-06tr.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,14853402,1,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_06b",{"map-bush-06.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,14041344,1.5,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_07",{"map-bush-07.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_07sp",{"map-bush-07sp.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,671242,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_07x",{"map-bush-07x.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_07cb",{"map-bush-07cb.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"campfire_01",{"map-campfire-01.img",0.375,1,16777215,10,0,0,0},1,{0,0,0,2.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6447714,1,{0,0,0,2.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_01",{"map-potato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_01f",{"map-potato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_02",{"map-potato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_02f",{"map-potato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_03",{"map-potato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_03f",{"map-potato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tomato_01",{"map-tomato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tomato_02",{"map-tomato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tomato_03",{"map-tomato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"egg_01",{"map-egg-01.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"egg_02",{"map-egg-02.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"egg_03",{"map-egg-03.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"egg_04",{"map-egg-04.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pumpkin_01",{"map-pumpkin-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,15889667,1,{0,0,0,1.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pumpkin_02",{"map-pumpkin-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,15889667,1,{0,0,0,1.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pumpkin_03",{"map-pumpkin-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,15889667,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"squash_01",{"map-squash-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6452036,1.25,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"squash_02",{"map-squash-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,16569521,1.25,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"sandbags_01",{"map-sandbags-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.1,-1.4,3.1,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,13278307,1,{1,-3.1,-1.4,3.1,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"sandbags_02",{"map-sandbags-02.img",0.5,1,16777215,10,0,0,0},1,{1,-1.1,-1.4,1.1,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,13278307,1,{1,-1.1,-1.4,1.1,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"silo_01",{"map-silo-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4079166,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"silo_01po",{"map-silo-01.img",0.5,1,16749645,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4079166,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_01",{"map-statue-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_03",{"map-statue-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_04",{"map-statue-04.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_top_01",{"map-statue-top-01.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.45,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,5723991,1,{0,0,0,2.45,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_top_02",{"map-statue-top-02.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.45,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,5723991,1,{0,0,0,2.45,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01b",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01cb",{"map-stone-01cb.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01f",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,8224125,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01sv",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01x",{"map-stone-01x.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6052956,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02sv",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02cb",{"map-stone-01cb.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02w",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02x",{"map-stone-01x.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02bh",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02f",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03",{"map-stone-03.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03b",{"map-stone-03b.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03cb",{"map-stone-03cb.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03f",{"map-stone-03f.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03sv",{"map-stone-03sv.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03x",{"map-stone-03x.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03tr",{"map-stone-03tr.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03bh",{"map-stone-03bh.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_04",{"map-stone-04.img",0.4,1,16777215,10,0,0,0},1,{1,-1.8,-1.8,1.8,1.8},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,1512466,1,{1,-1.8,-1.8,1.8,1.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_04x",{"map-stone-04x.img",0.4,1,16777215,10,0,0,0},1,{1,-1.8,-1.8,1.8,1.8},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11725567,1,{1,-1.8,-1.8,1.8,1.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_05",{"map-stone-05.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.7,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,1512466,1,{0,0,0,1.7,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_06",{"map-stone-06.img",0.5,1,16777215,10,0,0,0},1,{1,-4.5,-2,4.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,3618615,1,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_07",{"map-stone-07.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,9931908,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_08",{"map-stone-03.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_08x",{"map-stone-03x.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_08cb",{"map-stone-03cb.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_01",{"map-tree-03.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_01cb",{"map-tree-03cb.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.2,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2900834,2.5,{0,0,0,1.2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_01sv",{"map-tree-03sv.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4411673,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_interior_01",{"map-tree-03.img",0.7,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_interior_01bh",{"map-tree-13.img",0.35,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_interior_01de",{"map-tree-14.img",0.35,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_01x",{"map-tree-01x.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_02",{"map-tree-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,4083758,2.5,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_02h",{"map-tree-04h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,4083758,2.5,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03",{"map-tree-03.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03su",{"map-tree-07su.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,2185478,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03sp",{"map-tree-07sp.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03x",{"map-tree-10.img",0.7,1,13158600,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03sv",{"map-tree-03sv.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,4411673,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03d",{"map-tree-06.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,7700520,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03f",{"map-tree-08f.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,995844,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03w",{"map-tree-07.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03h",{"map-tree-07.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03cb",{"map-tree-03cb.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.2,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,2900834,2.5,{0,0,0,1.2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03bh",{"map-tree-13.img",0.35,1,11645361,800,0,0,0},1,{0,0,0,1.1,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0,1,4083758,2.5,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_05",{"map-tree-05.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,2.3,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5911831,3,{0,0,0,2.3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_05b",{"map-tree-05.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,2.3,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5911831,3,{0,0,0,2.3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_05c",{"map-tree-05c.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.05,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,9064739,3,{0,0,0,1.05,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_06",{"map-tree-06.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,7700520,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_07",{"map-tree-07.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_07sp",{"map-tree-07sp.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_07spr",{"map-tree-07sp.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_07su",{"map-tree-07su.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2185478,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08",{"map-tree-08.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11033868,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08b",{"map-tree-08.img",0.35,1,14383224,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,9647632,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08c",{"map-tree-08.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,7817749,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08f",{"map-tree-08f.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,995844,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08sp",{"map-tree-08sp.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,16746936,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08spb",{"map-tree-08sp.img",0.35,1,14383224,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,16734619,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08spc",{"map-tree-08sp.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,8268107,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08spr",{"map-tree-08sp.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,16746936,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08su",{"map-tree-08su.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2183181,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08sub",{"map-tree-08su.img",0.35,1,9211210,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,1785864,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_09",{"map-tree-09.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_10",{"map-tree-10.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,7571807,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_11",{"map-tree-11.img",0.75,0.92,16777215,201,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_interior_11",{"map-tree-11.img",0.5,0.92,16777215,200,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_12",{"map-tree-12.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,1,1,8032292,7,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_13",{"map-tree-13.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_13bh",{"map-tree-13.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_13x",{"map-tree-13x.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_14",{"map-tree-14.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_14d",{"map-tree-14.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_14x",{"map-tree-14x.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"woodpile_01",{"map-woodpile-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,9455616,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"woodpile_02",{"map-woodpile-02.img",0.5,1,16777215,10,0,0,0},1,{1,-6,-3,6,3},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.8,{1,-6,-3,6,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"woodpile_03",{"map-woodpile-03.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.75,3,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6697728,0.8,{1,-3,-1.75,3,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_741,3,1,kFloorImgs_741,2,kCeilImgs_741,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_741,3},
-    {"barn_basement_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_742,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_basement_floor_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_743,1,kCeilImgs_743,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_743,2},
-    {"barn_basement_floor_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_744,1,kCeilImgs_744,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_744,1},
-    {"barn_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_745,2,1,kFloorImgs_745,1,kCeilImgs_745,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_745,2},
-    {"barn_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_746,2,1,kFloorImgs_746,1,kCeilImgs_746,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_746,2},
-    {"bathhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_747,6,nullptr,0,5.5,2.75,0.5,6,"",kEmitters_747,2,kZoomIns_747,5},
-    {"bathhouse_sideroom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_748,1,kCeilImgs_748,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_748,1},
-    {"bathhouse_sideroom_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_749,1,kCeilImgs_749,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_749,1},
-    {"bridge_lg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_750,5,1,kFloorImgs_750,2,kCeilImgs_750,1,10,2.75,0,12,"",nullptr,0,kZoomIns_750,1},
-    {"bridge_lg_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"bridge_xlg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_752,5,1,kFloorImgs_752,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_xlg_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"bridge_md_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_754,1,1,kFloorImgs_754,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_md_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"cabin_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_756,2,1,kFloorImgs_756,1,kCeilImgs_756,3,5.5,2.75,0.5,6,"",kEmitters_756,1,kZoomIns_756,2},
-    {"club_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_757,9,1,kFloorImgs_757,8,kCeilImgs_757,3,7.5,2.5,0.5,6,"",nullptr,0,kZoomIns_757,9},
-    {"club_vault",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_758,1,kCeilImgs_758,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_758,1},
-    {"club_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-41,-52,31,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"container_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_760,1,kCeilImgs_760,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_760,1},
-    {"container_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_761,1,kCeilImgs_761,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_761,1},
-    {"container_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_762,1,kCeilImgs_762,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_762,1},
-    {"container_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_763,1,kCeilImgs_763,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_763,1},
-    {"container_05",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,11485762,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_764,1,kCeilImgs_764,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_764,1},
-    {"container_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_765,1,kCeilImgs_765,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_765,1},
-    {"dock_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_766,2,1,kFloorImgs_766,2,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"greenhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,1995644,1,{1,-17.5,-25,22,25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_767,4,kCeilImgs_767,2,7.5,2.75,0.5,6,"",nullptr,0,kZoomIns_767,1},
-    {"greenhouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,1995644,1,{1,-17.5,-25,22,25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_768,4,kCeilImgs_768,1,7.5,2.75,0.5,6,"",nullptr,0,kZoomIns_768,1},
-    {"hedgehog_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_769,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_770,2,0,kFloorImgs_770,2,kCeilImgs_770,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_770,1},
-    {"hut_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_771,2,0,kFloorImgs_771,2,kCeilImgs_771,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_771,1},
-    {"hut_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_772,2,0,kFloorImgs_772,2,kCeilImgs_772,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_772,1},
-    {"house_red_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6429724,1,{1,-19,-17.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_773,3,kCeilImgs_773,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_773,1},
-    {"house_red_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4656911,1,{1,-19,-19.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_774,10,kCeilImgs_774,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_774,1},
-    {"mansion_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_775,5,1,kFloorImgs_775,4,kCeilImgs_775,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_775,3},
-    {"mansion_cellar_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_776,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_776,2},
-    {"outhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,8145976,1,{1,-5.5,-5.1,5.5,7.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_777,1,kCeilImgs_777,1,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_777,1},
-    {"panicroom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_778,1,kCeilImgs_778,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_778,1},
-    {"police_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_779,10,1,kFloorImgs_779,2,kCeilImgs_779,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_779,4},
-    {"saferoom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_780,1,kCeilImgs_780,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_780,1},
-    {"shack_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_781,1,kCeilImgs_781,1,5.5,4,0,12,"map-shack-res-01.img",nullptr,0,kZoomIns_781,1},
-    {"shack_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4014894,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_782,1,kCeilImgs_782,1,5.5,4,0,12,"map-shack-res-02.img",nullptr,0,kZoomIns_782,1},
-    {"shack_03a",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_783,4,1,kFloorImgs_783,2,kCeilImgs_783,1,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_783,1},
-    {"shack_03b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_784,4,1,kFloorImgs_784,2,kCeilImgs_784,1,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_784,1},
-    {"teahouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_785,4,0,kFloorImgs_785,3,kCeilImgs_785,1,5.5,4,0,12,"map-building-teahouse-res-01.img",nullptr,0,kZoomIns_785,1},
-    {"teahouse_complex_01s",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_787,3,1,kFloorImgs_787,2,kCeilImgs_787,1,8,5,0,12,"",nullptr,0,kZoomIns_787,1},
-    {"warehouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_788,3,1,kFloorImgs_788,2,kCeilImgs_788,1,8,5,0,12,"",nullptr,0,kZoomIns_788,1},
-    {"warehouse_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_789,3,1,kFloorImgs_789,2,kCeilImgs_789,1,8,5,0,12,"",nullptr,0,kZoomIns_789,1},
-    {"warehouse_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-42,-40,108,78},1,nullptr,0,nullptr,0,nullptr,0,kShapes_790,20,0,kFloorImgs_790,3,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_791,1,kCeilImgs_791,1,7.25,2.75,0.5,6,"",nullptr,0,kZoomIns_791,1},
-    {"hut_01bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_792,2,0,kFloorImgs_792,2,kCeilImgs_792,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_792,1},
-    {"hut_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_793,4,0,kFloorImgs_793,2,kCeilImgs_793,1,5.5,4,0,12,"map-hut-res-02.img",nullptr,0,kZoomIns_793,1},
-    {"mansion_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_794,5,1,kFloorImgs_794,4,kCeilImgs_794,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_794,3},
-    {"mansion_cellar_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_795,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_795,2},
-    {"teahouse_complex_01cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"archway_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,7813914,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,kCeilImgs_797,1,5.5,2.75,0,12,"map-archway-res-01.img",nullptr,0,nullptr,0},
-    {"bank_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_798,3,1,kFloorImgs_798,2,kCeilImgs_798,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_798,3},
-    {"vault_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_799,1,kCeilImgs_799,1,7.25,2.75,0.5,6,"",nullptr,0,kZoomIns_799,1},
-    {"barn_basement_floor_01d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_800,1,kCeilImgs_800,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_800,2},
-    {"barn_basement_floor_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_801,1,kCeilImgs_801,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_801,1},
-    {"barn_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_802,2,1,kFloorImgs_802,1,kCeilImgs_802,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_802,2},
-    {"desert_town_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-70,-120,65,120},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"desert_town_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-85,-89,85,57},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"oasis_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-43,-43,43,43},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"river_town_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-95,-50,85,36},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_806,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-68,-37,68,39},1,nullptr,0,nullptr,0,nullptr,0,kShapes_807,6,1,kFloorImgs_807,4,kCeilImgs_807,5,5.5,2.75,0.5,6,"",kEmitters_807,1,kZoomIns_807,7},
-    {"reserve_basement_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-70,-35,70,35},1,nullptr,0,nullptr,0,nullptr,0,kShapes_808,1,1,kFloorImgs_808,5,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_808,7},
-    {"reserve_armory_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_809,1,kCeilImgs_809,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_809,1},
-    {"reserve_security_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_810,1,kCeilImgs_810,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_810,1},
-    {"reserve_vault_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_811,1,kCeilImgs_811,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_811,1},
-    {"saloon_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-22.5,-22.5,22.5,22.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_812,4,1,kFloorImgs_812,2,kCeilImgs_812,3,5.5,2.75,0.5,6,"",kEmitters_812,1,kZoomIns_812,1},
-    {"saloon_cellar_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_813,1,kCeilImgs_813,1,7,3,0,12,"",nullptr,0,kZoomIns_813,1},
-    {"statue_building_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_814,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_underground_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_815,1,kCeilImgs_815,1,5,3,0,12,"",nullptr,0,kZoomIns_815,1},
-    {"statue_building_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_816,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_underground_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_817,1,kCeilImgs_817,1,5,3,0,12,"",nullptr,0,kZoomIns_817,1},
-    {"river_town_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-121,-56,122,75},1,nullptr,0,nullptr,0,nullptr,0,kShapes_818,4,0,kFloorImgs_818,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_819,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_820,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_01f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_821,3,1,kFloorImgs_821,2,kCeilImgs_821,1,8,5,0,12,"",nullptr,0,kZoomIns_821,1},
-    {"barn_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_822,2,1,kFloorImgs_822,1,kCeilImgs_822,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_822,2},
-    {"warehouse_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_823,3,1,kFloorImgs_823,2,kCeilImgs_823,1,8,5,0,12,"",nullptr,0,kZoomIns_823,1},
-    {"junkyard_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-37,-37,37,37},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_red_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6429724,1,{1,-19,-17.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_825,3,kCeilImgs_825,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_825,1},
-    {"house_red_02h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4656911,1,{1,-19,-19.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_826,10,kCeilImgs_826,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_826,1},
-    {"cabin_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_827,2,1,kFloorImgs_827,1,kCeilImgs_827,3,5.5,2.75,0.5,6,"",kEmitters_827,1,kZoomIns_827,2},
-    {"mansion_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_828,5,1,kFloorImgs_828,4,kCeilImgs_828,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_828,3},
-    {"mansion_cellar_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_829,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_829,2},
-    {"shilo_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,3240224,1,{1,-17,-16,17,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_830,2,kCeilImgs_830,1,5.5,4,0,12,"",nullptr,0,kZoomIns_830,1},
-    {"warehouse_03sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_831,3,1,kFloorImgs_831,2,kCeilImgs_831,1,8,5,0,12,"",nullptr,0,kZoomIns_831,1},
-    {"kopje_brush_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-18,-18,18,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_cover_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-10,-10,10,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_cover_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-10,-10,10,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_cover_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-10,-10,10,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_cover_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-30,-10,30,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brush_clump_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-17,-17,17,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brush_clump_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-17,-17,17,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brush_clump_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-17,-17,17,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"savannah_patch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-20,-16,20,16},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"kopje_patch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-45,-35,45,35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"perch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,1915136,1,{1,-7,-8,7,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_842,1,kCeilImgs_842,1,5.5,2.75,0,12,"map-perch-res-01.img",nullptr,0,nullptr,0},
-    {"oasis_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-43,-43,43,43},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_844,2,0,kFloorImgs_844,2,kCeilImgs_844,3,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_844,1},
-    {"hut_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_845,2,0,kFloorImgs_845,2,kCeilImgs_845,3,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_845,1},
-    {"warehouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_846,3,1,kFloorImgs_846,2,kCeilImgs_846,5,8,5,0,12,"",nullptr,0,kZoomIns_846,1},
-    {"warehouse_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_847,3,1,kFloorImgs_847,2,kCeilImgs_847,4,8,5,0,12,"",nullptr,0,kZoomIns_847,1},
-    {"warehouse_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_848,3,1,kFloorImgs_848,2,kCeilImgs_848,5,8,5,0,12,"",nullptr,0,kZoomIns_848,1},
-    {"shack_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_849,1,kCeilImgs_849,3,5.5,4,0,12,"map-shack-res-01.img",nullptr,0,kZoomIns_849,1},
-    {"shack_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4014894,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_850,1,kCeilImgs_850,2,5.5,4,0,12,"map-shack-res-02.img",nullptr,0,kZoomIns_850,1},
-    {"shack_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_851,4,1,kFloorImgs_851,2,kCeilImgs_851,2,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_851,1},
-    {"outhouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,8145976,1,{1,-5.5,-5.1,5.5,7.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_852,1,kCeilImgs_852,2,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_852,1},
-    {"outhouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,10371350,1,{1,-5.5,-5.1,5.5,7.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_853,1,kCeilImgs_853,1,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_853,1},
-    {"barn_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_854,2,1,kFloorImgs_854,1,kCeilImgs_854,5,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_854,2},
-    {"barn_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_855,2,1,kFloorImgs_855,1,kCeilImgs_855,5,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_855,2},
-    {"bank_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_856,3,1,kFloorImgs_856,2,kCeilImgs_856,7,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_856,3},
-    {"police_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_857,10,1,kFloorImgs_857,2,kCeilImgs_857,9,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_857,4},
-    {"house_red_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,6429724,1,{1,-19,-17.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_858,3,kCeilImgs_858,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_858,1},
-    {"house_red_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,4656911,1,{1,-19,-19.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_859,10,kCeilImgs_859,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_859,1},
-    {"cabin_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_860,2,1,kFloorImgs_860,1,kCeilImgs_860,6,5.5,2.75,0.5,6,"",kEmitters_860,1,kZoomIns_860,2},
-    {"mansion_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_861,5,1,kFloorImgs_861,4,kCeilImgs_861,8,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_861,3},
-    {"teahouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_862,4,0,kFloorImgs_862,3,kCeilImgs_862,4,5.5,4,0,12,"map-building-teahouse-res-01.img",nullptr,0,kZoomIns_862,1},
-    {"teahouse_complex_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_lg_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_864,5,1,kFloorImgs_864,2,kCeilImgs_864,5,10,2.75,0,12,"",nullptr,0,kZoomIns_864,1},
-    {"container_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_865,1,kCeilImgs_865,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_865,1},
-    {"workshop_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-30.5,-32.5,34.5,32.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_866,4,1,kFloorImgs_866,2,kCeilImgs_866,2,8,5,0,12,"",nullptr,0,kZoomIns_866,2},
-    {"workshop_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-33,-35,37,35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-55,-54,55,46},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"camp_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-22.5,-22.5,22.5,22.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",kEmitters_871,1,kZoomIns_871,1},
-    {"teapavilion_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-11,-32,11,11},1,nullptr,0,nullptr,0,nullptr,0,kShapes_872,3,0,kFloorImgs_872,2,kCeilImgs_872,1,5.5,4,0,12,"map-building-pavilion-res-01.img",nullptr,0,kZoomIns_872,1},
-    {"teapavilion_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-14,-32,14,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_01sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-55,-54,55,46},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_02sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_03sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-30.5,-32.5,34.5,32.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_877,4,1,kFloorImgs_877,2,kCeilImgs_877,7,8,5,0,12,"",nullptr,0,kZoomIns_877,2},
-    {"workshop_complex_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-33,-35,37,35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"camp_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-22.5,-22.5,22.5,22.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",kEmitters_881,1,kZoomIns_881,1},
-    {"teapavilion_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-11,-32,11,11},1,nullptr,0,nullptr,0,nullptr,0,kShapes_882,3,0,kFloorImgs_882,2,kCeilImgs_882,1,5.5,4,0,12,"map-building-pavilion-res-01.img",nullptr,0,kZoomIns_882,1},
-    {"logging_complex_01su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-55,-54,55,46},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_02su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_03su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_complex_01su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_chrys_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_887,1,2,kFloorImgs_887,1,kCeilImgs_887,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_887,1},
-    {"bunker_chrys_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_888,2,kCeilImgs_888,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_888,1},
-    {"bunker_chrys_sublevel_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_889,2,kCeilImgs_889,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_889,1},
-    {"bunker_chrys_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_890,2,kCeilImgs_890,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_890,1},
-    {"bunker_chrys_compartment_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_891,2,kCeilImgs_891,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_891,1},
-    {"bunker_chrys_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_892,2,kCeilImgs_892,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_892,1},
-    {"bunker_chrys_compartment_02b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_893,2,kCeilImgs_893,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_893,1},
-    {"bunker_chrys_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_894,1,kCeilImgs_894,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_894,1},
-    {"bunker_chrys_compartment_03b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_895,1,kCeilImgs_895,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_895,1},
-    {"bunker_cloud_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_896,2,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"bunker_cloud_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,-45,-45,45,45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_897,3,kCeilImgs_897,4,7,3,0,12,"",nullptr,0,kZoomIns_897,4},
-    {"bunker_cloud_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,nullptr,0,kCeilImgs_898,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_898,2},
-    {"bunker_cloud_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,kZoomIns_899,1},
-    {"bunker_egg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_900,1,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"bunker_egg_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_901,2,kCeilImgs_901,1,5,3,0,12,"",nullptr,0,kZoomIns_901,1},
-    {"bunker_egg_sublevel_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_902,2,kCeilImgs_902,1,5,3,0,12,"",nullptr,0,kZoomIns_902,1},
-    {"bunker_egg_sublevel_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_903,2,kCeilImgs_903,1,5,3,0,12,"",nullptr,0,kZoomIns_903,1},
-    {"bunker_hydra_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_904,2,0,kFloorImgs_904,3,kCeilImgs_904,1,5,2.75,0.5,6,"",nullptr,0,kZoomIns_904,2},
-    {"bunker_hydra_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_905,4,kCeilImgs_905,3,10,3,0,12,"",nullptr,0,kZoomIns_905,3},
-    {"bunker_hydra_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_906,1,kCeilImgs_906,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_906,1},
-    {"bunker_hydra_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_907,1,kCeilImgs_907,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_907,1},
-    {"bunker_hydra_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_908,1,kCeilImgs_908,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_908,1},
-    {"bunker_storm_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_909,1,0,kFloorImgs_909,1,kCeilImgs_909,1,5,2.75,0.5,6,"none",nullptr,0,kZoomIns_909,1},
-    {"bunker_storm_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_910,2,kCeilImgs_910,1,5,3,0,12,"",nullptr,0,kZoomIns_910,1},
-    {"bunker_conch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_911,2,0,kFloorImgs_911,2,kCeilImgs_911,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_911,2},
-    {"bunker_conch_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_912,2,kCeilImgs_912,2,7,3,0,12,"",kEmitters_912,1,kZoomIns_912,2},
-    {"bunker_conch_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_913,2,kCeilImgs_913,1,7,3,0,12,"",kEmitters_913,1,kZoomIns_913,2},
-    {"bunker_crossing_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_914,1,1,kFloorImgs_914,1,kCeilImgs_914,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_914,1},
-    {"bunker_crossing_stairs_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_915,1,1,kFloorImgs_915,1,kCeilImgs_915,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_915,1},
-    {"bunker_crossing_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_916,1,0,kFloorImgs_916,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_crossing_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_917,8,kCeilImgs_917,2,7,3,0,12,"",nullptr,0,kZoomIns_917,4},
-    {"bunker_crossing_bathroom",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_918,1,kCeilImgs_918,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_918,1},
-    {"bunker_crossing_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_919,2,kCeilImgs_919,2,7,3,0,12,"",kEmitters_919,1,kZoomIns_919,2},
-    {"bunker_hatchet_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_920,1,0,kFloorImgs_920,1,kCeilImgs_920,1,5,2.75,0.5,6,"none",nullptr,0,kZoomIns_920,1},
-    {"bunker_hatchet_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_921,3,kCeilImgs_921,1,5,3,0,12,"",nullptr,0,kZoomIns_921,1},
-    {"bunker_hatchet_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_922,1,kCeilImgs_922,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_922,1},
-    {"bunker_hatchet_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_923,4,kCeilImgs_923,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_923,1},
-    {"bunker_hatchet_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_924,4,kCeilImgs_924,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_924,1},
-    {"bunker_eye_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_925,1,1,kFloorImgs_925,1,kCeilImgs_925,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_925,1},
-    {"bunker_eye_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_926,2,kCeilImgs_926,1,5,3,0,12,"",nullptr,0,kZoomIns_926,1},
-    {"bunker_eye_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_927,1,kCeilImgs_927,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_927,1},
-    {"bunker_twins_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_928,1,1,kFloorImgs_928,1,kCeilImgs_928,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_928,1},
-    {"bunker_twins_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_929,1,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"bunker_twins_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_930,1,kCeilImgs_930,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_930,1},
-    {"bunker_twins_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_931,1,kCeilImgs_931,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_931,1},
-    {"cache_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_932,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_933,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_934,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_935,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_936,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_937,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_938,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_939,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_940,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_941,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_942,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_943,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_944,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_945,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_946,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_947,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_948,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_949,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_950,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_03tr",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_951,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_952,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_04x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_953,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_04cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_954,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_955,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_06bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_956,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_07",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_957,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_07w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_958,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_06cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_959,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_07f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_960,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_07bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_961,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_log_13",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_962,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_pumpkin_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_963,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_pumpkin_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_964,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_pumpkin_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_965,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_pumpkin_airdrop_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_966,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"candle_lit_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_967,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"candle_lit_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_968,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_lg_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,kLayers_969,2,kStairs_969,2,kMask_969,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_xlg_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,kLayers_970,2,kStairs_970,2,kMask_970,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_md_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-23,-7,23,7},1,kLayers_971,2,kStairs_971,2,kMask_971,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_972,2,kStairs_972,1,kMask_972,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_structure_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_973,2,kStairs_973,1,kMask_973,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_basement_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-30,-30,30,30},1,kLayers_974,2,kStairs_974,1,kMask_974,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_basement_structure_01d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-30,-30,30,30},1,kLayers_975,2,kStairs_975,1,kMask_975,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_basement_structure_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-30,-30,30,30},1,kLayers_976,2,kStairs_976,1,kMask_976,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,kLayers_977,2,kStairs_977,2,kMask_977,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_structure_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,kLayers_978,2,kStairs_978,2,kMask_978,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,kLayers_979,2,kStairs_979,2,kMask_979,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,kLayers_980,2,kStairs_980,2,kMask_980,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-68,-37,68,39},1,kLayers_981,2,kStairs_981,2,kMask_981,3,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,kLayers_982,2,kStairs_982,1,kMask_982,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,kLayers_983,2,kStairs_983,2,kMask_983,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_984,2,kStairs_984,1,kMask_984,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_985,2,kStairs_985,1,kMask_985,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_986,2,kStairs_986,1,kMask_986,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-23.5,-97,46.5,15},1,kLayers_987,2,kStairs_987,3,kMask_987,5,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-7,-10.5,7,22.5},1,kLayers_988,2,kStairs_988,1,kMask_988,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,11.5,-40.5,58,11.5},1,kLayers_989,2,kStairs_989,2,kMask_989,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_05",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-42,-28.5,42,34.5},1,kLayers_990,2,kStairs_990,4,kMask_990,3,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-6,-7.5,8,19.5},1,kLayers_991,2,kStairs_991,1,kMask_991,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_07",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-42,-72,42,25},1,kLayers_992,2,kStairs_992,1,kMask_992,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_08",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-10,-10,20,20},1,kLayers_993,2,kStairs_993,1,kMask_993,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_08b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-10,-10,20,20},1,kLayers_994,2,kStairs_994,1,kMask_994,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_09",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-26.5,-21.4,26.5,21.4},1,kLayers_995,2,kStairs_995,4,kMask_995,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_10",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-46.5,-99,20,22},1,kLayers_996,2,kStairs_996,2,kMask_996,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_barrel_explosion",{"map-barrel-res-01.img",0.24,1,0,9,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_frag_explosion",{"map-barrel-res-01.img",0.2,0.8,0,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_frag_small_explosion",{"map-barrel-res-01.img",0.12,0.8,2105376,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_rounds_explosion",{"map-barrel-res-01.img",0.1,0.8,3150346,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_bomb_iron_explosion",{"map-barrel-res-01.img",0.2,0.8,0,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_smoke_explosion",{"map-smoke-res.img",0.2,0.5,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_snowball_explosion",{"map-snowball-res.img",0.2,0.25,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_potato_explosion",{"map-potato-res.img",0.2,0.25,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_vent_01",{"map-bunker-vent-01.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_vent_02",{"map-bunker-vent-02.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_vent_03",{"map-bunker-vent-03.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_hydra_01",{"map-bunker-hydra-floor-04.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_camera_01",{"map-decal-camera-01.img",0.25,1,16777215,60,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipe_01",{"map-decal-pipe.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipes_01",{"map-pipes-01.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-4.5,1,4.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1,-4.5,1,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipes_02",{"map-pipes-02.img",0.5,0.96,16777215,60,0,0,0},1,{1,-4,-3,4,3},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-4,-3,4,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipes_03",{"map-pipes-03.img",0.5,0.96,16777215,60,0,0,0},1,{1,-10.5,-4,10.5,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-10.5,-4,10.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipes_04",{"map-pipes-04.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-5.5,1,5.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipes_05",{"map-pipes-05.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-3.5,1,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1,-3.5,1,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_initiative_01",{"map-decal-initiative.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_caduceus_01",{"map-decal-caduceus.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_web_01",{"map-web-01.img",0.5,0.75,16777215,60,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_light_01",{"map-light-01.img",1,0.5,16751616,60,0,0,0},1,{1,-3.25,-3.25,3.25,3.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-3.25,-3.25,3.25,3.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_light_02",{"map-light-01.img",0.75,0.5,16760397,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_light_03",{"map-light-01.img",0.75,0.5,8585216,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_light_04",{"map-light-01.img",0.75,0.5,16734244,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_blood_01",{"part-splat-01.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_blood_02",{"part-splat-02.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_blood_03",{"part-splat-03.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_chrys_01",{"map-bunker-vent-01.img",0.5,1,16777215,3,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_01",{"map-decal-oil-01.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_02",{"map-decal-oil-02.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_03",{"map-decal-oil-03.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_04",{"map-decal-oil-04.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_05",{"map-decal-oil-05.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_06",{"map-decal-oil-06.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_bathhouse_pool_01",{"map-bathhouse-pool-01.img",8,0.5,52721,5,0,0,0},1,{1,-9,-15,9,15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-9,-15,9,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_club_01",{"map-decal-club-01.img",1,1,16777215,4,0,0,0},1,{0,0,0,4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{0,0,0,4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_club_02",{"map-decal-club-02.img",1,0,16777215,4,0,0,0},1,{1,-4,-10.5,4,10.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-4,-10.5,4,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_plank_01",{"part-plank-01.img",0.5,1,4327436,9,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_flyer_01",{"map-decal-flyer-01.img",0.6,0.667,16777215,4,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_1",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_2",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_beach",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_surviv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_vault_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_police_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_mansion_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_sv98",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_scopes_sniper",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_woodaxe",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_fireaxe",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_stonehammer",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_barn_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_hatchet_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_club_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_leaf_pile",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_islander_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_verde_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_lumber_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_imperial_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_pineapple_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_tarkhany_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_spetsnaz_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_eye_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_saloon",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_chrys_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_chrys_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_chrys_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_airdrop_armor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_perk_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_sniper_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_loot_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_helmet_forest",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_door_01",{"map-door-01.img",0.5,1,14671839,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_door_02",{"map-door-01.img",0.5,1,4934475,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_door_03",{"map-door-03.img",0.5,1,14671839,15,0,0,0},1,{1,-0.5,0.25,0.5,3.75},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,1,0,0,1,{1,-0.5,0.25,0.5,3.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_door_05",{"map-door-05.img",0.5,1,14671839,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crossing_door_01",{"map-door-01.img",0.5,1,3159362,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cell_door_01",{"map-door-01.img",0.5,1,1776411,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"eye_door_01",{"map-door-01.img",0.5,1,921102,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"lab_door_01",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"lab_door_02",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",-3.75,"map-door-slot-01.img",6,0,0.5,1316379,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"lab_door_03",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"lab_door_locked_01",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"lab_door_chrys",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vault_door_main",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vault_door_chrys_01",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vault_door_chrys_02",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vault_door_reserve",{"map-door-06.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,10},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,1,0,0,1,{1,0,0,2,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vault_door_eye",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"saloon_door_secret",{"map-door-04.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,0,0.75,4},1,0,0,0,0,0,0,"",4.5,"",0,0,1,16777215,1,0.5,1,1,0,0,1,{1,-0.75,0,0.75,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_door_01",{"map-door-01.img",0.5,0.95,14537141,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-02.img",-2,0,0.5,3211264,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"secret_door_club",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vault_door_bathhouse",{"map-door-01.img",0.5,1,4934475,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_window_01",{"map-building-house-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,4456448,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"lab_window_01",{"map-building-house-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"lab_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,1316379,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stairs_01",{"map-stairs-broken-01.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stairs_02",{"map-stairs-broken-02.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-4,2.5,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-4,2.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stairs_03",{"map-stairs-broken-03.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"club_window_01",{"map-building-boarded-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"club_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,7886127,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bank_window_01",{"map-building-bank-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_window_01",{"map-building-reserve-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-3.5,0.4,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-3.5,0.4,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_window_broken_01",{"map-building-reserve-window-res-01.img",0.5,1,1316379,10,0,0,0},1,{1,-0.4,-4,0.4,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-4,0.4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"container_05_collider",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-6,2.75,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.75,-6,2.75,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hedgehog_wall",{"",1,1,16777215,0,0,0,0},0,{1,-3,-0.5,3,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5854285,1,{1,-3,-0.5,3,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hut_wall_int_4",{"map-wall-04.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hut_wall_int_5",{"map-wall-05.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hut_wall_int_6",{"map-wall-06.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hut_wall_int_7",{"map-wall-07.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hut_wall_int_10",{"map-wall-10.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hut_wall_int_12",{"map-wall-12.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hut_wall_int_14",{"map-wall-14.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hut_window_open_01",{"map-building-house-window-res-01.img",0.5,1,7681026,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"warehouse_wall_side",{"",1,1,16777215,0,0,0,0},0,{1,-25,-0.6,25,0.6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-25,-0.6,25,0.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"warehouse_wall_edge",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-3.2,0.6,3.2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.6,-3.2,0.6,3.2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"warehouse_wall_edge_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-6.5,0.6,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.6,-6.5,0.6,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"warehouse_wall_int",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-1,0.6,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.6,-1,0.6,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"warehouse_column",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-0.6,0.6,0.6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.6,-0.6,0.6,0.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_right",{"",1,1,16777215,0,0,0,0},0,{1,-20,-0.5,20,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-20,-0.5,20,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_edge",{"",1,1,16777215,0,0,0,0},0,{1,-4,-0.5,4,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-4,-0.5,4,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_mid_1",{"",1,1,16777215,0,0,0,0},0,{1,-7.25,-0.5,7.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-7.25,-0.5,7.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_mid_2",{"",1,1,16777215,0,0,0,0},0,{1,-8,-0.5,8,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-8,-0.5,8,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_mid_3",{"",1,1,16777215,0,0,0,0},0,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_bot",{"",1,1,16777215,0,0,0,0},0,{1,-8.75,-0.5,8.75,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-8.75,-0.5,8.75,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_room_1",{"",1,1,16777215,0,0,0,0},0,{1,-4.25,-0.5,4.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-4.25,-0.5,4.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_room_2",{"",1,1,16777215,0,0,0,0},0,{1,-2.25,-0.5,2.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.25,-0.5,2.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_room_3",{"",1,1,16777215,0,0,0,0},0,{1,-4.5,-0.5,4.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-4.5,-0.5,4.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_room_4",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-0.5,2.75,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.75,-0.5,2.75,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_wall_left",{"",1,1,16777215,0,0,0,0},0,{1,-15.5,-0.5,15.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-15.5,-0.5,15.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cobalt_wall_int_4",{"map-wall-04-cobalt.img",0.5,1,16777215,10,0,0,0},1,{1,-0.6,-2,0.6,2},1,0,0,0,1,0,1,"explosion_cobalt",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.6,-2,0.6,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"archway_column_1",{"map-column-01.img",0.5,1,7290644,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"shack_wall_top",{"map-wall-shack-top.img",0.5,1,16777215,10,0,0,0},1,{1,-5.6,-0.35,5.6,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-5.6,-0.35,5.6,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"shack_wall_side_left",{"map-wall-shack-left.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.43,0.35,3.43},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.35,-3.43,0.35,3.43},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"shack_wall_side_right",{"map-wall-shack-right.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.8,0.35,3.8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.35,-3.8,0.35,3.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"shack_wall_bot",{"map-wall-shack-bot.img",0.5,1,16777215,10,0,0,0},1,{1,-3.75,-0.35,3.75,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-3.75,-0.35,3.75,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"shack_wall_ext_2",{"map-wall-02.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"shack_wall_ext_5",{"map-wall-05.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"shack_wall_ext_9",{"map-wall-09.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"shack_wall_ext_10",{"map-wall-10.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"shack_wall_ext_14",{"map-wall-14.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"outhouse_wall_top",{"map-wall-outhouse-top.img",0.5,1,16777215,10,0,0,0},1,{1,-3.2,-0.35,3.2,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-3.2,-0.35,3.2,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"outhouse_wall_side",{"map-wall-outhouse-side.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.1,0.35,3.1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.35,-3.1,0.35,3.1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"outhouse_wall_bot",{"map-wall-outhouse-bot.img",0.5,1,16777215,10,0,0,0},1,{1,-1.15,-0.35,1.15,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.15,-0.35,1.15,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_1",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_12_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.25,0.5,6.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.25,0.5,6.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_19",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9.5,0.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-9.5,0.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_20",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10,0.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-10,0.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_21",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10.5,0.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-10.5,0.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_33",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-16.5,0.5,16.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-16.5,0.5,16.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_41",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-20.5,0.5,20.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-20.5,0.5,20.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_short_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_thicker_16",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8,1.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-8,1.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_thicker_24",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12,1.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-12,1.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thin_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.375,-3,0.375,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.375,-3,0.375,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_1_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.75,0.5,0.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-0.75,0.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_9_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.75,0.5,4.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4.75,0.5,4.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_10_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.25,0.5,5.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5.25,0.5,5.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_11_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.75,0.5,5.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5.75,0.5,5.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_24",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12,0.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-12,0.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_25",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12.5,0.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-12.5,0.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_column_2x8",{"",1,1,16777215,0,0,0,0},0,{1,-1,-4,1,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-4,1,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_column_4x8",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4,2,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2,-4,2,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_column_4x9",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4.5,2,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2,-4.5,2,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_column_4x24",{"",1,1,16777215,0,0,0,0},0,{1,-2,-12,2,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2,-12,2,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_column_5x10",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-5,2.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-5,2.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_column_7x10",{"",1,1,16777215,0,0,0,0},0,{1,-3.5,-5,3.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-3.5,-5,3.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_column_8x3",{"",1,1,16777215,0,0,0,0},0,{1,-4,-1.5,4,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-4,-1.5,4,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thick_11",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5.5,1,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_11",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5.5,1.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-5.5,1.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_14",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_17",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8.5,1.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-8.5,1.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_19",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9.5,1.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-9.5,1.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_22",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11,1.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-11,1.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_27",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13.5,1.5,13.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-13.5,1.5,13.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_30",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15,1.5,15},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-15,1.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_31",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15.5,1.5,15.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-15.5,1.5,15.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_42",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-21,1.5,21},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-21,1.5,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_ext_thicker_54",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-27,1.5,27},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-27,1.5,27},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_2x2",{"",1,1,16777215,0,0,0,0},0,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_12_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.25,0.5,6.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.25,0.5,6.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_1x15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_43",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-21.5,0.5,21.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-21.5,0.5,21.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_short_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_short_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thick_5",{"",1,1,16777215,0,0,0,0},0,{1,-1,-2.5,1,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-2.5,1,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_2x5_5",{"",1,1,16777215,0,0,0,0},0,{1,-1,-2.75,1,2.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-2.75,1,2.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thick_6",{"",1,1,16777215,0,0,0,0},0,{1,-1,-3,1,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-3,1,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thick_8",{"",1,1,16777215,0,0,0,0},0,{1,-1,-4,1,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-4,1,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thick_12",{"",1,1,16777215,0,0,0,0},0,{1,-1,-6,1,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-6,1,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thick_16",{"",1,1,16777215,0,0,0,0},0,{1,-1,-8,1,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-8,1,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thick_20",{"",1,1,16777215,0,0,0,0},0,{1,-1,-10,1,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-10,1,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thick_23",{"",1,1,16777215,0,0,0,0},0,{1,-1,-11.5,1,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-11.5,1,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thick_28",{"",1,1,16777215,0,0,0,0},0,{1,-1,-14,1,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-14,1,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_1_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-0.75,1.5,0.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-0.75,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_11",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5.5,1.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-5.5,1.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_14",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_16",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8,1.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-8,1.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_17",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8.5,1.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-8.5,1.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_18",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9,1.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-9,1.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_19",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9.5,1.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-9.5,1.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_20",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10,1.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-10,1.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_22",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11,1.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-11,1.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_23",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11.5,1.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-11.5,1.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_24",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12,1.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-12,1.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_25",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12.5,1.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-12.5,1.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_26",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13,1.5,13},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-13,1.5,13},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_27",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13.5,1.5,13.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-13.5,1.5,13.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_28",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-14,1.5,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-14,1.5,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_29",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-14.5,1.5,14.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-14.5,1.5,14.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_30",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15,1.5,15},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-15,1.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_32",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-16,1.5,16},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-16,1.5,16},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_34",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-17,1.5,17},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-17,1.5,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_35",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-17.5,1.5,17.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-17.5,1.5,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_42",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-21,1.5,21},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-21,1.5,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_48",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-24,1.5,24},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-24,1.5,24},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_ext_thicker_49",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-7,2.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-7,2.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_5x6",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-3,2.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-3,2.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_5x10",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-5,2.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-5,2.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_5x13",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-6.5,2.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-6.5,2.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_5x22_5",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-11.25,2.5,11.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-11.25,2.5,11.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_5x23",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-11.5,2.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-11.5,2.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_5x26",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-13,2.5,13},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-13,2.5,13},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_6x8",{"",1,1,16777215,0,0,0,0},0,{1,-3,-4,3,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-3,-4,3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"glass_wall_9",{"map-wall-glass-9.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"glass_wall_10",{"map-wall-glass-10.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"glass_wall_12",{"map-wall-glass-12.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"glass_wall_12_2",{"map-wall-glass-12-2.img",0.5,1,16777215,10,0,0,0},1,{1,-1,-6,1,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-6,1,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"glass_wall_13",{"map-wall-glass-13.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"glass_wall_1x19",{"map-wall-glass-1x19.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-9.5,0.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-9.5,0.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"glass_wall_1x23",{"map-wall-glass-1x23.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_wall_int_2",{"map-wall-02-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_wall_int_2_5",{"map-wall-02-5-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-1.25,0.5,1.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1.25,0.5,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_wall_int_4",{"map-wall-04-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_wall_int_5",{"map-wall-05-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_wall_int_6",{"map-wall-06-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_wall_int_7",{"map-wall-07-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_wall_int_8",{"map-wall-08-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_wall_int_11",{"map-wall-11-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_wall_int_13",{"map-wall-13-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_column_1",{"map-column-01.img",0.5,1,2764060,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bank_wall_int_3",{"map-wall-03-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bank_wall_int_4",{"map-wall-04-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bank_wall_int_5",{"map-wall-05-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bank_wall_int_8",{"map-wall-08-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_1",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_20",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10,0.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-10,0.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_22",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11,0.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-11,0.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_25",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12.5,0.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-12.5,0.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_38",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-19,0.5,19},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-19,0.5,19},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_2x11",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5.5,1,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_2x10",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5,1,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-5,1,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_3x4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_perm_wall_ext_3x13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_wall_int_3",{"map-wall-03-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_wall_int_4",{"map-wall-04-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_wall_int_5",{"map-wall-05-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_wall_int_6",{"map-wall-06-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_wall_int_8",{"map-wall-08-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_wall_int_9",{"map-wall-09-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_wall_int_10",{"map-wall-10-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_wall_int_12",{"map-wall-12-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_wall_int_13",{"map-wall-13-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_wall_int_16",{"map-wall-16-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_bar_small",{"",0.5,1,16777215,10,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_bar_large",{"map-reserve-bar-large.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_bar_back",{"map-reserve-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-6.5,0.75,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.75,-6.5,0.75,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"police_wall_int_2",{"map-wall-02-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"police_wall_int_3",{"map-wall-03-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"police_wall_int_4",{"map-wall-04-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"police_wall_int_6",{"map-wall-06-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"police_wall_int_7",{"map-wall-07-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"police_wall_int_8",{"map-wall-08-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"police_wall_int_10",{"map-wall-10-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_wall_int_4",{"map-wall-04-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_wall_int_5",{"map-wall-05-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_wall_int_8",{"map-wall-08-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_wall_int_9",{"map-wall-09-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_wall_int_11",{"map-wall-11-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_wall_int_14",{"map-wall-14-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_column_1",{"map-column-01.img",0.5,1,5587506,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cabin_wall_int_5",{"map-wall-05-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cabin_wall_int_10",{"map-wall-10-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cabin_wall_int_13",{"map-wall-13-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_wall_int_1",{"map-wall-01-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_wall_int_5",{"map-wall-05-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_wall_int_6",{"map-wall-06-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_wall_int_7",{"map-wall-07-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_wall_int_8",{"map-wall-08-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_wall_int_9",{"map-wall-09-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_wall_int_10",{"map-wall-10-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_wall_int_11",{"map-wall-11-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_wall_int_12",{"map-wall-12-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_wall_int_13",{"map-wall-13-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_column_1",{"map-column-01.img",0.5,1,7432016,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"saloon_column_1",{"map-column-01.img",0.5,1,1710618,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"saloon_bar_small",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"saloon_bar_large",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"saloon_bar_back_large",{"map-saloon-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-5,0.75,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.75,-5,0.75,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"saloon_bar_back_small",{"map-saloon-bar-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-1.5,0.75,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.75,-1.5,0.75,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_wall_int_4",{"map-wall-04-stone.img",0.5,1,16777215,10,0,0,0},1,{1,-0.6,-2,0.6,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.6,-2,0.6,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_column_4x8",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4,2,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2,-4,2,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"metal_wall_column_5x12",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-6,2.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-6,2.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_35",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-17.5,0.5,17.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-17.5,0.5,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_thicker_18",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9,1.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-9,1.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wood_perm_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_wall_int_3",{"map-wall-03.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_wall_int_4",{"map-wall-04.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_wall_int_5",{"map-wall-05.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_wall_int_7",{"map-wall-07.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_wall_int_12",{"map-wall-12.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_wall_int_13",{"map-wall-13.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_wall_int_14",{"map-wall-14.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_wall_int_18",{"map-wall-18.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_window_open_01",{"map-building-house-window-res-01.img",0.5,1,12216619,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"grassy_wall_3",{"map-wall-03-grassy.img",0.5,1,16777215,10,0,0,0},1,{1,-0.375,-1.5,0.375,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,7282176,1,{1,-0.375,-1.5,0.375,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"grassy_wall_8",{"map-wall-08-grassy.img",0.5,1,16777215,10,0,0,0},1,{1,-0.375,-4,0.375,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,7282176,1,{1,-0.375,-4,0.375,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"club_wall_int_6",{"map-wall-06-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"club_wall_int_10",{"map-wall-10-rounded.img",0.5,1,7218988,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"club_bar_small",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"club_bar_large",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"club_bar_back_large",{"map-club-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-7.5,0.75,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.75,-7.5,0.75,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bathhouse_column_1",{"map-bathhouse-column-01.img",0.5,1,13481337,10,0,0,0},1,{1,-2,-2,2,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bathhouse_column_2",{"map-bathhouse-column-02.img",0.5,1,13481337,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_lg_under_column",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-10,2.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-10,2.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_column_5x4",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-2,2.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_rail_3",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"rail_4",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-2.5,0.4,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-2.5,0.4,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_rail_12",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-6.5,0.4,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-6.5,0.4,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_xlg_under_column",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-14,2.5,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.5,-14,2.5,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"concrete_wall_column_9x4",{"",1,1,16777215,0,0,0,0},0,{1,-4.5,-2,4.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_rail_20",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-10,0.4,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-10,0.4,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_rail_28",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-14,0.4,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.4,-14,0.4,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_3_0_low",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brick_wall_ext_11_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.75,0.5,5.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.5,-5.75,0.5,5.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"container_wall_top",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-0.4,2.75,0.4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.75,-0.4,2.75,0.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"container_wall_side",{"",1,1,16777215,0,0,0,0},0,{1,-0.4,-5.5,0.4,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.4,-5.5,0.4,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"container_wall_side_open",{"",1,1,16777215,0,0,0,0},0,{1,-0.4,-6,0.4,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.4,-6,0.4,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_01",{"map-case-deagle-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_02",{"map-case-deagle-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_03",{"map-case-hatchet-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_04",{"map-case-flare-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_05",{"map-case-meteor-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_06",{"map-case-chrys-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_07",{"map-case-ring-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_07de",{"map-case-ring-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_08",{"map-case-crow-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_08sv",{"map-case-crow-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_09",{"map-case-twins-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"case_10",{"map-case-cloud-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_01",{"map-chest-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_01cb",{"map-chest-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_02",{"map-chest-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_03",{"map-chest-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_03cb",{"map-chest-03cb.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_03d",{"map-chest-03d.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_03f",{"map-chest-03f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_03sv",{"map-chest-03sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_03x",{"map-chest-03x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_03tr",{"map-chest-03tr.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_04",{"map-case-basement-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chest_04d",{"map-case-basement-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_01",{"map-crate-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_01x",{"map-crate-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_02",{"map-crate-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_02sv",{"map-crate-02sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,16760832,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_02sv_lake",{"map-crate-02sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,16760832,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_02x",{"map-crate-02x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_02f",{"map-crate-02f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,13369344,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_02d",{"map-crate-02f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,13369344,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_03",{"map-crate-03.img",0.35,1,16777215,10,0,0,0},1,{1,-1.575,-1.575,1.575,1.575},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5066014,0.875,{1,-1.575,-1.575,1.575,1.575},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_03x",{"map-crate-03x.img",0.35,1,16777215,10,0,0,0},1,{1,-1.575,-1.575,1.575,1.575},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,31863,0.875,{1,-1.575,-1.575,1.575,1.575},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_04",{"map-crate-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5468244,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_05",{"map-crate-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2,-2,2,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_06",{"map-crate-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.1,2.25,1.1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-1.1,2.25,1.1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_07",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_07b",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_07sv",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_08",{"map-crate-08.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_09",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_09bh",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_09de",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_10",{"map-crate-10.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_11",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_11h",{"map-crate-11h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_10sv",{"map-crate-10.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_11sv",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_11de",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_11tr",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_12",{"map-crate-12.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_12po",{"map-crate-12.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_12dev",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_13",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_13po",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_14",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_14a",{"map-crate-14a.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_15",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_16",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_17",{"map-crate-17.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_18",{"map-crate-18.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,12867840,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_19",{"map-crate-19.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4500224,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_20",{"map-crate-20.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.7,1.7,1.7},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,3884335,1,{1,-1.7,-1.7,1.7,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_21",{"map-crate-21.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,18799,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_21b",{"map-crate-21.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,18799,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_22",{"map-crate-22.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,32511,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"crate_22d",{"map-crate-22.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,32511,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_01",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_02",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_03",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_03po",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_03dev",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_04",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_04po",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_05",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_01sv",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_02sv",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_02de",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_02h",{"map-airdrop-01h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_02tr",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_01x",{"map-airdrop-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"airdrop_crate_02x",{"map-airdrop-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_shell_01",{"map-class-shell-01a.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_shell_02",{"map-class-shell-02a.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_shell_03",{"map-class-shell-03a.img",0.5,1,16777215,20,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_common_scout",{"map-class-crate-scout.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_common_sniper",{"map-class-crate-sniper.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_common_healer",{"map-class-crate-healer.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_common_demo",{"map-class-crate-demo.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_common_assault",{"map-class-crate-assault.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_common_tank",{"map-class-crate-tank.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_common_classless",{"map-class-crate-classless.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_rare_scout",{"map-class-crate-scout.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_rare_sniper",{"map-class-crate-sniper.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_rare_healer",{"map-class-crate-healer.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_rare_demo",{"map-class-crate-demo.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_rare_assault",{"map-class-crate-assault.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_rare_tank",{"map-class-crate-tank.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_rare_classless",{"map-class-crate-classless.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"class_crate_mythic",{"map-class-crate-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mil_crate_01",{"map-crate-mil-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mil_crate_02",{"map-crate-mil-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mil_crate_03",{"map-crate-mil-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mil_crate_04",{"map-crate-mil-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mil_crate_05",{"map-crate-mil-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,3622438,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barrel_02",{"map-barrel-02.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11235106,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barrel_03",{"map-barrel-03.img",0.45,1,16777215,10,0,0,0},1,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11235106,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barrel_04",{"map-barrel-04.img",0.45,1,16777215,10,0,0,0},1,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11235106,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barrel_05",{"map-barrel-05.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11235106,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bathhouse_rocks_01",{"map-bathrocks-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.55,-1.55,1.55,1.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.55,-1.55,1.55,1.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bed_sm_01",{"map-bed-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.4,-3.4,1.4,3.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-1.4,-3.4,1.4,3.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bed_lg_01",{"map-bed-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.8,-3.4,2.8,3.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.8,-3.4,2.8,3.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bookshelf_01",{"map-bookshelf-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-1,3.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3.5,-1,3.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bookshelf_02",{"map-bookshelf-02.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-1,3.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3.5,-1,3.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chair_01",{"map-chair-01.img",0.5,1,16777215,5,0,0,0},1,{1,-1,-1.25,1,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-1,-1.25,1,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"chair_02",{"map-chair-02.img",0.5,1,16777215,5,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"couch_01",{"map-couch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4.5,-1.5,4.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-4.5,-1.5,4.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"couch_02",{"map-couch-02.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.5,3,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3,-1.5,3,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"couch_02b",{"map-couch-02.img",0.5,1,16777215,10,0,1,0},1,{1,-3,-1.5,3,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3,-1.5,3,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"couch_03",{"map-couch-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_01",{"map-bottle-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_02",{"map-bottle-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_04",{"map-bottle-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_05",{"map-bottle-05.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"candle_01",{"map-candle-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,16777215,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"deposit_box_01",{"map-deposit-box-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"deposit_box_02",{"map-deposit-box-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"deposit_box_03",{"map-deposit-box-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"drawers_01",{"map-drawers-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-1.1,2.5,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-1.1,2.5,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"drawers_02",{"map-drawers-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-1.1,2.5,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-1.1,2.5,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"fire_ext_01",{"map-fire-ext-01.img",0.5,1,16777215,10,0,0,0},1,{0,0.35,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0.35,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"grill_01",{"map-grill-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.55,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,1,14935011,0.875,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"gun_mount_empty",{"map-gun-mount-empty.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"gun_mount_01",{"map-gun-mount-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"gun_mount_02",{"map-gun-mount-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"gun_mount_03",{"map-gun-mount-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"gun_mount_04",{"map-gun-mount-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"gun_mount_05",{"map-gun-mount-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"gun_mount_06",{"map-gun-mount-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"gun_mount_07",{"map-gun-mount-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"locker_01",{"map-locker-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"locker_02",{"map-locker-02.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"locker_03",{"map-locker-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"oven_01",{"map-oven-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1500000000000001,1.7,1.45},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,1,14935011,0.875,{1,-1.7,-1.1500000000000001,1.7,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"piano_01",{"map-piano-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.75,-1,3.75,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3.75,-1,3.75,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"planter_01",{"map-planter-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"planter_02",{"map-planter-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"planter_03",{"map-planter-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"planter_04",{"map-planter-04.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"planter_06",{"map-planter-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"planter_07",{"map-planter-07.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"pot_01",{"map-pot-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"pot_02",{"map-pot-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"pot_03",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"pot_03b",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"pot_03c",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"pot_04",{"map-pot-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"pot_05",{"map-pot-05.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"rack_01",{"map-rack-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2,-1.05,2,1.45},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2,-1.05,2,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"refrigerator_01",{"map-refrigerator-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7733259,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"refrigerator_01b",{"map-refrigerator-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7733259,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"safe_01",{"map-safe-01.img",0.4,1,16777215,10,0,0,0},1,{1,-1.25,-1.15,1.25,1.35},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,1512466,1,{1,-1.25,-1.15,1.25,1.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"safe_01de",{"map-safe-01.img",0.4,1,16777215,10,0,0,0},1,{1,-1.25,-1.15,1.25,1.35},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,1512466,1,{1,-1.25,-1.15,1.25,1.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"screen_01",{"map-screen-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-0.15000000000000002,4,0.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-4,-0.15000000000000002,4,0.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"sink_01",{"map-sink-01.img",0.35,1,16777215,10,0,0,0},1,{1,-2,-1.5,2,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{1,-2,-1.5,2,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stand_01",{"map-stand-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.25,-1.1,1.25,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-1.25,-1.1,1.25,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"power_box_01",{"map-power-box-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stove_01",{"map-stove-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-2.25,3,2.25},1,0,0,0,0,0,1,"explosion_stove",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-3,-2.25,3,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stove_02",{"map-stove-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,1,"explosion_stove",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_01",{"map-table-01.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_01x",{"map-table-01x.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_01d",{"map-table-01d.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2.5,2.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_02",{"map-table-02.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2.5,4.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-4.5,-2.5,4.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_02x",{"map-table-02x.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2.5,4.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-4.5,-2.5,4.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_03",{"map-table-03.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_03x",{"map-table-03x.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_04",{"map-table-04.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2,4.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_05",{"map-table-05.img",0.5,1,16777215,60,0,0,0},1,{1,-9,-2.75,9,2.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-9,-2.75,9,2.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_06",{"map-table-06.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-2,4,2},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-4,-2,4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_07",{"map-table-07.img",0.5,1,16777215,10,0,0,0},1,{1,-3.3000000000000003,-1.35,3.4,1.15},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-3.3000000000000003,-1.35,3.4,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_08",{"map-table-08.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-1.55,4,1.45},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-4,-1.55,4,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"table_09",{"map-table-09.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-2.05,3,1.95},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-3,-2.05,3,1.95},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"toilet_01",{"map-toilet-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"toilet_02",{"map-toilet-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"toilet_02b",{"map-toilet-02.img",0.5,1,11842740,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"toilet_03",{"map-toilet-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"toilet_04",{"map-toilet-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"toilet_05",{"map-toilet-05.img",0.66,1,16777215,10,0,0,0},1,{0,0,0.25,1.56,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0.25,1.56,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"towelrack_01",{"map-towelrack-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1,3,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{1,-3,-1,3,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vat_01",{"map-vat-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vat_02",{"map-vat-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,3.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11776947,1,{0,0,0,3.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vat_03",{"map-vat-03.img",0.5,1,16777215,50,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11776947,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vat_04",{"map-vat-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vat_05",{"map-vat-05.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vending_01",{"map-vending-soda-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,10925,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wheel_01",{"map-wheel-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wheel_02",{"map-wheel-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"wheel_03",{"map-wheel-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"control_panel_01",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"control_panel_02",{"map-control-panel-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"control_panel_02b",{"map-control-panel-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"control_panel_03",{"map-control-panel-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.25,-1.2,1.25,1.2},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-1.25,-1.2,1.25,1.2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"control_panel_04",{"map-control-panel-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"control_panel_06",{"map-control-panel-06.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.4,3,1.4},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-3,-1.4,3,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"control_panel_07de",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"control_panel_07sv",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"switch_01",{"map-switch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"switch_01o",{"map-switch-01o.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"switch_01p",{"map-switch-01p.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"switch_01y",{"map-switch-01y.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"switch_02",{"map-switch-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"switch_03",{"map-switch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_02r",{"map-bottle-02.img",0.5,1,13172736,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_02o",{"map-bottle-02.img",0.5,1,16734720,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_02y",{"map-bottle-02.img",0.5,1,16776960,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_02g",{"map-bottle-02.img",0.5,1,32768,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_02b",{"map-bottle-02.img",0.5,1,27903,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_02i",{"map-bottle-02.img",0.5,1,4915330,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bottle_02v",{"map-bottle-02.img",0.5,1,15631086,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"button_01",{"map-button-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"button_01g",{"map-button-01g.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"button_01b",{"map-button-01b.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_01",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_02",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_03",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_04",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_05",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_06",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_07",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_08",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_09",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_10",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_11",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_12",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_13",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"recorder_14",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_switch_01",{"map-tree-switch-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_switch_02",{"map-tree-switch-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_switch_03",{"map-tree-switch-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barrel_01",{"map-barrel-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barrel_01b",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barrel_01w",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barrel_01bh",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barrel_01f",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barrel_01bd",{"map-barrel-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"propane_01",{"map-propane-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,1,1,24516,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bollard_01",{"map-bollard-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6310464,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_01",{"map-bush-01.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_01b",{"map-bush-01.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_01cb",{"map-bush-01cb.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2518873,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_01f",{"map-bush-01f.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,1793032,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_01sv",{"map-bush-01sv.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,7569455,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brush_01sv",{"map-brush-01sv.img",0.5,0.97,16777215,60,0,0,0},1,{1,-1.75,-1.75,1.75,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5207588,1.5,{1,-1.75,-1.75,1.75,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brush_02sv",{"map-brush-02sv.img",0.5,0.97,16777215,60,0,0,0},1,{1,-1.75,-1.75,1.75,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5207588,1.5,{1,-1.75,-1.75,1.75,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_01x",{"map-bush-01x.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4545840,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_02",{"map-bush-01.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_03",{"map-bush-03.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_04",{"map-bush-04.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_04cb",{"map-bush-04cb.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2784099,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_05",{"map-bush-05.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6971965,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_06",{"map-bush-06.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,16489473,1.5,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_06tr",{"map-bush-06tr.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,14853402,1,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_06b",{"map-bush-06.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,14041344,1.5,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_07",{"map-bush-07.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_07sp",{"map-bush-07sp.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,671242,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_07x",{"map-bush-07x.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bush_07cb",{"map-bush-07cb.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"campfire_01",{"map-campfire-01.img",0.375,1,16777215,10,0,0,0},1,{0,0,0,2.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6447714,1,{0,0,0,2.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"potato_01",{"map-potato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"potato_01f",{"map-potato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"potato_02",{"map-potato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"potato_02f",{"map-potato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"potato_03",{"map-potato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"potato_03f",{"map-potato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tomato_01",{"map-tomato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tomato_02",{"map-tomato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tomato_03",{"map-tomato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"egg_01",{"map-egg-01.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"egg_02",{"map-egg-02.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"egg_03",{"map-egg-03.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"egg_04",{"map-egg-04.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"pumpkin_01",{"map-pumpkin-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,15889667,1,{0,0,0,1.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"pumpkin_02",{"map-pumpkin-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,15889667,1,{0,0,0,1.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"pumpkin_03",{"map-pumpkin-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,15889667,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"squash_01",{"map-squash-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6452036,1.25,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"squash_02",{"map-squash-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,16569521,1.25,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"sandbags_01",{"map-sandbags-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.1,-1.4,3.1,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,13278307,1,{1,-3.1,-1.4,3.1,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"sandbags_02",{"map-sandbags-02.img",0.5,1,16777215,10,0,0,0},1,{1,-1.1,-1.4,1.1,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,13278307,1,{1,-1.1,-1.4,1.1,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"silo_01",{"map-silo-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4079166,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"silo_01po",{"map-silo-01.img",0.5,1,16749645,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4079166,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_01",{"map-statue-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_03",{"map-statue-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_04",{"map-statue-04.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_top_01",{"map-statue-top-01.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.45,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,5723991,1,{0,0,0,2.45,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_top_02",{"map-statue-top-02.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.45,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,5723991,1,{0,0,0,2.45,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_01",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_01b",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_01cb",{"map-stone-01cb.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_01f",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,8224125,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_01sv",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_01x",{"map-stone-01x.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6052956,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_02",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_02sv",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_02cb",{"map-stone-01cb.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_02w",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_02x",{"map-stone-01x.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_02bh",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_02f",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_03",{"map-stone-03.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_03b",{"map-stone-03b.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_03cb",{"map-stone-03cb.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_03f",{"map-stone-03f.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_03sv",{"map-stone-03sv.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_03x",{"map-stone-03x.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_03tr",{"map-stone-03tr.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_03bh",{"map-stone-03bh.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_04",{"map-stone-04.img",0.4,1,16777215,10,0,0,0},1,{1,-1.8,-1.8,1.8,1.8},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,1512466,1,{1,-1.8,-1.8,1.8,1.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_04x",{"map-stone-04x.img",0.4,1,16777215,10,0,0,0},1,{1,-1.8,-1.8,1.8,1.8},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11725567,1,{1,-1.8,-1.8,1.8,1.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_05",{"map-stone-05.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.7,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,1512466,1,{0,0,0,1.7,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_06",{"map-stone-06.img",0.5,1,16777215,10,0,0,0},1,{1,-4.5,-2,4.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,3618615,1,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_07",{"map-stone-07.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,9931908,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_08",{"map-stone-03.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_08x",{"map-stone-03x.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"stone_08cb",{"map-stone-03cb.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_01",{"map-tree-03.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_01cb",{"map-tree-03cb.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.2,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2900834,2.5,{0,0,0,1.2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_01sv",{"map-tree-03sv.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4411673,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_interior_01",{"map-tree-03.img",0.7,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_interior_01bh",{"map-tree-13.img",0.35,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_interior_01de",{"map-tree-14.img",0.35,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_01x",{"map-tree-01x.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_02",{"map-tree-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,4083758,2.5,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_02h",{"map-tree-04h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,4083758,2.5,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03",{"map-tree-03.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03su",{"map-tree-07su.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,2185478,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03sp",{"map-tree-07sp.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03x",{"map-tree-10.img",0.7,1,13158600,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03sv",{"map-tree-03sv.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,4411673,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03d",{"map-tree-06.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,7700520,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03f",{"map-tree-08f.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,995844,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03w",{"map-tree-07.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03h",{"map-tree-07.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03cb",{"map-tree-03cb.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.2,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,2900834,2.5,{0,0,0,1.2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_03bh",{"map-tree-13.img",0.35,1,11645361,800,0,0,0},1,{0,0,0,1.1,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,4083758,2.5,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_05",{"map-tree-05.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,2.3,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5911831,3,{0,0,0,2.3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_05b",{"map-tree-05.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,2.3,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5911831,3,{0,0,0,2.3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_05c",{"map-tree-05c.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.05,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,9064739,3,{0,0,0,1.05,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_06",{"map-tree-06.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,7700520,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_07",{"map-tree-07.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_07sp",{"map-tree-07sp.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_07spr",{"map-tree-07sp.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_07su",{"map-tree-07su.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2185478,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_08",{"map-tree-08.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11033868,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_08b",{"map-tree-08.img",0.35,1,14383224,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,9647632,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_08c",{"map-tree-08.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,7817749,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_08f",{"map-tree-08f.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,995844,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_08sp",{"map-tree-08sp.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,16746936,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_08spb",{"map-tree-08sp.img",0.35,1,14383224,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,16734619,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_08spc",{"map-tree-08sp.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,8268107,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_08spr",{"map-tree-08sp.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,16746936,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_08su",{"map-tree-08su.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2183181,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_08sub",{"map-tree-08su.img",0.35,1,9211210,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,1785864,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_09",{"map-tree-09.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_10",{"map-tree-10.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,7571807,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_11",{"map-tree-11.img",0.75,0.92,16777215,201,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_interior_11",{"map-tree-11.img",0.5,0.92,16777215,200,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_12",{"map-tree-12.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,8032292,7,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_13",{"map-tree-13.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_13bh",{"map-tree-13.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_13x",{"map-tree-13x.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_14",{"map-tree-14.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_14d",{"map-tree-14.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"tree_14x",{"map-tree-14x.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"woodpile_01",{"map-woodpile-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,9455616,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"woodpile_02",{"map-woodpile-02.img",0.5,1,16777215,10,0,0,0},1,{1,-6,-3,6,3},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.8,{1,-6,-3,6,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"woodpile_03",{"map-woodpile-03.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.75,3,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6697728,0.8,{1,-3,-1.75,3,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bank_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_741,3,1,kFloorImgs_741,2,kCeilImgs_741,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_741,3},
+    {"barn_basement_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_742,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_basement_floor_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_743,1,kCeilImgs_743,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_743,2},
+    {"barn_basement_floor_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_744,1,kCeilImgs_744,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_744,1},
+    {"barn_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_745,2,1,kFloorImgs_745,1,kCeilImgs_745,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_745,2},
+    {"barn_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_746,2,1,kFloorImgs_746,1,kCeilImgs_746,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_746,2},
+    {"bathhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_747,6,nullptr,0,5.5,2.75,0.5,6,"",kEmitters_747,2,kZoomIns_747,5},
+    {"bathhouse_sideroom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_748,1,kCeilImgs_748,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_748,1},
+    {"bathhouse_sideroom_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_749,1,kCeilImgs_749,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_749,1},
+    {"bridge_lg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_750,5,1,kFloorImgs_750,2,kCeilImgs_750,1,10,2.75,0,12,"",nullptr,0,kZoomIns_750,1},
+    {"bridge_lg_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0},
+    {"bridge_xlg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_752,5,1,kFloorImgs_752,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_xlg_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0},
+    {"bridge_md_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_754,1,1,kFloorImgs_754,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_md_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0},
+    {"cabin_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_756,2,1,kFloorImgs_756,1,kCeilImgs_756,3,5.5,2.75,0.5,6,"",kEmitters_756,1,kZoomIns_756,2},
+    {"club_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_757,9,1,kFloorImgs_757,8,kCeilImgs_757,3,7.5,2.5,0.5,6,"",nullptr,0,kZoomIns_757,9},
+    {"club_vault",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_758,1,kCeilImgs_758,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_758,1},
+    {"club_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-41,-52,31,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"container_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_760,1,kCeilImgs_760,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_760,1},
+    {"container_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_761,1,kCeilImgs_761,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_761,1},
+    {"container_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_762,1,kCeilImgs_762,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_762,1},
+    {"container_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_763,1,kCeilImgs_763,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_763,1},
+    {"container_05",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,11485762,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_764,1,kCeilImgs_764,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_764,1},
+    {"container_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_765,1,kCeilImgs_765,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_765,1},
+    {"dock_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_766,2,1,kFloorImgs_766,2,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"greenhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,1995644,1,{1,-17.5,-25,22,25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_767,4,kCeilImgs_767,2,7.5,2.75,0.5,6,"",nullptr,0,kZoomIns_767,1},
+    {"greenhouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,1995644,1,{1,-17.5,-25,22,25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_768,4,kCeilImgs_768,1,7.5,2.75,0.5,6,"",nullptr,0,kZoomIns_768,1},
+    {"hedgehog_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_769,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hut_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_770,2,0,kFloorImgs_770,2,kCeilImgs_770,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_770,1},
+    {"hut_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_771,2,0,kFloorImgs_771,2,kCeilImgs_771,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_771,1},
+    {"hut_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_772,2,0,kFloorImgs_772,2,kCeilImgs_772,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_772,1},
+    {"house_red_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6429724,1,{1,-19,-17.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_773,3,kCeilImgs_773,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_773,1},
+    {"house_red_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4656911,1,{1,-19,-19.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_774,10,kCeilImgs_774,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_774,1},
+    {"mansion_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_775,5,1,kFloorImgs_775,4,kCeilImgs_775,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_775,3},
+    {"mansion_cellar_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_776,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_776,2},
+    {"outhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,8145976,1,{1,-5.5,-5.1,5.5,7.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_777,1,kCeilImgs_777,1,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_777,1},
+    {"panicroom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_778,1,kCeilImgs_778,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_778,1},
+    {"police_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_779,10,1,kFloorImgs_779,2,kCeilImgs_779,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_779,4},
+    {"saferoom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_780,1,kCeilImgs_780,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_780,1},
+    {"shack_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_781,1,kCeilImgs_781,1,5.5,4,0,12,"map-shack-res-01.img",nullptr,0,kZoomIns_781,1},
+    {"shack_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4014894,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_782,1,kCeilImgs_782,1,5.5,4,0,12,"map-shack-res-02.img",nullptr,0,kZoomIns_782,1},
+    {"shack_03a",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_783,4,1,kFloorImgs_783,2,kCeilImgs_783,1,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_783,1},
+    {"shack_03b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_784,4,1,kFloorImgs_784,2,kCeilImgs_784,1,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_784,1},
+    {"teahouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_785,4,0,kFloorImgs_785,3,kCeilImgs_785,1,5.5,4,0,12,"map-building-teahouse-res-01.img",nullptr,0,kZoomIns_785,1},
+    {"teahouse_complex_01s",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"warehouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_787,3,1,kFloorImgs_787,2,kCeilImgs_787,1,8,5,0,12,"",nullptr,0,kZoomIns_787,1},
+    {"warehouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_788,3,1,kFloorImgs_788,2,kCeilImgs_788,1,8,5,0,12,"",nullptr,0,kZoomIns_788,1},
+    {"warehouse_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_789,3,1,kFloorImgs_789,2,kCeilImgs_789,1,8,5,0,12,"",nullptr,0,kZoomIns_789,1},
+    {"warehouse_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-42,-40,108,78},1,nullptr,0,nullptr,0,nullptr,0,kShapes_790,20,0,kFloorImgs_790,3,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"vault_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_791,1,kCeilImgs_791,1,7.25,2.75,0.5,6,"",nullptr,0,kZoomIns_791,1},
+    {"hut_01bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_792,2,0,kFloorImgs_792,2,kCeilImgs_792,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_792,1},
+    {"hut_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_793,4,0,kFloorImgs_793,2,kCeilImgs_793,1,5.5,4,0,12,"map-hut-res-02.img",nullptr,0,kZoomIns_793,1},
+    {"mansion_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_794,5,1,kFloorImgs_794,4,kCeilImgs_794,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_794,3},
+    {"mansion_cellar_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_795,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_795,2},
+    {"teahouse_complex_01cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"archway_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,7813914,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,kCeilImgs_797,1,5.5,2.75,0,12,"map-archway-res-01.img",nullptr,0,nullptr,0},
+    {"bank_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_798,3,1,kFloorImgs_798,2,kCeilImgs_798,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_798,3},
+    {"vault_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_799,1,kCeilImgs_799,1,7.25,2.75,0.5,6,"",nullptr,0,kZoomIns_799,1},
+    {"barn_basement_floor_01d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_800,1,kCeilImgs_800,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_800,2},
+    {"barn_basement_floor_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_801,1,kCeilImgs_801,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_801,1},
+    {"barn_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_802,2,1,kFloorImgs_802,1,kCeilImgs_802,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_802,2},
+    {"desert_town_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-70,-120,65,120},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"desert_town_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-85,-89,85,57},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"oasis_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-43,-43,43,43},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"river_town_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-95,-50,85,36},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_806,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-68,-37,68,39},1,nullptr,0,nullptr,0,nullptr,0,kShapes_807,6,1,kFloorImgs_807,4,kCeilImgs_807,5,5.5,2.75,0.5,6,"",kEmitters_807,1,kZoomIns_807,7},
+    {"reserve_basement_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-70,-35,70,35},1,nullptr,0,nullptr,0,nullptr,0,kShapes_808,1,1,kFloorImgs_808,5,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_808,7},
+    {"reserve_armory_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_809,1,kCeilImgs_809,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_809,1},
+    {"reserve_security_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_810,1,kCeilImgs_810,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_810,1},
+    {"reserve_vault_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_811,1,kCeilImgs_811,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_811,1},
+    {"saloon_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-22.5,-22.5,22.5,22.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_812,4,1,kFloorImgs_812,2,kCeilImgs_812,3,5.5,2.75,0.5,6,"",kEmitters_812,1,kZoomIns_812,1},
+    {"saloon_cellar_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_813,1,kCeilImgs_813,1,7,3,0,12,"",nullptr,0,kZoomIns_813,1},
+    {"statue_building_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_814,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_underground_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_815,1,kCeilImgs_815,1,5,3,0,12,"",nullptr,0,kZoomIns_815,1},
+    {"statue_building_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_816,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_underground_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_817,1,kCeilImgs_817,1,5,3,0,12,"",nullptr,0,kZoomIns_817,1},
+    {"river_town_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-121,-56,122,75},1,nullptr,0,nullptr,0,nullptr,0,kShapes_818,4,0,kFloorImgs_818,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_819,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_820,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"warehouse_01f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_821,3,1,kFloorImgs_821,2,kCeilImgs_821,1,8,5,0,12,"",nullptr,0,kZoomIns_821,1},
+    {"barn_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_822,2,1,kFloorImgs_822,1,kCeilImgs_822,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_822,2},
+    {"warehouse_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_823,3,1,kFloorImgs_823,2,kCeilImgs_823,1,8,5,0,12,"",nullptr,0,kZoomIns_823,1},
+    {"junkyard_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-37,-37,37,37},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_red_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6429724,1,{1,-19,-17.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_825,3,kCeilImgs_825,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_825,1},
+    {"house_red_02h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4656911,1,{1,-19,-19.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_826,10,kCeilImgs_826,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_826,1},
+    {"cabin_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_827,2,1,kFloorImgs_827,1,kCeilImgs_827,3,5.5,2.75,0.5,6,"",kEmitters_827,1,kZoomIns_827,2},
+    {"mansion_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_828,5,1,kFloorImgs_828,4,kCeilImgs_828,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_828,3},
+    {"mansion_cellar_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_829,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_829,2},
+    {"shilo_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,3240224,1,{1,-17,-16,17,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_830,2,kCeilImgs_830,1,5.5,4,0,12,"",nullptr,0,kZoomIns_830,1},
+    {"warehouse_03sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_831,3,1,kFloorImgs_831,2,kCeilImgs_831,1,8,5,0,12,"",nullptr,0,kZoomIns_831,1},
+    {"kopje_brush_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-18,-18,18,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"grassy_cover_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-10,-10,10,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"grassy_cover_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-10,-10,10,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"grassy_cover_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-10,-10,10,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"grassy_cover_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-30,-10,30,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brush_clump_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-17,-17,17,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brush_clump_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-17,-17,17,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"brush_clump_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-17,-17,17,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"savannah_patch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-20,-16,20,16},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"kopje_patch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-45,-35,45,35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"perch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,1915136,1,{1,-7,-8,7,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_842,1,kCeilImgs_842,1,5.5,2.75,0,12,"map-perch-res-01.img",nullptr,0,nullptr,0},
+    {"oasis_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-43,-43,43,43},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"hut_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_844,2,0,kFloorImgs_844,2,kCeilImgs_844,3,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_844,1},
+    {"hut_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_845,2,0,kFloorImgs_845,2,kCeilImgs_845,3,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_845,1},
+    {"warehouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_846,3,1,kFloorImgs_846,2,kCeilImgs_846,5,8,5,0,12,"",nullptr,0,kZoomIns_846,1},
+    {"warehouse_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_847,3,1,kFloorImgs_847,2,kCeilImgs_847,4,8,5,0,12,"",nullptr,0,kZoomIns_847,1},
+    {"warehouse_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_848,3,1,kFloorImgs_848,2,kCeilImgs_848,5,8,5,0,12,"",nullptr,0,kZoomIns_848,1},
+    {"shack_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_849,1,kCeilImgs_849,3,5.5,4,0,12,"map-shack-res-01.img",nullptr,0,kZoomIns_849,1},
+    {"shack_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4014894,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_850,1,kCeilImgs_850,2,5.5,4,0,12,"map-shack-res-02.img",nullptr,0,kZoomIns_850,1},
+    {"shack_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_851,4,1,kFloorImgs_851,2,kCeilImgs_851,2,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_851,1},
+    {"outhouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,8145976,1,{1,-5.5,-5.1,5.5,7.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_852,1,kCeilImgs_852,2,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_852,1},
+    {"outhouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,10371350,1,{1,-5.5,-5.1,5.5,7.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_853,1,kCeilImgs_853,1,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_853,1},
+    {"barn_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_854,2,1,kFloorImgs_854,1,kCeilImgs_854,5,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_854,2},
+    {"barn_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_855,2,1,kFloorImgs_855,1,kCeilImgs_855,5,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_855,2},
+    {"bank_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_856,3,1,kFloorImgs_856,2,kCeilImgs_856,7,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_856,3},
+    {"police_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_857,10,1,kFloorImgs_857,2,kCeilImgs_857,9,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_857,4},
+    {"house_red_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,6429724,1,{1,-19,-17.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_858,3,kCeilImgs_858,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_858,1},
+    {"house_red_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,4656911,1,{1,-19,-19.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_859,10,kCeilImgs_859,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_859,1},
+    {"cabin_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_860,2,1,kFloorImgs_860,1,kCeilImgs_860,6,5.5,2.75,0.5,6,"",kEmitters_860,1,kZoomIns_860,2},
+    {"mansion_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_861,5,1,kFloorImgs_861,4,kCeilImgs_861,8,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_861,3},
+    {"teahouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_862,4,0,kFloorImgs_862,3,kCeilImgs_862,4,5.5,4,0,12,"map-building-teahouse-res-01.img",nullptr,0,kZoomIns_862,1},
+    {"teahouse_complex_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_lg_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_864,5,1,kFloorImgs_864,2,kCeilImgs_864,5,10,2.75,0,12,"",nullptr,0,kZoomIns_864,1},
+    {"container_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_865,1,kCeilImgs_865,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_865,1},
+    {"workshop_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-30.5,-32.5,34.5,32.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_866,4,1,kFloorImgs_866,2,kCeilImgs_866,2,8,5,0,12,"",nullptr,0,kZoomIns_866,2},
+    {"workshop_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-33,-35,37,35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"logging_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-55,-54,55,46},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"logging_complex_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"logging_complex_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"camp_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-22.5,-22.5,22.5,22.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",kEmitters_871,1,kZoomIns_871,1},
+    {"teapavilion_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-11,-32,11,11},1,nullptr,0,nullptr,0,nullptr,0,kShapes_872,3,0,kFloorImgs_872,2,kCeilImgs_872,1,5.5,4,0,12,"map-building-pavilion-res-01.img",nullptr,0,kZoomIns_872,1},
+    {"teapavilion_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-14,-32,14,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"logging_complex_01sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-55,-54,55,46},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"logging_complex_02sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"logging_complex_03sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"workshop_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-30.5,-32.5,34.5,32.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_877,4,1,kFloorImgs_877,2,kCeilImgs_877,7,8,5,0,12,"",nullptr,0,kZoomIns_877,2},
+    {"workshop_complex_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-33,-35,37,35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"logging_complex_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"logging_complex_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"camp_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-22.5,-22.5,22.5,22.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",kEmitters_881,1,kZoomIns_881,1},
+    {"teapavilion_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-11,-32,11,11},1,nullptr,0,nullptr,0,nullptr,0,kShapes_882,3,0,kFloorImgs_882,2,kCeilImgs_882,1,5.5,4,0,12,"map-building-pavilion-res-01.img",nullptr,0,kZoomIns_882,1},
+    {"logging_complex_01su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-55,-54,55,46},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"logging_complex_02su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"logging_complex_03su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"teahouse_complex_01su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_chrys_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_887,1,2,kFloorImgs_887,1,kCeilImgs_887,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_887,1},
+    {"bunker_chrys_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_888,2,kCeilImgs_888,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_888,1},
+    {"bunker_chrys_sublevel_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_889,2,kCeilImgs_889,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_889,1},
+    {"bunker_chrys_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_890,2,kCeilImgs_890,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_890,1},
+    {"bunker_chrys_compartment_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_891,2,kCeilImgs_891,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_891,1},
+    {"bunker_chrys_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_892,2,kCeilImgs_892,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_892,1},
+    {"bunker_chrys_compartment_02b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_893,2,kCeilImgs_893,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_893,1},
+    {"bunker_chrys_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_894,1,kCeilImgs_894,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_894,1},
+    {"bunker_chrys_compartment_03b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_895,1,kCeilImgs_895,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_895,1},
+    {"bunker_cloud_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_896,2,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0},
+    {"bunker_cloud_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,-45,-45,45,45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_897,3,kCeilImgs_897,4,7,3,0,12,"",nullptr,0,kZoomIns_897,4},
+    {"bunker_cloud_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,nullptr,0,kCeilImgs_898,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_898,2},
+    {"bunker_cloud_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,kZoomIns_899,1},
+    {"bunker_egg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_900,1,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0},
+    {"bunker_egg_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_901,2,kCeilImgs_901,1,5,3,0,12,"",nullptr,0,kZoomIns_901,1},
+    {"bunker_egg_sublevel_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_902,2,kCeilImgs_902,1,5,3,0,12,"",nullptr,0,kZoomIns_902,1},
+    {"bunker_egg_sublevel_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_903,2,kCeilImgs_903,1,5,3,0,12,"",nullptr,0,kZoomIns_903,1},
+    {"bunker_hydra_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_904,2,0,kFloorImgs_904,3,kCeilImgs_904,1,5,2.75,0.5,6,"",nullptr,0,kZoomIns_904,2},
+    {"bunker_hydra_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_905,4,kCeilImgs_905,3,10,3,0,12,"",nullptr,0,kZoomIns_905,3},
+    {"bunker_hydra_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_906,1,kCeilImgs_906,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_906,1},
+    {"bunker_hydra_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_907,1,kCeilImgs_907,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_907,1},
+    {"bunker_hydra_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_908,1,kCeilImgs_908,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_908,1},
+    {"bunker_storm_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_909,1,0,kFloorImgs_909,1,kCeilImgs_909,1,5,2.75,0.5,6,"none",nullptr,0,kZoomIns_909,1},
+    {"bunker_storm_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_910,2,kCeilImgs_910,1,5,3,0,12,"",nullptr,0,kZoomIns_910,1},
+    {"bunker_conch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_911,2,0,kFloorImgs_911,2,kCeilImgs_911,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_911,2},
+    {"bunker_conch_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_912,2,kCeilImgs_912,2,7,3,0,12,"",kEmitters_912,1,kZoomIns_912,2},
+    {"bunker_conch_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_913,2,kCeilImgs_913,1,7,3,0,12,"",kEmitters_913,1,kZoomIns_913,2},
+    {"bunker_crossing_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_914,1,1,kFloorImgs_914,1,kCeilImgs_914,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_914,1},
+    {"bunker_crossing_stairs_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_915,1,1,kFloorImgs_915,1,kCeilImgs_915,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_915,1},
+    {"bunker_crossing_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_916,1,0,kFloorImgs_916,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_crossing_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_917,8,kCeilImgs_917,2,7,3,0,12,"",nullptr,0,kZoomIns_917,4},
+    {"bunker_crossing_bathroom",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_918,1,kCeilImgs_918,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_918,1},
+    {"bunker_crossing_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_919,2,kCeilImgs_919,2,7,3,0,12,"",kEmitters_919,1,kZoomIns_919,2},
+    {"bunker_hatchet_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_920,1,0,kFloorImgs_920,1,kCeilImgs_920,1,5,2.75,0.5,6,"none",nullptr,0,kZoomIns_920,1},
+    {"bunker_hatchet_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_921,3,kCeilImgs_921,1,5,3,0,12,"",nullptr,0,kZoomIns_921,1},
+    {"bunker_hatchet_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_922,1,kCeilImgs_922,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_922,1},
+    {"bunker_hatchet_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_923,4,kCeilImgs_923,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_923,1},
+    {"bunker_hatchet_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_924,4,kCeilImgs_924,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_924,1},
+    {"bunker_eye_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_925,1,1,kFloorImgs_925,1,kCeilImgs_925,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_925,1},
+    {"bunker_eye_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_926,2,kCeilImgs_926,1,5,3,0,12,"",nullptr,0,kZoomIns_926,1},
+    {"bunker_eye_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_927,1,kCeilImgs_927,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_927,1},
+    {"bunker_twins_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_928,1,1,kFloorImgs_928,1,kCeilImgs_928,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_928,1},
+    {"bunker_twins_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_929,1,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0},
+    {"bunker_twins_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_930,1,kCeilImgs_930,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_930,1},
+    {"bunker_twins_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_931,1,kCeilImgs_931,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_931,1},
+    {"cache_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_932,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_933,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_934,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_01cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_935,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_936,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_01bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_937,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_01f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_938,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_939,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_940,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_941,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_942,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_943,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_944,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_945,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_946,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_947,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_948,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_02bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_949,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_950,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_03tr",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_951,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_952,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_04x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_953,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_04cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_954,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_955,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_06bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_956,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_07",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_957,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_07w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_958,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_06cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_959,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_07f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_960,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_07bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_961,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_log_13",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_962,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_pumpkin_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_963,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_pumpkin_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_964,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_pumpkin_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_965,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"cache_pumpkin_airdrop_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_966,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"candle_lit_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_967,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"candle_lit_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_968,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_lg_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,kLayers_969,2,kStairs_969,2,kMask_969,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_xlg_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,kLayers_970,2,kStairs_970,2,kMask_970,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bridge_md_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-23,-7,23,7},1,kLayers_971,2,kStairs_971,2,kMask_971,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_972,2,kStairs_972,1,kMask_972,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"statue_structure_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_973,2,kStairs_973,1,kMask_973,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_basement_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-30,-30,30,30},1,kLayers_974,2,kStairs_974,1,kMask_974,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_basement_structure_01d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-30,-30,30,30},1,kLayers_975,2,kStairs_975,1,kMask_975,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"barn_basement_structure_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-30,-30,30,30},1,kLayers_976,2,kStairs_976,1,kMask_976,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,kLayers_977,2,kStairs_977,2,kMask_977,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_structure_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,kLayers_978,2,kStairs_978,2,kMask_978,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,kLayers_979,2,kStairs_979,2,kMask_979,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"mansion_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,kLayers_980,2,kStairs_980,2,kMask_980,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"reserve_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-68,-37,68,39},1,kLayers_981,2,kStairs_981,2,kMask_981,3,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"saloon_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,kLayers_982,2,kStairs_982,1,kMask_982,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"club_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,kLayers_983,2,kStairs_983,2,kMask_983,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_984,2,kStairs_984,1,kMask_984,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_985,2,kStairs_985,1,kMask_985,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_986,2,kStairs_986,1,kMask_986,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-23.5,-97,46.5,15},1,kLayers_987,2,kStairs_987,3,kMask_987,5,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-7,-10.5,7,22.5},1,kLayers_988,2,kStairs_988,1,kMask_988,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,11.5,-40.5,58,11.5},1,kLayers_989,2,kStairs_989,2,kMask_989,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_05",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-42,-28.5,42,34.5},1,kLayers_990,2,kStairs_990,4,kMask_990,3,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-6,-7.5,8,19.5},1,kLayers_991,2,kStairs_991,1,kMask_991,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_07",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-42,-72,42,25},1,kLayers_992,2,kStairs_992,1,kMask_992,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_08",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-10,-10,20,20},1,kLayers_993,2,kStairs_993,1,kMask_993,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_08b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-10,-10,20,20},1,kLayers_994,2,kStairs_994,1,kMask_994,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_09",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-26.5,-21.4,26.5,21.4},1,kLayers_995,2,kStairs_995,4,kMask_995,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"bunker_structure_10",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-46.5,-99,20,22},1,kLayers_996,2,kStairs_996,2,kMask_996,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_barrel_explosion",{"map-barrel-res-01.img",0.24,1,0,9,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_frag_explosion",{"map-barrel-res-01.img",0.2,0.8,0,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_frag_small_explosion",{"map-barrel-res-01.img",0.12,0.8,2105376,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_rounds_explosion",{"map-barrel-res-01.img",0.1,0.8,3150346,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_bomb_iron_explosion",{"map-barrel-res-01.img",0.2,0.8,0,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_smoke_explosion",{"map-smoke-res.img",0.2,0.5,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_snowball_explosion",{"map-snowball-res.img",0.2,0.25,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_potato_explosion",{"map-potato-res.img",0.2,0.25,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_vent_01",{"map-bunker-vent-01.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_vent_02",{"map-bunker-vent-02.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_vent_03",{"map-bunker-vent-03.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_hydra_01",{"map-bunker-hydra-floor-04.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_camera_01",{"map-decal-camera-01.img",0.25,1,16777215,60,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_pipe_01",{"map-decal-pipe.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_pipes_01",{"map-pipes-01.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-4.5,1,4.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1,-4.5,1,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_pipes_02",{"map-pipes-02.img",0.5,0.96,16777215,60,0,0,0},1,{1,-4,-3,4,3},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-4,-3,4,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_pipes_03",{"map-pipes-03.img",0.5,0.96,16777215,60,0,0,0},1,{1,-10.5,-4,10.5,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-10.5,-4,10.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_pipes_04",{"map-pipes-04.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-5.5,1,5.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_pipes_05",{"map-pipes-05.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-3.5,1,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1,-3.5,1,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_initiative_01",{"map-decal-initiative.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_caduceus_01",{"map-decal-caduceus.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_web_01",{"map-web-01.img",0.5,0.75,16777215,60,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_light_01",{"map-light-01.img",1,0.5,16751616,60,0,0,0},1,{1,-3.25,-3.25,3.25,3.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-3.25,-3.25,3.25,3.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_light_02",{"map-light-01.img",0.75,0.5,16760397,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_light_03",{"map-light-01.img",0.75,0.5,8585216,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_light_04",{"map-light-01.img",0.75,0.5,16734244,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_blood_01",{"part-splat-01.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_blood_02",{"part-splat-02.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_blood_03",{"part-splat-03.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_chrys_01",{"map-bunker-vent-01.img",0.5,1,16777215,3,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_oil_01",{"map-decal-oil-01.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_oil_02",{"map-decal-oil-02.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_oil_03",{"map-decal-oil-03.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_oil_04",{"map-decal-oil-04.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_oil_05",{"map-decal-oil-05.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_oil_06",{"map-decal-oil-06.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_bathhouse_pool_01",{"map-bathhouse-pool-01.img",8,0.5,52721,5,0,0,0},1,{1,-9,-15,9,15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-9,-15,9,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_club_01",{"map-decal-club-01.img",1,1,16777215,4,0,0,0},1,{0,0,0,4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{0,0,0,4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_club_02",{"map-decal-club-02.img",1,0,16777215,4,0,0,0},1,{1,-4,-10.5,4,10.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-4,-10.5,4,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_plank_01",{"part-plank-01.img",0.5,1,4327436,9,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"decal_flyer_01",{"map-decal-flyer-01.img",0.6,0.667,16777215,4,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_1",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_2",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_beach",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_surviv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_vault_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_police_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_mansion_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_sv98",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_scopes_sniper",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_woodaxe",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_fireaxe",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_stonehammer",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_barn_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_hatchet_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_club_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_leaf_pile",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_islander_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_verde_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_lumber_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_imperial_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_pineapple_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_tarkhany_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_spetsnaz_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_eye_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_saloon",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_chrys_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_chrys_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_chrys_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_airdrop_armor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_perk_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_sniper_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_loot_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"loot_tier_helmet_forest",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
 };
 static const char* const kMapAtlases_0[] = {"loadout","shared","main"};
 static const char* const kMapAtlases_199[] = {"loadout","shared","main"};
@@ -3762,762 +3763,762 @@ static const RawMapRender kMapRenders[] = {
     {"test_faction",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,1,0,0,0,1,"",kMapAtlases_4280,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
 };
 static const RawGameObj kGameObjs[] = {
-    {"bullet_mp5","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_ak47","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_scar","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_an94","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_groza","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_grozas","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_model94","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_blr","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_mosin","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_sv98","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_awc","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_scarssr","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_m39","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_svd","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_garand","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_buckshot","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_flechette","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_frag","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_slug","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_birdshot","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_m9","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_m9_cursed","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_m93r","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_p30l","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_ot38","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_ots38","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_colt45","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_m1911","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_m1a1","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_mkg45","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_deagle","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_barrett","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_sw500","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_ash12","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_mac10","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_ump9","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_vector","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_vector45","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_scorpion","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_vss","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_dp28","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_bar","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_imbel","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_pkp","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_glock","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_famas","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_hk416","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_m4a1","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_mk12","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_l86","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_m249","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_qbb97","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_scout","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_flare","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bullet_invis","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"shrapnel_barrel","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"shrapnel_stove","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"shrapnel_frag","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"shrapnel_strobe","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"shrapnel_usas","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"shrapnel_mirv_mini","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"shrapnel_bomb_iron","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"shrapnel_cobalt","bullet",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_default","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_001","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_005","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_007","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_010","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_022","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_027","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_038","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_040","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_045","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_051","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_064","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_080","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_086","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_094","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_098","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_101","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_102","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_109","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_118","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_124","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_125","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_136","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_158","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_160","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_173","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_176","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_177","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_181","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"crosshair_184","crosshair",{"",1,1,16777215,0,0,0,0},0,""},
-    {"heal_basic","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_basic"},
-    {"heal_heart","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_heart"},
-    {"heal_moon","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_moon"},
-    {"heal_tomoe","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_tomoe"},
-    {"heal_diamond","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_diamond"},
-    {"heal_ankh","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_ankh"},
-    {"heal_menacing","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_menacing"},
-    {"boost_basic","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_basic"},
-    {"boost_star","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_star"},
-    {"boost_naturalize","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_naturalize"},
-    {"boost_shuriken","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_shuriken"},
-    {"boost_club","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_club"},
-    {"boost_hermes","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_hermes"},
-    {"boost_lightning","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_lightning"},
-    {"boost_gearshift","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_gearshift_01,boost_gearshift_02"},
-    {"emote_medical","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ammo","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ammo9mm","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ammo12gauge","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ammo762mm","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ammo556mm","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ammo50ae","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ammo308sub","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ammoflare","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ammo45acp","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_loot","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_trick_nothing","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_trick_size","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_trick_m9","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_trick_chatty","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_trick_drain","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_treat_9mm","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_treat_12g","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_treat_556","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_treat_762","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_treat_super","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_bugle_inspiration_red","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_bugle_final_red","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_bugle_inspiration_blue","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_bugle_final_blue","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_thumbsup","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_sadface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_happyface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_boffy","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_sadboffy","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_surviv","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_gg","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_question","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_tombstone","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_joyface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_sobface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_thinkingface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagus","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagthailand","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaggermany","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagfrance","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagsouthkorea","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagbrazil","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagcanada","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagspain","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagrussia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagmexico","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagpoland","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaguk","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagcolombia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagukraine","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagturkey","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagphilippines","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagczechia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagperu","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagaustria","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagargentina","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagjapan","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagvenezuela","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagvietnam","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagswitzerland","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagnetherlands","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagchina","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagtaiwan","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagchile","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagaustralia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagdenmark","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagitaly","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagsweden","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagecuador","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagslovakia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaghungary","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagromania","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaghongkong","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagindonesia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagfinland","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagnorway","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagbosnia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaglibya","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_heart","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_sleepy","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flex","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_angryface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_upsidedownface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_teabag","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_alienface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagbelarus","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagbelgium","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagkazakhstan","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_egg","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_police","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_dabface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagmalaysia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagnewzealand","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logosurviv","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logoegg","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logoswine","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logohydra","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logostorm","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaghonduras","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logocaduceus","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_impface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_monocleface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_sunglassface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_headshotface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_potato","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_tomato","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_cake","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_leek","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_eggplant","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_baguette","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_chick","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagbolivia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagcroatia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagindia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaggeorgia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaggreece","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagguatemala","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagportugal","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagserbia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagsingapore","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagtrinidad","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaguruguay","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logoconch","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_pineapple","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_coconut","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_crab","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_whale","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logometeor","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_salt","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_disappointface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logocrossing","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_fish","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_campfire","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_chickendinner","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_cattle","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_icecream","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_cupcake","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_donut","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logohatchet","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_acorn","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_leaf","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_trunk","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_forest","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_pumpkin","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_candycorn","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_pilgrimhat","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_turkeyanimal","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_heartface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logochrysanthemum","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_santahat","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_snowman","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_snowflake","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagmorocco","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagestonia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagalgeria","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagegypt","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagazerbaijan","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagalbania","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaglithuania","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaglatvia","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaguae","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagdominicanrepublic","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagpalestine","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagiran","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaglebanon","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagyemen","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagtransgender","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagpride","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaglesbian","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flaggay","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagasexual","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagnonbinary","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flagbisexual","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logocloud","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ghost_base","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_bandagedface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_picassoface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_pooface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_ok","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_rainbow","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_logotwins","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_antisocial","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_timeout","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_traumatizedface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_bruh","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_flatteredface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_salutingface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"emote_screamingface","emote",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_frag","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_smoke","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_strobe","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_barrel","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_stove","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_usas","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_rounds","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_rounds_sg","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_mirv","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_mirv_mini","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_martyr_nade","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_snowball","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_snowball_heavy","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_potato","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_potato_heavy","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_potato_cannonball","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_potato_smgshot","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_potato_lmgshot","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_bomb_iron","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_coconut","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_tomato","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"explosion_cobalt","explosion",{"",1,1,16777215,0,0,0,0},0,""},
-    {"9mm","ammo",{"loot-ammo-box.img",0.2,1,16756224,0,0,0,0},1,""},
-    {"762mm","ammo",{"loot-ammo-box.img",0.2,1,26367,0,0,0,0},1,""},
-    {"556mm","ammo",{"loot-ammo-box.img",0.2,1,237056,0,0,0,0},1,""},
-    {"12gauge","ammo",{"loot-ammo-box.img",0.2,1,16711680,0,0,0,0},1,""},
-    {"50AE","ammo",{"loot-ammo-box.img",0.2,1,2697513,0,0,0,0},1,""},
-    {"308sub","ammo",{"loot-ammo-box.img",0.2,1,3225600,0,0,0,0},1,""},
-    {"flare","ammo",{"loot-ammo-box.img",0.2,1,13911552,0,0,0,0},1,""},
-    {"45acp","ammo",{"loot-ammo-box.img",0.2,1,7930111,0,0,0,0},1,""},
-    {"potato_ammo","ammo",{"loot-ammo-box.img",0.2,1,7618334,0,0,0,0},1,""},
-    {"bandage","heal",{"loot-medical-bandage.img",0.2,1,16777215,0,0,0,0},1,"heal"},
-    {"healthkit","heal",{"loot-medical-healthkit.img",0.2,1,16777215,0,0,0,0},1,"heal"},
-    {"soda","boost",{"loot-medical-soda.img",0.2,1,16777215,0,0,0,0},1,"boost"},
-    {"painkiller","boost",{"loot-medical-pill.img",0.2,1,16777215,0,0,0,0},1,"boost"},
-    {"backpack00","backpack",{"loot-pack-00.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"backpack01","backpack",{"loot-pack-01.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"backpack02","backpack",{"loot-pack-02.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"backpack03","backpack",{"loot-pack-03.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"backpack04","backpack",{"loot-pack-04.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"helmet01","helmet",{"loot-helmet-01.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"helmet02","helmet",{"loot-helmet-02.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"helmet03","helmet",{"loot-helmet-03.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"helmet04","helmet",{"loot-helmet-03.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"chest01","chest",{"loot-chest-01.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"chest02","chest",{"loot-chest-02.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"chest03","chest",{"loot-chest-03.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"chest04","chest",{"loot-chest-04.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"1xscope","scope",{"loot-scope-00.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"2xscope","scope",{"loot-scope-01.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"4xscope","scope",{"loot-scope-02.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"8xscope","scope",{"loot-scope-03.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"15xscope","scope",{"loot-scope-04.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"helmet03_leader","helmet",{"loot-helmet-03.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"helmet03_forest","helmet",{"player-helmet-forest.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"helmet03_moon","helmet",{"loot-helmet-03.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"helmet03_lt","helmet",{"loot-helmet-03.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"helmet03_lt_aged","helmet",{"player-helmet-lieutenant.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"helmet03_potato","helmet",{"player-helmet-potato.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"helmet03_marksman","helmet",{"player-helmet-marksman.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"helmet03_recon","helmet",{"player-helmet-recon.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"helmet03_grenadier","helmet",{"player-helmet-grenadier.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"helmet03_bugler","helmet",{"player-helmet-bugler.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"helmet04_medic","helmet",{"player-helmet-medic.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"helmet04_last_man_red","helmet",{"player-helmet-last-man-01.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"helmet04_last_man_blue","helmet",{"player-helmet-last-man-02.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"helmet04_leader","helmet",{"player-helmet-leader.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"helmet04_captain","helmet",{"player-helmet-captain.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"helmet04_classless","helmet",{"player-helmet-classless.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"backpack04_cloud","backpack",{"loot-pack-04-cloud.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"mp5","gun",{"loot-weapon-mp5.img",0.3,1,65280,0,0,0,0},1,""},
-    {"mac10","gun",{"loot-weapon-mac10.img",0.3,1,65280,0,0,0,0},1,""},
-    {"ump9","gun",{"loot-weapon-ump9.img",0.3,1,65280,0,0,0,0},1,""},
-    {"vector","gun",{"loot-weapon-vector.img",0.3,1,65280,0,0,0,0},1,""},
-    {"vector45","gun",{"loot-weapon-vector45.img",0.3,1,65280,0,0,0,0},1,""},
-    {"scorpion","gun",{"loot-weapon-scorpion.img",0.3,1,65280,0,0,0,0},1,""},
-    {"vss","gun",{"loot-weapon-vss.img",0.3,1,65280,0,0,0,0},1,""},
-    {"famas","gun",{"loot-weapon-famas.img",0.3,1,65280,0,0,0,0},1,""},
-    {"hk416","gun",{"loot-weapon-hk416.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m4a1","gun",{"loot-weapon-m4a1.img",0.3,1,65280,0,0,0,0},1,""},
-    {"mk12","gun",{"loot-weapon-mk12.img",0.3,1,65280,0,0,0,0},1,""},
-    {"l86","gun",{"loot-weapon-l86.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m249","gun",{"loot-weapon-m249.img",0.3,1,65280,0,0,0,0},1,""},
-    {"qbb97","gun",{"loot-weapon-qbb97.img",0.3,1,65280,0,0,0,0},1,""},
-    {"scout_elite","gun",{"loot-weapon-scout.img",0.3,1,65280,0,0,0,0},1,""},
-    {"ak47","gun",{"loot-weapon-ak.img",0.3,1,65280,0,0,0,0},1,""},
-    {"scar","gun",{"loot-weapon-scar.img",0.3,1,65280,0,0,0,0},1,""},
-    {"scarssr","gun",{"loot-weapon-scarssr.img",0.3,1,65280,0,0,0,0},1,""},
-    {"an94","gun",{"loot-weapon-an94.img",0.3,1,65280,0,0,0,0},1,""},
-    {"groza","gun",{"loot-weapon-groza.img",0.3,1,65280,0,0,0,0},1,""},
-    {"grozas","gun",{"loot-weapon-grozas.img",0.3,1,65280,0,0,0,0},1,""},
-    {"dp28","gun",{"loot-weapon-dp28.img",0.3,1,65280,0,0,0,0},1,""},
-    {"bar","gun",{"loot-weapon-bar.img",0.3,1,65280,0,0,0,0},1,""},
-    {"imbel","gun",{"loot-weapon-imbel.img",0.3,1,65280,0,0,0,0},1,""},
-    {"pkp","gun",{"loot-weapon-pkp.img",0.3,1,65280,0,0,0,0},1,""},
-    {"model94","gun",{"loot-weapon-model94.img",0.3,1,65280,0,0,0,0},1,""},
-    {"mkg45","gun",{"loot-weapon-mkg45.img",0.3,1,65280,0,0,0,0},1,""},
-    {"blr","gun",{"loot-weapon-blr.img",0.3,1,65280,0,0,0,0},1,""},
-    {"mosin","gun",{"loot-weapon-mosin.img",0.3,1,65280,0,0,0,0},1,""},
-    {"sv98","gun",{"loot-weapon-sv98.img",0.3,1,65280,0,0,0,0},1,""},
-    {"awc","gun",{"loot-weapon-awc.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m39","gun",{"loot-weapon-m39.img",0.3,1,65280,0,0,0,0},1,""},
-    {"svd","gun",{"loot-weapon-svd.img",0.3,1,65280,0,0,0,0},1,""},
-    {"garand","gun",{"loot-weapon-garand.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m870","gun",{"loot-weapon-m870.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m1100","gun",{"loot-weapon-m1100.img",0.3,1,65280,0,0,0,0},1,""},
-    {"mp220","gun",{"loot-weapon-mp220.img",0.3,1,65280,0,0,0,0},1,""},
-    {"saiga","gun",{"loot-weapon-saiga.img",0.3,1,65280,0,0,0,0},1,""},
-    {"spas12","gun",{"loot-weapon-spas12.img",0.3,1,65280,0,0,0,0},1,""},
-    {"spas16","gun",{"loot-weapon-spas16.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m1014","gun",{"loot-weapon-m1014.img",0.3,1,65280,0,0,0,0},1,""},
-    {"usas","gun",{"loot-weapon-usas.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m9","gun",{"loot-weapon-m9.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m9_dual","gun",{"loot-weapon-m9-dual.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m9_cursed","gun",{"loot-weapon-m9-cursed.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m93r","gun",{"loot-weapon-m93r.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m93r_dual","gun",{"loot-weapon-m93r-dual.img",0.3,1,65280,0,0,0,0},1,""},
-    {"glock","gun",{"loot-weapon-glock.img",0.3,1,65280,0,0,0,0},1,""},
-    {"glock_dual","gun",{"loot-weapon-glock-dual.img",0.3,1,65280,0,0,0,0},1,""},
-    {"p30l","gun",{"loot-weapon-p30l.img",0.3,1,65280,0,0,0,0},1,""},
-    {"p30l_dual","gun",{"loot-weapon-p30l-dual.img",0.3,1,65280,0,0,0,0},1,""},
-    {"ot38","gun",{"loot-weapon-ot38.img",0.3,1,65280,0,0,0,0},1,""},
-    {"ot38_dual","gun",{"loot-weapon-ot38-dual.img",0.3,1,65280,0,0,0,0},1,""},
-    {"ots38","gun",{"loot-weapon-ots38.img",0.3,1,65280,0,0,0,0},1,""},
-    {"ots38_dual","gun",{"loot-weapon-ots38-dual.img",0.3,1,65280,0,0,0,0},1,""},
-    {"colt45","gun",{"loot-weapon-colt45.img",0.3,1,65280,0,0,0,0},1,""},
-    {"colt45_dual","gun",{"loot-weapon-colt45-dual.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m1911","gun",{"loot-weapon-m1911.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m1911_dual","gun",{"loot-weapon-m1911-dual.img",0.3,1,65280,0,0,0,0},1,""},
-    {"m1a1","gun",{"loot-weapon-m1a1.img",0.3,1,65280,0,0,0,0},1,""},
-    {"deagle","gun",{"loot-weapon-deagle.img",0.3,1,65280,0,0,0,0},1,""},
-    {"deagle_dual","gun",{"loot-weapon-deagle-dual.img",0.3,1,65280,0,0,0,0},1,""},
-    {"barrett","gun",{"loot-weapon-barrett.img",0.3,1,65280,0,0,0,0},1,""},
-    {"sw500","gun",{"loot-weapon-sw500.img",0.3,1,65280,0,0,0,0},1,""},
-    {"ash12","gun",{"loot-weapon-ash12.img",0.3,1,65280,0,0,0,0},1,""},
-    {"flare_gun","gun",{"loot-weapon-flare-gun.img",0.3,1,65280,0,0,0,0},1,""},
-    {"flare_gun_dual","gun",{"loot-weapon-flare-gun-dual.img",0.3,1,65280,0,0,0,0},1,""},
-    {"potato_cannon","gun",{"loot-weapon-potato-cannon.img",0.3,1,65280,0,0,0,0},1,""},
-    {"potato_smg","gun",{"loot-weapon-potato-smg.img",0.3,1,65280,0,0,0,0},1,""},
-    {"potato_lmg","gun",{"loot-weapon-potato-lmg.img",0.3,1,65280,0,0,0,0},1,""},
-    {"bugle","gun",{"loot-weapon-bugle.img",0.3,1,65280,0,0,0,0},1,""},
-    {"svd_winter","gun",{"loot-weapon-svd.img",0.3,1,65280,0,0,0,0},1,""},
-    {"sv98_winter","gun",{"loot-weapon-sv98.img",0.3,1,65280,0,0,0,0},1,""},
-    {"awc_winter","gun",{"loot-weapon-awc.img",0.3,1,65280,0,0,0,0},1,""},
-    {"fists","melee",{"loot-weapon-fists.img",0.3,1,65280,0,0,0,0},1,""},
-    {"knuckles","melee",{"loot-melee-knuckles-rusted.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"karambit","melee",{"loot-melee-karambit-rugged.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"bayonet","melee",{"loot-melee-bayonet-rugged.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"huntsman","melee",{"loot-melee-huntsman-rugged.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"bowie","melee",{"loot-melee-bowie-vintage.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"machete","melee",{"loot-melee-machete-taiga.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"saw","melee",{"loot-melee-bonesaw-rusted.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"woodaxe","melee",{"loot-melee-woodaxe.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"fireaxe","melee",{"loot-melee-fireaxe.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"katana","melee",{"loot-melee-katana.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"naginata","melee",{"loot-melee-naginata.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"stonehammer","melee",{"loot-melee-stonehammer.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"iceaxe","melee",{"loot-melee-ice_pick.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"hook","melee",{"loot-melee-hook-silver.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"pan","melee",{"loot-melee-pan-black.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"spade","melee",{"loot-melee-spade-assault.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"crowbar","melee",{"loot-melee-crowbar.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"cutlass","melee",{"loot-melee-cutlass.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"knuckles_rusted","melee",{"loot-melee-knuckles-rusted.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"knuckles_heroic","melee",{"loot-melee-knuckles-heroic.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"karambit_borealis","melee",{"loot-melee-karambit-borealis.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"karambit_rugged","melee",{"loot-melee-karambit-rugged.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"karambit_prismatic","melee",{"loot-melee-karambit-prismatic.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"karambit_drowned","melee",{"loot-melee-karambit-drowned.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"bayonet_rugged","melee",{"loot-melee-bayonet-rugged.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"bayonet_woodland","melee",{"loot-melee-bayonet-woodland.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"huntsman_rugged","melee",{"loot-melee-huntsman-rugged.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"huntsman_burnished","melee",{"loot-melee-huntsman-burnished.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"bowie_vintage","melee",{"loot-melee-bowie-vintage.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"bowie_frontier","melee",{"loot-melee-bowie-frontier.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"machete_taiga","melee",{"loot-melee-machete-taiga.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"kukri_trad","melee",{"loot-melee-kukri-trad.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"bonesaw_rusted","melee",{"loot-melee-bonesaw-rusted.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"woodaxe_bloody","melee",{"loot-melee-woodaxe-bloody.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"katana_rusted","melee",{"loot-melee-katana-rusted.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"katana_orchid","melee",{"loot-melee-katana-orchid.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"sledgehammer","melee",{"loot-melee-sledgehammer.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"crowbar_scout","melee",{"loot-melee-crowbar-scout.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"crowbar_recon","melee",{"loot-melee-crowbar-recon.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"kukri_sniper","melee",{"loot-melee-kukri-sniper.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"bonesaw_healer","melee",{"loot-melee-bonesaw-healer.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"katana_demo","melee",{"loot-melee-katana-demo.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"spade_assault","melee",{"loot-melee-spade-assault.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"warhammer_tank","melee",{"loot-melee-warhammer-tank.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"naginata_daemon","melee",{"loot-melee-naginata-daemon.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"cutlass_gold","melee",{"loot-melee-cutlass-gold.img",0.3,1,16777215,0,0,0,0},1,""},
-    {"outfitBase","outfit",{"loot-shirt-01.img",0.2,1,16303476,0,0,0,0},1,""},
-    {"outfitDemo","outfit",{"loot-shirt-02.img",0.2,1,13068903,0,0,0,0},1,""},
-    {"outfitTank","outfit",{"loot-shirt-02.img",0.2,1,15382883,0,0,0,0},1,""},
-    {"outfitMedic","outfit",{"loot-shirt-02.img",0.2,1,14449116,0,0,0,0},1,""},
-    {"outfitScout","outfit",{"loot-shirt-02.img",0.2,1,11326819,0,0,0,0},1,""},
-    {"outfitSniper","outfit",{"loot-shirt-02.img",0.2,1,9293531,0,0,0,0},1,""},
-    {"outfitAssault","outfit",{"loot-shirt-02.img",0.2,1,14339929,0,0,0,0},1,""},
-    {"outfitClassless","outfit",{"loot-shirt-02.img",0.2,1,6579300,0,0,0,0},1,""},
-    {"outfitTurkey","outfit",{"loot-shirt-outfitTurkey.img",0.2,1,15781563,0,0,0,0},1,""},
-    {"outfitDev","outfit",{"loot-shirt-outfitDC.img",0.2,1,5295421,0,0,0,0},1,""},
-    {"outfitMaintainer","outfit",{"loot-shirt-outfitDC.img",0.2,1,9596644,0,0,0,0},1,""},
-    {"outfitGD","outfit",{"loot-shirt-outfitDC.img",0.2,1,13383993,0,0,0,0},1,""},
-    {"outfitMod","outfit",{"loot-shirt-outfitDC.img",0.2,1,3910655,0,0,0,0},1,""},
-    {"outfitWheat","outfit",{"loot-shirt-outfitWheat.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitNoir","outfit",{"loot-shirt-02.img",0.2,1,1776411,0,0,0,0},1,""},
-    {"outfitRedLeaderAged","outfit",{"loot-shirt-02.img",0.2,1,10098712,0,0,0,0},1,""},
-    {"outfitBlueLeaderAged","outfit",{"loot-shirt-02.img",0.2,1,1523353,0,0,0,0},1,""},
-    {"outfitRedLeader","outfit",{"loot-shirt-02.img",0.2,1,10158080,0,0,0,0},1,""},
-    {"outfitBlueLeader","outfit",{"loot-shirt-02.img",0.2,1,12187,0,0,0,0},1,""},
-    {"outfitSpetsnaz","outfit",{"loot-shirt-outfitSpetsnaz.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitWoodsCloak","outfit",{"loot-shirt-02.img",0.2,1,2817792,0,0,0,0},1,""},
-    {"outfitElf","outfit",{"loot-shirt-01.img",0.2,1,1489152,0,0,0,0},1,""},
-    {"outfitImperial","outfit",{"loot-shirt-01.img",0.2,1,12320813,0,0,0,0},1,""},
-    {"outfitLumber","outfit",{"loot-shirt-outfitLumber.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitVerde","outfit",{"loot-shirt-02.img",0.2,1,1785868,0,0,0,0},1,""},
-    {"outfitPineapple","outfit",{"loot-shirt-02.img",0.2,1,10027008,0,0,0,0},1,""},
-    {"outfitTarkhany","outfit",{"loot-shirt-02.img",0.2,1,4927107,0,0,0,0},1,""},
-    {"outfitWaterElem","outfit",{"loot-shirt-02.img",0.2,1,7143401,0,0,0,0},1,""},
-    {"outfitHeaven","outfit",{"loot-shirt-outfitHeaven.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitMeteor","outfit",{"loot-shirt-02.img",0.2,1,9764864,0,0,0,0},1,""},
-    {"outfitIslander","outfit",{"loot-shirt-01.img",0.2,1,16762368,0,0,0,0},1,""},
-    {"outfitAqua","outfit",{"loot-shirt-01.img",0.2,1,47778,0,0,0,0},1,""},
-    {"outfitCoral","outfit",{"loot-shirt-01.img",0.2,1,16736103,0,0,0,0},1,""},
-    {"outfitKhaki","outfit",{"loot-shirt-02.img",0.2,1,12824197,0,0,0,0},1,""},
-    {"outfitParma","outfit",{"loot-shirt-01.img",0.2,1,8746585,0,0,0,0},1,""},
-    {"outfitParmaPrestige","outfit",{"loot-shirt-outfitParmaPrestige.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitCasanova","outfit",{"loot-shirt-01.img",0.2,1,4327436,0,0,0,0},1,""},
-    {"outfitPrisoner","outfit",{"loot-shirt-01.img",0.2,1,16735266,0,0,0,0},1,""},
-    {"outfitJester","outfit",{"loot-shirt-01.img",0.2,1,7798904,0,0,0,0},1,""},
-    {"outfitWoodland","outfit",{"loot-shirt-01.img",0.2,1,2831146,0,0,0,0},1,""},
-    {"outfitRoyalFortune","outfit",{"loot-shirt-01.img",0.2,1,8333091,0,0,0,0},1,""},
-    {"outfitKeyLime","outfit",{"loot-shirt-01.img",0.2,1,13107007,0,0,0,0},1,""},
-    {"outfitCobaltShell","outfit",{"loot-shirt-01.img",0.2,1,11095,0,0,0,0},1,""},
-    {"outfitFragtastic","outfit",{"loot-shirt-01.img",0.2,1,9668146,0,0,0,0},1,""},
-    {"outfitCarbonFiber","outfit",{"loot-shirt-01.img",0.2,1,2171169,0,0,0,0},1,""},
-    {"outfitDarkGloves","outfit",{"loot-shirt-01.img",0.2,1,12482560,0,0,0,0},1,""},
-    {"outfitDarkShirt","outfit",{"loot-shirt-01.img",0.2,1,9460480,0,0,0,0},1,""},
-    {"outfitGhillie","outfit",{"loot-shirt-01.img",0.2,1,8630096,0,0,0,0},1,""},
-    {"outfitDesertCamo","outfit",{"loot-shirt-01.img",0.2,1,13736782,0,0,0,0},1,""},
-    {"outfitCamo","outfit",{"loot-shirt-01.img",0.2,1,10066278,0,0,0,0},1,""},
-    {"outfitRed","outfit",{"loot-shirt-01.img",0.2,1,16711680,0,0,0,0},1,""},
-    {"outfitWhite","outfit",{"loot-shirt-01.img",0.2,1,14935011,0,0,0,0},1,""},
-    {"outfitSnow","outfit",{"loot-shirt-outfitSnow.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitBlackIce","outfit",{"loot-shirt-02.img",0.2,1,6186099,0,0,0,0},1,""},
-    {"outfitBeachCamo","outfit",{"loot-shirt-01.img",0.2,1,15583870,0,0,0,0},1,""},
-    {"outfitCoconut","outfit",{"loot-shirt-01.img",0.2,1,7755830,0,0,0,0},1,""},
-    {"outfitWave","outfit",{"loot-shirt-02.img",0.2,1,1153260,0,0,0,0},1,""},
-    {"outfitParrotfish","outfit",{"loot-shirt-outfitParrotfish.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitEvent","outfit",{"loot-shirt-outfitEvent.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitGold","outfit",{"loot-shirt-outfitGold.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitRain","outfit",{"loot-shirt-01.img",0.2,1,4485828,0,0,0,0},1,""},
-    {"outfitCowz","outfit",{"loot-shirt-01.img",0.2,1,11250603,0,0,0,0},1,""},
-    {"outfitChameleon","outfit",{"loot-shirt-outfitChameleon.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitPastel","outfit",{"loot-shirt-outfitPastel.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitChrys","outfit",{"loot-shirt-outfitChrys.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitFahrenheit","outfit",{"loot-shirt-outfitFahrenheit.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitPotatoskin","outfit",{"loot-shirt-outfitPotatoskin.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitAurora","outfit",{"loot-shirt-outfitAurora.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitBarrel","outfit",{"loot-shirt-01.img",0.2,1,3750201,0,0,0,0},1,""},
-    {"outfitWoodBarrel","outfit",{"loot-shirt-01.img",0.2,1,11235106,0,0,0,0},1,""},
-    {"outfitStone","outfit",{"loot-shirt-01.img",0.2,1,7434609,0,0,0,0},1,""},
-    {"outfitSpringTree","outfit",{"loot-shirt-01.img",0.2,1,4599058,0,0,0,0},1,""},
-    {"outfitHalloweenTree","outfit",{"loot-shirt-01.img",0.2,1,4599058,0,0,0,0},1,""},
-    {"outfitTreeSpooky","outfit",{"loot-shirt-01.img",0.2,1,1775895,0,0,0,0},1,""},
-    {"outfitStump","outfit",{"loot-shirt-01.img",0.2,1,8602624,0,0,0,0},1,""},
-    {"outfitBush","outfit",{"loot-shirt-01.img",0.2,1,3889951,0,0,0,0},1,""},
-    {"outfitLeafPile","outfit",{"loot-shirt-01.img",0.2,1,16731392,0,0,0,0},1,""},
-    {"outfitCrate","outfit",{"loot-shirt-01.img",0.2,1,6697728,0,0,0,0},1,""},
-    {"outfitTable","outfit",{"loot-shirt-01.img",0.2,1,6697728,0,0,0,0},1,""},
-    {"outfitSoviet","outfit",{"loot-shirt-01.img",0.2,1,6697728,0,0,0,0},1,""},
-    {"outfitAirdrop","outfit",{"loot-shirt-01.img",0.2,1,6579300,0,0,0,0},1,""},
-    {"outfitOven","outfit",{"loot-shirt-01.img",0.2,1,14935011,0,0,0,0},1,""},
-    {"outfitRefrigerator","outfit",{"loot-shirt-01.img",0.2,1,7733259,0,0,0,0},1,""},
-    {"outfitVending","outfit",{"loot-shirt-01.img",0.2,1,10925,0,0,0,0},1,""},
-    {"outfitPumpkin","outfit",{"loot-shirt-01.img",0.2,1,15889667,0,0,0,0},1,""},
-    {"outfitWoodpile","outfit",{"loot-shirt-01.img",0.2,1,9455616,0,0,0,0},1,""},
-    {"outfitToilet","outfit",{"loot-shirt-01.img",0.2,1,16777215,0,0,0,0},1,""},
-    {"outfitBushRiver","outfit",{"loot-shirt-01.img",0.2,1,5339946,0,0,0,0},1,""},
-    {"outfitCrab","outfit",{"loot-shirt-01.img",0.2,1,16592920,0,0,0,0},1,""},
-    {"outfitStumpAxe","outfit",{"loot-shirt-01.img",0.2,1,11100701,0,0,0,0},1,""},
-    {"quest_top_solo","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_top_duo","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_top_squad","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_win_any","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_kills_hard","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_kills_harder","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_hard","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_harder","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_survived","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_9mm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_9mm_ltm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_762mm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_762mm_ltm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_556mm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_556mm_ltm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_12gauge","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_12gauge_ltm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_45acp","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_potato_ammo","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_rare_ammo","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_rare_ammo_ltm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_woods_king","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_grenade","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_grenade_ltm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_melee","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_damage_melee_ltm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_heal","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_boost","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_airdrop","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_airdrop_ltm","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_airdrop_ltm_hard","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_airdrop_rare","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_crates","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_toilets","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_furniture","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_barrels","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_lockers","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_pots","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_vending","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_hardstone","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_soviet_crate","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_initiative_crate","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_pvt_swappers","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_potatoes","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_club_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_docks_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_river_town_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_desert_town_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_reserve_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_logging_complex_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_be_mvp","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_promote_hunted","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_factions_damage","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_last_man_damage_hard","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_factions_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_healer_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_tank_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_sniper_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_scout_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_demo_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_assault_kills","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_healer_damage","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_tank_damage","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_sniper_damage","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_scout_damage","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_demo_damage","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_assault_damage","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"quest_classless_damage","quest",{"",1,1,16777215,0,0,0,0},0,""},
-    {"leadership","perk",{"loot-perk-leadership.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"assume_leadership","perk",{"loot-perk-assume-leadership.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"firepower","perk",{"loot-perk-firepower.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"gotw","perk",{"loot-perk-gotw.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"windwalk","perk",{"loot-perk-windwalk.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"rare_potato","perk",{"loot-perk-rare-potato.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"aoe_heal","perk",{"loot-perk-aoe-heal.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"endless_ammo","perk",{"loot-perk-endless-ammo.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"steelskin","perk",{"loot-perk-steelskin.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"ap_rounds","perk",{"loot-perk-ap-rounds.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"splinter","perk",{"loot-perk-splinter.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"small_arms","perk",{"loot-perk-small-arms.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"takedown","perk",{"loot-perk-takedown.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"lifeline","perk",{"loot-perk-lifeline.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"field_medic","perk",{"loot-perk-field-medic.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"combat_stims","perk",{"loot-perk-combat-stims.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"tree_climbing","perk",{"loot-perk-tree-climbing.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"scavenger","perk",{"loot-perk-scavenger.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"scavenger_adv","perk",{"loot-perk-scavenger_adv.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"pirate","perk",{"loot-perk-pirate.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"hunted","perk",{"loot-perk-hunted.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"chambered","perk",{"loot-perk-chambered.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"martyrdom","perk",{"loot-perk-martyrdom.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"targeting","perk",{"loot-perk-targeting.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"bonus_45","perk",{"loot-perk-bonus-45.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"broken_arrow","perk",{"loot-perk-broken-arrow.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"fabricate","perk",{"loot-perk-fabricate.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"self_revive","perk",{"loot-perk-self-revive.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"bonus_9mm","perk",{"loot-perk-bonus-9mm.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"flak_jacket","perk",{"loot-perk-flak-jacket.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"amped_explosives","perk",{"loot-perk-amped-explosives.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"explosive","perk",{"loot-perk-explosive.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"bonus_assault","perk",{"loot-perk-bonus-assault.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"inspiration","perk",{"loot-perk-inspiration.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"final_bugle","perk",{"loot-perk-final-bugle.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"high_velocity","perk",{"loot-perk-high-velocity.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"halloween_mystery","perk",{"loot-perk-halloween-mystery.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"trick_nothing","perk",{"loot-perk-trick-nothing.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"trick_size","perk",{"loot-perk-trick-size.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"trick_m9","perk",{"loot-perk-trick-m9.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"trick_chatty","perk",{"loot-perk-trick-chatty.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"trick_drain","perk",{"loot-perk-trick-drain.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"treat_9mm","perk",{"loot-perk-treat-9mm.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"treat_12g","perk",{"loot-perk-treat-12g.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"treat_556","perk",{"loot-perk-treat-556.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"treat_762","perk",{"loot-perk-treat-762.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"treat_super","perk",{"loot-perk-treat-super.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"turkey_shoot","perk",{"loot-perk-turkey_shoot.img",0.275,1,16777215,0,0,0,0},1,""},
-    {"pass_survivr1","pass",{"",1,1,16777215,0,0,0,0},0,""},
-    {"pass_survivr2","pass",{"",1,1,16777215,0,0,0,0},0,""},
-    {"ping_danger","ping",{"",1,1,16777215,0,0,0,0},0,""},
-    {"ping_coming","ping",{"",1,1,16777215,0,0,0,0},0,""},
-    {"ping_help","ping",{"",1,1,16777215,0,0,0,0},0,""},
-    {"ping_airdrop","ping",{"",1,1,16777215,0,0,0,0},0,""},
-    {"ping_airstrike","ping",{"",1,1,16777215,0,0,0,0},0,""},
-    {"ping_woodsking","ping",{"",1,1,16777215,0,0,0,0},0,""},
-    {"ping_unlock","ping",{"",1,1,16777215,0,0,0,0},0,""},
-    {"leader","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"captain","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"lieutenant","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"medic","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"marksman","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"recon","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"grenadier","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"bugler","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"last_man","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"woods_king","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"kill_leader","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"the_hunted","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"healer","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"tank","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"sniper","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"scout","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"demo","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"assault","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"classless","role",{"",1,1,16777215,0,0,0,0},0,""},
-    {"frag","throwable",{"loot-throwable-frag.img",0.2,1,65280,0,0,0,0},1,""},
-    {"mirv","throwable",{"loot-throwable-mirv.img",0.2,1,65280,0,0,0,0},1,""},
-    {"mirv_mini","throwable",{"loot-throwable-frag.img",0.2,1,65280,0,0,0,0},1,""},
-    {"martyr_nade","throwable",{"loot-throwable-frag.img",0.2,1,65280,0,0,0,0},1,""},
-    {"smoke","throwable",{"loot-throwable-smoke.img",0.2,1,65280,0,0,0,0},1,""},
-    {"strobe","throwable",{"loot-throwable-strobe.img",0.2,1,65280,0,0,0,0},1,""},
-    {"snowball","throwable",{"loot-throwable-snowball.img",0.2,1,65280,0,0,0,0},1,""},
-    {"snowball_heavy","throwable",{"loot-throwable-snowball.img",0.2,1,65280,0,0,0,0},1,""},
-    {"potato","throwable",{"loot-throwable-potato.img",0.2,1,65280,0,0,0,0},1,""},
-    {"potato_heavy","throwable",{"loot-throwable-potato.img",0.2,1,65280,0,0,0,0},1,""},
-    {"potato_cannonball","throwable",{"loot-throwable-potato.img",0.2,1,65280,0,0,0,0},1,""},
-    {"potato_smgshot","throwable",{"loot-throwable-potato.img",0.2,1,65280,0,0,0,0},1,""},
-    {"potato_lmgshot","throwable",{"loot-throwable-potato.img",0.2,1,65280,0,0,0,0},1,""},
-    {"bomb_iron","throwable",{"loot-throwable-frag.img",0.2,1,65280,0,0,0,0},1,""},
-    {"coconut","throwable",{"loot-throwable-coconut.img",0.2,1,65280,0,0,0,0},1,""},
-    {"tomato","throwable",{"loot-throwable-tomato.img",0.2,1,65280,0,0,0,0},1,""},
-    {"unlock_default","unlock",{"",1,1,16777215,0,0,0,0},0,""},
-    {"unlock_new_account","unlock",{"",1,1,16777215,0,0,0,0},0,""},
-    {"xp_10","xp",{"loot-xp-book-01.img",0.2,1,16777215,0,0,0,0},1,"xp_common"},
-    {"xp_25","xp",{"loot-xp-book-01.img",0.2,1,16777215,0,0,0,0},1,"xp_rare"},
-    {"xp_100","xp",{"loot-xp-book-01.img",0.2,1,16777215,0,0,0,0},1,"xp_mythic"},
-    {"xp_book_tallow","xp",{"loot-xp-book-01.img",0.2,1,16777215,0,0,0,0},1,"xp_common"},
-    {"xp_book_greene","xp",{"loot-xp-book-02.img",0.2,1,16777215,0,0,0,0},1,"xp_common"},
-    {"xp_book_parma","xp",{"loot-xp-book-03.img",0.2,1,16777215,0,0,0,0},1,"xp_common"},
-    {"xp_book_nevelskoy","xp",{"loot-xp-book-04.img",0.2,1,16777215,0,0,0,0},1,"xp_common"},
-    {"xp_book_rinzo","xp",{"loot-xp-book-05.img",0.2,1,16777215,0,0,0,0},1,"xp_common"},
-    {"xp_book_kuga","xp",{"loot-xp-book-06.img",0.2,1,16777215,0,0,0,0},1,"xp_common"},
-    {"xp_glasses","xp",{"loot-xp-glasses-01.img",0.2,1,16777215,0,0,0,0},1,"xp_rare"},
-    {"xp_compass","xp",{"loot-xp-compass-01.img",0.2,1,16777215,0,0,0,0},1,"xp_rare"},
-    {"xp_stump","xp",{"loot-xp-stump-01.img",0.2,1,16777215,0,0,0,0},1,"xp_rare"},
-    {"xp_bone","xp",{"loot-xp-bone-01.img",0.2,1,16777215,0,0,0,0},1,"xp_rare"},
-    {"xp_donut","xp",{"loot-xp-donut-01.img",0.2,1,16777215,0,0,0,0},1,"xp_mythic"},
+    {"bullet_mp5","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_ak47","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_scar","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_an94","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_groza","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_grozas","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_model94","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_blr","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_mosin","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_sv98","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_awc","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_scarssr","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_m39","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_svd","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_garand","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_buckshot","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_flechette","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_frag","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_slug","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_birdshot","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_m9","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_m9_cursed","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_m93r","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_p30l","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_ot38","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_ots38","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_colt45","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_m1911","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_m1a1","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_mkg45","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_deagle","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_barrett","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_sw500","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_ash12","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_mac10","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_ump9","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_vector","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_vector45","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_scorpion","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_vss","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_dp28","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_bar","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_imbel","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_pkp","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_glock","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_famas","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_hk416","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_m4a1","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_mk12","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_l86","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_m249","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_qbb97","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_scout","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_flare","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bullet_invis","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"shrapnel_barrel","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"shrapnel_stove","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"shrapnel_frag","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"shrapnel_strobe","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"shrapnel_usas","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"shrapnel_mirv_mini","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"shrapnel_bomb_iron","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"shrapnel_cobalt","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_default","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_001","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_005","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_007","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_010","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_022","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_027","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_038","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_040","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_045","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_051","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_064","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_080","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_086","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_094","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_098","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_101","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_102","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_109","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_118","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_124","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_125","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_136","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_158","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_160","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_173","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_176","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_177","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_181","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"crosshair_184","crosshair",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"heal_basic","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_basic","",16711935,0},
+    {"heal_heart","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_heart","",16711935,0},
+    {"heal_moon","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_moon","",16711935,0},
+    {"heal_tomoe","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_tomoe","",16711935,0},
+    {"heal_diamond","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_diamond","",16711935,0},
+    {"heal_ankh","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_ankh","",16711935,0},
+    {"heal_menacing","heal_effect",{"",1,1,16777215,0,0,0,0},0,"heal_menacing","",16711935,0},
+    {"boost_basic","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_basic","",16711935,0},
+    {"boost_star","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_star","",16711935,0},
+    {"boost_naturalize","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_naturalize","",16711935,0},
+    {"boost_shuriken","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_shuriken","",16711935,0},
+    {"boost_club","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_club","",16711935,0},
+    {"boost_hermes","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_hermes","",16711935,0},
+    {"boost_lightning","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_lightning","",16711935,0},
+    {"boost_gearshift","boost_effect",{"",1,1,16777215,0,0,0,0},0,"boost_gearshift_01,boost_gearshift_02","",16711935,0},
+    {"emote_medical","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ammo","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ammo9mm","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ammo12gauge","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ammo762mm","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ammo556mm","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ammo50ae","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ammo308sub","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ammoflare","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ammo45acp","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_loot","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_trick_nothing","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_trick_size","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_trick_m9","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_trick_chatty","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_trick_drain","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_treat_9mm","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_treat_12g","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_treat_556","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_treat_762","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_treat_super","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_bugle_inspiration_red","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_bugle_final_red","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_bugle_inspiration_blue","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_bugle_final_blue","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_thumbsup","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_sadface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_happyface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_boffy","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_sadboffy","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_surviv","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_gg","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_question","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_tombstone","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_joyface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_sobface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_thinkingface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagus","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagthailand","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaggermany","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagfrance","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagsouthkorea","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagbrazil","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagcanada","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagspain","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagrussia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagmexico","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagpoland","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaguk","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagcolombia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagukraine","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagturkey","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagphilippines","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagczechia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagperu","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagaustria","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagargentina","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagjapan","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagvenezuela","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagvietnam","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagswitzerland","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagnetherlands","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagchina","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagtaiwan","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagchile","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagaustralia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagdenmark","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagitaly","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagsweden","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagecuador","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagslovakia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaghungary","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagromania","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaghongkong","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagindonesia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagfinland","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagnorway","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagbosnia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaglibya","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_heart","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_sleepy","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flex","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_angryface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_upsidedownface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_teabag","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_alienface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagbelarus","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagbelgium","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagkazakhstan","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_egg","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_police","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_dabface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagmalaysia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagnewzealand","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logosurviv","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logoegg","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logoswine","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logohydra","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logostorm","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaghonduras","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logocaduceus","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_impface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_monocleface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_sunglassface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_headshotface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_potato","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_tomato","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_cake","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_leek","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_eggplant","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_baguette","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_chick","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagbolivia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagcroatia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagindia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaggeorgia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaggreece","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagguatemala","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagportugal","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagserbia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagsingapore","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagtrinidad","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaguruguay","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logoconch","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_pineapple","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_coconut","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_crab","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_whale","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logometeor","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_salt","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_disappointface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logocrossing","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_fish","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_campfire","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_chickendinner","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_cattle","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_icecream","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_cupcake","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_donut","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logohatchet","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_acorn","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_leaf","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_trunk","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_forest","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_pumpkin","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_candycorn","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_pilgrimhat","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_turkeyanimal","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_heartface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logochrysanthemum","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_santahat","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_snowman","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_snowflake","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagmorocco","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagestonia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagalgeria","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagegypt","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagazerbaijan","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagalbania","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaglithuania","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaglatvia","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaguae","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagdominicanrepublic","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagpalestine","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagiran","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaglebanon","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagyemen","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagtransgender","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagpride","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaglesbian","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flaggay","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagasexual","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagnonbinary","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flagbisexual","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logocloud","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ghost_base","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_bandagedface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_picassoface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_pooface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_ok","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_rainbow","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_logotwins","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_antisocial","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_timeout","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_traumatizedface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_bruh","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_flatteredface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_salutingface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"emote_screamingface","emote",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_frag","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_smoke","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_strobe","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_barrel","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_stove","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_usas","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_rounds","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_rounds_sg","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_mirv","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_mirv_mini","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_martyr_nade","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_snowball","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_snowball_heavy","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_potato","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_potato_heavy","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_potato_cannonball","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_potato_smgshot","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_potato_lmgshot","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_bomb_iron","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_coconut","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_tomato","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"explosion_cobalt","explosion",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"9mm","ammo",{"loot-ammo-box.img",0.2,1,16756224,0,0,0,0},1,"","",16711935,0},
+    {"762mm","ammo",{"loot-ammo-box.img",0.2,1,26367,0,0,0,0},1,"","",16711935,0},
+    {"556mm","ammo",{"loot-ammo-box.img",0.2,1,237056,0,0,0,0},1,"","",16711935,0},
+    {"12gauge","ammo",{"loot-ammo-box.img",0.2,1,16711680,0,0,0,0},1,"","",16711935,0},
+    {"50AE","ammo",{"loot-ammo-box.img",0.2,1,2697513,0,0,0,0},1,"","",16711935,0},
+    {"308sub","ammo",{"loot-ammo-box.img",0.2,1,3225600,0,0,0,0},1,"","",16711935,0},
+    {"flare","ammo",{"loot-ammo-box.img",0.2,1,13911552,0,0,0,0},1,"","",16711935,0},
+    {"45acp","ammo",{"loot-ammo-box.img",0.2,1,7930111,0,0,0,0},1,"","",16711935,0},
+    {"potato_ammo","ammo",{"loot-ammo-box.img",0.2,1,7618334,0,0,0,0},1,"","",16711935,0},
+    {"bandage","heal",{"loot-medical-bandage.img",0.2,1,16777215,0,0,0,0},1,"heal","part-aura-circle-01.img",16711680,1},
+    {"healthkit","heal",{"loot-medical-healthkit.img",0.2,1,16777215,0,0,0,0},1,"heal","part-aura-circle-01.img",16711680,1},
+    {"soda","boost",{"loot-medical-soda.img",0.2,1,16777215,0,0,0,0},1,"boost","part-aura-circle-01.img",1676544,1},
+    {"painkiller","boost",{"loot-medical-pill.img",0.2,1,16777215,0,0,0,0},1,"boost","part-aura-circle-01.img",1676544,1},
+    {"backpack00","backpack",{"loot-pack-00.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"backpack01","backpack",{"loot-pack-01.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"backpack02","backpack",{"loot-pack-02.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"backpack03","backpack",{"loot-pack-03.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"backpack04","backpack",{"loot-pack-04.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet01","helmet",{"loot-helmet-01.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet02","helmet",{"loot-helmet-02.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03","helmet",{"loot-helmet-03.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet04","helmet",{"loot-helmet-03.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"chest01","chest",{"loot-chest-01.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"chest02","chest",{"loot-chest-02.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"chest03","chest",{"loot-chest-03.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"chest04","chest",{"loot-chest-04.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"1xscope","scope",{"loot-scope-00.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"2xscope","scope",{"loot-scope-01.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"4xscope","scope",{"loot-scope-02.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"8xscope","scope",{"loot-scope-03.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"15xscope","scope",{"loot-scope-04.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03_leader","helmet",{"loot-helmet-03.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03_forest","helmet",{"player-helmet-forest.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03_moon","helmet",{"loot-helmet-03.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03_lt","helmet",{"loot-helmet-03.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03_lt_aged","helmet",{"player-helmet-lieutenant.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03_potato","helmet",{"player-helmet-potato.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03_marksman","helmet",{"player-helmet-marksman.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03_recon","helmet",{"player-helmet-recon.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03_grenadier","helmet",{"player-helmet-grenadier.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet03_bugler","helmet",{"player-helmet-bugler.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet04_medic","helmet",{"player-helmet-medic.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet04_last_man_red","helmet",{"player-helmet-last-man-01.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet04_last_man_blue","helmet",{"player-helmet-last-man-02.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet04_leader","helmet",{"player-helmet-leader.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet04_captain","helmet",{"player-helmet-captain.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"helmet04_classless","helmet",{"player-helmet-classless.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"backpack04_cloud","backpack",{"loot-pack-04-cloud.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"mp5","gun",{"loot-weapon-mp5.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"mac10","gun",{"loot-weapon-mac10.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"ump9","gun",{"loot-weapon-ump9.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"vector","gun",{"loot-weapon-vector.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"vector45","gun",{"loot-weapon-vector45.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"scorpion","gun",{"loot-weapon-scorpion.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"vss","gun",{"loot-weapon-vss.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"famas","gun",{"loot-weapon-famas.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"hk416","gun",{"loot-weapon-hk416.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m4a1","gun",{"loot-weapon-m4a1.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"mk12","gun",{"loot-weapon-mk12.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"l86","gun",{"loot-weapon-l86.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m249","gun",{"loot-weapon-m249.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"qbb97","gun",{"loot-weapon-qbb97.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"scout_elite","gun",{"loot-weapon-scout.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"ak47","gun",{"loot-weapon-ak.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"scar","gun",{"loot-weapon-scar.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"scarssr","gun",{"loot-weapon-scarssr.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"an94","gun",{"loot-weapon-an94.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"groza","gun",{"loot-weapon-groza.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"grozas","gun",{"loot-weapon-grozas.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"dp28","gun",{"loot-weapon-dp28.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"bar","gun",{"loot-weapon-bar.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"imbel","gun",{"loot-weapon-imbel.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"pkp","gun",{"loot-weapon-pkp.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"model94","gun",{"loot-weapon-model94.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"mkg45","gun",{"loot-weapon-mkg45.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"blr","gun",{"loot-weapon-blr.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"mosin","gun",{"loot-weapon-mosin.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"sv98","gun",{"loot-weapon-sv98.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"awc","gun",{"loot-weapon-awc.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m39","gun",{"loot-weapon-m39.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"svd","gun",{"loot-weapon-svd.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"garand","gun",{"loot-weapon-garand.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m870","gun",{"loot-weapon-m870.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m1100","gun",{"loot-weapon-m1100.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"mp220","gun",{"loot-weapon-mp220.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"saiga","gun",{"loot-weapon-saiga.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"spas12","gun",{"loot-weapon-spas12.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"spas16","gun",{"loot-weapon-spas16.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m1014","gun",{"loot-weapon-m1014.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"usas","gun",{"loot-weapon-usas.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m9","gun",{"loot-weapon-m9.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m9_dual","gun",{"loot-weapon-m9-dual.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m9_cursed","gun",{"loot-weapon-m9-cursed.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m93r","gun",{"loot-weapon-m93r.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m93r_dual","gun",{"loot-weapon-m93r-dual.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"glock","gun",{"loot-weapon-glock.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"glock_dual","gun",{"loot-weapon-glock-dual.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"p30l","gun",{"loot-weapon-p30l.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"p30l_dual","gun",{"loot-weapon-p30l-dual.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"ot38","gun",{"loot-weapon-ot38.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"ot38_dual","gun",{"loot-weapon-ot38-dual.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"ots38","gun",{"loot-weapon-ots38.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"ots38_dual","gun",{"loot-weapon-ots38-dual.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"colt45","gun",{"loot-weapon-colt45.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"colt45_dual","gun",{"loot-weapon-colt45-dual.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m1911","gun",{"loot-weapon-m1911.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m1911_dual","gun",{"loot-weapon-m1911-dual.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"m1a1","gun",{"loot-weapon-m1a1.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"deagle","gun",{"loot-weapon-deagle.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"deagle_dual","gun",{"loot-weapon-deagle-dual.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"barrett","gun",{"loot-weapon-barrett.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"sw500","gun",{"loot-weapon-sw500.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"ash12","gun",{"loot-weapon-ash12.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"flare_gun","gun",{"loot-weapon-flare-gun.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"flare_gun_dual","gun",{"loot-weapon-flare-gun-dual.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"potato_cannon","gun",{"loot-weapon-potato-cannon.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"potato_smg","gun",{"loot-weapon-potato-smg.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"potato_lmg","gun",{"loot-weapon-potato-lmg.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"bugle","gun",{"loot-weapon-bugle.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"svd_winter","gun",{"loot-weapon-svd.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"sv98_winter","gun",{"loot-weapon-sv98.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"awc_winter","gun",{"loot-weapon-awc.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"fists","melee",{"loot-weapon-fists.img",0.3,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"knuckles","melee",{"loot-melee-knuckles-rusted.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"karambit","melee",{"loot-melee-karambit-rugged.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bayonet","melee",{"loot-melee-bayonet-rugged.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"huntsman","melee",{"loot-melee-huntsman-rugged.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bowie","melee",{"loot-melee-bowie-vintage.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"machete","melee",{"loot-melee-machete-taiga.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"saw","melee",{"loot-melee-bonesaw-rusted.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"woodaxe","melee",{"loot-melee-woodaxe.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"fireaxe","melee",{"loot-melee-fireaxe.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"katana","melee",{"loot-melee-katana.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"naginata","melee",{"loot-melee-naginata.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"stonehammer","melee",{"loot-melee-stonehammer.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"iceaxe","melee",{"loot-melee-ice_pick.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"hook","melee",{"loot-melee-hook-silver.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"pan","melee",{"loot-melee-pan-black.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"spade","melee",{"loot-melee-spade-assault.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"crowbar","melee",{"loot-melee-crowbar.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"cutlass","melee",{"loot-melee-cutlass.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"knuckles_rusted","melee",{"loot-melee-knuckles-rusted.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"knuckles_heroic","melee",{"loot-melee-knuckles-heroic.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"karambit_borealis","melee",{"loot-melee-karambit-borealis.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"karambit_rugged","melee",{"loot-melee-karambit-rugged.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"karambit_prismatic","melee",{"loot-melee-karambit-prismatic.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"karambit_drowned","melee",{"loot-melee-karambit-drowned.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bayonet_rugged","melee",{"loot-melee-bayonet-rugged.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bayonet_woodland","melee",{"loot-melee-bayonet-woodland.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"huntsman_rugged","melee",{"loot-melee-huntsman-rugged.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"huntsman_burnished","melee",{"loot-melee-huntsman-burnished.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bowie_vintage","melee",{"loot-melee-bowie-vintage.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bowie_frontier","melee",{"loot-melee-bowie-frontier.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"machete_taiga","melee",{"loot-melee-machete-taiga.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"kukri_trad","melee",{"loot-melee-kukri-trad.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bonesaw_rusted","melee",{"loot-melee-bonesaw-rusted.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"woodaxe_bloody","melee",{"loot-melee-woodaxe-bloody.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"katana_rusted","melee",{"loot-melee-katana-rusted.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"katana_orchid","melee",{"loot-melee-katana-orchid.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"sledgehammer","melee",{"loot-melee-sledgehammer.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"crowbar_scout","melee",{"loot-melee-crowbar-scout.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"crowbar_recon","melee",{"loot-melee-crowbar-recon.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"kukri_sniper","melee",{"loot-melee-kukri-sniper.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bonesaw_healer","melee",{"loot-melee-bonesaw-healer.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"katana_demo","melee",{"loot-melee-katana-demo.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"spade_assault","melee",{"loot-melee-spade-assault.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"warhammer_tank","melee",{"loot-melee-warhammer-tank.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"naginata_daemon","melee",{"loot-melee-naginata-daemon.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"cutlass_gold","melee",{"loot-melee-cutlass-gold.img",0.3,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitBase","outfit",{"loot-shirt-01.img",0.2,1,16303476,0,0,0,0},1,"","",16711935,0},
+    {"outfitDemo","outfit",{"loot-shirt-02.img",0.2,1,13068903,0,0,0,0},1,"","",16711935,0},
+    {"outfitTank","outfit",{"loot-shirt-02.img",0.2,1,15382883,0,0,0,0},1,"","",16711935,0},
+    {"outfitMedic","outfit",{"loot-shirt-02.img",0.2,1,14449116,0,0,0,0},1,"","",16711935,0},
+    {"outfitScout","outfit",{"loot-shirt-02.img",0.2,1,11326819,0,0,0,0},1,"","",16711935,0},
+    {"outfitSniper","outfit",{"loot-shirt-02.img",0.2,1,9293531,0,0,0,0},1,"","",16711935,0},
+    {"outfitAssault","outfit",{"loot-shirt-02.img",0.2,1,14339929,0,0,0,0},1,"","",16711935,0},
+    {"outfitClassless","outfit",{"loot-shirt-02.img",0.2,1,6579300,0,0,0,0},1,"","",16711935,0},
+    {"outfitTurkey","outfit",{"loot-shirt-outfitTurkey.img",0.2,1,15781563,0,0,0,0},1,"","",16711935,0},
+    {"outfitDev","outfit",{"loot-shirt-outfitDC.img",0.2,1,5295421,0,0,0,0},1,"","",16711935,0},
+    {"outfitMaintainer","outfit",{"loot-shirt-outfitDC.img",0.2,1,9596644,0,0,0,0},1,"","",16711935,0},
+    {"outfitGD","outfit",{"loot-shirt-outfitDC.img",0.2,1,13383993,0,0,0,0},1,"","",16711935,0},
+    {"outfitMod","outfit",{"loot-shirt-outfitDC.img",0.2,1,3910655,0,0,0,0},1,"","",16711935,0},
+    {"outfitWheat","outfit",{"loot-shirt-outfitWheat.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitNoir","outfit",{"loot-shirt-02.img",0.2,1,1776411,0,0,0,0},1,"","",16711935,0},
+    {"outfitRedLeaderAged","outfit",{"loot-shirt-02.img",0.2,1,10098712,0,0,0,0},1,"","",16711935,0},
+    {"outfitBlueLeaderAged","outfit",{"loot-shirt-02.img",0.2,1,1523353,0,0,0,0},1,"","",16711935,0},
+    {"outfitRedLeader","outfit",{"loot-shirt-02.img",0.2,1,10158080,0,0,0,0},1,"","",16711935,0},
+    {"outfitBlueLeader","outfit",{"loot-shirt-02.img",0.2,1,12187,0,0,0,0},1,"","",16711935,0},
+    {"outfitSpetsnaz","outfit",{"loot-shirt-outfitSpetsnaz.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitWoodsCloak","outfit",{"loot-shirt-02.img",0.2,1,2817792,0,0,0,0},1,"","",16711935,0},
+    {"outfitElf","outfit",{"loot-shirt-01.img",0.2,1,1489152,0,0,0,0},1,"","",16711935,0},
+    {"outfitImperial","outfit",{"loot-shirt-01.img",0.2,1,12320813,0,0,0,0},1,"","",16711935,0},
+    {"outfitLumber","outfit",{"loot-shirt-outfitLumber.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitVerde","outfit",{"loot-shirt-02.img",0.2,1,1785868,0,0,0,0},1,"","",16711935,0},
+    {"outfitPineapple","outfit",{"loot-shirt-02.img",0.2,1,10027008,0,0,0,0},1,"","",16711935,0},
+    {"outfitTarkhany","outfit",{"loot-shirt-02.img",0.2,1,4927107,0,0,0,0},1,"","",16711935,0},
+    {"outfitWaterElem","outfit",{"loot-shirt-02.img",0.2,1,7143401,0,0,0,0},1,"","",16711935,0},
+    {"outfitHeaven","outfit",{"loot-shirt-outfitHeaven.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitMeteor","outfit",{"loot-shirt-02.img",0.2,1,9764864,0,0,0,0},1,"","",16711935,0},
+    {"outfitIslander","outfit",{"loot-shirt-01.img",0.2,1,16762368,0,0,0,0},1,"","",16711935,0},
+    {"outfitAqua","outfit",{"loot-shirt-01.img",0.2,1,47778,0,0,0,0},1,"","",16711935,0},
+    {"outfitCoral","outfit",{"loot-shirt-01.img",0.2,1,16736103,0,0,0,0},1,"","",16711935,0},
+    {"outfitKhaki","outfit",{"loot-shirt-02.img",0.2,1,12824197,0,0,0,0},1,"","",16711935,0},
+    {"outfitParma","outfit",{"loot-shirt-01.img",0.2,1,8746585,0,0,0,0},1,"","",16711935,0},
+    {"outfitParmaPrestige","outfit",{"loot-shirt-outfitParmaPrestige.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitCasanova","outfit",{"loot-shirt-01.img",0.2,1,4327436,0,0,0,0},1,"","",16711935,0},
+    {"outfitPrisoner","outfit",{"loot-shirt-01.img",0.2,1,16735266,0,0,0,0},1,"","",16711935,0},
+    {"outfitJester","outfit",{"loot-shirt-01.img",0.2,1,7798904,0,0,0,0},1,"","",16711935,0},
+    {"outfitWoodland","outfit",{"loot-shirt-01.img",0.2,1,2831146,0,0,0,0},1,"","",16711935,0},
+    {"outfitRoyalFortune","outfit",{"loot-shirt-01.img",0.2,1,8333091,0,0,0,0},1,"","",16711935,0},
+    {"outfitKeyLime","outfit",{"loot-shirt-01.img",0.2,1,13107007,0,0,0,0},1,"","",16711935,0},
+    {"outfitCobaltShell","outfit",{"loot-shirt-01.img",0.2,1,11095,0,0,0,0},1,"","",16711935,0},
+    {"outfitFragtastic","outfit",{"loot-shirt-01.img",0.2,1,9668146,0,0,0,0},1,"","",16711935,0},
+    {"outfitCarbonFiber","outfit",{"loot-shirt-01.img",0.2,1,2171169,0,0,0,0},1,"","",16711935,0},
+    {"outfitDarkGloves","outfit",{"loot-shirt-01.img",0.2,1,12482560,0,0,0,0},1,"","",16711935,0},
+    {"outfitDarkShirt","outfit",{"loot-shirt-01.img",0.2,1,9460480,0,0,0,0},1,"","",16711935,0},
+    {"outfitGhillie","outfit",{"loot-shirt-01.img",0.2,1,8630096,0,0,0,0},1,"","",16711935,0},
+    {"outfitDesertCamo","outfit",{"loot-shirt-01.img",0.2,1,13736782,0,0,0,0},1,"","",16711935,0},
+    {"outfitCamo","outfit",{"loot-shirt-01.img",0.2,1,10066278,0,0,0,0},1,"","",16711935,0},
+    {"outfitRed","outfit",{"loot-shirt-01.img",0.2,1,16711680,0,0,0,0},1,"","",16711935,0},
+    {"outfitWhite","outfit",{"loot-shirt-01.img",0.2,1,14935011,0,0,0,0},1,"","",16711935,0},
+    {"outfitSnow","outfit",{"loot-shirt-outfitSnow.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitBlackIce","outfit",{"loot-shirt-02.img",0.2,1,6186099,0,0,0,0},1,"","",16711935,0},
+    {"outfitBeachCamo","outfit",{"loot-shirt-01.img",0.2,1,15583870,0,0,0,0},1,"","",16711935,0},
+    {"outfitCoconut","outfit",{"loot-shirt-01.img",0.2,1,7755830,0,0,0,0},1,"","",16711935,0},
+    {"outfitWave","outfit",{"loot-shirt-02.img",0.2,1,1153260,0,0,0,0},1,"","",16711935,0},
+    {"outfitParrotfish","outfit",{"loot-shirt-outfitParrotfish.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitEvent","outfit",{"loot-shirt-outfitEvent.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitGold","outfit",{"loot-shirt-outfitGold.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitRain","outfit",{"loot-shirt-01.img",0.2,1,4485828,0,0,0,0},1,"","",16711935,0},
+    {"outfitCowz","outfit",{"loot-shirt-01.img",0.2,1,11250603,0,0,0,0},1,"","",16711935,0},
+    {"outfitChameleon","outfit",{"loot-shirt-outfitChameleon.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitPastel","outfit",{"loot-shirt-outfitPastel.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitChrys","outfit",{"loot-shirt-outfitChrys.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitFahrenheit","outfit",{"loot-shirt-outfitFahrenheit.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitPotatoskin","outfit",{"loot-shirt-outfitPotatoskin.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitAurora","outfit",{"loot-shirt-outfitAurora.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitBarrel","outfit",{"loot-shirt-01.img",0.2,1,3750201,0,0,0,0},1,"","",16711935,0},
+    {"outfitWoodBarrel","outfit",{"loot-shirt-01.img",0.2,1,11235106,0,0,0,0},1,"","",16711935,0},
+    {"outfitStone","outfit",{"loot-shirt-01.img",0.2,1,7434609,0,0,0,0},1,"","",16711935,0},
+    {"outfitSpringTree","outfit",{"loot-shirt-01.img",0.2,1,4599058,0,0,0,0},1,"","",16711935,0},
+    {"outfitHalloweenTree","outfit",{"loot-shirt-01.img",0.2,1,4599058,0,0,0,0},1,"","",16711935,0},
+    {"outfitTreeSpooky","outfit",{"loot-shirt-01.img",0.2,1,1775895,0,0,0,0},1,"","",16711935,0},
+    {"outfitStump","outfit",{"loot-shirt-01.img",0.2,1,8602624,0,0,0,0},1,"","",16711935,0},
+    {"outfitBush","outfit",{"loot-shirt-01.img",0.2,1,3889951,0,0,0,0},1,"","",16711935,0},
+    {"outfitLeafPile","outfit",{"loot-shirt-01.img",0.2,1,16731392,0,0,0,0},1,"","",16711935,0},
+    {"outfitCrate","outfit",{"loot-shirt-01.img",0.2,1,6697728,0,0,0,0},1,"","",16711935,0},
+    {"outfitTable","outfit",{"loot-shirt-01.img",0.2,1,6697728,0,0,0,0},1,"","",16711935,0},
+    {"outfitSoviet","outfit",{"loot-shirt-01.img",0.2,1,6697728,0,0,0,0},1,"","",16711935,0},
+    {"outfitAirdrop","outfit",{"loot-shirt-01.img",0.2,1,6579300,0,0,0,0},1,"","",16711935,0},
+    {"outfitOven","outfit",{"loot-shirt-01.img",0.2,1,14935011,0,0,0,0},1,"","",16711935,0},
+    {"outfitRefrigerator","outfit",{"loot-shirt-01.img",0.2,1,7733259,0,0,0,0},1,"","",16711935,0},
+    {"outfitVending","outfit",{"loot-shirt-01.img",0.2,1,10925,0,0,0,0},1,"","",16711935,0},
+    {"outfitPumpkin","outfit",{"loot-shirt-01.img",0.2,1,15889667,0,0,0,0},1,"","",16711935,0},
+    {"outfitWoodpile","outfit",{"loot-shirt-01.img",0.2,1,9455616,0,0,0,0},1,"","",16711935,0},
+    {"outfitToilet","outfit",{"loot-shirt-01.img",0.2,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"outfitBushRiver","outfit",{"loot-shirt-01.img",0.2,1,5339946,0,0,0,0},1,"","",16711935,0},
+    {"outfitCrab","outfit",{"loot-shirt-01.img",0.2,1,16592920,0,0,0,0},1,"","",16711935,0},
+    {"outfitStumpAxe","outfit",{"loot-shirt-01.img",0.2,1,11100701,0,0,0,0},1,"","",16711935,0},
+    {"quest_top_solo","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_top_duo","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_top_squad","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_win_any","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_kills_hard","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_kills_harder","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_hard","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_harder","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_survived","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_9mm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_9mm_ltm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_762mm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_762mm_ltm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_556mm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_556mm_ltm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_12gauge","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_12gauge_ltm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_45acp","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_potato_ammo","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_rare_ammo","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_rare_ammo_ltm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_woods_king","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_grenade","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_grenade_ltm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_melee","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_damage_melee_ltm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_heal","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_boost","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_airdrop","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_airdrop_ltm","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_airdrop_ltm_hard","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_airdrop_rare","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_crates","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_toilets","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_furniture","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_barrels","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_lockers","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_pots","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_vending","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_hardstone","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_soviet_crate","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_initiative_crate","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_pvt_swappers","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_potatoes","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_club_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_docks_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_river_town_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_desert_town_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_reserve_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_logging_complex_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_be_mvp","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_promote_hunted","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_factions_damage","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_last_man_damage_hard","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_factions_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_healer_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_tank_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_sniper_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_scout_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_demo_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_assault_kills","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_healer_damage","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_tank_damage","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_sniper_damage","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_scout_damage","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_demo_damage","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_assault_damage","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"quest_classless_damage","quest",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"leadership","perk",{"loot-perk-leadership.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"assume_leadership","perk",{"loot-perk-assume-leadership.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"firepower","perk",{"loot-perk-firepower.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"gotw","perk",{"loot-perk-gotw.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"windwalk","perk",{"loot-perk-windwalk.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"rare_potato","perk",{"loot-perk-rare-potato.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"aoe_heal","perk",{"loot-perk-aoe-heal.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"endless_ammo","perk",{"loot-perk-endless-ammo.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"steelskin","perk",{"loot-perk-steelskin.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"ap_rounds","perk",{"loot-perk-ap-rounds.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"splinter","perk",{"loot-perk-splinter.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"small_arms","perk",{"loot-perk-small-arms.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"takedown","perk",{"loot-perk-takedown.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"lifeline","perk",{"loot-perk-lifeline.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"field_medic","perk",{"loot-perk-field-medic.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"combat_stims","perk",{"loot-perk-combat-stims.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"tree_climbing","perk",{"loot-perk-tree-climbing.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"scavenger","perk",{"loot-perk-scavenger.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"scavenger_adv","perk",{"loot-perk-scavenger_adv.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"pirate","perk",{"loot-perk-pirate.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"hunted","perk",{"loot-perk-hunted.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"chambered","perk",{"loot-perk-chambered.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"martyrdom","perk",{"loot-perk-martyrdom.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"targeting","perk",{"loot-perk-targeting.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bonus_45","perk",{"loot-perk-bonus-45.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"broken_arrow","perk",{"loot-perk-broken-arrow.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"fabricate","perk",{"loot-perk-fabricate.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"self_revive","perk",{"loot-perk-self-revive.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bonus_9mm","perk",{"loot-perk-bonus-9mm.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"flak_jacket","perk",{"loot-perk-flak-jacket.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"amped_explosives","perk",{"loot-perk-amped-explosives.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"explosive","perk",{"loot-perk-explosive.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"bonus_assault","perk",{"loot-perk-bonus-assault.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"inspiration","perk",{"loot-perk-inspiration.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"final_bugle","perk",{"loot-perk-final-bugle.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"high_velocity","perk",{"loot-perk-high-velocity.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"halloween_mystery","perk",{"loot-perk-halloween-mystery.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"trick_nothing","perk",{"loot-perk-trick-nothing.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"trick_size","perk",{"loot-perk-trick-size.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"trick_m9","perk",{"loot-perk-trick-m9.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"trick_chatty","perk",{"loot-perk-trick-chatty.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"trick_drain","perk",{"loot-perk-trick-drain.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"treat_9mm","perk",{"loot-perk-treat-9mm.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"treat_12g","perk",{"loot-perk-treat-12g.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"treat_556","perk",{"loot-perk-treat-556.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"treat_762","perk",{"loot-perk-treat-762.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"treat_super","perk",{"loot-perk-treat-super.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"turkey_shoot","perk",{"loot-perk-turkey_shoot.img",0.275,1,16777215,0,0,0,0},1,"","",16711935,0},
+    {"pass_survivr1","pass",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"pass_survivr2","pass",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"ping_danger","ping",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"ping_coming","ping",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"ping_help","ping",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"ping_airdrop","ping",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"ping_airstrike","ping",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"ping_woodsking","ping",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"ping_unlock","ping",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"leader","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"captain","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"lieutenant","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"medic","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"marksman","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"recon","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"grenadier","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"bugler","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"last_man","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"woods_king","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"kill_leader","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"the_hunted","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"healer","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"tank","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"sniper","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"scout","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"demo","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"assault","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"classless","role",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"frag","throwable",{"loot-throwable-frag.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"mirv","throwable",{"loot-throwable-mirv.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"mirv_mini","throwable",{"loot-throwable-frag.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"martyr_nade","throwable",{"loot-throwable-frag.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"smoke","throwable",{"loot-throwable-smoke.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"strobe","throwable",{"loot-throwable-strobe.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"snowball","throwable",{"loot-throwable-snowball.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"snowball_heavy","throwable",{"loot-throwable-snowball.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"potato","throwable",{"loot-throwable-potato.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"potato_heavy","throwable",{"loot-throwable-potato.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"potato_cannonball","throwable",{"loot-throwable-potato.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"potato_smgshot","throwable",{"loot-throwable-potato.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"potato_lmgshot","throwable",{"loot-throwable-potato.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"bomb_iron","throwable",{"loot-throwable-frag.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"coconut","throwable",{"loot-throwable-coconut.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"tomato","throwable",{"loot-throwable-tomato.img",0.2,1,65280,0,0,0,0},1,"","",16711935,0},
+    {"unlock_default","unlock",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"unlock_new_account","unlock",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0},
+    {"xp_10","xp",{"loot-xp-book-01.img",0.2,1,16777215,0,0,0,0},1,"xp_common","",16711935,0},
+    {"xp_25","xp",{"loot-xp-book-01.img",0.2,1,16777215,0,0,0,0},1,"xp_rare","",16711935,0},
+    {"xp_100","xp",{"loot-xp-book-01.img",0.2,1,16777215,0,0,0,0},1,"xp_mythic","",16711935,0},
+    {"xp_book_tallow","xp",{"loot-xp-book-01.img",0.2,1,16777215,0,0,0,0},1,"xp_common","",16711935,0},
+    {"xp_book_greene","xp",{"loot-xp-book-02.img",0.2,1,16777215,0,0,0,0},1,"xp_common","",16711935,0},
+    {"xp_book_parma","xp",{"loot-xp-book-03.img",0.2,1,16777215,0,0,0,0},1,"xp_common","",16711935,0},
+    {"xp_book_nevelskoy","xp",{"loot-xp-book-04.img",0.2,1,16777215,0,0,0,0},1,"xp_common","",16711935,0},
+    {"xp_book_rinzo","xp",{"loot-xp-book-05.img",0.2,1,16777215,0,0,0,0},1,"xp_common","",16711935,0},
+    {"xp_book_kuga","xp",{"loot-xp-book-06.img",0.2,1,16777215,0,0,0,0},1,"xp_common","",16711935,0},
+    {"xp_glasses","xp",{"loot-xp-glasses-01.img",0.2,1,16777215,0,0,0,0},1,"xp_rare","",16711935,0},
+    {"xp_compass","xp",{"loot-xp-compass-01.img",0.2,1,16777215,0,0,0,0},1,"xp_rare","",16711935,0},
+    {"xp_stump","xp",{"loot-xp-stump-01.img",0.2,1,16777215,0,0,0,0},1,"xp_rare","",16711935,0},
+    {"xp_bone","xp",{"loot-xp-bone-01.img",0.2,1,16777215,0,0,0,0},1,"xp_rare","",16711935,0},
+    {"xp_donut","xp",{"loot-xp-donut-01.img",0.2,1,16777215,0,0,0,0},1,"xp_mythic","",16711935,0},
 };
 static const RawParticle kParticles[] = {
     {"archwayBreak",kParticleImgs_0,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.2,0.35,0},{0.08,0.12,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,7878419,0},
@@ -4737,6 +4738,7 @@ public:
             d.doorCasingScale = r.doorCasingScale;
             d.doorCasingTint = r.doorCasingTint;
             d.doorCasingAlpha = r.doorCasingAlpha;
+            d.doorSpriteAnchor = Vec2(r.doorSpriteAnchorX, r.doorSpriteAnchorY);
             d.map.display = r.mapDisplay != 0;
             d.map.hasColor = r.mapHasColor != 0;
             d.map.color = r.mapColor;
@@ -4824,7 +4826,162 @@ public:
             d.img = toImg(r.img);
             d.hasImg = r.hasImg != 0;
             d.emitter = r.emitter ? r.emitter : "";
+            d.auraSprite = r.auraSprite ? r.auraSprite : "";
+            d.auraTint = r.auraTint;
+            d.hasAura = r.hasAura != 0;
             _gameObjs[d.type] = d;
+        }
+        { auto& d = _gameObjs.at("explosion_snowball");
+
+
+        d.ghillie=false; d.isDual=false; d.level=0;
+        d.gunOffset=Vec2(0.0f,0.0f); d.leftHandOffset=Vec2(0.0f,0.0f);
+        d.magSprite=""; d.magPos=Vec2(0.0f,0.0f);
+        d.magTop=false; d.idlePose="fists";
+        d.recoil=0.0f;
+        d.attackAnims={};
+        d.deployAnims={};
+        d.idleAnims={};
+        d.frozenSprites={"player-snow-01.img","player-snow-02.img","player-snow-03.img"};
+
+
+
+
+
+
+        }
+        { auto& d = _gameObjs.at("explosion_snowball_heavy");
+
+
+        d.ghillie=false; d.isDual=false; d.level=0;
+        d.gunOffset=Vec2(0.0f,0.0f); d.leftHandOffset=Vec2(0.0f,0.0f);
+        d.magSprite=""; d.magPos=Vec2(0.0f,0.0f);
+        d.magTop=false; d.idlePose="fists";
+        d.recoil=0.0f;
+        d.attackAnims={};
+        d.deployAnims={};
+        d.idleAnims={};
+        d.frozenSprites={"player-snow-01.img","player-snow-02.img","player-snow-03.img"};
+
+
+
+
+
+
+        }
+        { auto& d = _gameObjs.at("explosion_potato");
+
+
+        d.ghillie=false; d.isDual=false; d.level=0;
+        d.gunOffset=Vec2(0.0f,0.0f); d.leftHandOffset=Vec2(0.0f,0.0f);
+        d.magSprite=""; d.magPos=Vec2(0.0f,0.0f);
+        d.magTop=false; d.idlePose="fists";
+        d.recoil=0.0f;
+        d.attackAnims={};
+        d.deployAnims={};
+        d.idleAnims={};
+        d.frozenSprites={"player-mash-01.img","player-mash-02.img","player-mash-03.img"};
+
+
+
+
+
+
+        }
+        { auto& d = _gameObjs.at("explosion_potato_heavy");
+
+
+        d.ghillie=false; d.isDual=false; d.level=0;
+        d.gunOffset=Vec2(0.0f,0.0f); d.leftHandOffset=Vec2(0.0f,0.0f);
+        d.magSprite=""; d.magPos=Vec2(0.0f,0.0f);
+        d.magTop=false; d.idlePose="fists";
+        d.recoil=0.0f;
+        d.attackAnims={};
+        d.deployAnims={};
+        d.idleAnims={};
+        d.frozenSprites={"player-mash-01.img","player-mash-02.img","player-mash-03.img"};
+
+
+
+
+
+
+        }
+        { auto& d = _gameObjs.at("explosion_potato_smgshot");
+
+
+        d.ghillie=false; d.isDual=false; d.level=0;
+        d.gunOffset=Vec2(0.0f,0.0f); d.leftHandOffset=Vec2(0.0f,0.0f);
+        d.magSprite=""; d.magPos=Vec2(0.0f,0.0f);
+        d.magTop=false; d.idlePose="fists";
+        d.recoil=0.0f;
+        d.attackAnims={};
+        d.deployAnims={};
+        d.idleAnims={};
+        d.frozenSprites={"player-mash-01.img","player-mash-02.img","player-mash-03.img"};
+
+
+
+
+
+
+        }
+        { auto& d = _gameObjs.at("explosion_potato_lmgshot");
+
+
+        d.ghillie=false; d.isDual=false; d.level=0;
+        d.gunOffset=Vec2(0.0f,0.0f); d.leftHandOffset=Vec2(0.0f,0.0f);
+        d.magSprite=""; d.magPos=Vec2(0.0f,0.0f);
+        d.magTop=false; d.idlePose="fists";
+        d.recoil=0.0f;
+        d.attackAnims={};
+        d.deployAnims={};
+        d.idleAnims={};
+        d.frozenSprites={"player-mash-01.img","player-mash-02.img","player-mash-03.img"};
+
+
+
+
+
+
+        }
+        { auto& d = _gameObjs.at("explosion_coconut");
+
+
+        d.ghillie=false; d.isDual=false; d.level=0;
+        d.gunOffset=Vec2(0.0f,0.0f); d.leftHandOffset=Vec2(0.0f,0.0f);
+        d.magSprite=""; d.magPos=Vec2(0.0f,0.0f);
+        d.magTop=false; d.idlePose="fists";
+        d.recoil=0.0f;
+        d.attackAnims={};
+        d.deployAnims={};
+        d.idleAnims={};
+        d.frozenSprites={"player-mash-01.img","player-mash-02.img","player-mash-03.img"};
+
+
+
+
+
+
+        }
+        { auto& d = _gameObjs.at("explosion_tomato");
+
+
+        d.ghillie=false; d.isDual=false; d.level=0;
+        d.gunOffset=Vec2(0.0f,0.0f); d.leftHandOffset=Vec2(0.0f,0.0f);
+        d.magSprite=""; d.magPos=Vec2(0.0f,0.0f);
+        d.magTop=false; d.idlePose="fists";
+        d.recoil=0.0f;
+        d.attackAnims={};
+        d.deployAnims={};
+        d.idleAnims={};
+        d.frozenSprites={"player-mash-04.img","player-mash-05.img"};
+
+
+
+
+
+
         }
         { auto& d = _gameObjs.at("backpack00");
 
@@ -4837,6 +4994,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -4855,6 +5013,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -4873,6 +5032,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -4891,6 +5051,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -4909,6 +5070,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -4935,6 +5097,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -4961,6 +5124,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -4987,6 +5151,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5013,6 +5178,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5039,6 +5205,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5065,6 +5232,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5091,6 +5259,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5117,6 +5286,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5143,6 +5313,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5169,6 +5340,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5195,6 +5367,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5221,6 +5394,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5247,6 +5421,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5273,6 +5448,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5299,6 +5475,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5325,6 +5502,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5351,6 +5529,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5377,6 +5556,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5403,6 +5583,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5429,6 +5610,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5455,6 +5637,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5481,6 +5664,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5507,6 +5691,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5533,6 +5718,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5551,6 +5737,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5572,6 +5759,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5593,6 +5781,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5614,6 +5803,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5635,6 +5825,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5656,6 +5847,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5677,6 +5869,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5698,6 +5891,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5719,6 +5913,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5740,6 +5935,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5761,6 +5957,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5782,6 +5979,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5803,6 +6001,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5824,6 +6023,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5845,6 +6045,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5866,6 +6067,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5887,6 +6089,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5908,6 +6111,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5929,6 +6133,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5950,6 +6155,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5971,6 +6177,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -5992,6 +6199,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6013,6 +6221,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6034,6 +6243,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6055,6 +6265,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6076,6 +6287,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6097,6 +6309,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6118,6 +6331,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6139,6 +6353,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6160,6 +6375,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6181,6 +6397,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6202,6 +6419,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6223,6 +6441,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6244,6 +6463,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6265,6 +6485,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6286,6 +6507,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6307,6 +6529,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6328,6 +6551,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6349,6 +6573,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6370,6 +6595,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6391,6 +6617,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6412,6 +6639,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6433,6 +6661,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6454,6 +6683,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6475,6 +6705,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6496,6 +6727,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6517,6 +6749,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6538,6 +6771,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6559,6 +6793,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6580,6 +6815,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6601,6 +6837,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6622,6 +6859,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6643,6 +6881,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6664,6 +6903,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6685,6 +6925,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6706,6 +6947,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6727,6 +6969,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6748,6 +6991,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6769,6 +7013,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6790,6 +7035,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6811,6 +7057,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6832,6 +7079,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6853,6 +7101,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6874,6 +7123,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6895,6 +7145,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6916,6 +7167,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6937,6 +7189,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6958,6 +7211,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -6979,6 +7233,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7000,6 +7255,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7021,6 +7277,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7042,6 +7299,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7063,6 +7321,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7084,6 +7343,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7105,6 +7365,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7123,6 +7384,7 @@ public:
         d.attackAnims={"fists"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7144,6 +7406,7 @@ public:
         d.attackAnims={"fists","fists"};
         d.deployAnims={"knuckles_spin","knuckles_slam"};
         d.idleAnims={"knuckles_bash"};
+        d.frozenSprites={};
 
 
 
@@ -7165,6 +7428,7 @@ public:
         d.attackAnims={"slash","stab"};
         d.deployAnims={"karambit_spin","karambit_rapidSpin"};
         d.idleAnims={"karambit_frontSpin","karambit_backSpin"};
+        d.frozenSprites={};
 
 
 
@@ -7186,6 +7450,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={"bayonet_unsheathe"};
         d.idleAnims={"knife_inspect"};
+        d.frozenSprites={};
 
 
 
@@ -7207,6 +7472,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={"huntsman_catch"};
         d.idleAnims={"knife_inspect"};
+        d.frozenSprites={};
 
 
 
@@ -7228,6 +7494,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7249,6 +7516,7 @@ public:
         d.attackAnims={"cutReverse"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7270,6 +7538,7 @@ public:
         d.attackAnims={"sawSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7291,6 +7560,7 @@ public:
         d.attackAnims={"axeSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7312,6 +7582,7 @@ public:
         d.attackAnims={"axeSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7333,6 +7604,7 @@ public:
         d.attackAnims={"katanaSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7354,6 +7626,7 @@ public:
         d.attackAnims={"naginataSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7375,6 +7648,7 @@ public:
         d.attackAnims={"hammerSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7396,6 +7670,7 @@ public:
         d.attackAnims={"axeSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7417,6 +7692,7 @@ public:
         d.attackAnims={"hook"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7441,6 +7717,7 @@ public:
         d.attackAnims={"pan"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7462,6 +7739,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7483,6 +7761,7 @@ public:
         d.attackAnims={"cut","cutReverseShort"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7504,6 +7783,7 @@ public:
         d.attackAnims={"cut","cutReverse"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7525,6 +7805,7 @@ public:
         d.attackAnims={"fists","fists"};
         d.deployAnims={"knuckles_spin","knuckles_slam"};
         d.idleAnims={"knuckles_bash"};
+        d.frozenSprites={};
 
 
 
@@ -7546,6 +7827,7 @@ public:
         d.attackAnims={"fists","fists"};
         d.deployAnims={"knuckles_spin","knuckles_slam"};
         d.idleAnims={"knuckles_bash"};
+        d.frozenSprites={};
 
 
 
@@ -7567,6 +7849,7 @@ public:
         d.attackAnims={"slash","stab"};
         d.deployAnims={"karambit_spin","karambit_rapidSpin"};
         d.idleAnims={"karambit_frontSpin","karambit_backSpin"};
+        d.frozenSprites={};
 
 
 
@@ -7588,6 +7871,7 @@ public:
         d.attackAnims={"slash","stab"};
         d.deployAnims={"karambit_spin","karambit_rapidSpin"};
         d.idleAnims={"karambit_frontSpin","karambit_backSpin"};
+        d.frozenSprites={};
 
 
 
@@ -7609,6 +7893,7 @@ public:
         d.attackAnims={"slash","stab"};
         d.deployAnims={"karambit_spin","karambit_rapidSpin"};
         d.idleAnims={"karambit_frontSpin","karambit_backSpin"};
+        d.frozenSprites={};
 
 
 
@@ -7630,6 +7915,7 @@ public:
         d.attackAnims={"slash","stab"};
         d.deployAnims={"karambit_spin","karambit_rapidSpin"};
         d.idleAnims={"karambit_frontSpin","karambit_backSpin"};
+        d.frozenSprites={};
 
 
 
@@ -7651,6 +7937,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={"bayonet_unsheathe"};
         d.idleAnims={"knife_inspect"};
+        d.frozenSprites={};
 
 
 
@@ -7672,6 +7959,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={"bayonet_unsheathe"};
         d.idleAnims={"knife_inspect"};
+        d.frozenSprites={};
 
 
 
@@ -7693,6 +7981,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={"huntsman_catch"};
         d.idleAnims={"knife_inspect"};
+        d.frozenSprites={};
 
 
 
@@ -7714,6 +8003,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={"huntsman_catch"};
         d.idleAnims={"knife_inspect"};
+        d.frozenSprites={};
 
 
 
@@ -7735,6 +8025,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7756,6 +8047,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7777,6 +8069,7 @@ public:
         d.attackAnims={"cutReverse"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7798,6 +8091,7 @@ public:
         d.attackAnims={"cutReverse"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7819,6 +8113,7 @@ public:
         d.attackAnims={"sawSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7840,6 +8135,7 @@ public:
         d.attackAnims={"axeSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7861,6 +8157,7 @@ public:
         d.attackAnims={"katanaSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7882,6 +8179,7 @@ public:
         d.attackAnims={"katanaSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7903,6 +8201,7 @@ public:
         d.attackAnims={"hammerSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7924,6 +8223,7 @@ public:
         d.attackAnims={"cut","cutReverseShort"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7945,6 +8245,7 @@ public:
         d.attackAnims={"cut","cutReverseShort"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7966,6 +8267,7 @@ public:
         d.attackAnims={"cutReverse"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -7987,6 +8289,7 @@ public:
         d.attackAnims={"sawSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8008,6 +8311,7 @@ public:
         d.attackAnims={"katanaSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8029,6 +8333,7 @@ public:
         d.attackAnims={"cut","thrust"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8050,6 +8355,7 @@ public:
         d.attackAnims={"hammerSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8071,6 +8377,7 @@ public:
         d.attackAnims={"naginataSwing"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8092,6 +8399,7 @@ public:
         d.attackAnims={"cut","cutReverse"};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8118,6 +8426,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8144,6 +8453,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8170,6 +8480,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8196,6 +8507,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8222,6 +8534,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8248,6 +8561,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8274,6 +8588,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8300,6 +8615,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8326,6 +8642,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8352,6 +8669,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8378,6 +8696,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8404,6 +8723,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8430,6 +8750,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8456,6 +8777,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8482,6 +8804,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8508,6 +8831,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8534,6 +8858,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8560,6 +8885,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8586,6 +8912,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8612,6 +8939,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8638,6 +8966,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8664,6 +8993,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8690,6 +9020,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8716,6 +9047,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8742,6 +9074,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8768,6 +9101,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8794,6 +9128,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8820,6 +9155,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8846,6 +9182,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8872,6 +9209,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8898,6 +9236,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8924,6 +9263,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8950,6 +9290,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -8976,6 +9317,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9002,6 +9344,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9028,6 +9371,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9054,6 +9398,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9080,6 +9425,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9106,6 +9452,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9132,6 +9479,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9158,6 +9506,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9184,6 +9533,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9210,6 +9560,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9236,6 +9587,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9262,6 +9614,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9288,6 +9641,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9314,6 +9668,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9340,6 +9695,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9366,6 +9722,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9392,6 +9749,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9418,6 +9776,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9444,6 +9803,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9470,6 +9830,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9496,6 +9857,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9522,6 +9884,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9548,6 +9911,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9574,6 +9938,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9600,6 +9965,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9626,6 +9992,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9652,6 +10019,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9678,6 +10046,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9704,6 +10073,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9730,6 +10100,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9756,6 +10127,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9782,6 +10154,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9808,6 +10181,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9834,6 +10208,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9860,6 +10235,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9886,6 +10262,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9912,6 +10289,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9938,6 +10316,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9964,6 +10343,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -9990,6 +10370,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10016,6 +10397,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10042,6 +10424,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10068,6 +10451,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10094,6 +10478,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10120,6 +10505,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10146,6 +10532,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10172,6 +10559,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10198,6 +10586,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10224,6 +10613,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10250,6 +10640,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10276,6 +10667,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10302,6 +10694,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10328,6 +10721,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10354,6 +10748,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10380,6 +10775,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10406,6 +10802,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10432,6 +10829,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10458,6 +10856,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10484,6 +10883,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10510,6 +10910,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10536,6 +10937,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10562,6 +10964,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10588,6 +10991,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10614,6 +11018,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10635,6 +11040,7 @@ public:
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
         d.handImgs[0][0].sprite="none"; d.handImgs[0][0].pos=Vec2(0.0f,0.0f);
         d.handImgs[0][0].scale=Vec2(1.0f,1.0f); d.handImgs[0][0].rot=0.0f; d.handImgs[0][0].tint=16777215;
         d.handImgs[0][0].renderOnHand=false; d.handImgs[0][0].leftHandOnTop=false;
@@ -10674,6 +11080,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
         d.handImgs[0][0].sprite="none"; d.handImgs[0][0].pos=Vec2(0.0f,0.0f);
         d.handImgs[0][0].scale=Vec2(1.0f,1.0f); d.handImgs[0][0].rot=0.0f; d.handImgs[0][0].tint=16777215;
         d.handImgs[0][0].renderOnHand=false; d.handImgs[0][0].leftHandOnTop=false;
@@ -10713,6 +11120,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10734,6 +11142,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10755,6 +11164,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
         d.handImgs[0][0].sprite="none"; d.handImgs[0][0].pos=Vec2(0.0f,0.0f);
         d.handImgs[0][0].scale=Vec2(1.0f,1.0f); d.handImgs[0][0].rot=0.0f; d.handImgs[0][0].tint=16777215;
         d.handImgs[0][0].renderOnHand=false; d.handImgs[0][0].leftHandOnTop=false;
@@ -10794,6 +11204,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
         d.handImgs[0][0].sprite="none"; d.handImgs[0][0].pos=Vec2(0.0f,0.0f);
         d.handImgs[0][0].scale=Vec2(1.0f,1.0f); d.handImgs[0][0].rot=0.0f; d.handImgs[0][0].tint=16777215;
         d.handImgs[0][0].renderOnHand=false; d.handImgs[0][0].leftHandOnTop=false;
@@ -10833,6 +11244,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
         d.handImgs[0][0].sprite="none"; d.handImgs[0][0].pos=Vec2(0.0f,0.0f);
         d.handImgs[0][0].scale=Vec2(1.0f,1.0f); d.handImgs[0][0].rot=0.0f; d.handImgs[0][0].tint=16777215;
         d.handImgs[0][0].renderOnHand=false; d.handImgs[0][0].leftHandOnTop=false;
@@ -10872,6 +11284,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10893,6 +11306,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
         d.handImgs[0][0].sprite="none"; d.handImgs[0][0].pos=Vec2(0.0f,0.0f);
         d.handImgs[0][0].scale=Vec2(1.0f,1.0f); d.handImgs[0][0].rot=0.0f; d.handImgs[0][0].tint=16777215;
         d.handImgs[0][0].renderOnHand=false; d.handImgs[0][0].leftHandOnTop=false;
@@ -10932,6 +11346,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10953,6 +11368,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10974,6 +11390,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -10995,6 +11412,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -11016,6 +11434,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
 
 
 
@@ -11037,6 +11456,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
         d.handImgs[0][0].sprite="none"; d.handImgs[0][0].pos=Vec2(0.0f,0.0f);
         d.handImgs[0][0].scale=Vec2(1.0f,1.0f); d.handImgs[0][0].rot=0.0f; d.handImgs[0][0].tint=16777215;
         d.handImgs[0][0].renderOnHand=false; d.handImgs[0][0].leftHandOnTop=false;
@@ -11076,6 +11496,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         d.attackAnims={};
         d.deployAnims={};
         d.idleAnims={};
+        d.frozenSprites={};
         d.handImgs[0][0].sprite="none"; d.handImgs[0][0].pos=Vec2(0.0f,0.0f);
         d.handImgs[0][0].scale=Vec2(1.0f,1.0f); d.handImgs[0][0].rot=0.0f; d.handImgs[0][0].tint=16777215;
         d.handImgs[0][0].renderOnHand=false; d.handImgs[0][0].leftHandOnTop=false;

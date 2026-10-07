@@ -42,6 +42,10 @@ public:
     void setScale(float nsx, float nsy) override { sx = nsx; sy = nsy; }
     void setRotation(float r) override { rotation = r; }
     void setAnchor(float nax, float nay) override { ax = nax; ay = nay; }
+    float getAnchorX() const override { return ax; }
+    float getAnchorY() const override { return ay; }
+    float getAlpha() const override { return alpha; }
+    bool isVisible() const override { return visible; }
     void setAlpha(float a) override { alpha = a; }
     void setVisible(bool v) override { visible = v; }
     void setTint(uint t) override { tint = t; }

@@ -78,6 +78,10 @@ public:
         _node->setRotation(rad * 180.0f / 3.14159265358979f);
     }
     void setAnchor(float x, float y) override { _node->setAnchorPoint(ax::Vec2(x, y)); }
+    float getAnchorX() const override { return _node->getAnchorPoint().x; }
+    float getAnchorY() const override { return _node->getAnchorPoint().y; }
+    float getAlpha() const override { return _node->getOpacity() / 255.0f; }
+    bool isVisible() const override { return _node->isVisible(); }
     void setAlpha(float alpha) override {
         const float a = alpha < 0.0f ? 0.0f : (alpha > 1.0f ? 1.0f : alpha);
         _node->setOpacity(static_cast<uint8_t>(a * 255.0f + 0.5f));

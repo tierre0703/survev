@@ -94,11 +94,14 @@ public:
     void applyFrame(bool hasImage);
     void applyColor();
     int updateDistanceToStairs(Ctx& ctx) const;
+    // Test/diagnostics: the anchor currently applied to the sprite.
+    Vec2 debugAnchor() const { return _anchor; }
 
 private:
+    bool _anchorApplied = false;
     bool _firstUpdate = true;
-    bool _anchorInit = false;
     bool _visible = false;
+    Vec2 _anchor{0.5f, 0.5f};
     int _mapValueAdjust = 1.0f;
 };
 
@@ -139,6 +142,8 @@ public:
     bool playedCeilingDeadFx = false;
     bool playedSolvedPuzzleFx = false;
     bool puzzleErrSeqModified = false;
+    // MapObjectDef::isDoor (building.ts has no door flag).
+    bool isDoorDef = false;
 
     std::vector<Img> imgs;
     pix::Sprite* residue = nullptr;
@@ -452,6 +457,14 @@ public:
     uint8_t teamId = 0;
     int animType = 0;
     int animSeq = -1;
+    int actionType = 0;
+    std::string actionItem;
+    bool frozen = false;
+    int frozenOri = 0;
+    std::string frozenType;
+    // Active-player view bounds (player.ts activePlayer.viewAabb).
+    float viewHalfWidth = 0.0f;
+    float viewHalfHeight = 0.0f;
     int currentAnim = 0;
     float animTicker = 0.0f;
     bool animMirror = false;
@@ -464,6 +477,27 @@ public:
     int renderZLayer = 0;
     int renderZOrd = 18;
     int renderZIdx = 0;
+
+    // player.ts aura (medic heal/revive circle), frozen patch and submersion.
+    bool auraVisible = false;
+    bool paramsCached = false;
+    int cachedActionType = -1;
+    std::string cachedActionItem;
+    pix::Container* auraContainer = nullptr;
+    pix::Sprite* auraCircle = nullptr;
+    std::string auraSprite;
+    uint32_t auraTint = 0xff00ff;
+    float auraRadius = 0.0f;
+    float auraViewFade = 0.0f;
+    float auraPulseTicker = 0.0f;
+    float auraPulseDir = 1.0f;
+    pix::Sprite* bodyEffectSprite = nullptr;
+    bool updateFrozenImage = true;
+    float frozenTicker = 0.0f;
+    bool frozenActive = false;
+    pix::Sprite* bodySubmergeSprite = nullptr;
+    std::array<pix::Sprite*, 4> submergeLimbs{};
+    float submersion = 0.0f;
 
     pix::Container* container = nullptr;
     pix::Container* bodyContainer = nullptr;
@@ -488,6 +522,10 @@ public:
     void update(float dt, Ctx& ctx);
     void playAnim(int type, int seq);
     void updateVisuals(Ctx& ctx);
+    void updateAura(float dt, Ctx& ctx, bool isActivePlayer);
+    void updateActions(int actionType, const std::string& actionItem);
+    void updateSubmersion(float dt, Ctx& ctx);
+    void updateFrozenState(float dt, Ctx& ctx);
 };
 
 class PlayerBarn {

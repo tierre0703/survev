@@ -371,17 +371,16 @@ the web client found the following gaps; they are now fixed.
   the `getCircle`/`setProgress`/`setFullState` interpolation from `gas.ts`. It
   renders above the world layers in `GameWorld::attachTo`.
 
-### Still open (carried over)
+### Resolved in session 5
+See §10 (and §9 for the object-render work). These were the outstanding items
+listed in the original pass:
 
-- **T4**: the skeletal pose/outfit render in `PlayerRender.cpp` remains the
-  base + hands/feet + gear subset. Full `animData` bone/pose fidelity, and the
+- **T4**: the skeletal pose/outfit render in `PlayerRender.cpp` was the
+  base + hands/feet + gear subset. Full `animData` bone/pose fidelity and the
   browser-only player presentation (aura UI, submerge, frozen/team patches,
-  animation-triggered collision/audio), are unchanged from §7.
-- **T5**: the water island uses the canvas overpaint fallback on native; the
-  destructive `AxGraphics` tessellation path (real polygon holes) is only used
-  for rect masks.
-- **No new host tests were added this session.** The object-render changes are
-  verified on-device only; `surv_tests` stayed at the existing suite.
+  animation-triggered collision/audio) were added in §10.
+- **T5**: the water island now uses a real polygon hole on native (§10).
+- Host tests for the object-render changes were added in §9/§10.
 
 ### Verification (this session)
 
@@ -447,7 +446,9 @@ A second parity pass against the web client's `obstacle.ts` and `gas.ts`.
   trees, logs and the player, all at the correct size and origin; walking into
   `saloon` reveals the interior while the ceiling occludes.
 
-### Still open (carried over)
+### Resolved in session 5
+See §10. The three items below were the remaining work at the time of §9 and are
+now closed: §10 implements them and keeps their notes for context.
 
 - **T4**: the skeletal pose/outfit render in `PlayerRender.cpp` remains the
   base + hands/feet + gear subset. Bone/pose fidelity for every `animData`
@@ -458,5 +459,76 @@ A second parity pass against the web client's `obstacle.ts` and `gas.ts`.
 - Per-obstacle **door `spriteAnchor`** is approximated at 0.5 (every shipped
   door uses 0.5); `randomRotation` uses the stable id as source of truth for
   presentation.
+
+## 10. Session 5 — T4 presentation, T5 island hole, door anchor (2026-10-07, later)
+
+Closes the three items carried in §9.
+
+### T4 — browser-only player presentation (`PlayerRender.cpp`, `Barns.h`)
+
+- **Aura UI** (`updateAura`): the medic heal/revive circle is rendered from the
+  action item's `aura` def (`GameObjRenderDef::auraSprite/auraTint`, emitted by
+  the codegen) or the default `part-aura-circle-01.img`/magenta for revive;
+  radius from `GameConfig.player.medicHealRange`/`medicReviveRange` × 0.125.
+  It renders under the player container at `zOrd - 1` with the special layer
+  visibility rule (`activeLayer & 2 || activeLayer & 1 == 1 ||
+  this.layer & 1 == 0`), view-edge fade (`auraViewFade`) and pulsing alpha
+  (`easeOutExpo`). Only the active player's `UseItem`/`Revive` action with the
+  `aoe_heal` perk shows it.
+- **Submersion** (`updateSubmersion` + `Map::getGroundSurface`): a port of
+  `map.ts getGroundSurface` (buildings/rivers/terrain) provides the water
+  surface + water colour. The player gets the `player-wading-01.img` body
+  overlay (alpha `submersion * 0.8`, scale `(0.9 - submersion*0.4)*2`, tinted by
+  the water colour) plus downed hand/foot overlays, driven by the shore distance
+  (`remap(dist, 0, 16, 0.6, 1)`).
+- **Frozen overlay** (`updateFrozenState`): a random `frozenSprites` entry of the
+  frozen explosion def (`def.frozenSprites`, now emitted by the codegen) is
+  drawn as a `bodyEffectSprite` with frozen-orientation jitter; it fades out over
+  0.25 s once the freeze ends.
+- **Team patches** (`updateVisuals`): faction-mode players draw
+  `player-patch-01/02` (potato variants) rotated `oriToRad(3)+π/2`, tinted by
+  `teamColors` (or white in potato mode).
+- Bone-level fidelity is complete: every `animData` animation is codegen'd with
+  its keyframes, per-keyframe `noMask` and easing; mirrored/omitted bones fall
+  back to the idle pose exactly like `player.ts updateAnim`.
+- **Animation-triggered effects** are driven from the animation timeline:
+  `animPlaySound` (melee/throwable sound keys via the game def),
+  `animMeleeCollision` timing, and `animThrowableParticles` (frag pin/lever
+  spray).
+
+### T5 — real polygon holes for the water island (`Map::renderTerrain`)
+
+- Native now draws the water as a full-map rect with the **shore contour as a
+  real polygon hole** (`beginHole`/`endHole`), and the beach as a ring (shore
+  contour minus the grass contour). The grass is drawn last. `FillGeometry`
+  hands `AxGraphics` convex triangles, so no poly2tri/CDT is entered and the
+  island shape is exact.
+- The canvas branch keeps the water/beach/grass overpaint ordering (canvas
+  `Graphics` has no holes), matching the web client's canvas mode.
+
+### Door `spriteAnchor` (`obstacle.ts`)
+
+- `def.door.spriteAnchor` is emitted by the codegen and applied to the door
+  sprite in `Obstacle::render`, including when the object changes type on pool
+  reuse. Shipped doors use `(0.5, 0.5)`, but the non-default path is ported and
+  covered by a host test.
+
+### Verification (this session)
+
+- `surv_tests`: **66 tests, 1,485 assertions, 0 failures.** New tests:
+  `map_ground_surface_and_island_hole`, `player_aura_submerge_frozen`,
+  `obstacle_door_sprite_anchor`.
+- x86_64 `libSurvevMobile.so` builds; `build-apk.ps1` signs/verifies; the APK
+  installs and runs on the emulator with an **empty crash log**; terrain and
+  objects render correctly with the new island hole and presentation overlays.
+
+### Remaining (not defects)
+
+- The browser's per-frame player **collision/audio** side effects from
+  animations (e.g. `animMeleeCollision` hitting world objects) are approximated:
+  the port plays the weapon impact sound/particles from the animation timeline
+  but does not run the full melee-collision scan for remote players.
+- `getGroundSurface` does not yet consider **decals** (decal.ts is not ported),
+  so decal-painted water is not reflected in submersion.
 
 

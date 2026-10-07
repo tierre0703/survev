@@ -7,6 +7,7 @@
 #include "../core/GameConfig.h"
 #include "../core/MathUtil.h"
 #include "../core/Rand.h"
+#include "../core/Collider.h"
 #include "../render/Camera.h"
 
 #include <cmath>
@@ -102,20 +103,30 @@ void Map::renderTerrain(pix::Graphics* g, float gridThickness, bool canvasMode, 
     g->drawRect(w, -120.0f, 120.0f, h + 240.0f);
     g->endFill();
 
-    // Canvas retains the overpaint fallback; native supports true island holes.
+    // The island hole is real on native: the water is a full-map rect with the
+    // shore contour punched out (FillGeometry tessellates in both adapters), so
+    // beach/grass never need an overpaint fallback. The canvas keeps its
+    // overpaint ordering because canvas Graphics has no hole support.
     if (canvasMode) {
         g->beginFill(colors.water);
         g->drawRect(0.0f, 0.0f, w, h);
         g->endFill();
-    }
-    g->beginFill(colors.beach);
-    tracePath(g, terrain.shore);
-    g->endFill();
-    if (!canvasMode) {
+        g->beginFill(colors.beach);
+        tracePath(g, terrain.shore);
+        g->endFill();
+    } else {
         g->beginFill(colors.water);
         g->drawRect(0.0f, 0.0f, w, h);
         g->beginHole();
         tracePath(g, terrain.shore);
+        g->endHole();
+        g->endFill();
+        // Beach ring: the beach contour minus the (smaller) grass contour, so
+        // the grass drawn next is not covered by beach fill.
+        g->beginFill(colors.beach);
+        tracePath(g, terrain.shore);
+        g->beginHole();
+        tracePath(g, terrain.grass);
         g->endHole();
         g->endFill();
     }
@@ -229,6 +240,94 @@ Building* Map::getBuildingById(uint16_t id) {
         }
     }
     return nullptr;
+}
+
+Map::GroundSurface Map::getGroundSurface(const Vec2& pos, int layer) const {
+    // Buildings can override the ground (layer 2 surfaces), matching map.ts.
+    int zIdx = 0;
+    const Building::Surface* surface = nullptr;
+    const bool onStairs = (layer & 2) != 0;
+    for (auto* building : buildingPool.m_getPool()) {
+        if (!building->active || building->zIdx < zIdx) {
+            continue;
+        }
+        if (!(building->layer == layer || onStairs)) {
+            continue;
+        }
+        if (building->layer == 1 && onStairs) {
+            continue;
+        }
+        for (const auto& s : building->surfaces) {
+            bool hit = false;
+            for (const auto& c : s.colliders) {
+                if (colliderIntersectCircle(c, pos, 0.0001f)) {
+                    hit = true;
+                    break;
+                }
+            }
+            if (hit) {
+                zIdx = building->zIdx;
+                surface = &s;
+                break;
+            }
+        }
+    }
+    if (surface) {
+        GroundSurface out;
+        if (surface->type == "water") out.type = SurfaceType::Water;
+        else if (surface->type == "sand") out.type = SurfaceType::Sand;
+        else if (surface->type == "grass") out.type = SurfaceType::Grass;
+        else out.type = SurfaceType::Water;
+        out.waterColor = mapDef.colors.water;
+        out.rippleColor = mapDef.colors.waterRipple;
+        return out;
+    }
+
+    // Rivers.
+    bool onRiverShore = false;
+    if (layer != 1) {
+        for (const auto& river : terrain.rivers) {
+            if (testPointAabb(pos, river.aabb.min, river.aabb.max) &&
+                math::pointInsidePolygon(pos, river.shorePoly.data(),
+                                         static_cast<int>(river.shorePoly.size()))) {
+                onRiverShore = true;
+                if (math::pointInsidePolygon(pos, river.waterPoly.data(),
+                                             static_cast<int>(river.waterPoly.size()))) {
+                    GroundSurface out;
+                    out.type = SurfaceType::Water;
+                    out.waterColor = river.looped ? mapDef.colors.lakeWater : mapDef.colors.water;
+                    out.rippleColor =
+                        river.looped ? mapDef.colors.lakeWaterRipple : mapDef.colors.waterRipple;
+                    return out;
+                }
+            }
+        }
+    }
+
+    // Terrain.
+    GroundSurface out;
+    if (math::pointInsidePolygon(pos, terrain.grass.data(),
+                                 static_cast<int>(terrain.grass.size()))) {
+        out.type = onRiverShore ? SurfaceType::Sand : SurfaceType::Grass;
+    } else if (math::pointInsidePolygon(pos, terrain.shore.data(),
+                                        static_cast<int>(terrain.shore.size()))) {
+        out.type = SurfaceType::Sand;
+    } else {
+        out.type = SurfaceType::Water;
+        out.waterColor = mapDef.colors.water;
+        out.rippleColor = mapDef.colors.waterRipple;
+    }
+    return out;
+}
+
+bool Map::isInOcean(const Vec2& pos) const {
+    return !math::pointInsidePolygon(pos, terrain.shore.data(),
+                                     static_cast<int>(terrain.shore.size()));
+}
+
+float Map::distanceToShore(const Vec2& pos) const {
+    return math::distToPolygon(pos, terrain.shore.data(),
+                               static_cast<int>(terrain.shore.size()));
 }
 
 bool Map::insideStructureStairs(const Collider& c) const {

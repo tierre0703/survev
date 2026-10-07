@@ -138,6 +138,11 @@ enum FactionTeam : uint8_t {
 // Port of the GameConfig.player values used by touch input.
 struct PlayerConfig {
     static constexpr float throwableMaxMouseDist = 18.0f;
+    // player.ts aura (medic heal/revive circle) radii.
+    static constexpr float medicHealRange = 8.0f;
+    static constexpr float medicReviveRange = 6.0f;
+    // player.ts maxVisualRadius (stairs sort test).
+    static constexpr float maxVisualRadius = 1.0f;
 };
 
 // Port of GameConfig.map (terrain generation + grid).

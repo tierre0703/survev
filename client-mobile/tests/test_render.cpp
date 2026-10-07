@@ -926,3 +926,203 @@ TEST(gas_overlay_world_scale) {
     CHECK(hasHole);
 }
 
+TEST(map_ground_surface_and_island_hole) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    Camera camera;
+    camera.m_screenWidth = 800.0f;
+    camera.m_screenHeight = 600.0f;
+    Map map(&factory, false);
+
+    MapMsg msg;
+    msg.mapName = "main";
+    msg.seed = 123456;
+    msg.width = 512.0f;
+    msg.height = 512.0f;
+    msg.shoreInset = 4.0f;
+    msg.grassInset = 2.0f;
+    map.loadMap(msg, camera);
+
+    // Ground surface classes match map.ts (water outside the shore, sand in the
+    // beach ring, grass inside the grass contour).
+    CHECK(map.getGroundSurface(Vec2(-50.0f, -50.0f), 0).type == Map::SurfaceType::Water);
+    // A point inside the grass contour: the centroid-ish average of its verts
+    // (the first vertex itself may lie exactly on the contour edge).
+    Vec2 inside = Vec2(0.0f, 0.0f);
+    for (const auto& v : map.terrain.grass) {
+        inside = v2Add(inside, v);
+    }
+    inside = v2Div(inside, static_cast<float>(map.terrain.grass.size()));
+    CHECK(map.getGroundSurface(inside, 0).type == Map::SurfaceType::Grass);
+    CHECK(!map.isInOcean(inside));
+    CHECK(map.isInOcean(Vec2(-50.0f, -50.0f)));
+    CHECK(map.distanceToShore(Vec2(-50.0f, -50.0f)) > 0.0f);
+
+    // Native terrain uses a real polygon hole for the island (water rect minus
+    // the shore contour); without it the grass would be covered by water.
+    map.renderTerrain(map.groundGfx, 0.5f, false, false);
+    auto* g = static_cast<pix::NullGraphics*>(map.groundGfx);
+    bool hasHole = false;
+    for (const auto& cmd : g->commands) {
+        if (cmd.kind == pix::DrawCommand::BeginHole) hasHole = true;
+    }
+    CHECK(hasHole);
+    CHECK(!g->fillTriangles.empty());
+
+    // Canvas keeps the overpaint ordering.
+    Map canvasMap(&factory, true);
+    canvasMap.loadMap(msg, camera);
+    canvasMap.renderTerrain(canvasMap.groundGfx, 0.5f, true, false);
+    auto* canvasG = static_cast<pix::NullGraphics*>(canvasMap.groundGfx);
+    bool canvasHole = false;
+    for (const auto& cmd : canvasG->commands) {
+        if (cmd.kind == pix::DrawCommand::BeginHole) canvasHole = true;
+    }
+    CHECK(!canvasHole);
+}
+
+TEST(player_aura_submerge_frozen) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.camera().m_screenWidth = 800.0f;
+    world.camera().m_screenHeight = 600.0f;
+
+    Player ap;
+    ap.m_init();
+    auto apd = playerData();
+    world.setActivePlayer(&ap);
+    ap.m_updateData(apd, true, true, world);
+    ap.update(0, world);
+
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    d.pos = Vec2(200.0f, 200.0f);
+    d.actionType = Action_UseItem;
+    d.actionItem = "bandage";
+    d.perks.push_back({"aoe_heal", false});
+    p.m_updateData(d, true, true, world);
+    p.update(0.1f, world);
+    CHECK(p.auraVisible);
+    CHECK(p.auraContainer != nullptr);
+    CHECK(sprite(p.auraCircle)->visible);
+
+    // Losing aoe_heal stops the aura (player.ts role visuals).
+    d.perks.clear();
+    p.m_updateData(d, true, false, world);
+    p.update(0.1f, world);
+    CHECK(!sprite(p.auraCircle)->visible);
+
+    // Submersion: in the ocean the submerge sprite fades in.
+    world.setActivePlayer(&ap);
+    Player water;
+    water.m_init();
+    auto wd = playerData();
+    wd.pos = Vec2(-100.0f, -100.0f);
+    water.m_updateData(wd, true, true, world);
+    for (int i = 0; i < 200; i++) {
+        water.update(0.05f, world);
+    }
+    CHECK(water.submersion > 0.5f);
+    CHECK(sprite(water.bodySubmergeSprite)->visible);
+    CHECK_NEAR(sprite(water.bodySubmergeSprite)->tint, world.map().mapDef.colors.water, 1.0f);
+
+    // Frozen: the body-effect sprite fades in, then out (player.ts keeps the
+    // patch visible for fadeDuration=0.25s after the freeze ends).
+    const GameObjRenderDef* snowball = getDefProvider()->gameObject("explosion_snowball");
+    CHECK(snowball != nullptr);
+    CHECK(snowball != nullptr && !snowball->frozenSprites.empty());
+    Player frozen;
+    frozen.m_init();
+    auto fd = playerData();
+    fd.frozen = true;
+    fd.frozenType = "explosion_snowball";
+    frozen.m_updateData(fd, true, true, world);
+    frozen.update(0.001f, world);
+    CHECK(frozen.frozenActive);
+    CHECK(sprite(frozen.bodyEffectSprite)->visible);
+    CHECK_EQ(sprite(frozen.bodyEffectSprite)->frame, std::string());
+    fd.frozen = false;    frozen.m_updateData(fd, true, false, world);
+    frozen.update(0.1f, world);
+    CHECK(sprite(frozen.bodyEffectSprite)->visible);
+    for (int i = 0; i < 20; i++) {
+        frozen.update(0.05f, world);
+    }
+    CHECK(!sprite(frozen.bodyEffectSprite)->visible);
+
+    // Order matters: clear the active player before the stack objects die so
+    // the world never points at a destroyed player.
+    world.setActivePlayer(nullptr);
+}
+
+TEST(obstacle_door_sprite_anchor) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    Obstacle o;
+    o.active = true;
+    o.__id = 9;
+    ObjectData data;
+    data.type = "lab_door_01";
+    data.pos = Vec2(10.0f, 10.0f);
+    data.isDoor = true;
+    o.m_updateData(data, true, true, world);
+    o.update(0.016f, world);
+    o.render(world, 0);
+    const MapObjectDef* def = getDefProvider()->mapObject("lab_door_01");
+    CHECK(def != nullptr);
+    if (!def) {
+        return;
+    }
+    CHECK(sprite(o.sprite) != nullptr);
+    if (!sprite(o.sprite)) {
+        return;
+    }
+    // obstacle.ts: the sprite anchor is 0.5, or def.door.spriteAnchor for doors.
+    // The anchor is stored on the Obstacle and applied to the sprite (which the
+    // adapter anchors before applying the rest of the transform).
+    CHECK_NEAR(o.debugAnchor().x, def->doorSpriteAnchor.x, 1e-4f);
+    CHECK_NEAR(sprite(o.sprite)->ax, def->doorSpriteAnchor.x, 1e-4f);
+    CHECK_NEAR(sprite(o.sprite)->ax, 0.5f, 1e-4f);
+    CHECK_NEAR(o.debugAnchor().x, 0.5f, 1e-4f);
+    (void)def;
+
+    // A custom anchor is honoured (def.door.spriteAnchor is 0.5 for shipped
+    // doors, so use a fake def to exercise the non-default path).
+    FakeDefProvider provider;
+    provider.def.type = "custom_door";
+    provider.def.isDoor = true;
+    provider.def.img.sprite = "lab_door_01.img";
+    provider.def.doorSpriteAnchor = Vec2(0.25f, 0.75f);
+    provider.def.img.zIdx = 15;
+    provider.def.map.display = true;
+    provider.def.hasCollision = true;
+    provider.def.collision = Collider::createAabb(Vec2(-1.0f, -1.0f), Vec2(1.0f, 1.0f));
+    provider.def.hasBounding = true;
+    provider.def.boundingCollider = Collider::createAabb(Vec2(-1.0f, -1.0f), Vec2(1.0f, 1.0f));
+    setDefProvider(&provider);
+    Obstacle custom;
+    custom.active = true;
+    custom.__id = 10;
+    ObjectData cdata;
+    cdata.type = "custom_door";
+    cdata.pos = Vec2(10.0f, 10.0f);
+    cdata.isDoor = true;
+    custom.m_init();
+    custom.m_updateData(cdata, true, true, world);
+    custom.update(0.016f, world);
+    custom.render(world, 0);
+    // The custom anchor (0.25, 0.75) must reach the sprite; read it back from
+    // the Obstacle's cached value and the sprite node.
+    CHECK_EQ(custom.isDoor, true);
+    CHECK_EQ(custom.type, std::string("custom_door"));
+    CHECK_NEAR(custom.debugAnchor().x, 0.25f, 1e-4f);
+    CHECK_NEAR(custom.debugAnchor().y, 0.75f, 1e-4f);
+    CHECK_NEAR(sprite(custom.sprite) != nullptr ? sprite(custom.sprite)->ax : -1.0f, 0.25f,
+               1e-4f);
+    CHECK_NEAR(sprite(custom.sprite) != nullptr ? sprite(custom.sprite)->ay : -1.0f, 0.75f,
+               1e-4f);
+    (void)def;
+    installGeneratedDefs();
+}

@@ -83,9 +83,14 @@ void Obstacle::m_init() {
     doorSeq = 0;
     buttonOnOff = false;
     buttonSeq = 0;
-    dead = false;
+    buttonCanUse = false;
+    isButton = false;
+    isDoor = false;
+    layer = 0;
+    isSkin = false;
     exploded = false;
     isNew = false;
+    dead = false;
     rot = 0.0f;
     imgRot = Vec2(0.0f, 0.0f);
     imgDirty = true;
@@ -96,8 +101,9 @@ void Obstacle::m_init() {
     casingEnabled = false;
     posInterpTicker = 0.0f;
     posInterpOld = Vec2(0.0f, 0.0f);
+    _anchor = Vec2(0.5f, 0.5f);
+    _anchorApplied = false;
     _firstUpdate = true;
-    _anchorInit = false;
     if (smokeEmitter) {
         smokeEmitter->stop();
         smokeEmitter = nullptr;
@@ -133,6 +139,7 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
         }
         dead = data.dead;
         isSkin = data.isSkin;
+        isDoor = data.isDoor;
         if (isSkin) {
             skinPlayerId = data.skinPlayerId;
         }
@@ -251,10 +258,12 @@ void Obstacle::applyFrame(bool hasImage) {
     if (!sprite) {
         return;
     }
-    if (!_anchorInit) {
-        sprite->setAnchor(0.5f, 0.5f);
-        _anchorInit = true;
-    }
+    // obstacle.ts: anchor 0.5 normally, or def.door.spriteAnchor for doors.
+    // The anchor is applied unconditionally (the node is a menu-less sprite;
+    // re-applying the same value is cheap and keeps pool reuse correct).
+    const Vec2 anchor = (def && isDoor) ? def->doorSpriteAnchor : Vec2(0.5f, 0.5f);
+    _anchor = anchor;
+    sprite->setAnchor(anchor.x, anchor.y);
     if (hasImage) {
         sprite->setFrame(frame);
     }
@@ -338,8 +347,16 @@ void Obstacle::render(Ctx& ctx, int activeLayer) {
 
     if (!sprite) {
         sprite = ctx.factory()->createSprite();
-        _anchorInit = true;
-        sprite->setAnchor(0.5f, 0.5f);
+    }
+    // obstacle.ts m_updateData: anchor 0.5, or def.door.spriteAnchor for doors.
+    // Bake it into the sprite before rendering the current frame.
+    const Vec2 obstacleAnchor = (def && isDoor) ? def->doorSpriteAnchor : Vec2(0.5f, 0.5f);
+    if (!_anchorApplied || obstacleAnchor.x != _anchor.x || obstacleAnchor.y != _anchor.y) {
+        _anchor = obstacleAnchor;
+        _anchorApplied = true;
+        if (sprite) {
+            sprite->setAnchor(_anchor.x, _anchor.y);
+        }
     }
     if (imgDirty) {
         applyFrame(!frame.empty() && frame != "none");
@@ -362,8 +379,9 @@ void Obstacle::render(Ctx& ctx, int activeLayer) {
 
     const Vec2 screenPos = ctx.camera().m_pointToScreen(renderPos);
     const float screenScale = ctx.camera().m_pixels(scale * imgScale);
-    // obstacle.ts renders the sprite directly at the object screen position
-    // with anchor 0.5 (def.door.spriteAnchor is 0.5 for every shipped door).
+    // obstacle.ts renders the sprite directly at the object screen position;
+    // the sprite's own anchor (0.5 or the door's def.door.spriteAnchor) is the
+    // pivot, applied by applyFrame.
     sprite->setPosition(screenPos.x, screenPos.y);
     float sx = screenScale;
     float sy = screenScale;

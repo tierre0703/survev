@@ -67,6 +67,21 @@ public:
     void m_render(const Camera& camera);
     void update(float dt, GameWorld& ctx);
 
+    // Ground surface classes (player submerge/tint + game logic). Port of
+    // map.ts getGroundSurface.
+    enum class SurfaceType { Water, Sand, Grass };
+    struct GroundSurface {
+        SurfaceType type = SurfaceType::Water;
+        uint32_t waterColor = 0;
+        uint32_t rippleColor = 0;
+    };
+
+    // map.ts getGroundSurface(pos, layer).
+    GroundSurface getGroundSurface(const Vec2& pos, int layer) const;
+    // map.ts isInOcean / distanceToShore.
+    bool isInOcean(const Vec2& pos) const;
+    float distanceToShore(const Vec2& pos) const;
+
     Building* getBuildingById(uint16_t id);
     bool insideStructureStairs(const Collider& c) const;
     bool insideStructureMask(const Collider& c) const;

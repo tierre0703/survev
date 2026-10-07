@@ -45,6 +45,10 @@ public:
     virtual void setScale(float x, float y) = 0;
     virtual void setRotation(float rad) = 0; // radians, like PIXI
     virtual void setAnchor(float x, float y) = 0;
+    virtual float getAnchorX() const = 0;
+    virtual float getAnchorY() const = 0;
+    virtual float getAlpha() const = 0;
+    virtual bool isVisible() const = 0;
     virtual void setAlpha(float alpha) = 0;
     virtual void setVisible(bool visible) = 0;
     virtual void setTint(uint color) = 0;

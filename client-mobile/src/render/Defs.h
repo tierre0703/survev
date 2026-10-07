@@ -112,6 +112,8 @@ struct MapObjectDef {
     float doorCasingScale = 1.0f;
     uint32_t doorCasingTint = 0xffffff;
     float doorCasingAlpha = 1.0f;
+    // obstacle.ts door.spriteAnchor (image pivot; 0.5 for every shipped door).
+    Vec2 doorSpriteAnchor{0.5f, 0.5f};
 
     std::vector<MapShapeDef> mapShapes;
 
@@ -224,6 +226,11 @@ struct GameObjRenderDef {
     float recoil = 0.0f;
     std::string idlePose = "fists";
     std::vector<std::string> attackAnims, deployAnims, idleAnims;
+    // player.ts action aura (heal/boost defs) and frozen patch sprites.
+    std::string auraSprite;
+    uint32_t auraTint = 0xff00ff;
+    bool hasAura = false;
+    std::vector<std::string> frozenSprites;
 };
 
 // A [min,max] range or a constant (both stored as min==max for constants).

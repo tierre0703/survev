@@ -236,7 +236,10 @@ for (let i = 0; i < mapTypes.length; i++) {
     )},${n(def.door?.casingImg?.pos?.y, 0)},${n(def.door?.casingImg?.scale, 1)},${n(
         def.door?.casingImg?.tint,
         0xffffff,
-    )},${n(def.door?.casingImg?.alpha, 1)},${
+    )},${n(def.door?.casingImg?.alpha, 1)},${n(def.door?.spriteAnchor?.x, 0.5)},${n(
+        def.door?.spriteAnchor?.y,
+        0.5,
+    )},${
         map && map.display === false ? 0 : 1
     },${map && map.color !== undefined ? 1 : 0},${n(map?.color, 0)},${n(map?.scale, 1)},${colInit(
         bounds,
@@ -317,8 +320,8 @@ for (const type of gameTypes) {
     }
     if (!def) continue;
     const img = def.lootImg || def.img || null;
-    gameEntries += `    {${str(type)},${str(def.type || "")},${imgInit(img)},${img?.sprite ? 1 : 0},${str(def.emitter || "")}},\n`;
-    if (!def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack") continue;
+    gameEntries += `    {${str(type)},${str(def.type || "")},${imgInit(img)},${img?.sprite ? 1 : 0},${str(def.emitter || "")},${str(def.aura?.sprite)},${n(def.aura?.tint, 0xff00ff)},${def.aura !== undefined ? 1 : 0}},\n`;
+    if (!def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack" && !def.frozenSprites) continue;
     let idlePose = def.anim?.idlePose || "fists";
     if (def.type === "gun") idlePose = def.pistol ? (def.isDual ? "dualPistol" : "pistol")
         : def.isBullpup ? "bullpup" : def.isLauncher ? "launcher" : def.isMinigun ? "minigun"
@@ -335,6 +338,7 @@ for (const type of gameTypes) {
         d.attackAnims={${(def.anim?.attackAnims || []).map(str).join(",")}};
         d.deployAnims={${(def.anim?.deployAnims || []).map(str).join(",")}};
         d.idleAnims={${(def.anim?.idleAnims || []).map(str).join(",")}};
+        d.frozenSprites={${(def.frozenSprites || []).map(str).join(",")}};
         ${["equip", "cook", "throwing"].flatMap((state, i) => ["left", "right"].map((side, j) =>
             heldAssignments(def.handImg?.[state]?.[side], `d.handImgs[${i}][${j}]`))).join("\n")}
         }\n`;
@@ -522,6 +526,7 @@ struct RawMapObj {
     int isDoor, isButton, isTree, isWall; int randomRotation, hasExplosion; const char* explosionParticle;
     float doorSlideOffset;
     const char* doorCasingSprite; float doorCasingPx, doorCasingPy, doorCasingScale; unsigned doorCasingTint; float doorCasingAlpha;
+    float doorSpriteAnchorX, doorSpriteAnchorY;
     int mapDisplay, mapHasColor; unsigned mapColor; float mapScale;
     RawCollider bounding; int hasBounding;
     const RawLayer* layers; int layerCount;
@@ -543,7 +548,7 @@ struct RawMapRender {
     const char* const* atlases; int atlasCount;
     const char* ambMusic; const char* ambWind; const char* ambRiver; const char* ambWaves;
 };
-struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; };
+struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -630,6 +635,7 @@ public:
             d.doorCasingScale = r.doorCasingScale;
             d.doorCasingTint = r.doorCasingTint;
             d.doorCasingAlpha = r.doorCasingAlpha;
+            d.doorSpriteAnchor = Vec2(r.doorSpriteAnchorX, r.doorSpriteAnchorY);
             d.map.display = r.mapDisplay != 0;
             d.map.hasColor = r.mapHasColor != 0;
             d.map.color = r.mapColor;
@@ -717,6 +723,9 @@ public:
             d.img = toImg(r.img);
             d.hasImg = r.hasImg != 0;
             d.emitter = r.emitter ? r.emitter : "";
+            d.auraSprite = r.auraSprite ? r.auraSprite : "";
+            d.auraTint = r.auraTint;
+            d.hasAura = r.hasAura != 0;
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}

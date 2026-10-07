@@ -65,6 +65,20 @@ void Player::m_init() {
     hasteType = HasteType_None;
     hasteSeq = -1;
     healEmitter = hasteEmitter = nullptr;
+    auraVisible = false;
+    paramsCached = false;
+    cachedActionType = -1;
+    cachedActionItem.clear();
+    auraSprite.clear();
+    auraTint = 0xff00ff;
+    auraRadius = 0.0f;
+    auraViewFade = 0.0f;
+    auraPulseTicker = 0.0f;
+    auraPulseDir = 1.0f;
+    updateFrozenImage = true;
+    frozenTicker = 0.0f;
+    frozenActive = false;
+    submersion = 0.0f;
 }
 
 void Player::m_free() {
@@ -72,6 +86,7 @@ void Player::m_free() {
     if (healEmitter) healEmitter->stop();
     if (hasteEmitter) hasteEmitter->stop();
     healEmitter = hasteEmitter = nullptr;
+    auraVisible = false;
 }
 
 void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) {
@@ -98,6 +113,32 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
     hasteSeq = data.hasteSeq;
     perks = data.perks;
     animType = data.animType;
+    actionType = data.actionType;
+    actionItem = data.actionItem;
+    frozen = data.frozen;
+    frozenActive = data.frozen;
+    frozenOri = data.frozenOri;
+    frozenType = data.frozenType;
+    // player.ts updateFrozenState: refresh the patch image when it (re)froze.
+    if (!frozen) {
+        updateFrozenImage = true;
+    } else if (frozen && updateFrozenImage && !frozenType.empty()) {
+        const GameObjRenderDef* frozenDef = item(frozenType);
+        if (frozenDef && !frozenDef->frozenSprites.empty()) {
+            const std::string& spriteName =
+                frozenDef->frozenSprites[std::rand() % frozenDef->frozenSprites.size()];
+            if (bodyEffectSprite) {
+                bodyEffectSprite->setFrame(spriteName);
+                bodyEffectSprite->setRotation(
+                    math::oriToRad(frozenOri) + pi * 0.5f +
+                    ((static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) - 0.5f) *
+                        pi * 0.25f);
+                bodyEffectSprite->setTint(0xffffff);
+                bodyEffectSprite->setScale(0.25f, 0.25f);
+            }
+        }
+        updateFrozenImage = false;
+    }
     visualsDirty = true;
 
     if (!container) {
@@ -136,6 +177,20 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
             objectSprites[i] = sprite(boneContainers[i]);
         }
         meleeSprite = sprite(boneContainers[1]);
+        // player.ts: a frozen/body-effect sprite, a submerge body sprite (with
+        // its own limb sprites) and the aura container + circle.
+        bodyEffectSprite = sprite(bodyContainer);
+        bodySubmergeSprite = sprite(bodyContainer);
+        for (int i = 0; i < 4; ++i) {
+            submergeLimbs[i] = sprite(boneContainers[i]);
+            submergeLimbs[i]->setVisible(false);
+        }
+        bodySubmergeSprite->setVisible(false);
+        bodyEffectSprite->setVisible(false);
+        auraContainer = factory->createContainer();
+        auraCircle = sprite(auraContainer);
+        auraCircle->setScale(0.125f, 0.125f);
+        auraContainer->setVisible(false);
         nameText = factory->createText();
         nameText->setAnchor(0.5f, -1.0f);
         nameText->setScale(0.5f, 0.5f);
@@ -143,6 +198,7 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
         container->addChild(nameText);
     }
     if (isNew || data.animSeq != animSeq) playAnim(data.animType, data.animSeq);
+    updateActions(data.actionType, data.actionItem);
 }
 
 void Player::playAnim(int type, int seq) {
@@ -354,6 +410,23 @@ void Player::update(float dt, Ctx& ctx) {
     renderZLayer = renderLayer;
     renderZOrd = zOrd;
     renderZIdx = zIdx;
+
+    // player.ts: the aura is added under the player container and has special
+    // layer visibility rules (it does not clip well with the bunker mask).
+    if (ap) {
+        const bool auraLayerMatch = ((ap->layer & 2) != 0) || ((ap->layer & 1) == 1) ||
+                                    ((layer & 1) == 0);
+        auraVisible = !dead && auraLayerMatch;
+    } else {
+        auraVisible = false;
+    }
+    if (auraContainer) {
+        ctx.renderer().addPIXIObj(auraContainer, renderLayer, zOrd - 1, zIdx);
+        auraContainer->setPosition(screenPos.x, screenPos.y);
+        auraContainer->setScale(screenScale, screenScale);
+        auraContainer->setVisible(auraVisible && auraCircle && auraCircle->getSortOrd() >= 0);
+    }
+
     ctx.renderer().addPIXIObj(container, renderLayer, zOrd, zIdx);
     auto emitter = [&](Emitter*& e, bool enabled, const char* type) {
         if (enabled && !dead && !e) {
@@ -368,6 +441,129 @@ void Player::update(float dt, Ctx& ctx) {
     const char* hasteTypes[] = {"", "windwalk", "takedown", "inspire"};
     const int haste = std::clamp(hasteType, 0, 3);
     emitter(hasteEmitter, haste != 0, hasteTypes[haste]);
+    updateSubmersion(dt, ctx);
+    updateFrozenState(dt, ctx);
+    updateAura(dt, ctx, ap == this);
     if (finished) playAnim(Anim_None, animSeq);
+}
+
+// playAnim for a cached action item (player.ts selectAnim). The C++ port does
+// not receive Action/item for every player, so the aura caller passes them in.
+void Player::updateActions(int actionType, const std::string& actionItem) {
+    if (paramsCached && cachedActionType == actionType && cachedActionItem == actionItem) {
+        return;
+    }
+    paramsCached = true;
+    cachedActionType = actionType;
+    cachedActionItem = actionItem;
+}
+
+void Player::updateAura(float dt, Ctx& ctx, bool isActivePlayer) {
+    if (!auraContainer) {
+        return;
+    }
+    // player.ts role visuals: only the active player's use-item/revive action
+    // (with aoe_heal / self-revive) shows the aura.
+    bool hasPerkAoe = std::any_of(perks.begin(), perks.end(),
+                                  [](const auto& p) { return p.type == "aoe_heal"; });
+    const int action = cachedActionType;
+    const bool auraAction = action == Action_UseItem || action == Action_Revive;
+    if (!auraAction || dead || (!hasPerkAoe)) {
+        auraPulseTicker = 0.0f;
+        auraPulseDir = 1.0f;
+        if (auraCircle) {
+            auraCircle->setVisible(false);
+            auraCircle->setSortKey(-1, -1);
+        }
+        return;
+    }
+    const GameObjRenderDef* actionItemDef =
+        cachedActionItem.empty() ? nullptr : item(cachedActionItem);
+    if (actionItemDef) {
+        auraSprite = actionItemDef->auraSprite.empty() ? "part-aura-circle-01.img"
+                                                       : actionItemDef->auraSprite;
+        auraTint = actionItemDef->auraSprite.empty() ? 0xff00ff : actionItemDef->auraTint;
+        auraRadius = PlayerConfig::medicHealRange;
+    } else {
+        auraSprite = "part-aura-circle-01.img";
+        auraTint = 0xff00ff;
+        auraRadius = PlayerConfig::medicReviveRange;
+    }
+    auraRadius *= 0.125f;
+    auraCircle->setFrame(auraSprite);
+    auraCircle->setScale(auraRadius, auraRadius);
+    auraCircle->setTint(auraTint);
+    auraCircle->setVisible(true);
+    auraCircle->setSortKey(0, 0);
+
+    // player.ts updateAura: fade at the active player's view edge, pulse scale.
+    bool inView = true;
+    if (!isActivePlayer) {
+        const Player* ap = ctx.activePlayer();
+        if (ap && ap->viewHalfWidth > 0.0f) {
+            const Vec2 min = v2Sub(ap->pos, Vec2(ap->viewHalfWidth, ap->viewHalfHeight));
+            const Vec2 max = v2Add(ap->pos, Vec2(ap->viewHalfWidth, ap->viewHalfHeight));
+            inView = intersectAabbCircle(min, max, pos, 1.0f);
+        }
+    }
+    auraViewFade = math::lerp(dt * 6.0f, auraViewFade, inView ? 1.0f : 0.0f);
+    auraPulseTicker = math::clamp(auraPulseTicker + dt * auraPulseDir * 1.5f, 0.0f, 1.0f);
+    const float pulseAlpha = math::easeOutExpo(auraPulseTicker) * 0.75f + 0.25f;
+    if (auraPulseTicker >= 1.0f || auraPulseTicker <= 0.0f) {
+        auraPulseDir *= -1.0f;
+    }
+    auraCircle->setAlpha(pulseAlpha * auraViewFade);
+}
+
+void Player::updateSubmersion(float dt, Ctx& ctx) {
+    if (!bodySubmergeSprite) {
+        return;
+    }
+    const Map::GroundSurface surface = ctx.map().getGroundSurface(pos, layer);
+    const bool inWater = surface.type == Map::SurfaceType::Water;
+    float submersionAmount = 0.0f;
+    if (inWater) {
+        const float dist = ctx.map().distanceToShore(pos);
+        submersionAmount = math::remap(dist, 0.0f, 16.0f, 0.6f, 1.0f);
+    }
+    submersion = math::lerp(dt * 4.0f, submersion, submersionAmount);
+    const float submersionAlpha = submersion * 0.8f;
+    const float submersionScale = (0.9f - submersion * 0.4f) * 2.0f;
+    bodySubmergeSprite->setFrame("player-wading-01.img");
+    bodySubmergeSprite->setScale(submersionScale, submersionScale);
+    bodySubmergeSprite->setAlpha(submersionAlpha);
+    bodySubmergeSprite->setVisible(submersionAlpha > 0.001f);
+    if (inWater) {
+        bodySubmergeSprite->setTint(surface.waterColor);
+    }
+    for (auto* limb : submergeLimbs) {
+        if (!limb) {
+            continue;
+        }
+        const float alpha = downed ? submersionAlpha : 0.0f;
+        limb->setAlpha(alpha);
+        limb->setVisible(alpha > 0.001f);
+        if (inWater) {
+            limb->setTint(surface.waterColor);
+        }
+    }
+}
+
+void Player::updateFrozenState(float dt, Ctx& ctx) {
+    (void)ctx;
+    if (!bodyEffectSprite) {
+        return;
+    }
+    const float fadeDuration = 0.25f;
+    if (frozenActive) {
+        frozenTicker = fadeDuration;
+    } else {
+        frozenTicker -= dt;
+        updateFrozenImage = true;
+    }
+    bodyEffectSprite->setAlpha(frozenActive
+                                   ? 1.0f
+                                   : math::remap(frozenTicker, 0.0f, fadeDuration, 0.0f, 1.0f));
+    bodyEffectSprite->setVisible(frozenTicker > 0.0f);
 }
 } // namespace surv
