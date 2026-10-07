@@ -79,9 +79,11 @@ public:
     void m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) override;
     void update(float dt, Ctx& ctx);
     void render(Ctx& ctx, int activeLayer);
+    void applyFrame(bool hasImage);
 
 private:
     bool _firstUpdate = true;
+    bool _anchorInit = false;
 };
 
 // --- building.ts -----------------------------------------------------------

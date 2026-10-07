@@ -89,6 +89,11 @@ void Obstacle::m_init() {
     rot = 0.0f;
     imgRot = 0.0f;
     _firstUpdate = true;
+    _anchorInit = false;
+    if (smokeEmitter) {
+        smokeEmitter->stop();
+        smokeEmitter = nullptr;
+    }
 }
 
 void Obstacle::m_free() {
@@ -186,59 +191,31 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
 
     std::string currentImg = data.dead ? (def ? def->img.residue : "") : (def ? def->img.sprite : "");
     if (currentImg != frame) {
-        // obstacle.ts anchors doors with door.spriteAnchor; other sprites 0.5.
-        sprite->setAnchor(0.5f, 0.5f);
-        if (!currentImg.empty() && currentImg != "none") {
-            sprite->setFrame(currentImg);
-        }
-        sprite->setVisible(!currentImg.empty() && currentImg != "none");
         frame = currentImg;
-        if (def) {
-            sprite->setTint(def->img.tint);
-        }
+        applyFrame(!currentImg.empty() && currentImg != "none");
+    }
+}
+
+void Obstacle::applyFrame(bool hasImage) {
+    if (!sprite) {
+        return;
+    }
+    if (!_anchorInit) {
+        sprite->setAnchor(0.5f, 0.5f);
+        _anchorInit = true;
+    }
+    if (hasImage) {
+        sprite->setFrame(frame);
+    }
+    sprite->setVisible(hasImage);
+    const MapObjectDef* def = mapDefFor(type);
+    if (def) {
+        sprite->setTint(def->img.tint);
     }
 }
 
 void Obstacle::update(float dt, Ctx& ctx) {
-    if (!sprite) {
-        return;
-    }
     const MapObjectDef* def = mapDefFor(type);
-    if (def && def->hasExplosion) {
-        // Only barrels show the health smoke; once dead the emitter stops.
-        if (dead && smokeEmitter) {
-            smokeEmitter->stop();
-            smokeEmitter = nullptr;
-        }
-    }
-
-    if (doorHasInterp) {
-        const float moveSpd = 15.0f * scale;
-        const Vec2 posDiff = v2Sub(pos, doorInterpPos);
-        const float diffLen = v2Length(posDiff);
-        float posMove = moveSpd * dt;
-        if (diffLen < posMove) posMove = diffLen;
-        const Vec2 moveDir = diffLen > 0.0001f ? v2Div(posDiff, diffLen) : Vec2(1.0f, 0.0f);
-        doorInterpPos = v2Add(doorInterpPos, v2Mul(moveDir, posMove));
-        const float rotSpd = pi * 15.0f * scale;
-        const float angDiff = math::angleDiff(doorInterpRot, rot);
-        float angMove = math::sign(angDiff) * rotSpd * dt;
-        if (std::fabs(angDiff) < std::fabs(angMove)) angMove = angDiff;
-        doorInterpRot += angMove;
-    }
-
-    if (smokeEmitter) {
-        smokeEmitter->pos = pos;
-        smokeEmitter->enabled = !dead && healthT < 0.5f;
-    }
-
-    if (def && def->hasExplosion) {
-        // Only barrels show the health smoke; once dead the emitter stops.
-        if (dead && smokeEmitter) {
-            smokeEmitter->stop();
-            smokeEmitter = nullptr;
-        }
-    }
 
     const bool explodedNow = dead && !exploded;
     if (explodedNow) {
@@ -284,7 +261,14 @@ void Obstacle::update(float dt, Ctx& ctx) {
 }
 
 void Obstacle::render(Ctx& ctx, int activeLayer) {
-    if (!sprite) return;
+    if (!sprite) {
+        sprite = ctx.factory()->createSprite();
+        applyFrame(!frame.empty() && frame != "none");
+    }
+    if (!_anchorInit) {
+        sprite->setAnchor(0.5f, 0.5f);
+        _anchorInit = true;
+    }
 
     const Vec2 renderPos = doorHasInterp ? doorInterpPos : pos;
     const float renderRot = doorHasInterp ? doorInterpRot : rot;

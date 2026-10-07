@@ -302,3 +302,80 @@ node tools/build-atlas.mjs --res low                                # sprite atl
   frozen/team-patch overlays and animation-triggered collision/audio effects)
   is not part of this skeletal render port. Gear/animation variants are covered
   by host tests; not every variant has been exercised on-device.
+
+## 8. Session 3 — object-render parity pass (2026-10-07, later)
+
+A fresh on-device check of the §7 build showed the world rendering **terrain
+and trees only**: buildings, loot and most obstacles were missing and every
+obstacle sprite that did draw was oversized. Comparing the ported barns against
+the web client found the following gaps; they are now fixed.
+
+### Fixed in this session
+
+- **`Obstacle` was drawing the sprite directly, without the `container` the web
+  client uses.** `obstacle.ts` puts the sprite in a `container`, creates it with
+  `PIXI.Sprite()` (i.e. **anchor 0,0** until `m_updateData` sets
+  `sprite.anchor = 0.5`), gives the sprite an inner scale of `0.8`, and adds
+  `-0.5 * width * scale` to the container position. The native port walked the
+  sprite at anchor 0.5 and camera scale, so loose obstacles drew at **1/0.8 =
+  25 % too large** and the wrong origin. We now bake the container semantics
+  into the sprite: `scale = 0.8 * camera.m_pixels(scale * imgScale)`.
+- **`Obstacle` sprite was created in `m_updateData` before `isNew` was reached**
+  and de-referenced `sprite->` even when `m_getPool()` handed back a recycled
+  instance. The sprite is now created lazily on first `render()`, the frame is
+  stored in `Obstacle::frame`, and `applyFrame()` sets anchor/image/visibility
+  only once the node exists. This was the cause of the **release-only SIGSEGV**
+  (`Obstacle::m_updateData` pc `+1525`) observed when the first barrel/obstacle
+  arrived.
+- **`deadObstacleIds` / `deadCeilingIds` / `solvedPuzzleIds` / `lootDropSfxIds`**
+  now live on `Map` (`Map.h`), matching `client/src/map.ts`. Obstacles push to
+  `deadObstacleIds` on death and clear the entry on respawn; buildings track
+  `deadCeilingIds`/`solvedPuzzleIds`; loot suppresses replayed drop SFX. This
+  stops join-time destroy/drop effects from firing for objects that were already
+  gone before the client connected.
+- **`Obstacle` now ports the rest of `obstacle.ts`**: `randomRotation`
+  (`imgRot = deg2rad(__id % 360)`), `imgMirrorX/Y`, the `dead ? 5 : img.zIdx`
+  z-order, the `zOrd >= 50 && layer 0` tree/stairs bump, door position/rotation
+  interpolation (`pos`/`rot` towards the network target at `15 * scale`), the
+  barrel health-smoke emitter (`smoke_barrel`, enabled while `healthT < 0.5`),
+  the destroy particle spray, and the `img.residue` swap when destroyed. The
+  def provider (`Defs.h` + `codegen_render_defs.mjs` → `GeneratedDefs.cpp`) now
+  carries `randomRotation`, `hasExplosion`/`explosionParticle` and
+  `doorSlideOffset`.
+- **`Loot` now renders like `loot.ts`**: `zOrd 13` (was 10), the container is
+  scaled by `camera.m_pixels(imgScale * easeOutElastic(delerp(ticker,0,1),0.75))`
+  for the pop-in, `lootRadius`-derived interaction radius, and the sprite inner
+  scale of 0.8.
+- **Camera interpolation interval** is now measured (`GameWorld::applyUpdate`
+  records the wall-clock spacing between `UpdateMsg`s into
+  `camera.m_interpInterval`); loot uses it for position interpolation.
+- **`Gas` overlay ported** (`src/game/Gas.{h,cpp}`): the screen-covering quad
+  with a 512-segment circular hole, scaled by the interpolated safe radius, and
+  the `getCircle`/`setProgress`/`setFullState` interpolation from `gas.ts`. It
+  renders above the world layers in `GameWorld::attachTo`.
+
+### Still open (carried over)
+
+- **T4**: the skeletal pose/outfit render in `PlayerRender.cpp` remains the
+  base + hands/feet + gear subset. Full `animData` bone/pose fidelity, and the
+  browser-only player presentation (aura UI, submerge, frozen/team patches,
+  animation-triggered collision/audio), are unchanged from §7.
+- **T5**: the water island uses the canvas overpaint fallback on native; the
+  destructive `AxGraphics` tessellation path (real polygon holes) is only used
+  for rect masks.
+- **No new host tests were added this session.** The object-render changes are
+  verified on-device only; `surv_tests` stayed at the existing suite.
+
+### Verification (this session)
+
+- `surv_tests`: **60 tests, 1430 assertions, 0 failures** (unchanged count —
+  the new code paths are exercised on-device instead).
+- x86_64 `libSurvevMobile.so` builds and links clean; `build-apk.ps1` packages
+  and signs the APK; installs on the x86_64 emulator.
+- The release-only SIGSEGV in `Obstacle::m_updateData` that a **debug** build
+  masked (`addChild` assertion) is fixed. The app now connects, loads the three
+  atlases, and renders for a continuous capture with an empty `logcat -b crash`.
+- Screenshots show the **beach biome** (sand/water), palm trees, pecans, logs,
+  iron-skull obstacles and `saloon`/door sprites, confirming obstacles/sprites
+  now render at the correct size and origin.
+
