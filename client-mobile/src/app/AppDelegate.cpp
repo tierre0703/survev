@@ -1,6 +1,9 @@
 #include "AppDelegate.h"
 #include "GameScene.h"
+#include "MenuScene.h"
+#include "../net/Api.h"
 #include "../net/Net.h"
+#include "../ui/UiOverlay.h"
 
 using namespace ax;
 
@@ -42,24 +45,82 @@ bool AppDelegate::applicationDidFinishLaunching() {
         designResolutionSize.height,
         ResolutionPolicy::NO_BORDER);
 
-    auto scene = surv::GameScene::createScene();
-    director->runWithScene(scene);
+    // M7: the menu and the game are sibling scenes; the menu drives matchmaking
+    // and switches which one is running.
+    auto* menuScene = surv::MenuScene::createScene();
+    auto* gameScene = surv::GameScene::createScene();
+
+    if (menuScene && gameScene) {
+        auto* overlay = menuScene->overlay();
+        if (overlay) {
+            overlay->build(gameScene, const_cast<surv::ui::Config*>(&menuScene->config()),
+                           nullptr, gameScene->getTouch());
+            overlay->onQuit = [menuScene, gameScene] {
+                gameScene->leaveGame();
+                menuScene->onMatchEnded();
+            };
+        }
+        gameScene->setOverlay(overlay);
+
+        // The menu owns the find_game HTTP call; the scene only schedules it.
+        gameScene->setFindGameRequest(
+            [](const std::string& region, int gameModeIdx,
+               surv::GameScene::FindGameDone done) {
+                surv::FindGameBody body;
+                body.region = region;
+                body.version = surv::defs::kProtocolVersion;
+                body.playerCount = 1;
+                body.autoFill = true;
+                body.gameModeIdx = gameModeIdx;
+                const std::string apiUrl(
+                    ax::UserDefault::getInstance()->getStringForKey(
+                        surv::dev::kKeyApiUrl, surv::dev::kApiBaseUrl));
+                surv::findGame(apiUrl, body, [done](surv::FindGameResult result) {
+                    surv::GameScene::FindGameResultInfo info;
+                    info.ok = result.ok;
+                    info.urls = result.data.urls;
+                    info.joinToken = result.data.joinToken;
+                    info.error = result.error;
+                    if (done) {
+                        done(info);
+                    }
+                });
+            });
+
+        surv::MenuScene::GameHooks hooks;
+        hooks.scene = [gameScene] { return gameScene; };
+        hooks.joinInfo = [menuScene] { return menuScene->joinInfo(); };
+        hooks.onMatchStarted = [director, gameScene] { director->replaceScene(gameScene); };
+        hooks.onReturnToMenu = [director, menuScene] { director->replaceScene(menuScene); };
+        menuScene->setGameHooks(hooks);
+    }
+
+    director->runWithScene(menuScene ? static_cast<ax::Scene*>(menuScene)
+                                     : static_cast<ax::Scene*>(gameScene));
+    _menuScene = menuScene;
+    _gameScene = gameScene;
     return true;
 }
 
 void AppDelegate::applicationDidEnterBackground() {
     Director::getInstance()->stopAnimation();
     // Pause the game ticker + close the WebSocket gracefully (plan.md 5.8).
-    if (auto* scene = dynamic_cast<surv::GameScene*>(Director::getInstance()->getRunningScene())) {
-        scene->pauseGame();
+    if (_gameScene) {
+        _gameScene->pauseGame();
+    }
+    if (_menuScene) {
+        _menuScene->pauseMenu();
     }
 }
 
 void AppDelegate::applicationWillEnterForeground() {
     Director::getInstance()->startAnimation();
     // Resume the ticker; the game rejoins and re-syncs from the server snapshot.
-    if (auto* scene = dynamic_cast<surv::GameScene*>(Director::getInstance()->getRunningScene())) {
-        scene->resumeGame();
+    if (_gameScene) {
+        _gameScene->resumeGame();
+    }
+    if (_menuScene) {
+        _menuScene->resumeMenu();
     }
 }
 

@@ -90,6 +90,7 @@ public:
 
     // UI overlay (HUD + pause menu). Not owned by the scene.
     void setOverlay(ui::UiOverlay* overlay) { _overlay = overlay; }
+    surv::Touch* getTouch() { return _touch.get(); }
     // Player name + loadout used for the next join (mirrors main.ts
     // setConfigFromDOM + JoinMsg fields).
     void setJoinInfo(const Game::JoinInfo& info) { _joinInfo = info; }

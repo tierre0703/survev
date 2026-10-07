@@ -33,6 +33,19 @@ public:
     std::string value;
 };
 
+// Persistence through the engine's UserDefault (SharedPreferences on Android),
+// matching the web client's `localStorage["surviv_config"]`. Defined in
+// ConfigStorage.cpp so this header stays engine-free for the host tests.
+class UserDefaultConfigStorage : public ConfigStorage {
+public:
+    explicit UserDefaultConfigStorage(const std::string& key = "surviv_config");
+    std::string read() override;
+    void write(const std::string& json) override;
+
+private:
+    std::string _key;
+};
+
 // Serializes a JsonValue. Numbers that are whole are emitted without a decimal
 // point so the blob stays readable and stable.
 std::string jsonToString(const JsonValue& value);
