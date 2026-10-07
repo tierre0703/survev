@@ -59,15 +59,27 @@ public:
     bool isNew = false;
     bool dead = false;
     bool exploded = false;
+    bool imgDirty = true; // update m_updateData's currentImg slot, like `this.img`
     float rot = 0.0f;
-    float imgRot = 0.0f;
+    Vec2 imgRot;          // per-image rotation offset (orient/randomRotation)
     float imgScale = 1.0f;
+    float imgAlpha = 1.0f;
+    uint32_t imgTint = 0xffffff;
     bool imgMirrorX = false;
     bool imgMirrorY = false;
     int zOrd = 0;
+    int zIdx = 0;
+    bool casingEnabled = false;
+    Vec2 casingPosOffset;
+    float casingImgScale = 1.0f;
+    uint32_t casingTint = 0xffffff;
+    float casingAlpha = 1.0f;
     bool doorHasInterp = false;
     Vec2 doorInterpPos;
     float doorInterpRot = 0.0f;
+    Vec2 doorClosedPos;
+    Vec2 posInterpOld;
+    float posInterpTicker = 0.0f;
 
     pix::Sprite* sprite = nullptr;
     pix::Sprite* casingSprite = nullptr;
@@ -80,10 +92,14 @@ public:
     void update(float dt, Ctx& ctx);
     void render(Ctx& ctx, int activeLayer);
     void applyFrame(bool hasImage);
+    void applyColor();
+    int updateDistanceToStairs(Ctx& ctx) const;
 
 private:
     bool _firstUpdate = true;
     bool _anchorInit = false;
+    bool _visible = false;
+    int _mapValueAdjust = 1.0f;
 };
 
 // --- building.ts -----------------------------------------------------------
@@ -444,6 +460,10 @@ public:
     unsigned animMask = 0;
     bool visualsDirty = true;
     int throwableState = 0;
+    // Published render sort key (obstacle.ts player skins read these).
+    int renderZLayer = 0;
+    int renderZOrd = 18;
+    int renderZIdx = 0;
 
     pix::Container* container = nullptr;
     pix::Container* bodyContainer = nullptr;

@@ -47,7 +47,8 @@ void GasRenderer::m_free() {
     }
 }
 
-void GasRenderer::render(pix::Factory* factory, const Vec2& gasPos, float gasRad, bool isActive) {
+void GasRenderer::render(pix::Factory* factory, const Vec2& gasPos, float gasRad, bool isActive,
+                         float zoom) {
     (void)factory;
     if (!display) {
         return;
@@ -60,8 +61,12 @@ void GasRenderer::render(pix::Factory* factory, const Vec2& gasPos, float gasRad
         rad = 1.0f;
         center.x += kOverdraw * 0.5f;
     }
+    // The geometry is authored in world units (a 100000-unit quad), so it needs
+    // the camera world->screen scale. `rad` is already a screen-space radius
+    // (camera.m_scaleToScreen applied by Gas::m_render), so the hole stays in
+    // registers with the world while the quad still covers the viewport.
     display->setPosition(center.x, center.y);
-    display->setScale(rad, rad);
+    display->setScale(rad * zoom, rad * zoom);
     display->setVisible(isActive);
 }
 
@@ -156,7 +161,7 @@ void Gas::m_render(pix::Factory* factory, float dt, const Camera& camera) {
     const Circle circle = getCircle(interpT);
     const Vec2 pos = camera.m_pointToScreen(circle.pos);
     const float scale = camera.m_scaleToScreen(circle.rad);
-    gasRenderer.render(factory, pos, scale, isActive());
+    gasRenderer.render(factory, pos, scale, isActive(), camera.m_zoom);
 }
 
 } // namespace surv

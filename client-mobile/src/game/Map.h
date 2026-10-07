@@ -76,6 +76,7 @@ public:
 
 private:
     bool _canvasMode = false;
+    float _lastValueAdjust = 1.0f;
 };
 
 } // namespace surv

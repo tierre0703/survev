@@ -22,6 +22,7 @@ struct ImgDef {
     int zIdx = 0;
     bool mirrorX = false;
     bool mirrorY = false;
+    float ori = 0.0f; // obstacle.ts img.ori (degrees, folded into imgRot)
     std::string residue;
 };
 
@@ -105,6 +106,12 @@ struct MapObjectDef {
     std::string explosionParticle;
     // obstacle.ts door.slideOffset (used to compute the open door position).
     float doorSlideOffset = 0.0f;
+    // obstacle.ts def.door.casingImg (rendered behind/next to the door).
+    std::string doorCasingSprite;
+    Vec2 doorCasingPos;
+    float doorCasingScale = 1.0f;
+    uint32_t doorCasingTint = 0xffffff;
+    float doorCasingAlpha = 1.0f;
 
     std::vector<MapShapeDef> mapShapes;
 
@@ -191,6 +198,7 @@ struct PoseKeyframe {
     unsigned mask = 0;
     PlayerPose bones{};
     PoseEasing easing = PoseEasing::Linear;
+    unsigned noMask = 0; // bones missing from this frame that must not interpolate
 };
 struct PlayerAnimationDef {
     std::vector<PoseKeyframe> keyframes;

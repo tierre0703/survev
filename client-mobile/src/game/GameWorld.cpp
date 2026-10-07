@@ -222,6 +222,7 @@ void GameWorld::update(float dt) {
     if (!mapLoaded()) {
         return;
     }
+    _dt = dt;
     _map->update(dt, *this);
     _playerBarn->update(dt, *this);
     _lootBarn->update(dt, *this);

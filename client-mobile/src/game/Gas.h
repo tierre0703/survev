@@ -23,7 +23,7 @@ public:
 
     void m_init(pix::Factory* factory);
     void m_free();
-    void render(pix::Factory* factory, const Vec2& gasPos, float gasRad, bool active);
+    void render(pix::Factory* factory, const Vec2& gasPos, float gasRad, bool active, float zoom);
 };
 
 class GasSafeZoneRenderer {

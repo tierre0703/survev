@@ -87,7 +87,15 @@ void Obstacle::m_init() {
     exploded = false;
     isNew = false;
     rot = 0.0f;
-    imgRot = 0.0f;
+    imgRot = Vec2(0.0f, 0.0f);
+    imgDirty = true;
+    imgAlpha = 1.0f;
+    imgTint = 0xffffff;
+    zIdx = 0;
+    _visible = false;
+    casingEnabled = false;
+    posInterpTicker = 0.0f;
+    posInterpOld = Vec2(0.0f, 0.0f);
     _firstUpdate = true;
     _anchorInit = false;
     if (smokeEmitter) {
@@ -129,6 +137,13 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
             skinPlayerId = data.skinPlayerId;
         }
     }
+
+    // Skins interpolate between their previous and current position.
+    if (!v2Eq(data.pos, posInterpOld)) {
+        posInterpOld = isNew_ || first ? data.pos : pos;
+        posInterpTicker = 0.0f;
+    }
+
     pos = data.pos;
     rot = math::oriToRad(data.ori);
     scale = data.scale;
@@ -136,7 +151,6 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
         imgScale = def->img.scale;
         imgMirrorX = def->img.mirrorX;
         imgMirrorY = def->img.mirrorY;
-        zOrd = def->img.zIdx;
     }
 
     const bool newObj = isNew_ || first;
@@ -144,17 +158,32 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
         isNew = true;
         exploded = std::find(ctx.map().deadObstacleIds.begin(), ctx.map().deadObstacleIds.end(),
                               __id) != ctx.map().deadObstacleIds.end();
+        // obstacle.ts: imgRot holds the def's per-image rot, or a random
+        // rotation derived from the stable id.
+        imgRot = Vec2(0.0f, 0.0f);
+        if (def && !def->isDoor) {
+            imgRot.x = math::oriToRad(def->img.ori);
+        }
         if (def && def->randomRotation) {
             // Use the id (stable per obstacle) so the rotation doesn't change
             // as it is re-added to the screen.
-            imgRot = math::deg2rad(static_cast<float>(__id % 360));
-        } else {
-            imgRot = 0.0f;
+            imgRot.x += math::deg2rad(static_cast<float>(__id % 360));
         }
         if (data.isDoor) {
+            const float casingRot = rot + pi * 0.5f;
             doorHasInterp = true;
             doorInterpPos = data.pos;
             doorInterpRot = math::oriToRad(data.ori);
+            doorClosedPos = data.pos;
+            casingEnabled = def && !def->doorCasingSprite.empty();
+            if (casingEnabled) {
+                casingPosOffset = v2Rotate(def->doorCasingPos, casingRot);
+                casingImgScale = def->doorCasingScale;
+                casingTint = def->doorCasingTint;
+                casingAlpha = def->doorCasingAlpha;
+            }
+        } else {
+            doorHasInterp = false;
         }
     }
 
@@ -179,7 +208,8 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
     isPuzzlePiece = data.isPuzzlePiece;
     parentBuildingId = data.isPuzzlePiece ? data.parentBuildingId : 0;
 
-    // Health smoke emitter for explodable obstacles.
+    // Health smoke emitter for explodable obstacles (obstacle.ts uses a higher
+    // health threshold for player skins).
     if (def && def->hasExplosion && !smokeEmitter && data.healthT < 0.5f && !data.dead) {
         const Vec2 dir = v2Normalize(Vec2(1.0f, 1.0f));
         EmitterOptions opts;
@@ -189,14 +219,35 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
         smokeEmitter = ctx.particleBarn().addEmitter(ctx.factory(), "smoke_barrel", opts);
     }
 
+    // obstacle.ts `this.img`: only rebake when the sprite name changes.
     std::string currentImg = data.dead ? (def ? def->img.residue : "") : (def ? def->img.sprite : "");
     if (currentImg != frame) {
         frame = currentImg;
-        applyFrame(!currentImg.empty() && currentImg != "none");
+        imgDirty = true;
     }
 }
 
 void Obstacle::applyFrame(bool hasImage) {
+    imgDirty = false;
+    const MapObjectDef* def = mapDefFor(type);
+
+    float zOrd_ = def ? def->img.zIdx : 0;
+    int zIdx_ = static_cast<int>(std::floor(scale * 1000.0f)) * 65535 + __id;
+    float imgAlpha_ = dead ? 0.75f : (def ? def->img.alpha : 1.0f);
+    // Player skins tint by health (updateVisibility); other obstacles by the
+    // value-adjusted def tint (updateVisibility + map's biome valueAdjust).
+    uint32_t tint = def ? def->img.tint : 0xffffff;
+    const float valueAdjust = _mapValueAdjust;
+    if (isSkin) {
+        tint = adjustValue(0xff0000, math::clamp(healthT, 0.0f, 1.0f));
+    } else if (valueAdjust < 1.0f) {
+        tint = adjustValue(tint, valueAdjust);
+    }
+    imgAlpha = imgAlpha_;
+    zOrd = zOrd_;
+    zIdx = zIdx_;
+    imgTint = tint;
+
     if (!sprite) {
         return;
     }
@@ -208,14 +259,33 @@ void Obstacle::applyFrame(bool hasImage) {
         sprite->setFrame(frame);
     }
     sprite->setVisible(hasImage);
-    const MapObjectDef* def = mapDefFor(type);
-    if (def) {
-        sprite->setTint(def->img.tint);
+    if (hasImage) {
+        sprite->setTint(tint);
+        sprite->setAlpha(imgAlpha);
     }
+    _visible = hasImage;
+}
+
+void Obstacle::applyColor() {
+    if (!sprite || isSkin || !_visible) {
+        return;
+    }
+    const MapObjectDef* def = mapDefFor(type);
+    uint32_t tint = def ? def->img.tint : imgTint;
+    if (_mapValueAdjust < 1.0f) {
+        tint = adjustValue(tint, _mapValueAdjust);
+    }
+    imgTint = tint;
+    sprite->setTint(tint);
+    sprite->setAlpha(imgAlpha);
 }
 
 void Obstacle::update(float dt, Ctx& ctx) {
     const MapObjectDef* def = mapDefFor(type);
+    if (!def) {
+        return;
+    }
+    _mapValueAdjust = ctx.map().mapDef.valueAdjust;
 
     const bool explodedNow = dead && !exploded;
     if (explodedNow) {
@@ -243,9 +313,17 @@ void Obstacle::update(float dt, Ctx& ctx) {
     }
 
     if (smokeEmitter) {
+        const float smokeHealthT = isSkin ? 0.3f : 0.5f;
         smokeEmitter->pos = pos;
-        smokeEmitter->enabled = !dead && healthT < 0.5f;
+        smokeEmitter->enabled = !dead && healthT < smokeHealthT;
     }
+
+    isNew = false;
+}
+
+void Obstacle::render(Ctx& ctx, int activeLayer) {
+    const MapObjectDef* def = mapDefFor(type);
+    const bool explodedNow = dead && !exploded;
 
     if (dead && !explodedNow && def && def->hasExplosion && !isNew) {
         const Collider aabb = colliderToAabbDef(def->hasCollision ? def->collision : Collider{});
@@ -257,41 +335,87 @@ void Obstacle::update(float dt, Ctx& ctx) {
             ctx.particleBarn().addParticle(ctx.factory(), def->explosionParticle, layer, center, vel);
         }
     }
-    isNew = false;
-}
 
-void Obstacle::render(Ctx& ctx, int activeLayer) {
     if (!sprite) {
         sprite = ctx.factory()->createSprite();
+        _anchorInit = true;
+        sprite->setAnchor(0.5f, 0.5f);
+    }
+    if (imgDirty) {
         applyFrame(!frame.empty() && frame != "none");
     }
-    if (!_anchorInit) {
-        sprite->setAnchor(0.5f, 0.5f);
-        _anchorInit = true;
+    if (!_visible) {
+        isNew = false;
+        return;
     }
 
-    const Vec2 renderPos = doorHasInterp ? doorInterpPos : pos;
+    Vec2 renderPos = doorHasInterp ? doorInterpPos : pos;
     const float renderRot = doorHasInterp ? doorInterpRot : rot;
+
+    if (isSkin && ctx.camera().m_interpEnabled) {
+        posInterpTicker += ctx.dt();
+        const float posT = ctx.camera().m_interpInterval > 0.0f
+                               ? math::clamp(posInterpTicker / ctx.camera().m_interpInterval, 0.0f, 1.0f)
+                               : 1.0f;
+        renderPos = v2Lerp(posT, posInterpOld, pos);
+    }
 
     const Vec2 screenPos = ctx.camera().m_pointToScreen(renderPos);
     const float screenScale = ctx.camera().m_pixels(scale * imgScale);
+    // obstacle.ts renders the sprite directly at the object screen position
+    // with anchor 0.5 (def.door.spriteAnchor is 0.5 for every shipped door).
     sprite->setPosition(screenPos.x, screenPos.y);
     float sx = screenScale;
     float sy = screenScale;
     if (imgMirrorY) sy *= -1.0f;
     if (imgMirrorX) sx *= -1.0f;
     sprite->setScale(sx, sy);
-    sprite->setRotation(-renderRot + imgRot);
+    sprite->setRotation(-renderRot + imgRot.x);
 
     int curZOrd = dead ? 5 : zOrd;
-    int curZIdx = __id;
+    int curZIdx = zIdx;
     int renderLayer = layer;
     // Render trees/bushes above stair elements when viewing only the ground.
     if (!dead && curZOrd >= 50 && layer == 0 && activeLayer == 0) {
         curZOrd += 100;
         renderLayer |= 2;
     }
+
+    // Player skins inherit the skinned player's sort key (obstacle.ts).
+    if (!dead && isSkin) {
+        Player* skinPlayer = ctx.playerBarn().getPlayerById(skinPlayerId);
+        if (skinPlayer) {
+            curZOrd = math::max(math::max(curZOrd, skinPlayer->renderZOrd), 21);
+            if (skinPlayer->renderZLayer != 0) {
+                renderLayer = skinPlayer->renderZLayer;
+                curZOrd = skinPlayer->renderZOrd;
+            }
+            curZIdx = skinPlayer->renderZIdx + 262144;
+        }
+    }
     ctx.renderer().addPIXIObj(sprite, renderLayer, curZOrd, curZIdx);
+
+    if (doorHasInterp && casingEnabled) {
+        if (!casingSprite) {
+            casingSprite = ctx.factory()->createSprite();
+            casingSprite->setAnchor(0.5f, 0.5f);
+        }
+        const Vec2 casingWorld = v2Add(doorClosedPos, casingPosOffset);
+        const Vec2 casingScreen = ctx.camera().m_pointToScreen(casingWorld);
+        const float casingScale = ctx.camera().m_pixels(scale * casingImgScale);
+        casingSprite->setPosition(casingScreen.x, casingScreen.y);
+        casingSprite->setScale(casingScale, casingScale);
+        casingSprite->setRotation(-renderRot);
+        casingSprite->setVisible(!dead);
+        ctx.renderer().addPIXIObj(casingSprite, renderLayer, curZOrd + 1, curZIdx);
+    } else if (casingSprite) {
+        casingSprite->setVisible(false);
+    }
+    isNew = false;
+}
+
+int Obstacle::updateDistanceToStairs(Ctx& ctx) const {
+    return 0;
 }
 
 // ---------------------------------------------------------------------------

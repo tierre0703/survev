@@ -183,14 +183,27 @@ void Map::update(float dt, GameWorld& ctx) {
             obstacle->render(ctx, activeLayer);
         }
     }
+    for (auto* structure : structurePool.m_getPool()) {
+        if (structure->active) {
+            // Structures only do debug rendering in the web client.
+        }
+    }
+
+    // map.ts computes this once per frame; obstacle.ts caches it.
+    const bool valueAdjustChanged = mapDef.valueAdjust != _lastValueAdjust;
+    if (valueAdjustChanged) {
+        _lastValueAdjust = mapDef.valueAdjust;
+    }
     for (auto* building : buildingPool.m_getPool()) {
         if (building->active) {
             building->update(dt, ctx);
         }
     }
-    for (auto* structure : structurePool.m_getPool()) {
-        if (structure->active) {
-            // Structures only do debug rendering in the web client.
+    if (valueAdjustChanged) {
+        for (auto* obstacle : obstaclePool.m_getPool()) {
+            if (obstacle->active) {
+                obstacle->applyColor();
+            }
         }
     }
 

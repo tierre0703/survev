@@ -257,6 +257,23 @@ node tools/build-atlas.mjs --res low                                # sprite atl
 `Content/` is gitignored, so run `build-atlas.mjs` before packaging the APK
 (`build-apk.ps1` ships everything under `Content/`).
 
+### Workflow used in session 4
+```powershell
+# Host tests
+cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
+cmake --build build-tests --config Release
+.\build-tests\Release\surv_tests.exe          # 63 tests, 1451 assertions
+
+# Device (x86_64 emulator; dev server on :8000/:9001 already running)
+.\tools\build-native.ps1 -Abis "x86_64"
+.\tools\build-apk.ps1 -Abis "x86_64"
+adb install -r .\SurvevMobile-debug.apk
+adb reverse tcp:8000 tcp:8000; adb reverse tcp:9000 tcp:9000
+adb shell am force-stop com.survev.mobile
+adb shell am start -n com.survev.mobile/dev.axmol.app.AppActivity
+# drive with: adb shell input swipe 480 300 300 470 400
+```
+
 ## 7. Remaining rendering implementation (2026-10-07)
 
 - **T4 skeletal pose/outfit rendering implemented** in
@@ -378,4 +395,68 @@ the web client found the following gaps; they are now fixed.
 - Screenshots show the **beach biome** (sand/water), palm trees, pecans, logs,
   iron-skull obstacles and `saloon`/door sprites, confirming obstacles/sprites
   now render at the correct size and origin.
+
+## 9. Session 4 — obstacle particle lifetime, door casing, gas scale (2026-10-07)
+
+A second parity pass against the web client's `obstacle.ts` and `gas.ts`.
+
+### Fixed in this session
+
+- **Obstacle render now controls its own visibility** (obstacle.ts
+  `if (this.sprite.visible && this.img) {...}`). The old port baked the frame in
+  `m_updateData` and returned early from the wrong guard, so the sprite drew from
+  the first network delta (before `isNew`) and the **destroyed-obstacle particle
+  spray and `img.residue` swap fired on the `update` path every frame**. The
+  spray moved to `render`, which is the only place the web client runs it.
+- **`sprite.zIdx = floor(scale * 1000) * 65535 + __id`** is ported; the sprite
+  now carries a stable sort index instead of `__id`. `sprite.zOrd`/`imgAlpha`
+  are read from the sprite (explicit `Img` state) rather than the def at render
+  time, and dead sprites use `alpha = 0.75`.
+- **`img.ori`** (image rotation in degrees) is now emitted by the def codegen and
+  folded into `imgRot` together with `randomRotation`; the sprite rotates by
+  `-rot + imgRot`.
+- **Biome `valueAdjust` tinting**: `map.update` stores the map's `valueAdjust`
+  once and obstacles re-tint (`util.adjustValue`) only when it changes, matching
+  map.ts/obstacle.ts. Player skins keep their red health tint instead.
+- **Player skins** (`isSkin`) now: track `visualPosOld`/`posInterpTicker` and
+  interpolate position with the camera interval, keep the higher skin health
+  threshold for smoke (`0.3`), and inherit the skinned player's
+  `renderLayer`/`renderZOrd`/`renderZIdx` (+262144). `Player` publishes those.
+- **Door casing sprite** (`def.door.casingImg`): emitted by codegen and drawn
+  behind the door at `closedPos + rotate(casingImg.pos, rot + π/2)`, with its
+  own scale/tint/alpha, hidden when dead, z-order `doorZOrd + 1`.
+- **Player stairs/world bounds match `GameConfig.player.maxVisualRadius`**
+  (the port used a radius of 1.0).
+- **Gas overlay world scale**: the gas quad is authored in world units
+  (100000), so `GasRenderer::render` now scales by `camera.m_zoom` as well as
+  the screen-space safe radius; previously the overlay was ~100000× too large.
+- **Animation keyframes with omitted bones** (`noMask`) no longer interpolate a
+  bone across a gap — the affected bone falls back to the idle pose, matching
+  player.ts's per-frame bone-set semantics.
+
+### Verification (this session)
+
+- `surv_tests`: **63 tests, 1451 assertions, 0 failures.** New tests:
+  `obstacle_render_parity` (frame/zIdx/zOrd/scale/randomRotation),
+  `obstacle_door_interp_and_casing` (door casing sprite + interpolation) and
+  `gas_overlay_world_scale`; `generated_defs_provider` checks door casing defs.
+- x86_64 `libSurvevMobile.so` builds, `build-apk.ps1` signs/verifies the APK,
+  and it installs and runs on the x86_64 emulator with an **empty crash log**.
+- Screenshots show the beach and grass biomes with buildings (floor, walls,
+  furniture/counters, toilet, rugs), wooden crates, bushes, boulders, palm
+  trees, logs and the player, all at the correct size and origin; walking into
+  `saloon` reveals the interior while the ceiling occludes.
+
+### Still open (carried over)
+
+- **T4**: the skeletal pose/outfit render in `PlayerRender.cpp` remains the
+  base + hands/feet + gear subset. Bone/pose fidelity for every `animData`
+  variant, and the browser-only player presentation (aura UI, submerge,
+  frozen/team patches, animation-triggered collision/audio), are unchanged.
+- **T5**: the water island keeps the canvas overpaint fallback on native; the
+  real-polygon-hole tessellation path is used for rectangular layer masks.
+- Per-obstacle **door `spriteAnchor`** is approximated at 0.5 (every shipped
+  door uses 0.5); `randomRotation` uses the stable id as source of truth for
+  presentation.
+
 

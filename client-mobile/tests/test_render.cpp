@@ -6,6 +6,7 @@
 
 #include "game/GameWorld.h"
 #include "game/Map.h"
+#include "game/Gas.h"
 #include "game/objects/Barns.h"
 #include "game/objects/GameObject.h"
 #include "game/objects/Structure.h"
@@ -415,6 +416,19 @@ TEST(generated_defs_provider) {
         CHECK(bank->ceilingVision.dist > 0.0f);
     }
 
+    // image definitions carry their per-image rotation (obstacle.ts img.ori).
+    if (barrel) {
+        CHECK(std::isfinite(barrel->img.ori));
+    }
+
+    // obstacle.ts door casing image.
+    const MapObjectDef* door = provider->mapObject("lab_door_01");
+    CHECK(door != nullptr);
+    if (door) {
+        CHECK(!door->doorCasingSprite.empty());
+        CHECK(door->doorCasingScale > 0.0f);
+    }
+
     // T3: particle/emitter tables are emitted.
     const ParticleDef* splat = provider->particle("bloodSplat");
     CHECK(splat != nullptr);
@@ -804,3 +818,111 @@ TEST(player_revive_and_missing_defs) {
     CHECK_EQ(p.currentAnim, Anim_None);
     installGeneratedDefs();
 }
+
+TEST(obstacle_render_parity) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.camera().m_screenWidth = 800.0f;
+    world.camera().m_screenHeight = 600.0f;
+
+    const MapObjectDef* barrelDef = getDefProvider()->mapObject("barrel_01");
+    CHECK(barrelDef != nullptr);
+
+    Obstacle o;
+    o.active = true;
+    o.__id = 42;
+    ObjectData data;
+    data.type = "barrel_01";
+    data.pos = Vec2(100.0f, 100.0f);
+    data.ori = 0;
+    data.layer = 0;
+    data.scale = 1.0f;
+    o.m_updateData(data, true, true, world);
+    CHECK(o.imgDirty);
+    CHECK(o.frame == barrelDef->img.sprite);
+    o.update(0.016f, world);
+    o.render(world, 0);
+    CHECK(!o.imgDirty);
+    CHECK(!sprite(o.sprite)->visible == false);
+    // zIdx = floor(scale * 1000) * 65535 + __id (obstacle.ts sprite.zIdx).
+    CHECK_EQ(o.zIdx, 1000 * 65535 + 42);
+    CHECK_EQ(o.zOrd, barrelDef->img.zIdx);
+    CHECK_NEAR(sprite(o.sprite)->sx, world.camera().m_pixels(1.0f * barrelDef->img.scale), 1e-4f);
+    // The sprite is only rendered when it is visible.
+    auto* layer0 = static_cast<pix::NullContainer*>(world.renderer().layers[0]);
+    CHECK(layer0->children.size() >= 1u);
+
+    // randomRotation folds the stable __id into the image rotation.
+    const MapObjectDef* treeDef = nullptr;
+    for (const char* cand : {"tree_01", "bush_01", "rock_01"}) {
+        const MapObjectDef* d = getDefProvider()->mapObject(cand);
+        if (d && d->randomRotation) { treeDef = d; data.type = cand; break; }
+    }
+    if (treeDef) {
+        Obstacle t;
+        t.active = true;
+        t.__id = 90;
+        ObjectData td = data;
+        t.m_updateData(td, true, true, world);
+        CHECK_NEAR(t.imgRot.x, math::deg2rad(90.0f), 1e-4f);
+    }
+}
+
+TEST(obstacle_door_interp_and_casing) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.camera().m_screenWidth = 800.0f;
+    world.camera().m_screenHeight = 600.0f;
+
+    Obstacle o;
+    o.active = true;
+    o.__id = 5;
+    ObjectData data;
+    data.type = "lab_door_01";
+    data.pos = Vec2(20.0f, 30.0f);
+    data.ori = 0;
+    data.layer = 0;
+    data.scale = 1.0f;
+    data.isDoor = true;
+    data.doorOpen = false;
+    data.doorSeq = 1;
+    o.m_updateData(data, true, true, world);
+    CHECK(o.casingEnabled);
+    CHECK(o.doorHasInterp);
+
+    // A network move (door slides open) interpolates the visual position.
+    data.doorOpen = true;
+    data.pos = Vec2(20.0f, 30.0f);
+    o.m_updateData(data, true, false, world);
+    o.update(0.016f, world);
+    o.render(world, 0);
+    CHECK(o.casingSprite != nullptr);
+    bool casingDrawn = false;
+    for (pix::Node* child : static_cast<pix::NullContainer*>(world.renderer().layers[0])->children) {
+        if (child == o.casingSprite) casingDrawn = true;
+    }
+    CHECK(casingDrawn);
+    CHECK(sprite(o.casingSprite)->visible);
+}
+
+TEST(gas_overlay_world_scale) {
+    pix::NullPixiFactory factory;
+    Camera camera;
+    camera.m_zoom = 2.0f;
+    Gas gas;
+    gas.m_init(&factory);
+    gas.setFullState(0.0f, GasData{});
+    gas.gasRenderer.render(&factory, Vec2(100.0f, 100.0f), camera.m_scaleToScreen(50.0f), true,
+                           camera.m_zoom);
+    auto* gfx = static_cast<pix::NullGraphics*>(gas.gasRenderer.display);
+    CHECK(gfx->visible);
+    CHECK_NEAR(gfx->sx, camera.m_scaleToScreen(50.0f) * camera.m_zoom, 1e-4f);
+    bool hasHole = false;
+    for (const auto& cmd : gfx->commands) {
+        if (cmd.kind == pix::DrawCommand::BeginHole) hasHole = true;
+    }
+    CHECK(hasHole);
+}
+

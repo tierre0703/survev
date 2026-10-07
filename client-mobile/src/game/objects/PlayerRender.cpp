@@ -268,6 +268,8 @@ void Player::updateVisuals(Ctx& ctx) {
 void Player::update(float dt, Ctx& ctx) {
     if (!container) return;
     dt = std::max(dt, 0.0f);
+    // player.ts gives the stairs test a larger radius (GameConfig.player.maxVisualRadius).
+    const float maxVisualRadius = 1.0f;
     for (auto& recoil : gunRecoil) recoil = std::max(0.0f, recoil - recoil * dt * 5.0f - dt);
     scale = std::max(scale, 0.001f);
     const auto* provider = getDefProvider();
@@ -287,6 +289,13 @@ void Player::update(float dt, Ctx& ctx) {
         const float t = duration > 0.0f ? std::clamp((animTicker - frames[a].time) / duration, 0.0f, 1.0f) : 1.0f;
         for (int i = 0; i < PlayerBoneCount; ++i) {
             const int source = animMirror ? (i ^ 1) : i;
+            const unsigned bit = 1u << i;
+            // player.ts builds a per-frame bone set: a bone that a keyframe omits
+            // is drawn with the idle pose, not interpolated across the gap.
+            if (frames[b].noMask & bit) {
+                animMask &= ~bit;
+                continue;
+            }
             if ((frames[a].mask & frames[b].mask & (1u << source)) == 0) continue;
             animBones[i] = blend(ease(t, frames[b].easing), frames[a].bones[source], frames[b].bones[source]);
             if (animMirror) {
@@ -294,7 +303,7 @@ void Player::update(float dt, Ctx& ctx) {
                 animBones[i].pos.y *= -1.0f;
                 animBones[i].rot *= -1.0f;
             }
-            animMask |= 1u << i;
+            animMask |= bit;
         }
         finished = animTicker >= frames.back().time;
     } else if (currentAnim != Anim_None) playAnim(Anim_None, animSeq);
@@ -334,13 +343,17 @@ void Player::update(float dt, Ctx& ctx) {
     int renderLayer = layer;
     int zOrd = 18;
     const auto* ap = ctx.activePlayer();
-    const Collider col = Collider::createCircle(pos, 1.0f);
+    const Collider col = Collider::createCircle(pos, maxVisualRadius);
     if (ap && ctx.map().insideStructureStairs(col)) {
         const bool mask = ctx.map().insideStructureMask(col);
         if (((layer & 1) && ((ap->layer & 1) || !ctx.map().insideBuildingCeiling(col, true))) || ((ap->layer & 2) && !mask)) renderLayer |= 2;
         if ((layer & 1) == (ap->layer & 1) && (!mask || ap->layer == 0)) { renderLayer |= 2; zOrd += 100; }
     }
     const int zIdx = __id + (downed ? 0 : 262144) + (ap == this ? 65536 : 0) + (scale > 1.0f ? 131072 : 0);
+    // Published for player skins (obstacle.ts reads renderLayer/renderZOrd/renderZIdx).
+    renderZLayer = renderLayer;
+    renderZOrd = zOrd;
+    renderZIdx = zIdx;
     ctx.renderer().addPIXIObj(container, renderLayer, zOrd, zIdx);
     auto emitter = [&](Emitter*& e, bool enabled, const char* type) {
         if (enabled && !dead && !e) {

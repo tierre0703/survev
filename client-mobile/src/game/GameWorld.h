@@ -79,6 +79,9 @@ public:
 
     bool mapLoaded() const;
 
+    // Frame delta for the current update (obstacle.ts skin position interp).
+    float dt() const { return _dt; }
+
 private:
     void registerPools();
 
@@ -105,6 +108,7 @@ private:
     std::string _emptyName;
     audio::AudioManager* _audio = nullptr;
     audio::Ambiance* _ambiance = nullptr;
+    float _dt = 0.0f;
 };
 
 } // namespace surv

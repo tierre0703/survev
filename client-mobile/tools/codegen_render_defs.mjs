@@ -49,7 +49,7 @@ function imgInit(img) {
     return `{${str(i.sprite)},${n(i.scale, 1)},${n(i.alpha, 1)},${n(i.tint, 0xffffff)},${n(
         i.zIdx,
         0,
-    )},${i.mirrorX ? 1 : 0},${i.mirrorY ? 1 : 0}}`;
+    )},${i.mirrorX ? 1 : 0},${i.mirrorY ? 1 : 0},${n(i.ori, 0)}}`;
 }
 // building FloorImage -> RawBImg.
 function bimgInit(img) {
@@ -230,7 +230,13 @@ for (let i = 0; i < mapTypes.length; i++) {
         def.img && def.img.randomRotation ? 1 : 0
     },${def.explosion !== undefined ? 1 : 0},${str(
         Array.isArray(def.explosion) ? def.explosion[0] : def.explosion,
-    )},${n(def.door?.slideOffset, 0)},${
+    )},${n(def.door?.slideOffset, 0)},${str(def.door?.casingImg?.sprite)},${n(
+        def.door?.casingImg?.pos?.x,
+        0,
+    )},${n(def.door?.casingImg?.pos?.y, 0)},${n(def.door?.casingImg?.scale, 1)},${n(
+        def.door?.casingImg?.tint,
+        0xffffff,
+    )},${n(def.door?.casingImg?.alpha, 1)},${
         map && map.display === false ? 0 : 1
     },${map && map.color !== undefined ? 1 : 0},${n(map?.color, 0)},${n(map?.scale, 1)},${colInit(
         bounds,
@@ -344,11 +350,17 @@ for (const [name, bones] of Object.entries(IdlePoses)) {
     poseEntries += `        _poses[${str(name)}]=${poseInit(bones)};\n`;
 }
 for (const [name, animation] of Object.entries(Animations)) {
+    let noMask = 0;
+    for (const frame of animation.keyframes) {
+        for (const key of Object.keys(frame.bones)) noMask |= 1 << Number(key);
+    }
     const frames = animation.keyframes.map((frame) => {
         const mask = Object.keys(frame.bones).reduce((bits, key) => bits | (1 << Number(key)), 0);
         const easing = easings.find(([fn]) => fn === frame.easing)?.[1] || "Linear";
         if (frame.easing && easing === "Linear") throw new Error(`Unknown easing in ${name}`);
-        return `{${fp(frame.time)},${mask},${poseInit(frame.bones)},PoseEasing::${easing}}`;
+        return `{${fp(frame.time)},${mask},${poseInit(frame.bones)},PoseEasing::${easing},${
+            noMask & ~mask
+        }}`;
     });
     poseEntries += `        _animations[${str(name)}].keyframes={${frames.join(",")}};\n`;
 }
@@ -499,7 +511,7 @@ namespace surv {
 namespace {
 
 struct RawCollider { int type; float a, b, c, d; };
-struct RawImg { const char* sprite; float scale; float alpha; unsigned tint; int zIdx; int mirrorX; int mirrorY; };
+struct RawImg { const char* sprite; float scale; float alpha; unsigned tint; int zIdx; int mirrorX; int mirrorY; float ori; };
 struct RawBImg { const char* sprite; float scale; float alpha; unsigned tint; float px, py, rot; int mirrorX, mirrorY, removeOnDamaged; };
 struct RawBEmitter { const char* type; float px, py, rot, scale; int layer, parentToCeiling; float dirx, diry; };
 struct RawLayer { const char* type; float x, y; int ori; int inheritOri; int underground; };
@@ -509,6 +521,7 @@ struct RawMapObj {
     const char* type; RawImg img; int hasImg; RawCollider collision; int hasCollision;
     int isDoor, isButton, isTree, isWall; int randomRotation, hasExplosion; const char* explosionParticle;
     float doorSlideOffset;
+    const char* doorCasingSprite; float doorCasingPx, doorCasingPy, doorCasingScale; unsigned doorCasingTint; float doorCasingAlpha;
     int mapDisplay, mapHasColor; unsigned mapColor; float mapScale;
     RawCollider bounding; int hasBounding;
     const RawLayer* layers; int layerCount;
@@ -557,6 +570,7 @@ static ImgDef toImg(const RawImg& i) {
     d.alpha = i.alpha;
     d.tint = i.tint;
     d.zIdx = i.zIdx;
+    d.ori = i.ori;
     d.mirrorX = i.mirrorX != 0;
     d.mirrorY = i.mirrorY != 0;
     return d;
@@ -611,6 +625,11 @@ public:
             d.hasExplosion = r.hasExplosion != 0;
             d.explosionParticle = r.explosionParticle ? r.explosionParticle : "";
             d.doorSlideOffset = r.doorSlideOffset;
+            d.doorCasingSprite = r.doorCasingSprite ? r.doorCasingSprite : "";
+            d.doorCasingPos = Vec2(r.doorCasingPx, r.doorCasingPy);
+            d.doorCasingScale = r.doorCasingScale;
+            d.doorCasingTint = r.doorCasingTint;
+            d.doorCasingAlpha = r.doorCasingAlpha;
             d.map.display = r.mapDisplay != 0;
             d.map.hasColor = r.mapHasColor != 0;
             d.map.color = r.mapColor;
