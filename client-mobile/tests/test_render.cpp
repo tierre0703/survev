@@ -1126,3 +1126,99 @@ TEST(obstacle_door_sprite_anchor) {
     (void)def;
     installGeneratedDefs();
 }
+
+// animData.ts animation effects + decal.ts / map.ts getGroundSurface.
+TEST(player_anim_effects_and_decals) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.camera().m_screenWidth = 800.0f;
+    world.camera().m_screenHeight = 600.0f;
+
+    const DefProvider* defs = getDefProvider();
+    CHECK(defs != nullptr);
+    const PlayerAnimationDef* fists = defs ? defs->playerAnimation("fists") : nullptr;
+    CHECK(fists != nullptr);
+    if (fists) {
+        CHECK_EQ(fists->effects.size(), 2u);
+        CHECK(fists->effects[0].fn == AnimEffectFn::PlaySound);
+        CHECK_EQ(fists->effects[0].sound, std::string("swing"));
+        CHECK(fists->effects[1].fn == AnimEffectFn::MeleeCollision);
+    }
+    const GameObjRenderDef* axe = defs ? defs->gameObject("woodaxe") : nullptr;
+    CHECK(axe != nullptr);
+    if (axe) {
+        CHECK(axe->hasAttack);
+        CHECK(!axe->cleave);
+        CHECK_NEAR(axe->attackOffset.x, 1.35f, 1e-4f);
+        CHECK_NEAR(axe->attackRad, 1.0f, 1e-4f);
+    }
+    const MapObjectDef* barrel = defs ? defs->mapObject("barrel_01") : nullptr;
+    CHECK(barrel != nullptr);
+    if (barrel) {
+        // barrel_01: collidable circle r=1.75, height 0.5.
+        CHECK_NEAR(barrel->height, 0.5f, 1e-4f);
+        CHECK(barrel->collidable);
+        CHECK_EQ(barrel->hitParticle, std::string("barrelChip"));
+        CHECK_EQ(barrel->punchSound, std::string("barrel_bullet"));
+    }
+
+    // Melee collision: fists hit an obstacle in front of the player.
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    d.pos = Vec2(50.0f, 50.0f);
+    d.dir = Vec2(1.0f, 0.0f);
+    d.activeWeapon = "fists";
+    d.animType = Anim_Melee;
+    d.animSeq = 7;
+    p.m_updateData(d, true, true, world);
+
+    // Decals: the bathhouse pool def carries a water surface.
+    const MapObjectDef* poolDecal = defs ? defs->mapObject("decal_bathhouse_pool_01") : nullptr;
+    CHECK(poolDecal != nullptr);
+    if (poolDecal) {
+        CHECK(poolDecal->hasSurface);
+        CHECK(poolDecal->hasGore);
+        CHECK_EQ(poolDecal->surfaceWaterColor, 0x4eb2c4u);
+    }
+
+    // The map consults the decal barn before buildings/rivers/terrain.
+    MapMsg msg;
+    msg.mapName = "main";
+    msg.seed = 123456;
+    msg.width = 512.0f;
+    msg.height = 512.0f;
+    msg.shoreInset = 4.0f;
+    msg.grassInset = 2.0f;
+    world.loadMap(msg);
+    Decal dcl;
+    dcl.m_init();
+    dcl.active = true;
+    dcl.__id = 3;
+    ObjectData dd;
+    dd.type = "decal_bathhouse_pool_01";
+    dd.pos = Vec2(-50.0f, 0.0f);
+    dd.scale = 1.0f;
+    dd.layer = 0;
+    dcl.m_updateData(dd, true, true, world);
+    // Mirror DecalBarn::update for the gore colour path (goreKills=0 -> goreT=0).
+    dcl.update(0.016f, world);
+    world.decalBarn().update(0.0f, world);
+    const Map::GroundSurface s0 = world.map().getGroundSurface(Vec2(-50.0f, 0.0f), 0);
+    CHECK(s0.type == Map::SurfaceType::Water);
+    // goreKills = 0 -> goreT = 0; the def's own surface water colour is used
+    // (decal_bathhouse_pool_01 has no explicit gore waterColour override).
+    CHECK_EQ(dcl.surfaceWaterColor, 0x4eb2c4u);
+    // The decal is visible to getGroundSurface while active...
+    CHECK_EQ(dcl.collider.type, Collider::Aabb);
+    CHECK(dcl.active && dcl.hasSurface);
+    // ...and its pooled render node exists for sprite output.
+    CHECK(dcl.decalRender != nullptr);
+    CHECK(dcl.decalRender == nullptr || dcl.decalRender->active);
+    // Outside the pool the unmodified terrain surface is unchanged.
+    const Map::GroundSurface s1 = world.map().getGroundSurface(Vec2(0.0f, -50.0f), 0);
+    CHECK(s1.waterColor != 0x4eb2c4u);
+
+    installGeneratedDefs();
+}

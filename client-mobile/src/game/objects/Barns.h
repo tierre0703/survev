@@ -9,6 +9,7 @@
 #include "../../core/Vec2.h"
 #include "../../render/Camera.h"
 #include "../../render/Defs.h"
+#include "../../render/Renderer.h"
 #include <array>
 #include <cstdint>
 #include <string>
@@ -69,6 +70,14 @@ public:
     bool imgMirrorY = false;
     int zOrd = 0;
     int zIdx = 0;
+    // obstacle.ts: the transformed collision collider plus the def flags used
+    // by melee/bullet collision (height, collidable, isWindow).
+    Collider collider;
+    float height = 0.0f;
+    bool collidable = false;
+    bool isWindow = false;
+    std::string hitParticle;
+    std::string punchSound;
     bool casingEnabled = false;
     Vec2 casingPosOffset;
     float casingImgScale = 1.0f;
@@ -201,6 +210,79 @@ public:
 class LootBarn {
 public:
     Pool<Loot> lootPool;
+    void update(float dt, GameWorld& ctx);
+};
+
+// --- decal.ts --------------------------------------------------------------
+// Port of client/src/objects/decal.ts: a ground decal drawn through a pooled
+// DecalRender node. Decals whose def carries a `surface` also recolour
+// Map::getGroundSurface (bathhouse pool etc.), including the gore fade.
+class DecalRenderObj {
+public:
+    pix::Sprite* sprite = nullptr;
+    Vec2 pos;
+    float rot = 0.0f;
+    float scale = 1.0f;
+    int layer = 0;
+    int zIdx = 0;
+    int zOrd = 0;
+
+    float imgScale = 1.0f;
+    float spriteAlpha = 1.0f;
+    float valueAdjust = 1.0f;
+    bool inWater = false;
+
+    bool flicker = false;
+    float flickerMin = 1.0f;
+    float flickerMax = 1.0f;
+    float flickerTarget = 1.0f;
+    float flickerRate = 1.0f;
+    float flickerCooldown = 0.0f;
+
+    bool active = false;
+    bool deactivated = false;
+    bool fadeout = false;
+    float fadeAlpha = 1.0f;
+
+    void init(pix::Factory* factory, const std::string& type, const Vec2& decalPos, float decalRot,
+              float decalScale, int decalLayer, int id, const Map& map);
+    void free();
+    void setTint(uint32_t color);
+    void update(float dt, float valueAdjust, const Camera& camera, Renderer& renderer);
+};
+
+class Decal : public AbstractObject {
+public:
+    DecalRenderObj* decalRender = nullptr;
+
+    bool isNew = false;
+    float goreT = 0.0f;
+    bool hasGore = false;
+
+    std::string type;
+    Vec2 pos;
+    float rot = 0.0f;
+    float scale = 1.0f;
+    int layer = 0;
+    int goreKills = 0;
+    Collider collider;
+    bool hasSurface = false;
+    SurfaceTypeDef surfaceType = SurfaceTypeDef::Water;
+    uint32_t surfaceWaterColor = 0;
+    uint32_t surfaceRippleColor = 0;
+
+    void m_init() override;
+    void m_free() override;
+    void m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) override;
+    void update(float dt, GameWorld& ctx);
+};
+
+class DecalBarn {
+public:
+    Pool<Decal> decalPool;
+    std::vector<DecalRenderObj*> decalRenders;
+
+    DecalRenderObj* allocDecalRender();
     void update(float dt, GameWorld& ctx);
 };
 
@@ -429,6 +511,7 @@ public:
     Particle* addParticle(pix::Factory* factory, const std::string& type, int layer, const Vec2& pos,
                           const Vec2& vel, float scale = 1.0f, float rot = -1.0f,
                           pix::Node* parent = nullptr, int zOrd = -1);
+    // particles.ts: ripple particles (waterRipple def) used by combat/effects.
     Particle* addRippleParticle(pix::Factory* factory, const Vec2& pos, int layer, uint32_t color);
     Emitter* addEmitter(pix::Factory* factory, const std::string& type, const EmitterOptions& opts);
     void update(float dt, GameWorld& ctx);
@@ -488,6 +571,8 @@ public:
     std::string auraSprite;
     uint32_t auraTint = 0xff00ff;
     float auraRadius = 0.0f;
+    // player.ts m_rad = netData.scale * GameConfig.player.radius.
+    float rad = 1.0f;
     float auraViewFade = 0.0f;
     float auraPulseTicker = 0.0f;
     float auraPulseDir = 1.0f;
@@ -526,6 +611,12 @@ public:
     void updateActions(int actionType, const std::string& actionItem);
     void updateSubmersion(float dt, Ctx& ctx);
     void updateFrozenState(float dt, Ctx& ctx);
+    // player.ts getMeleeCollider (attack offset capsule).
+    Collider getMeleeCollider() const;
+    // player.ts animation effects (animPlaySound/animMeleeCollision/...).
+    void runAnimEffects(Ctx& ctx, float ticker, float effectTicker, bool lastFrame);
+    void animMeleeCollision(Ctx& ctx, const std::string& playerHit);
+    void animThrowableParticles(Ctx& ctx);
 };
 
 class PlayerBarn {

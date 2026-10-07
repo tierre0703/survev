@@ -33,6 +33,9 @@ struct MapDisplayDef {
     float scale = 1.0f;
 };
 
+// map.ts SurfaceType ("water" | "sand" | "grass"), used by decal defs.
+enum class SurfaceTypeDef { Water, Sand, Grass };
+
 // One minimap shape (def.map.shapes entries and generated fallbacks).
 struct MapShapeDef {
     Collider collider;
@@ -114,6 +117,45 @@ struct MapObjectDef {
     float doorCasingAlpha = 1.0f;
     // obstacle.ts door.spriteAnchor (image pivot; 0.5 for every shipped door).
     Vec2 doorSpriteAnchor{0.5f, 0.5f};
+
+    // obstacle.ts/obstacleDefs: `height` gates melee/bullet collision, `punch`
+    // is the obstacle hit sound (played via the punch group), and `hitParticle`
+    // is the impact spray. `collidable`/`isWindow` mirror the def booleans used
+    // by collisionHelpers.intersectSegmentObstacle.
+    float height = 0.0f;
+    bool collidable = false;
+    bool isWindow = false;
+    std::string hitParticle;
+    std::string punchSound;
+
+    // decalDefs (decal.ts): `surface` recolours getGroundSurface for decals
+    // painted over water; `gore` fades that water colour with the gore level.
+    bool hasSurface = false;
+    SurfaceTypeDef surfaceType = SurfaceTypeDef::Water;
+    uint32_t surfaceWaterColor = 0;
+    uint32_t surfaceRippleColor = 0;
+    bool hasGore = false;
+    float goreFadeStart = 0.0f;
+    float goreFadeEnd = 1.0f;
+    float goreFadePow = 1.0f;
+    float goreFadeSpeed = 1.0f;
+    bool goreHasTint = false;
+    uint32_t goreTint = 0xffffff;
+    bool goreHasAlpha = false;
+    float goreAlpha = 1.0f;
+    bool goreHasWaterColor = false;
+    uint32_t goreWaterColor = 0;
+    bool goreHasRippleColor = false;
+    uint32_t goreRippleColor = 0;
+    // decalDefs img extras: flicker (map lights) and ignoreAdjust.
+    bool imgFlicker = false;
+    float imgFlickerMin = 1.0f;
+    float imgFlickerMax = 1.0f;
+    float imgFlickerRate = 1.0f;
+    bool imgIgnoreAdjust = false;
+    bool hasLifetime = false;
+    float lifetimeMin = 0.0f;
+    float lifetimeMax = 0.0f;
 
     std::vector<MapShapeDef> mapShapes;
 
@@ -202,8 +244,17 @@ struct PoseKeyframe {
     PoseEasing easing = PoseEasing::Linear;
     unsigned noMask = 0; // bones missing from this frame that must not interpolate
 };
+// animData.ts animation effect kinds (animPlaySound, animMeleeCollision, ...).
+enum class AnimEffectFn { PlaySound, MeleeCollision, ThrowableParticles };
+struct AnimEffect {
+    float time = 0.0f;
+    AnimEffectFn fn = AnimEffectFn::PlaySound;
+    std::string sound;       // PlaySound: EmitterDef sound key
+    std::string playerHit;   // MeleeCollision: MeleeDef sound.playerHit key
+};
 struct PlayerAnimationDef {
     std::vector<PoseKeyframe> keyframes;
+    std::vector<AnimEffect> effects;
 };
 
 // Game-object (item/player) render fields.
@@ -226,10 +277,20 @@ struct GameObjRenderDef {
     float recoil = 0.0f;
     std::string idlePose = "fists";
     std::vector<std::string> attackAnims, deployAnims, idleAnims;
+    // meleeDefs (player.ts getMeleeCollider + animMeleeCollision): attack
+    // capsule offset/radius, whether the attack cleaves through walls, and the
+    // impact sounds. Obstacles' punch groups reuse punchSound.
+    bool hasAttack = false;
+    Vec2 attackOffset;
+    float attackRad = 0.0f;
+    bool cleave = false;
+    std::string playerHit;  // meleeDefs sound.playerHit
+    std::string punchSound; // meleeDefs/obstacleDefs sound.punch
     // player.ts action aura (heal/boost defs) and frozen patch sprites.
     std::string auraSprite;
     uint32_t auraTint = 0xff00ff;
     bool hasAura = false;
+    bool useThrowParticles = false;
     std::vector<std::string> frozenSprites;
 };
 

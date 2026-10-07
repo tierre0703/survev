@@ -70,6 +70,7 @@ GameWorld::GameWorld(pix::Factory* factory, bool canvasMode) : _factory(factory)
     _explosionBarn = std::make_unique<ExplosionBarn>();
     _playerBarn = std::make_unique<PlayerBarn>();
     _particleBarn = std::make_unique<ParticleBarn>();
+    _decalBarn = std::make_unique<DecalBarn>();
     _creator = std::make_unique<ObjectCreator>();
     registerPools();
 }
@@ -85,6 +86,8 @@ void GameWorld::registerPools() {
     _creator->registerPool<Structure>(ObjectType_Structure, &_map->structurePool);
     _creator->registerPool<Projectile>(ObjectType_Projectile, &_projectileBarn->projectilePool);
     _creator->registerPool<Smoke>(ObjectType_Smoke, &_smokeBarn->m_smokePool);
+    _creator->registerPool<Decal>(ObjectType_Decal, &_decalBarn->decalPool);
+    _map->setDecalBarn(_decalBarn.get());
 }
 
 void GameWorld::attachTo(pix::Node* root) {
@@ -232,6 +235,7 @@ void GameWorld::update(float dt) {
     _bulletBarn->update(dt, *this);
     _explosionBarn->update(dt, *this);
     _particleBarn->update(dt, *this);
+    _decalBarn->update(dt, *this);
 
     _renderer->m_update(dt, _camera, *_map, false);
     _map->m_render(_camera);

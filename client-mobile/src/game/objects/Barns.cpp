@@ -54,6 +54,20 @@ static uint32_t adjustValue(uint32_t tint, float value) {
            static_cast<uint32_t>(b);
 }
 
+// util.lerpColor (decal.ts): an sRGB<->linear lerp used by the decal gore fade.
+static uint32_t lerpColor(float t, uint32_t start, uint32_t end) {
+    const auto toLinear = [](float c) { return std::pow(c / 255.0f, 2.2f); };
+    const auto toSRGB = [](float c) { return std::pow(c, 1.0f / 2.2f) * 255.0f; };
+    const auto channel = [&](uint32_t a, uint32_t b, int shift) {
+        const float s = toLinear(static_cast<float>((a >> shift) & 0xff));
+        const float e = toLinear(static_cast<float>((b >> shift) & 0xff));
+        const float v = math::lerp(t, s, e);
+        return static_cast<uint32_t>(std::lround(toSRGB(v))) & 0xff;
+    };
+    return (channel(start, end, 16) << 16) | (channel(start, end, 8) << 8) |
+           channel(start, end, 0);
+}
+
 // GameConfig.lootRadius keyed by item type (shared/gameConfig.ts).
 static float lootRadius(const std::string& type) {
     if (type == "melee" || type == "gun" || type == "perk") return 1.25f;
@@ -132,6 +146,13 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
         type = data.type;
         layer = data.layer;
         healthT = data.healthT;
+        // obstacle.ts: the collider is transformed once from the def and the
+        // def's collision flags/height gate melee/bullet hits.
+        const MapObjectDef* d = mapDefFor(data.type);
+        collider = colliderTransform(d ? d->collision : Collider{}, data.pos, rot, data.scale);
+        height = d ? d->height : 0.0f;
+        collidable = d ? d->collidable : false;
+        isWindow = d ? d->isWindow : false;
         if (!data.dead) {
             auto& ids = ctx.map().deadObstacleIds;
             ids.erase(std::remove(ids.begin(), ids.end(), __id), ids.end());
@@ -254,6 +275,8 @@ void Obstacle::applyFrame(bool hasImage) {
     zOrd = zOrd_;
     zIdx = zIdx_;
     imgTint = tint;
+    hitParticle = def ? def->hitParticle : "";
+    punchSound = def ? def->punchSound : "";
 
     if (!sprite) {
         return;
@@ -830,6 +853,200 @@ void LootBarn::update(float dt, GameWorld& ctx) {
     for (auto* loot : lootPool.m_getPool()) {
         if (loot->active) {
             loot->update(dt, ctx);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Decal (decal.ts)
+// ---------------------------------------------------------------------------
+void DecalRenderObj::init(pix::Factory* factory, const std::string& type, const Vec2& decalPos,
+                          float decalRot, float decalScale, int decalLayer, int id,
+                          const Map& map) {
+    const DefProvider* provider = getDefProvider();
+    const MapObjectDef* def = provider ? provider->mapObject(type) : nullptr;
+
+    pos = decalPos;
+    rot = decalRot;
+    scale = decalScale;
+    layer = decalLayer;
+    zIdx = def ? def->img.zIdx : 0;
+    zOrd = id;
+
+    if (!sprite) {
+        sprite = factory->createSprite();
+        sprite->setAnchor(0.5f, 0.5f);
+    }
+    sprite->setFrame(def ? def->img.sprite : "");
+    sprite->setAlpha(1.0f);
+    sprite->setVisible(true);
+
+    imgScale = def ? def->img.scale : 1.0f;
+    spriteAlpha = def ? def->img.alpha : 1.0f;
+    valueAdjust = (def && def->imgIgnoreAdjust) ? 1.0f : map.mapDef.valueAdjust;
+    setTint(def ? def->img.tint : 0xffffff);
+
+    inWater = false;
+    if (def && def->height < 0.25f) {
+        const Map::GroundSurface surface = map.getGroundSurface(decalPos, decalLayer);
+        inWater = surface.type == Map::SurfaceType::Water;
+    }
+
+    flicker = def && def->imgFlicker;
+    if (flicker) {
+        flickerMin = def->imgFlickerMin;
+        flickerMax = def->imgFlickerMax;
+        flickerTarget = imgScale;
+        flickerRate = def->imgFlickerRate;
+        flickerCooldown = 0.0f;
+    }
+
+    active = true;
+    deactivated = false;
+    fadeout = def && def->hasLifetime;
+    fadeAlpha = 1.0f;
+}
+
+void DecalRenderObj::free() {
+    deactivated = true;
+}
+
+void DecalRenderObj::setTint(uint32_t color) {
+    if (valueAdjust < 1.0f) {
+        color = adjustValue(color, valueAdjust);
+    }
+    if (sprite) {
+        sprite->setTint(color);
+    }
+}
+
+void DecalRenderObj::update(float dt, float valueAdjust_, const Camera& camera, Renderer& renderer) {
+    (void)valueAdjust_;
+    if (deactivated && fadeout) {
+        fadeAlpha = math::lerp(dt * 3.0f, fadeAlpha, 0.0f);
+        if (fadeAlpha < 0.01f) {
+            fadeAlpha = 0.0f;
+        }
+    }
+    if (deactivated && (!fadeout || math::eqAbs(fadeAlpha, 0.0f))) {
+        if (sprite) {
+            sprite->setVisible(false);
+        }
+        active = false;
+    }
+
+    if (flicker) {
+        if (flickerCooldown < 0.0f) {
+            flickerTarget = rnd(flickerMin, flickerMax);
+            flickerCooldown = rnd(0.05f, flickerRate);
+        } else {
+            imgScale = math::lerp(flickerRate - flickerCooldown, imgScale, flickerTarget);
+            flickerCooldown -= dt;
+        }
+    }
+    if (!sprite) {
+        return;
+    }
+    const Vec2 screenPos = camera.m_pointToScreen(pos);
+    const float screenScale = camera.m_pixels(scale * imgScale);
+    sprite->setPosition(screenPos.x, screenPos.y);
+    sprite->setScale(screenScale, screenScale);
+    sprite->setRotation(-rot);
+    sprite->setAlpha(spriteAlpha * (inWater ? 0.3f : 1.0f) * fadeAlpha);
+    renderer.addPIXIObj(sprite, layer, zIdx, zOrd);
+}
+
+void Decal::m_init() {
+    isNew = false;
+    goreT = 0.0f;
+    hasGore = false;
+    goreKills = 0;
+    hasSurface = false;
+    decalRender = nullptr;
+}
+
+void Decal::m_free() {
+    if (decalRender) {
+        decalRender->free();
+        decalRender = nullptr;
+    }
+}
+
+void Decal::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_, Ctx& ctx) {
+    (void)isNew_;
+    if (!fullUpdate) {
+        return;
+    }
+    const DefProvider* provider = getDefProvider();
+    const MapObjectDef* def = provider ? provider->mapObject(data.type) : nullptr;
+
+    type = data.type;
+    pos = data.pos;
+    rot = math::oriToRad(data.ori);
+    scale = data.scale;
+    layer = data.layer;
+    goreKills = data.count;
+    collider = colliderTransform(def ? def->collision : Collider{}, pos, rot, scale);
+    hasSurface = def && def->hasSurface;
+    if (hasSurface) {
+        surfaceType = def->surfaceType;
+        surfaceWaterColor = def->surfaceWaterColor;
+        surfaceRippleColor = def->surfaceRippleColor;
+    }
+    hasGore = def && def->hasGore;
+
+    isNew = isNew_;
+    if (isNew) {
+        decalRender = ctx.decalBarn().allocDecalRender();
+        decalRender->init(ctx.factory(), type, pos, rot, scale, layer, __id, ctx.map());
+    }
+}
+
+void Decal::update(float dt, GameWorld& ctx) {
+    const DefProvider* provider = getDefProvider();
+    const MapObjectDef* def = provider ? provider->mapObject(type) : nullptr;
+    if (hasGore && def && def->hasGore) {
+        float goreTarget = math::delerp(goreKills, def->goreFadeStart, def->goreFadeEnd);
+        goreTarget = std::pow(goreTarget, def->goreFadePow);
+        goreT = isNew ? goreTarget
+                      : math::lerp(dt * def->goreFadeSpeed, goreT, goreTarget);
+
+        if (def->goreHasTint && decalRender) {
+            decalRender->setTint(lerpColor(goreT, def->img.tint, def->goreTint));
+        }
+        if (def->goreHasAlpha && decalRender) {
+            decalRender->spriteAlpha = math::lerp(goreT, def->img.alpha, def->goreAlpha);
+        }
+        if (def->goreHasWaterColor && hasSurface) {
+            surfaceWaterColor = lerpColor(goreT, def->surfaceWaterColor, def->goreWaterColor);
+        }
+        if (def->goreHasRippleColor && hasSurface) {
+            surfaceRippleColor = lerpColor(goreT, def->surfaceRippleColor, def->goreRippleColor);
+        }
+    }
+    isNew = false;
+}
+
+DecalRenderObj* DecalBarn::allocDecalRender() {
+    for (auto* d : decalRenders) {
+        if (!d->active) {
+            return d;
+        }
+    }
+    auto* d = new DecalRenderObj();
+    decalRenders.push_back(d);
+    return d;
+}
+
+void DecalBarn::update(float dt, GameWorld& ctx) {
+    for (auto* decal : decalPool.m_getPool()) {
+        if (decal->active) {
+            decal->update(dt, ctx);
+        }
+    }
+    for (auto* decalRender : decalRenders) {
+        if (decalRender->active) {
+            decalRender->update(dt, ctx.map().mapDef.valueAdjust, ctx.camera(), ctx.renderer());
         }
     }
 }

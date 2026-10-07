@@ -18,6 +18,7 @@ function pathToFile(dir, rel) {
 }
 
 const { MapObjectDefs, GameObjectDefs } = await import(pathToFile(sharedDir, "defs/register.ts"));
+const { DecalDefs } = await import(pathToFile(sharedDir, "defs/mapObjects/decalDefs.ts"));
 const { MapDefs } = await import(pathToFile(sharedDir, "defs/mapDefs.ts"));
 const { util } = await import(pathToFile(sharedDir, "utils/util.ts"));
 const { math } = await import(pathToFile(sharedDir, "utils/math.ts"));
@@ -224,6 +225,27 @@ for (let i = 0; i < mapTypes.length; i++) {
         refs.zoomIns = name;
     }
 
+    // obstacle.ts collision/sound fields + decal.ts surface/gore fields.
+    const defHeight = n(def.height, 0);
+    const defCollidable = !!def.collidable;
+    const defIsWindow = !!def.isWindow;
+    const hitParticle = def.hitParticle || "";
+    const punchSound = def.sound?.punch || "";
+    const surface = def.surface || null;
+    const gore = def.gore || null;
+    const surfaceTypeId = surface ? (surface.type === "grass" ? 2 : surface.type === "sand" ? 1 : 0) : 0;
+    const lifetime = def.lifetime;
+    let lifetimeMin = 0, lifetimeMax = 0, hasLifetime = false;
+    if (lifetime !== undefined) {
+        hasLifetime = true;
+        if (typeof lifetime === "number") {
+            lifetimeMin = lifetimeMax = n(lifetime);
+        } else {
+            lifetimeMin = n(lifetime.min);
+            lifetimeMax = n(lifetime.max);
+        }
+    }
+
     entries += `    {${str(type)},${imgInit(img)},${hasImg ? 1 : 0},${colInit(collision)},${
         hasCollision ? 1 : 0
     },${def.isDoor ? 1 : 0},${def.isButton ? 1 : 0},${def.isTree ? 1 : 0},${def.isWall ? 1 : 0},${
@@ -239,7 +261,26 @@ for (let i = 0; i < mapTypes.length; i++) {
     )},${n(def.door?.casingImg?.alpha, 1)},${n(def.door?.spriteAnchor?.x, 0.5)},${n(
         def.door?.spriteAnchor?.y,
         0.5,
-    )},${
+    )},${defHeight},${defCollidable ? 1 : 0},${defIsWindow ? 1 : 0},${str(hitParticle)},${str(
+        punchSound,
+    )},${surface ? 1 : 0},${surfaceTypeId},${n(surface?.data?.waterColor, 0)},${n(
+        surface?.data?.rippleColor,
+        0,
+    )},${gore ? 1 : 0},${n(gore?.fade?.start, 0)},${n(gore?.fade?.end, 1)},${n(
+        gore?.fade?.pow,
+        1,
+    )},${n(gore?.fade?.speed, 1)},${gore && gore.tint !== undefined ? 1 : 0},${n(
+        gore?.tint,
+        0xffffff,
+    )},${gore && gore.alpha !== undefined ? 1 : 0},${n(gore?.alpha, 1)},${
+        gore && gore.waterColor !== undefined ? 1 : 0
+    },${n(gore?.waterColor, 0)},${gore && gore.rippleColor !== undefined ? 1 : 0},${n(
+        gore?.rippleColor,
+        0,
+    )},${img?.flicker ? 1 : 0},${n(img?.flickerMin, 1)},${n(img?.flickerMax, 1)},${n(
+        img?.flickerRate,
+        1,
+    )},${img?.ignoreAdjust ? 1 : 0},${hasLifetime ? 1 : 0},${lifetimeMin},${lifetimeMax},${
         map && map.display === false ? 0 : 1
     },${map && map.color !== undefined ? 1 : 0},${n(map?.color, 0)},${n(map?.scale, 1)},${colInit(
         bounds,
@@ -320,7 +361,8 @@ for (const type of gameTypes) {
     }
     if (!def) continue;
     const img = def.lootImg || def.img || null;
-    gameEntries += `    {${str(type)},${str(def.type || "")},${imgInit(img)},${img?.sprite ? 1 : 0},${str(def.emitter || "")},${str(def.aura?.sprite)},${n(def.aura?.tint, 0xff00ff)},${def.aura !== undefined ? 1 : 0}},\n`;
+    const atk = def.attack || null;
+    gameEntries += `    {${str(type)},${str(def.type || "")},${imgInit(img)},${img?.sprite ? 1 : 0},${str(def.emitter || "")},${str(def.aura?.sprite)},${n(def.aura?.tint, 0xff00ff)},${def.aura !== undefined ? 1 : 0},${atk ? 1 : 0},${n(atk?.offset?.x, 0)},${n(atk?.offset?.y, 0)},${n(atk?.rad, 0)},${def.cleave ? 1 : 0},${str(def.sound?.playerHit)},${str(def.sound?.punch)},${def.useThrowParticles ? 1 : 0}},\n`;
     if (!def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack" && !def.frozenSprites) continue;
     let idlePose = def.anim?.idlePose || "fists";
     if (def.type === "gun") idlePose = def.pistol ? (def.isDual ? "dualPistol" : "pistol")
@@ -367,6 +409,25 @@ for (const [name, animation] of Object.entries(Animations)) {
         }}`;
     });
     poseEntries += `        _animations[${str(name)}].keyframes={${frames.join(",")}};\n`;
+    const effects = (animation.effects || []).map((e) => {
+        let fn = "AnimEffectFn::PlaySound", sound = "", playerHit = "";
+        if (e.fn === "animMeleeCollision") {
+            fn = "AnimEffectFn::MeleeCollision";
+            playerHit = e.args?.playerHit || "";
+        } else if (e.fn === "animThrowableParticles") {
+            fn = "AnimEffectFn::ThrowableParticles";
+        } else if (e.fn === "animSetThrowableState") {
+            // throwableState is already derived from the cook/throw state each
+            // frame, so this effect has no ported runtime side effect.
+            return `{${fp(e.time)},AnimEffectFn::ThrowableParticles,"__noop__",""}`;
+        } else if (e.fn === "animPlaySound") {
+            sound = e.args?.sound || "";
+        } else {
+            throw new Error(`Unknown anim effect fn ${e.fn} in ${name}`);
+        }
+        return `{${fp(e.time)},${fn},${str(sound)},${str(playerHit)}}`;
+    });
+    poseEntries += `        _animations[${str(name)}].effects={${effects.join(",")}};\n`;
 }
 
 // --- particles.ts particle/emitter defs -----------------------------------
@@ -527,6 +588,14 @@ struct RawMapObj {
     float doorSlideOffset;
     const char* doorCasingSprite; float doorCasingPx, doorCasingPy, doorCasingScale; unsigned doorCasingTint; float doorCasingAlpha;
     float doorSpriteAnchorX, doorSpriteAnchorY;
+    float height; int collidable, isWindow;
+    const char* hitParticle; const char* punchSound;
+    int hasSurface, surfaceType; unsigned surfaceWaterColor, surfaceRippleColor;
+    int hasGore; float goreFadeStart, goreFadeEnd, goreFadePow, goreFadeSpeed;
+    int goreHasTint; unsigned goreTint; int goreHasAlpha; float goreAlpha;
+    int goreHasWaterColor; unsigned goreWaterColor; int goreHasRippleColor; unsigned goreRippleColor;
+    int imgFlicker; float imgFlickerMin, imgFlickerMax, imgFlickerRate; int imgIgnoreAdjust;
+    int hasLifetime; float lifetimeMin, lifetimeMax;
     int mapDisplay, mapHasColor; unsigned mapColor; float mapScale;
     RawCollider bounding; int hasBounding;
     const RawLayer* layers; int layerCount;
@@ -548,7 +617,9 @@ struct RawMapRender {
     const char* const* atlases; int atlasCount;
     const char* ambMusic; const char* ambWind; const char* ambRiver; const char* ambWaves;
 };
-struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura; };
+struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura;
+    int hasAttack; float attackOffX, attackOffY, attackRad; int cleave;
+    const char* playerHit; const char* punchSound; int useThrowParticles; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -636,6 +707,38 @@ public:
             d.doorCasingTint = r.doorCasingTint;
             d.doorCasingAlpha = r.doorCasingAlpha;
             d.doorSpriteAnchor = Vec2(r.doorSpriteAnchorX, r.doorSpriteAnchorY);
+            d.height = r.height;
+            d.collidable = r.collidable != 0;
+            d.isWindow = r.isWindow != 0;
+            d.hitParticle = r.hitParticle ? r.hitParticle : "";
+            d.punchSound = r.punchSound ? r.punchSound : "";
+            d.hasSurface = r.hasSurface != 0;
+            d.surfaceType = r.surfaceType == 2
+                ? SurfaceTypeDef::Grass
+                : (r.surfaceType == 1 ? SurfaceTypeDef::Sand : SurfaceTypeDef::Water);
+            d.surfaceWaterColor = r.surfaceWaterColor;
+            d.surfaceRippleColor = r.surfaceRippleColor;
+            d.hasGore = r.hasGore != 0;
+            d.goreFadeStart = r.goreFadeStart;
+            d.goreFadeEnd = r.goreFadeEnd;
+            d.goreFadePow = r.goreFadePow;
+            d.goreFadeSpeed = r.goreFadeSpeed;
+            d.goreHasTint = r.goreHasTint != 0;
+            d.goreTint = r.goreTint;
+            d.goreHasAlpha = r.goreHasAlpha != 0;
+            d.goreAlpha = r.goreAlpha;
+            d.goreHasWaterColor = r.goreHasWaterColor != 0;
+            d.goreWaterColor = r.goreWaterColor;
+            d.goreHasRippleColor = r.goreHasRippleColor != 0;
+            d.goreRippleColor = r.goreRippleColor;
+            d.imgFlicker = r.imgFlicker != 0;
+            d.imgFlickerMin = r.imgFlickerMin;
+            d.imgFlickerMax = r.imgFlickerMax;
+            d.imgFlickerRate = r.imgFlickerRate;
+            d.imgIgnoreAdjust = r.imgIgnoreAdjust != 0;
+            d.hasLifetime = r.hasLifetime != 0;
+            d.lifetimeMin = r.lifetimeMin;
+            d.lifetimeMax = r.lifetimeMax;
             d.map.display = r.mapDisplay != 0;
             d.map.hasColor = r.mapHasColor != 0;
             d.map.color = r.mapColor;
@@ -726,6 +829,13 @@ public:
             d.auraSprite = r.auraSprite ? r.auraSprite : "";
             d.auraTint = r.auraTint;
             d.hasAura = r.hasAura != 0;
+            d.hasAttack = r.hasAttack != 0;
+            d.attackOffset = Vec2(r.attackOffX, r.attackOffY);
+            d.attackRad = r.attackRad;
+            d.cleave = r.cleave != 0;
+            d.playerHit = r.playerHit ? r.playerHit : "";
+            d.punchSound = r.punchSound ? r.punchSound : "";
+            d.useThrowParticles = r.useThrowParticles != 0;
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}

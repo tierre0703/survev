@@ -2,6 +2,7 @@
 #include "../GameWorld.h"
 #include "../Map.h"
 #include "../../render/Renderer.h"
+#include "../../audio/AudioManager.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -13,6 +14,79 @@ const GameObjRenderDef* item(const std::string& type) {
     auto* defs = getDefProvider();
     return defs ? defs->gameObject(type) : nullptr;
 }
+const MapObjectDef* providerDef(const std::string& type) {
+    auto* defs = getDefProvider();
+    return defs ? defs->mapObject(type) : nullptr;
+}
+
+// shared/utils/util.sameLayer.
+bool sameLayer(int a, int b) {
+    return ((a & 0x1) == (b & 0x1)) || (((a & 0x2) != 0) && ((b & 0x2) != 0));
+}
+float randf() { return static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX); }
+// util.random(min, max).
+float randRange(float a, float b) { return math::lerp(randf(), a, b); }
+
+// collisionHelpers.intersectSegmentObstacle: filters + nearest hit point.
+bool intersectSegmentObstacle(const Obstacle& o, const Vec2& s0, const Vec2& s1, float height,
+                              int layer, bool hackStairs, Vec2* pointOut) {
+    if (!o.active || o.dead || !o.collidable || o.isWindow || o.height < height ||
+        !sameLayer(o.layer, layer)) {
+        return false;
+    }
+    if (hackStairs && (layer & 0x2) != 0 && o.layer == 0) {
+        return false;
+    }
+    return colliderIntersectSegmentRes(o.collider, s0, s1, pointOut);
+}
+
+// collisionHelpers.intersectSegment: nearest obstacle along pos + dir*len.
+// Returns true and writes the hit id + distance.
+bool intersectSegmentNearest(const std::vector<Obstacle*>& obstacles, const Vec2& pos,
+                             const Vec2& dir, float len, float height, int layer, bool hackStairs,
+                             uint16_t* idOut, float* distOut) {
+    const Vec2 end = v2Add(pos, v2Mul(dir, len));
+    bool found = false;
+    float bestDist = 0.0f;
+    uint16_t bestId = 0;
+    for (auto* o : obstacles) {
+        if (!o) {
+            continue;
+        }
+        Vec2 point;
+        if (intersectSegmentObstacle(*o, pos, end, height, layer, hackStairs, &point)) {
+            const float dist = v2Length(v2Sub(point, pos));
+            if (!found || dist < bestDist) {
+                found = true;
+                bestDist = dist;
+                bestId = o->__id;
+            }
+        }
+    }
+    if (found) {
+        *idOut = bestId;
+        *distOut = bestDist;
+    }
+    return found;
+}
+
+// collisionHelpers.intersectSegmentDist: nearest obstacle distance (defaults len).
+float intersectSegmentDist(const std::vector<Obstacle*>& obstacles, const Vec2& pos, const Vec2& dir,
+                           float len, float height, int layer, bool hackStairs) {
+    float dist = len;
+    const Vec2 end = v2Add(pos, v2Mul(dir, len));
+    for (auto* o : obstacles) {
+        if (!o) {
+            continue;
+        }
+        Vec2 point;
+        if (intersectSegmentObstacle(*o, pos, end, height, layer, hackStairs, &point)) {
+            dist = math::min(dist, v2Length(v2Sub(point, pos)));
+        }
+    }
+    return dist;
+}
+
 BonePose blend(float t, const BonePose& a, const BonePose& b) {
     return {v2Lerp(t, a.pivot, b.pivot), math::lerp(t, a.rot, b.rot), v2Lerp(t, a.pos, b.pos)};
 }
@@ -105,6 +179,8 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
     scale = data.scale;
     wearingPan = data.wearingPan;
     healEffect = data.healEffect;
+    // player.ts: m_rad = netData.m_scale * GameConfig.player.radius.
+    rad = data.scale * PlayerConfig::radius;
     if ((hasteType != data.hasteType || hasteSeq != data.hasteSeq) && hasteEmitter) {
         hasteEmitter->stop();
         hasteEmitter = nullptr;
@@ -362,6 +438,10 @@ void Player::update(float dt, Ctx& ctx) {
             animMask |= bit;
         }
         finished = animTicker >= frames.back().time;
+        // player.ts: run animation effects whose time falls in (prevTicker,
+        // ticker]; the final frame also processes the animation end.
+        const float effectTicker = animTicker + (finished ? 1.0f : 0.0f);
+        runAnimEffects(ctx, animTicker - dt, effectTicker, finished);
     } else if (currentAnim != Anim_None) playAnim(Anim_None, animSeq);
     const auto* idle = provider ? provider->playerPose(downed ? "downed" : weapon ? weapon->idlePose : "fists") : nullptr;
     if (!idle && provider) idle = provider->playerPose("fists");
@@ -565,5 +645,244 @@ void Player::updateFrozenState(float dt, Ctx& ctx) {
                                    ? 1.0f
                                    : math::remap(frozenTicker, 0.0f, fadeDuration, 0.0f, 1.0f));
     bodyEffectSprite->setVisible(frozenTicker > 0.0f);
+}
+
+Collider Player::getMeleeCollider() const {
+    const GameObjRenderDef* meleeDef = item(activeWeapon);
+    const float ang = std::atan2(dir.y, dir.x);
+    const Vec2 off = v2Add(meleeDef && meleeDef->hasAttack ? meleeDef->attackOffset : Vec2(),
+                           v2Mul(Vec2(1.0f, 0.0f), scale - 1.0f));
+    const Vec2 pos = v2Add(this->pos, v2Rotate(off, ang));
+    const float rad = meleeDef && meleeDef->hasAttack ? meleeDef->attackRad : 0.0f;
+    return Collider::createCircle(pos, rad);
+}
+
+void Player::runAnimEffects(Ctx& ctx, float ticker, float effectTicker, bool lastFrame) {
+    (void)lastFrame;
+    const DefProvider* provider = getDefProvider();
+    const PlayerAnimationDef* anim = provider ? provider->playerAnimation(animation) : nullptr;
+    if (!anim) {
+        return;
+    }
+    for (const auto& effect : anim->effects) {
+        if (effect.time < ticker || effect.time >= effectTicker) {
+            continue;
+        }
+        switch (effect.fn) {
+            case AnimEffectFn::PlaySound: {
+                if (effect.sound == "__noop__" || effect.sound.empty()) {
+                    break;
+                }
+                const GameObjRenderDef* def = item(activeWeapon);
+                if (!def) {
+                    break;
+                }
+                // animPlaySound: melee/throwable sound keyed by the def's sound
+                // table. Melee and throwable defs both carry their swing/throw
+                // sounds; the shared table is exposed via the render def's
+                // punch/playerHit fields where applicable.
+                const std::string* sound = nullptr;
+                if (effect.sound == "swing") sound = &def->punchSound;
+                else if (effect.sound == "playerHit") sound = &def->playerHit;
+                if (!sound || sound->empty()) {
+                    break;
+                }
+                if (ctx.audio()) {
+                    audio::PlaySoundOptions opts;
+                    opts.channel = "sfx";
+                    opts.hasSoundPos = true;
+                    opts.soundPos = pos;
+                    opts.fallOff = 3.0f;
+                    opts.hasLayer = true;
+                    opts.layer = layer;
+                    opts.filter = "muffled";
+                    ctx.audio()->playSound(*sound, opts);
+                }
+                break;
+            }
+            case AnimEffectFn::MeleeCollision:
+                animMeleeCollision(ctx, effect.playerHit);
+                break;
+            case AnimEffectFn::ThrowableParticles:
+                animThrowableParticles(ctx);
+                break;
+        }
+    }
+}
+
+void Player::animMeleeCollision(Ctx& ctx, const std::string& playerHit) {
+    const GameObjRenderDef* meleeDef = item(activeWeapon);
+    if (!meleeDef || meleeDef->category != "melee") {
+        return;
+    }
+    const Collider meleeCol = getMeleeCollider();
+    const float meleeDist = meleeCol.rad + v2Length(v2Sub(pos, meleeCol.pos));
+
+    struct Hit {
+        float pen = 0.0f;
+        int prio = 0;
+        Vec2 pos;
+        Vec2 vel;
+        int layer = 0;
+        int zOrd = 0;
+        std::string particle;
+        std::string sound;
+        bool playGroup = false;
+    };
+    std::vector<Hit> hits;
+
+    const auto& obstacles = ctx.map().obstaclePool.m_getPool();
+    for (auto* obstacle : obstacles) {
+        if (!obstacle) {
+            continue;
+        }
+        if (!colliderIntersect(obstacle->collider, meleeCol)) {
+            continue;
+        }
+        if (!obstacle->active || obstacle->dead || obstacle->isSkin) {
+            continue;
+        }
+        if (obstacle->height < PlayerConfig::meleeHeight) {
+            continue;
+        }
+        if (!sameLayer(obstacle->layer, layer & 1)) {
+            continue;
+        }
+        Vec2 dirPush;
+        float pen = 0.0f;
+        if (!colliderIntersectCircleRes(obstacle->collider, meleeCol.pos, meleeCol.rad, &dirPush,
+                                        &pen)) {
+            continue;
+        }
+        if (meleeDef->cleave) {
+            const Vec2 meleeDir = v2NormalizeSafe(v2Sub(obstacle->pos, pos), Vec2(1.0f, 0.0f));
+            uint16_t hitId = 0;
+            float hitDist = 0.0f;
+            if (intersectSegmentNearest(obstacles, pos, meleeDir, meleeDist,
+                                        PlayerConfig::meleeHeight, layer, false, &hitId,
+                                        &hitDist) &&
+                hitId != obstacle->__id) {
+                continue;
+            }
+        }
+        const Vec2 closestPt = v2Add(meleeCol.pos, v2Mul(v2Neg(dirPush), meleeCol.rad - pen));
+        const Vec2 vel = v2Rotate(v2Mul(dirPush, 7.5f), ((randf() - 0.5f) * pi) / 3.0f);
+        Hit hit;
+        hit.pen = pen;
+        hit.prio = 1;
+        hit.pos = closestPt;
+        hit.vel = vel;
+        hit.layer = renderZLayer;
+        hit.zOrd = renderZOrd;
+        hit.particle = obstacle ? obstacle->hitParticle : "";
+        hit.sound = obstacle ? obstacle->punchSound : "";
+        hit.playGroup = true;
+        hits.push_back(std::move(hit));
+    }
+
+    // Players.
+    const uint8_t ourTeamId = teamId;
+    for (auto* playerCol : ctx.playerBarn().playerPool.m_getPool()) {
+        if (!playerCol) {
+            continue;
+        }
+        if (!playerCol->active) {
+            continue;
+        }
+        if (playerCol->__id == __id || playerCol->dead) {
+            continue;
+        }
+        if (!sameLayer(playerCol->layer, layer)) {
+            continue;
+        }
+        Vec2 dirPush;
+        float pen = 0.0f;
+        if (!intersectCircleCircleRes(meleeCol.pos, meleeCol.rad, playerCol->pos, playerCol->rad,
+                                      &dirPush, &pen)) {
+            continue;
+        }
+        const Vec2 meleeDir = v2NormalizeSafe(v2Sub(playerCol->pos, pos), Vec2(1.0f, 0.0f));
+        Vec2 linePoint;
+        const bool lineHit = intersectSegmentCircleRes(
+            pos, v2Add(pos, v2Mul(meleeDir, meleeDist)), playerCol->pos, playerCol->rad, &linePoint);
+        const Vec2 pt = lineHit ? linePoint : playerCol->pos;
+        const float distToPlayer = v2Length(v2Sub(pt, pos));
+        const float distToObstacle = intersectSegmentDist(
+            obstacles, pos, meleeDir, meleeDist, PlayerConfig::meleeHeight, layer, false);
+        if (distToObstacle < distToPlayer) {
+            continue;
+        }
+        const uint8_t teamId2 = ctx.playerBarn().teams.count(playerCol->__id)
+                                    ? ctx.playerBarn().teams[playerCol->__id]
+                                    : 0;
+        const Vec2 vel = v2Rotate(meleeDir, ((randf() - 0.5f) * pi) / 3.0f);
+        std::string hitSound = !playerHit.empty() ? playerHit : meleeDef->playerHit;
+        if (hitSound.empty()) {
+            hitSound = meleeDef->playerHit;
+        }
+        Hit hit;
+        hit.pen = pen;
+        hit.prio = teamId2 == ourTeamId ? 2 : 0;
+        hit.pos = playerCol->pos;
+        hit.vel = vel;
+        hit.layer = playerCol->renderZLayer;
+        hit.zOrd = playerCol->renderZOrd;
+        hit.particle = "bloodSplat";
+        hit.sound = hitSound;
+        hit.playGroup = false;
+        hits.push_back(std::move(hit));
+    }
+
+    std::sort(hits.begin(), hits.end(), [](const Hit& a, const Hit& b) {
+        if (a.prio == b.prio) {
+            return a.pen > b.pen;
+        }
+        return a.prio < b.prio;
+    });
+
+    size_t hitCount = hits.size();
+    if (!meleeDef->cleave) {
+        hitCount = math::min(hitCount, static_cast<size_t>(1));
+    }
+    for (size_t i = 0; i < hitCount; i++) {
+        const Hit& hit = hits[i];
+        if (!hit.particle.empty()) {
+            ctx.particleBarn().addParticle(ctx.factory(), hit.particle, hit.layer, hit.pos, hit.vel,
+                                           1.0f, randf() * pi * 2.0f, nullptr, hit.zOrd + 1);
+        }
+        if (!hit.sound.empty() && ctx.audio()) {
+            audio::PlaySoundOptions opts;
+            opts.channel = "hits";
+            opts.hasSoundPos = true;
+            opts.soundPos = hit.pos;
+            opts.hasLayer = true;
+            opts.layer = layer;
+            opts.filter = "muffled";
+            if (hit.playGroup) {
+                ctx.audio()->playGroup(hit.sound, opts);
+            } else {
+                ctx.audio()->playSound(hit.sound, opts);
+            }
+        }
+    }
+}
+
+void Player::animThrowableParticles(Ctx& ctx) {
+    const GameObjRenderDef* weapon = item(activeWeapon);
+    if (!weapon || !weapon->useThrowParticles) {
+        return;
+    }
+    // Pin.
+    const Vec2 pinOff = v2Rotate(Vec2(0.75f, 0.75f), std::atan2(dir.y, dir.x));
+    ctx.particleBarn().addParticle(ctx.factory(), "fragPin", renderZLayer,
+                                   v2Add(pos, pinOff),
+                                   v2Mul(v2Rotate(dir, pi * 0.5f), 4.5f), 1.0f, randf() * pi * 2.0f,
+                                   nullptr, renderZOrd + 1);
+    // Lever.
+    const Vec2 leverOff = v2Rotate(Vec2(0.75f, -0.75f), std::atan2(dir.y, dir.x));
+    ctx.particleBarn().addParticle(ctx.factory(), "fragLever", renderZLayer,
+                                   v2Add(pos, leverOff),
+                                   v2Mul(v2Rotate(dir, -pi * 0.25f), 3.5f), 1.0f, randf() * pi * 2.0f,
+                                   nullptr, renderZOrd + 1);
 }
 } // namespace surv

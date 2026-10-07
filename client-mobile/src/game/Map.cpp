@@ -14,6 +14,11 @@
 
 namespace surv {
 
+// util.sameLayer (shared/utils/util.ts): objects on the same layer interact.
+static bool sameLayerMask(int a, int b) {
+    return ((a & 0x1) == (b & 0x1)) || (((a & 0x2) != 0) && ((b & 0x2) != 0));
+}
+
 static void tracePath(pix::Graphics* g, const std::vector<Vec2>& path) {
     if (path.empty()) {
         return;
@@ -243,6 +248,31 @@ Building* Map::getBuildingById(uint16_t id) {
 }
 
 Map::GroundSurface Map::getGroundSurface(const Vec2& pos, int layer) const {
+    // Decals are checked first (map.ts): a decal painted over water (e.g. the
+    // bathhouse pool) overrides the ground surface, including its gore fade.
+    if (decalBarn) {
+        for (auto* decal : decalBarn->decalPool.m_getPool()) {
+            if (decal->active && decal->hasSurface && sameLayerMask(decal->layer, layer) &&
+                colliderIntersectCircle(decal->collider, pos, 0.0001f)) {
+                GroundSurface out;
+                out.type = decal->surfaceType == SurfaceTypeDef::Grass
+                               ? SurfaceType::Grass
+                               : (decal->surfaceType == SurfaceTypeDef::Sand
+                                      ? SurfaceType::Sand
+                                      : SurfaceType::Water);
+                out.waterColor = decal->surfaceWaterColor;
+                out.rippleColor = decal->surfaceRippleColor;
+                if (out.type == SurfaceType::Water) {
+                    // River/decalless defaults for a decal surface are authored
+                    // in the def; fall back to the map colors when unset.
+                    if (out.waterColor == 0) out.waterColor = mapDef.colors.water;
+                    if (out.rippleColor == 0) out.rippleColor = mapDef.colors.waterRipple;
+                }
+                return out;
+            }
+        }
+    }
+
     // Buildings can override the ground (layer 2 surfaces), matching map.ts.
     int zIdx = 0;
     const Building::Surface* surface = nullptr;

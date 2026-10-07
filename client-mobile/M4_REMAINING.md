@@ -524,11 +524,74 @@ Closes the three items carried in §9.
 
 ### Remaining (not defects)
 
-- The browser's per-frame player **collision/audio** side effects from
-  animations (e.g. `animMeleeCollision` hitting world objects) are approximated:
-  the port plays the weapon impact sound/particles from the animation timeline
-  but does not run the full melee-collision scan for remote players.
-- `getGroundSurface` does not yet consider **decals** (decal.ts is not ported),
-  so decal-painted water is not reflected in submersion.
+Both items below were implemented in §11.
+
+## 11. Session 6 — animation collision/audio + decals (2026-10-07)
+
+Closes the two §10 "Remaining (not defects)" items.
+
+### Animation-driven melee collision + audio (`player.ts`)
+
+- `animData.ts` animation **effects** are now codegen'd (`PlayerAnimationDef.effects`
+  → `AnimEffect` / `AnimEffectFn`): `animPlaySound`, `animMeleeCollision` and
+  `animThrowableParticles` (plus the throwable-state `animSetThrowableState`
+  marker, which has no runtime side effect because `throwableState` is derived
+  each frame).
+- `Player::update` tracks `(prevTicker, ticker]` and calls `runAnimEffects`
+  once per crossed effect, including the +1 s final-frame window like
+  `player.ts`.
+- **`animMeleeCollision` is a full port**: it builds the melee attack capsule
+  (`getMeleeCollider`, now using `def.attack.offset/rad` emitted by the
+  codegen), scans `map.obstaclePool` (with `height`/`collidable`/`isWindow`/
+  layer filters, the `cleave` wall-check via `collisionHelpers.intersectSegment`)
+  and the player pool (`intersectCircleCircle`, LOS wall check, team priority),
+  sorts by `(prio, -pen)`, respects the non-cleave single-hit cap, sprays the
+  hit particle (`bloodSplat`/obstacle `hitParticle`) and plays the hit sound
+  (`playGroup` for obstacle punch groups, `playSound` for player hits) with
+  `channel:"hits"`.
+- `animPlaySound` resolves the melee/throwable `sound` table and plays it with
+  `channel:"sfx"`, `soundPos`, `fallOff:3`, layer and `muffled` filter.
+- `animThrowableParticles` spawns the `fragPin`/`fragLever` spray when the
+  throwable def has `useThrowParticles` (now emitted by the codegen).
+- New def fields: `MapObjectDef.height/collidable/isWindow/hitParticle/
+  punchSound` and `GameObjRenderDef.hasAttack/attackOffset/attackRad/cleave/
+  playerHit/punchSound/useThrowParticles`. `Obstacle` stores the transformed
+  `collider` and the def flags for the scan. `Player::rad`
+  (`scale * GameConfig.player.radius`) and `PlayerConfig.meleeHeight` are
+  ported.
+- `clamp`-style push/pen coldet helpers (`colliderIntersectCircleRes`,
+  `colliderIntersectSegmentRes`, segment distance) were added to
+  `core/Collider.h`.
+
+### Decals (`decal.ts`) + `getGroundSurface`
+
+- **Full `Decal`/`DecalRender`/`DecalBarn` port** in `Barns.{h,cpp}`: the pooled
+  decal object transforms its collider from the def, copies the `surface`, and
+  allocates a pooled `DecalRender` on `isNew`; the render node draws the sprite
+  (`camera.m_pointToScreen`, `camera.m_pixels`, `-rot`, water alpha ×0.3, fade
+  alpha), supports `flicker` on light decals and fades out over `lifetime`.
+- Decals register as `ObjectType_Decal` in `GameWorld`, update in
+  `GameWorld::update` before the renderer flush, and `Map` gets the barn via
+  `setDecalBarn` (matching `map.ts` constructor injection).
+- **`Map::getGroundSurface` checks decals first** (after `util.sameLayer` +
+  `collider.intersectCircle`), returning the decal `surface` water colour with
+  the gore fade (`decal.ts update` → `surface.data.waterColor/rippleColor`),
+  so `player-wading` submersion in the bathhouse pool now uses the decal water.
+- The codegen emits decal `surface`, `gore` (fade fields + optional
+  `tint/alpha/waterColor/rippleColor`), `img.flicker*`, `img.ignoreAdjust`,
+  `lifetime` and `height`. `util.lerpColor` (sRGB↔linear) is ported in
+  `Barns.cpp`.
+
+### Verification (this session)
+
+- `surv_tests`: **67 tests, 1,512 assertions, 0 failures.** New test
+  `player_anim_effects_and_decals` covers the codegen'd animation effects
+  (`fists` swing + melee-collision timing), the melee attack capsule defs
+  (`woodaxe` offset/rad, `cleave`), the obstacle collision/impact defs
+  (`barrel_01` height/collidable/`barrelChip`/`barrel_bullet`), the
+  `decal_bathhouse_pool_01` surface/gore defs, and the decal-first
+  `Map::getGroundSurface` water colour (with the terrain surface unchanged
+  outside the pool).
+- x86_64 `libSurvevMobile.so` builds and links clean.
 
 

@@ -53,6 +53,11 @@ public:
     std::vector<uint16_t> solvedPuzzleIds;
     std::vector<uint16_t> lootDropSfxIds;
 
+    // map.ts constructor injection (decalBarn): getGroundSurface checks decals
+    // before buildings/rivers/terrain.
+    DecalBarn* decalBarn = nullptr;
+    void setDecalBarn(DecalBarn* barn) { decalBarn = barn; }
+
     // biome camera particle emitter (map.ts cameraEmitter), driven per frame.
     Emitter* cameraEmitter = nullptr;
 

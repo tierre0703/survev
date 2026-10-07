@@ -25,6 +25,7 @@ class BulletBarn;
 class ExplosionBarn;
 class PlayerBarn;
 class ParticleBarn;
+class DecalBarn;
 class Gas;
 
 namespace audio {
@@ -58,6 +59,7 @@ public:
     ExplosionBarn& explosionBarn() { return *_explosionBarn; }
     PlayerBarn& playerBarn() { return *_playerBarn; }
     ParticleBarn& particleBarn() { return *_particleBarn; }
+    DecalBarn& decalBarn() { return *_decalBarn; }
     Gas& gas() { return _gas; }
 
     Player* activePlayer() { return _activePlayer; }
@@ -99,6 +101,7 @@ private:
     std::unique_ptr<ExplosionBarn> _explosionBarn;
     std::unique_ptr<PlayerBarn> _playerBarn;
     std::unique_ptr<ParticleBarn> _particleBarn;
+    std::unique_ptr<DecalBarn> _decalBarn;
     Gas _gas;
     std::unique_ptr<ObjectCreator> _creator;
 
