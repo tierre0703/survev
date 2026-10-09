@@ -163,6 +163,7 @@ private:
     Button* _aimLineBtn = nullptr;
     Button* _soundBtn = nullptr;
     ax::Label* _errorText = nullptr;
+    std::function<void(const std::string&, const std::string&)> _onMenuError;
 
     float _health = 0.0f;
     float _boost = 0.0f;

@@ -346,6 +346,17 @@ void GameScene::pauseGame() {
     }
 }
 
+void GameScene::returnToMenu() {
+    // Stop any in-flight matchmaking/join first so a late find_game response
+    // cannot pull the player back out of the menu.
+    if (_inGame || _pendingFind || _findInFlight) {
+        leaveGame();
+    }
+    if (onMatchEnded) {
+        onMatchEnded("");
+    }
+}
+
 void GameScene::resumeGame() {
     if (_game) {
         _game->resume();

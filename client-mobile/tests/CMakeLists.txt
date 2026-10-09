@@ -58,6 +58,7 @@ if(MSVC)
 else()
     target_compile_options(surv_tests PRIVATE -Wall -Wextra)
 endif()
+target_compile_definitions(surv_tests PRIVATE SURV_UI_NO_AXMOL)
 
 enable_testing()
 add_test(NAME surv_tests COMMAND surv_tests)

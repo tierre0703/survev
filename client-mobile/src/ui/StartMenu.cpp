@@ -141,9 +141,16 @@ void StartMenu::buildPanel() {
 
     const char* keys[3] = { "index-play-solo", "index-play-duo", "index-play-squad" };
     const char* fallbacks[3] = { "Play Solo", "Play Duo", "Play Squad" };
+    const int teamModes[3] = { 1, 2, 4 }; // web: solo/duo/squad teamMode
     for (int i = 0; i < 3; i++) {
         _playBtns[i] = makeButton(tr(_loc, keys[i], fallbacks[i]), fieldW, kRow, true, 16);
         _playBtns[i]->setCssPosition(pad, y);
+        const int teamMode = teamModes[i];
+        _playBtns[i]->onClick = [this, teamMode] {
+            if (onQuickStart) {
+                onQuickStart(teamMode);
+            }
+        };
         _panel->addChild(_playBtns[i]);
         y += kRow + kGap;
     }

@@ -91,6 +91,10 @@ public:
     void onMatchStarted();
     void onMatchEnded(const std::string& errorL10nKey = "");
 
+    // Aborts an in-flight matchmaking request and restores the main menu. Wired
+    // to the matchmaking overlay's "Back to Main Menu" button.
+    void cancelPending();
+
     // The overlay is owned by the menu and handed to the game scene.
     uikit::UiOverlay* overlay() const { return _overlay.get(); }
 

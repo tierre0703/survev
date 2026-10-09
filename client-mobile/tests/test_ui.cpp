@@ -437,7 +437,8 @@ TEST(ui_css_colors) {
 
     const ui::Rgba half = ui::parseHexColorRgba("rgba(0,0,0,0.5)");
     CHECK_EQ(int(half.r), 0);
-    CHECK_EQ(int(half.a), 127);
+    // 0.5 * 255 = 127.5, and the CSS->byte conversion rounds half up.
+    CHECK_EQ(int(half.a), 128);
 
     // An unparsable string yields the caller's fallback.
     const ui::Rgb fallback{1, 2, 3};

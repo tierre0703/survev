@@ -2,7 +2,6 @@
 #include "Files.h"
 
 #include <algorithm>
-#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <vector>
@@ -54,93 +53,17 @@ bool hit(ax::Node* node, ax::Touch* touch) {
 } // namespace
 
 // --- colours ---------------------------------------------------------------
-namespace {
-
-int hexVal(char c) {
-    if (c >= '0' && c <= '9') return c - '0';
-    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
-    return -1;
-}
-
-bool parseCss(const std::string& css, float& r, float& g, float& b, float& a) {
-    std::string s = css;
-    // Trim whitespace.
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.front()))) s.erase(s.begin());
-    while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) s.pop_back();
-    if (s.rfind("rgb(", 0) == 0 || s.rfind("rgba(", 0) == 0) {
-        const bool hasAlpha = s[3] == 'a';
-        const std::size_t start = hasAlpha ? 5 : 4;
-        const std::size_t end = s.find(')');
-        const std::string inner = s.substr(start, end == std::string::npos ? std::string::npos : end - start);
-        std::vector<float> parts;
-        std::string cur;
-        for (char c : inner + ",") {
-            if (c == ',') {
-                if (!cur.empty()) {
-                    parts.push_back(std::stof(cur));
-                    cur.clear();
-                }
-            } else {
-                cur.push_back(c);
-            }
-        }
-        if (parts.size() < 3) {
-            return false;
-        }
-        r = parts[0] / 255.0f;
-        g = parts[1] / 255.0f;
-        b = parts[2] / 255.0f;
-        a = parts.size() > 3 ? parts[3] : 1.0f;
-        return true;
-    }
-    if (s.empty() || s[0] != '#') {
-        return false;
-    }
-    s.erase(s.begin());
-    if (s.size() == 3 || s.size() == 4) {
-        std::string expanded;
-        for (char c : s) {
-            expanded.push_back(c);
-            expanded.push_back(c);
-        }
-        s = expanded;
-    }
-    if (s.size() != 6 && s.size() != 8) {
-        return false;
-    }
-    const int rr = hexVal(s[0]) * 16 + hexVal(s[1]);
-    const int gg = hexVal(s[2]) * 16 + hexVal(s[3]);
-    const int bb = hexVal(s[4]) * 16 + hexVal(s[5]);
-    const int aa = s.size() == 8 ? hexVal(s[6]) * 16 + hexVal(s[7]) : 255;
-    if (rr < 0 || gg < 0 || bb < 0 || aa < 0) {
-        return false;
-    }
-    r = rr / 255.0f;
-    g = gg / 255.0f;
-    b = bb / 255.0f;
-    a = aa / 255.0f;
-    return true;
-}
-
-} // namespace
+// The parser itself lives in Layout.cpp (engine-free) so the host tests can
+// exercise it; these wrappers convert the parsed bytes to axmol colours.
 
 ax::Color3B parseHexColor(const std::string& css, const ax::Color3B& fallback) {
-    float r = 0, g = 0, b = 0, a = 1;
-    if (!parseCss(css, r, g, b, a)) {
-        return fallback;
-    }
-    return ax::Color3B(static_cast<uint8_t>(r * 255.0f + 0.5f), static_cast<uint8_t>(g * 255.0f + 0.5f),
-                       static_cast<uint8_t>(b * 255.0f + 0.5f));
+    const Rgb rgb = parseHexColorRgb(css, Rgb{fallback.r, fallback.g, fallback.b});
+    return ax::Color3B(rgb.r, rgb.g, rgb.b);
 }
 
 ax::Color4B parseHexColorA(const std::string& css, const ax::Color4B& fallback) {
-    float r = 0, g = 0, b = 0, a = 1;
-    if (!parseCss(css, r, g, b, a)) {
-        return fallback;
-    }
-    return ax::Color4B(static_cast<uint8_t>(r * 255.0f + 0.5f), static_cast<uint8_t>(g * 255.0f + 0.5f),
-                       static_cast<uint8_t>(b * 255.0f + 0.5f), static_cast<uint8_t>(a * 255.0f + 0.5f));
+    const Rgba rgba = parseHexColorRgba(css, Rgba{fallback.r, fallback.g, fallback.b, fallback.a});
+    return ax::Color4B(rgba.r, rgba.g, rgba.b, rgba.a);
 }
 
 // --- Typography ------------------------------------------------------------
@@ -154,6 +77,16 @@ std::string fontPath(const std::string& family, bool bold) {
     return Files::fontFace(family.empty() ? kGuiFamily : family, bold);
 }
 
+namespace {
+// Font size, in points, that maps to a label's face size of `size` under the
+// project's content scale (`Content/` is authored at half the 1280x720 design
+// space, so a 16px design label is rendered from an 8pt face). axmol otherwise
+// substitutes a fixed ~12pt TTF face and silently ignores the requested size.
+float ttfFacePoints(float size) {
+    return size * ax::Director::getInstance()->getContentScaleFactor();
+}
+} // namespace
+
 ax::Label* makeLabel(const std::string& text, float size, bool bold, bool bulk) {
     // The web client renders UI text in Roboto Condensed. Prefer the bundled TTF
     // so the native UI matches the web glyphs; `bulk` (tight grids) keeps the
@@ -161,7 +94,20 @@ ax::Label* makeLabel(const std::string& text, float size, bool bold, bool bulk) 
     if (!bulk) {
         const std::string face = fontPath(kGuiFamily, bold);
         if (!face.empty() && ax::FileUtils::getInstance()->isFileExist(face)) {
-            if (auto* label = ax::Label::createWithTTF(text, face, size)) {
+            // axmol substitutes a fixed ~12pt face whenever `createWithTTF` is
+            // given the (float) point size, so route through `createWithTTF`'s
+            // `FontDefinition` to get an integer point size, then scale the
+            // label by the content factor so it rasterises at the right size.
+            // (This is what `axmol::ui::RichText`/`Label::createWithTTF` do
+            // internally for their own content-scale handling.)
+            ax::FontDefinition def;
+            def._fontName = face;
+            def._fontSize = static_cast<int>(size + 0.5f);
+            if (auto* label = ax::Label::createWithTTF(def, text)) {
+                const float scale = ax::Director::getInstance()->getContentScaleFactor();
+                if (scale > 0.0f) {
+                    label->setScale(scale);
+                }
                 return label;
             }
         }
@@ -177,7 +123,8 @@ void setLabelSize(ax::Label* label, float size) {
     // labels keep the point size in the system-font field. Handle both so a
     // resize never corrupts a label created by `makeLabel`.
     if (label->getLabelType() == ax::Label::LabelType::TTF) {
-        label->setTTFFaceSize(static_cast<int>(size + 0.5f));
+        label->setTTFFaceSize(static_cast<int>(ttfFacePoints(size) + 0.5f));
+        label->setScale(1.0f);
     } else {
         label->setSystemFontSize(size);
     }
@@ -192,8 +139,9 @@ void setLabelBold(ax::Label* label, bool bold, bool bulk) {
         return;
     }
     // Rebuild the TTF label with the other weight at the same position/style.
-    auto* replacement = makeLabel(std::string(label->getString()),
-                                  static_cast<float>(label->getTTFFaceSize()), bold, bulk);
+    const float facePoints = static_cast<float>(label->getTTFFaceSize());
+    const float size = facePoints / ax::Director::getInstance()->getContentScaleFactor();
+    auto* replacement = makeLabel(std::string(label->getString()), size, bold, bulk);
     if (!replacement || replacement == label) {
         return;
     }
@@ -356,6 +304,7 @@ bool Button::init(const std::string& label, float width, float height, const std
     };
     touch->onTouchCancelled = [this](ax::Touch*, ax::Event*) { setPressed(false); };
     getEventDispatcher()->addEventListenerWithSceneGraphPriority(touch, this);
+    scheduleUpdate();
     return true;
 }
 

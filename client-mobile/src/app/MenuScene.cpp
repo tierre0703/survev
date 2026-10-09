@@ -112,6 +112,9 @@ bool MenuScene::init() {
 
     // --- in-game overlay (handed to the game scene) ----------------------
     _overlay = std::make_unique<menuui::UiOverlay>();
+    // The pause/menu overlay is shared with the game scene; when the player
+    // quits out of a lobby it restores the main menu.
+    _overlay->onQuit = [this] { cancelPending(); };
 
     // --- team client -----------------------------------------------------
     _team = std::make_unique<menuui::TeamMenu>();
@@ -337,6 +340,20 @@ void MenuScene::quickStart(int teamMode) {
     // The scene owns the anti-spam delay/retries; this only asks for the mode.
     game->setJoinInfo(_hooks.joinInfo ? _hooks.joinInfo() : Game::JoinInfo{});
     game->enterWithFindGame(_region, gameModeIdx);
+}
+
+void MenuScene::cancelPending() {
+    _pending = false;
+    _pendingTicker = 0.0f;
+    _inGame = false;
+    if (GameScene* game = _hooks.scene ? _hooks.scene() : nullptr) {
+        game->returnToMenu(); // leaveGame() + onMatchEnded("")
+    }
+    if (_overlay) {
+        _overlay->hide();
+    }
+    clearError();
+    refreshUi();
 }
 
 void MenuScene::setError(const std::string& l10nKey, const std::string& fallback) {

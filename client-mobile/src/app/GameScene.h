@@ -113,6 +113,10 @@ public:
     void pauseGame();
     void resumeGame();
 
+    // Aborts any join in progress and notifies the menu that the match should
+    // re-open. Used by the matchmaking overlay's "Back to Main Menu".
+    void returnToMenu();
+
 private:
     // M5: build an InputMsg from Touch and send it at the server's input rate.
     void updateInput(float dt);
