@@ -1,0 +1,2 @@
+# Staged web assets live here (img/, audio/, l10n/, fonts/).
+# They are gitignored; regenerate with tools/sync-assets.ps1 before building.
