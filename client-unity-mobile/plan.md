@@ -314,12 +314,68 @@ is available locally, `manifest.json` + the fetch script are the deliverable (D4
 | Mobile WebSocket reliability | reconnection/backoff + surface errors in UI |
 | `shared/defs` drift | Codegen (D7) from the live TS registry |
 
-## 12. Immediate next steps
+## 12. Implementation status
 
-1. Create the Unity 2020.3 project skeleton (this scaffold): `ProjectSettings`,
-   `Packages/manifest.json`, `Assets/`, `ThirdParty/`, `tools/`.
-2. Stage assets (`tools/sync-assets.ps1`) and build the Unity atlas
-   (`tools/build-atlas.mjs`) + TMP fonts.
-3. Start **M2** (BitBuffer + messages) — critical path, testable without Unity.
-4. Stand up the **M0** Android build once Unity 2020.3 is installed locally.
-5. Port `v2`/`math` and build the `PixiLike` adapter while M0/M1 mature.
+The **engine-independent networking core is implemented and compiles cleanly**
+against the Roslyn C# compiler (no Unity required); the Unity/UI layers are
+scaffolded and need the Unity Editor (M0) to build.
+
+### Done (`Assets/Scripts/Core`, `Net`, `Game`, `Config`)
+- **`Core/BitBuffer.cs`** — bit-exact port of `shared/lib/bitBuffer.ts`
+  (`getBits`/`setBits` LSB-first, float32/64, ASCII + UTF-8 strings with the
+  NULL-terminated fixed-length semantics, `PatchUInt16` for flag back-patching).
+- **`Core/Vec2.cs`, `Core/V2.cs`, `Core/MathUtil.cs`, `Core/Rand.cs`** — ports of
+  `shared/utils/{v2,math}.ts` and the deterministic PRNG.
+- **`Core/GameConfig.cs`** — enums (`Action`, `Anim`, `Input`, `MapId`, ...),
+  `protocolVersion=1028`, `structureLayerCount=2`, `WeaponSlot.Count=4` and the
+  `bagSizes` key order.
+- **`Net/BitStream.cs`** — port of the `BitStream` extensions in
+  `shared/net/net.ts` (Constants, BitSizes, MsgType, `writeFloat`, `writeVec`,
+  `writeMapPos`, `writeUnitVec`, `writeGameType`, `writeMapType`, `writeArray`,
+  `writeCollider`, align helpers).
+- **`Net/TypeRegistry.cs`** — type<->id lookups over the generated tables.
+- **`Net/MsgStream.cs`** — port of `MsgStream`.
+- **`Net/Messages.cs`** — JoinMsg, InputMsg, JoinedMsg, KillMsg, PickupMsg,
+  AliveCountsMsg, SpectateMsg, DropItemMsg, EmoteMsg, EditMsg,
+  RoleAnnouncementMsg, PerkModeRoleSelectMsg, PlayerStatsMsg, GameOverMsg,
+  UpdatePassMsg.
+- **`Net/MapMsg.cs`** — rivers/places/objects/ground patches.
+- **`Net/ObjectSerializeFns.cs`** — per-object partial/full serializers for all
+  `ObjectType`s (player, obstacle, building, structure, loot, dead body, decal,
+  projectile, smoke, airdrop, loot spawner).
+- **`Net/UpdateMsg.cs`** — the full update delta (flags, active player, gas,
+  player/group status, bullets, explosions, emotes, planes, airstrikes, map
+  indicators, kill leader, ack).
+- **`Net/Connection.cs` + `WebSocketSharpTransport` / `ClientWebSocketTransport`
+  / `WebSocketTransport`** — port of `shared/net/connection.ts` with the
+  background-thread queue + main-thread `Pump()` split.
+- **`Game/Game.cs`** — connect + send `JoinMsg` + decode/dispatch
+  (`Joined`/`Update`/`Map`/`Kill`/`GameOver`/`Pickup`), `SendInput` seq/ack.
+- **Codegen** (`tools/codegen-defs.mjs`) now emits `GeneratedDefs.cs`
+  (757 game types / 1072 map types) **and** `GeneratedCategories.cs`
+  (756 game-type -> def-category entries, e.g. `gun`/`outfit`/`crosshair`).
+
+### Verification
+- The `Core` + `Net` + `Game` + `Generated` sources compile with
+  `-langversion:9` (Roslyn) with **zero errors**; the only externals are
+  `UnityEngine` (config/UI) and the vendored `websocket-sharp` (which also
+  compiles cleanly).
+- `Assets/Tests/EditMode/ProtocolTests.cs` asserts serialize -> deserialize ->
+  re-serialize byte equality for every message, including a full `UpdateMsg`
+  with full + partial objects. These run in Unity's Test Runner.
+- **Still to capture:** byte-for-byte fixtures from the web client / server
+  (the M2 gate) — the roundtrip tests are the harness for them.
+
+### Scaffolded, needs the Unity Editor (M0 → M7)
+- `Assets/Scripts/Render/*` (`PixiLike`, `Camera`), `UI/*` (`UiTheme`, `Touch`),
+  `App/Bootstrap.cs`, `Assets/Editor/BuildScript.cs`, `Assets/Tests/**`.
+
+## 13. Immediate next steps
+
+1. Capture binary frames from the web client / a dev server and add them as
+   byte-exact fixtures to `ProtocolTests` (closes the **M2** gate).
+2. Install Unity 2020.3 LTS and stand up the **M0** Android build
+   (armeabi-v7a + arm64-v8a).
+3. Port `v2`/`math` consumers and build the `PixiLike` adapter (**M4**).
+4. Wire `find_game_v2` + the menu → `Game.TryJoinGame` flow (**M3/M7**).
+5. Build the atlas + TMP fonts and load them in a test scene (**M1**).

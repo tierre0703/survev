@@ -89,8 +89,14 @@ namespace Survev.Core
         public void WriteUInt8(byte value) => WriteBits(value, 8);
         public byte ReadUInt8() => (byte)ReadBits(8);
 
+        public void WriteInt8(sbyte value) => WriteBits((byte)value, 8);
+        public sbyte ReadInt8() => (sbyte)ReadBits(8);
+
         public void WriteUInt16(ushort value) => WriteBits(value, 16);
         public ushort ReadUInt16() => (ushort)ReadBits(16);
+
+        public void WriteInt16(short value) => WriteBits((ushort)value, 16);
+        public short ReadInt16() => (short)ReadBits(16);
 
         public void WriteUInt32(uint value)
         {
@@ -103,6 +109,34 @@ namespace Survev.Core
             uint lo = (uint)ReadBits(16);
             uint hi = (uint)ReadBits(16);
             return lo | (hi << 16);
+        }
+
+        /// <summary>IEEE-754 float32 raw little-endian value (writeFloat32 in net.ts).</summary>
+        public void WriteFloat32(float value)
+        {
+            byte[] raw = BitConverter.GetBytes(value);
+            if (!BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(raw);
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                WriteUInt8(raw[i]);
+            }
+        }
+
+        public float ReadFloat32()
+        {
+            byte[] raw = new byte[4];
+            for (int i = 0; i < 4; i++)
+            {
+                raw[i] = ReadUInt8();
+            }
+            if (!BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(raw);
+            }
+            return BitConverter.ToSingle(raw, 0);
         }
 
         public void WriteBool(bool value) => WriteBits(value ? 1 : 0, 1);
@@ -136,26 +170,89 @@ namespace Survev.Core
             return BitConverter.ToSingle(raw, 0);
         }
 
-        /// <summary>UTF-8 string, length-prefixed the same way as the TS BitBuffer.</summary>
-        public void WriteString(string value, int bitLengthBits = 16)
+        /// <summary>
+        /// ASCII string, NULL-terminated. With an explicit length it writes
+        /// exactly `length` bytes; otherwise `value.Length + 1`.
+        /// Port of <c>writeASCIIString</c>/<c>readASCIIString</c> in
+        /// shared/lib/bitBuffer.ts (used by net.ts writeString/readString).
+        /// </summary>
+        public void WriteString(string value, int length = 0)
         {
-            byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(value ?? string.Empty);
-            WriteBits(utf8.Length, bitLengthBits);
-            for (int i = 0; i < utf8.Length; i++)
+            value ??= string.Empty;
+            int len = length > 0 ? length : value.Length + 1;
+            for (int i = 0; i < len; i++)
             {
-                WriteUInt8(utf8[i]);
+                WriteUInt8((byte)(i < value.Length ? value[i] : 0x00));
             }
         }
 
-        public string ReadString(int bitLengthBits = 16)
+        public string ReadString(int length = 0)
         {
-            int length = ReadBits(bitLengthBits);
-            byte[] utf8 = new byte[length];
-            for (int i = 0; i < length; i++)
+            var chars = new System.Collections.Generic.List<char>();
+            bool append = true;
+            bool fixedLength = length > 0;
+            int bytes = fixedLength ? length : (BitsRemaining / 8);
+
+            for (int i = 0; i < bytes; i++)
             {
-                utf8[i] = ReadUInt8();
+                byte c = ReadUInt8();
+                if (c == 0x00)
+                {
+                    append = false;
+                    if (!fixedLength)
+                    {
+                        break;
+                    }
+                }
+                if (append)
+                {
+                    chars.Add((char)c);
+                }
             }
-            return System.Text.Encoding.UTF8.GetString(utf8);
+            return new string(chars.ToArray());
+        }
+
+        /// <summary>Alias of <see cref="WriteString"/> with an explicit byte length (net.ts writeString).</summary>
+        public void WriteStringFixed(string value, int length) => WriteString(value, length);
+
+        /// <summary>Alias of <see cref="ReadString"/> with an explicit byte length (net.ts readString).</summary>
+        public string ReadStringFixed(int length) => ReadString(length);
+
+        /// <summary>UTF-8 string, NULL-terminated (writeUTF8String in bitBuffer.ts).</summary>
+        public void WriteUtf8String(string value, int length = 0)
+        {
+            byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(value ?? string.Empty);
+            int len = length > 0 ? length : utf8.Length + 1;
+            for (int i = 0; i < len; i++)
+            {
+                WriteUInt8(i < utf8.Length ? utf8[i] : (byte)0x00);
+            }
+        }
+
+        public string ReadUtf8String(int length = 0)
+        {
+            var bytes = new System.Collections.Generic.List<byte>();
+            bool append = true;
+            bool fixedLength = length > 0;
+            int total = fixedLength ? length : (BitsRemaining / 8);
+
+            for (int i = 0; i < total; i++)
+            {
+                byte c = ReadUInt8();
+                if (c == 0x00)
+                {
+                    append = false;
+                    if (!fixedLength)
+                    {
+                        break;
+                    }
+                }
+                if (append)
+                {
+                    bytes.Add(c);
+                }
+            }
+            return System.Text.Encoding.UTF8.GetString(bytes.ToArray());
         }
 
         /// <summary>Reset the write cursor (reader reuse: create a fresh reader instead).</summary>
@@ -170,6 +267,29 @@ namespace Survev.Core
         public void Rewind()
         {
             _readOffset = 0;
+        }
+
+        /// <summary>
+        /// Overwrite 16 bits at a byte offset (used by UpdateMsg to back-patch its
+        /// flags word after the body is written).
+        /// </summary>
+        public void PatchUInt16(int byteIndex, ushort value)
+        {
+            int offset = byteIndex * 8;
+            for (int i = 0; i < 16; i++)
+            {
+                int idx = (offset + i) >> 3;
+                int shift = 7 - ((offset + i) & 7);
+                int bit = (value >> i) & 1;
+                if (bit != 0)
+                {
+                    _bytes[idx] |= (byte)(1 << shift);
+                }
+                else
+                {
+                    _bytes[idx] &= (byte)~(1 << shift);
+                }
+            }
         }
 
         /// <summary>Trim the backing array to the bytes actually written.</summary>

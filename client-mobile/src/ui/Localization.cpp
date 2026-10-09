@@ -20,7 +20,6 @@ const LocaleInfo kLocales[] = {
     {"vn", "Tiếng Việt"},
     {"tr", "Türkçe"},
     {"jp", "日本語"},
-    {"ko", "한국어"},
     {"th", "ภาษาไทย"},
     {"zh-cn", "中文简体"},
     {"zh-tw", "中文繁體"},
@@ -152,7 +151,7 @@ std::string Localization::detectLocale(const std::string& languageTag) const {
             return kLocales[i].code;
         }
     }
-    static const char* wildcards[] = { "pt", "de", "es", "fr", "ko", "ru", "en" };
+    static const char* wildcards[] = { "pt", "de", "es", "fr", "ru", "en" };
     for (const char* w : wildcards) {
         if (tag.find(w) != std::string::npos) {
             return w;

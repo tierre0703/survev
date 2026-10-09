@@ -1,11 +1,11 @@
 // Built-in System.Net.WebSockets transport (fallback).
 //
-// Same contract as WebSocketSharpTransport: receive on a background task, push
-// raw frames into Connection.PushFrame() and decode on the main thread.
+// Same contract as WebSocketSharpTransport: receive on a background task, queue
+// raw frames into Connection.Enqueue() and dispatch on the main thread.
 //
 // NOTE: ClientWebSocket is part of the Unity 2020.3 .NET Standard 2.0 profile.
-// If IL2CPP stripping removes it, add an entry to link.xml. Because of profile
-// quirks on some Android devices, websocket-sharp is the default transport.
+// If IL2CPP stripping removes it, add an entry to link.xml. websocket-sharp is
+// the default because of profile quirks on some Android devices.
 using System;
 using System.IO;
 using System.Net.WebSockets;
@@ -36,14 +36,13 @@ namespace Survev.Net
             try
             {
                 await _socket.ConnectAsync(new Uri(url), _cts.Token);
-                _connection.SetState(ConnectionState.Connected);
-                _connection.RaiseOpen();
+                _connection.NotifyOpen();
                 await ReceiveLoop();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                _connection.RaiseError(ex.Message);
-                _connection.RaiseClose(1006, ex.Message);
+                _connection.NotifyError();
+                _connection.NotifyClose(1006, string.Empty);
             }
         }
 
@@ -60,8 +59,7 @@ namespace Survev.Net
                     result = await _socket.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        _connection.SetState(ConnectionState.Closed);
-                        _connection.RaiseClose(
+                        _connection.NotifyClose(
                             result.CloseStatus.HasValue ? (int)result.CloseStatus.Value : 1000,
                             result.CloseStatusDescription);
                         return;
@@ -70,7 +68,7 @@ namespace Survev.Net
                 }
                 while (!result.EndOfMessage);
 
-                _connection.PushFrame(accumulated.ToArray());
+                _connection.Enqueue(accumulated.ToArray());
             }
         }
 

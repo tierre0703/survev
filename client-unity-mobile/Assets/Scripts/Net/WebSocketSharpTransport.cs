@@ -1,11 +1,9 @@
 // websocket-sharp-backed transport (the default).
 //
 // Port of the WebSocket plumbing the browser provides for
-// shared/net/connection.ts. Frames arrive on a background thread and are pushed
-// into Connection.PushFrame(); Connection.Pump() decodes them on the main thread.
-//
-// Uses the vendored library in ThirdParty/WebSocketSharp (see ThirdParty/README.md).
-using System;
+// shared/net/connection.ts. Frames arrive on a background thread and are queued
+// into Connection.Enqueue(); Connection.Pump() dispatches them on the main
+// thread. Uses the vendored library in ThirdParty/WebSocketSharp.
 using WebSocketSharp;
 
 namespace Survev.Net
@@ -24,25 +22,17 @@ namespace Survev.Net
         public void Connect(string url)
         {
             _socket = new WebSocket(url);
-            _socket.OnOpen += (_, __) =>
-            {
-                _connection.SetState(ConnectionState.Connected);
-                _connection.RaiseOpen();
-            };
+            _socket.OnOpen += (_, _) => _connection.NotifyOpen();
             _socket.OnMessage += (_, e) =>
             {
                 // Binary frames only; the protocol is never text.
                 if (e.IsBinary && e.RawData != null)
                 {
-                    _connection.PushFrame(e.RawData);
+                    _connection.Enqueue(e.RawData);
                 }
             };
-            _socket.OnError += (_, e) => _connection.RaiseError(e.Message);
-            _socket.OnClose += (_, e) =>
-            {
-                _connection.SetState(ConnectionState.Closed);
-                _connection.RaiseClose(e.Code, e.Reason);
-            };
+            _socket.OnError += (_, e) => _connection.NotifyError();
+            _socket.OnClose += (_, e) => _connection.NotifyClose(e.Code, e.Reason);
             _socket.ConnectAsync();
         }
 
@@ -60,7 +50,6 @@ namespace Survev.Net
             {
                 return;
             }
-            _connection.SetState(ConnectionState.Closing);
             _socket.Close();
             _socket = null;
         }

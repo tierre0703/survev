@@ -17,7 +17,7 @@ namespace Survev.Config
 
         public static readonly string[] Locales =
         {
-            "da", "de", "en", "es", "fr", "it", "jp", "ko", "nl", "pl", "pt",
+            "da", "de", "en", "es", "fr", "it", "jp", "nl", "pl", "pt",
             "ru", "sv", "th", "tr", "vn", "zh-cn", "zh-tw",
         };
 

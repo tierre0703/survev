@@ -1,44 +1,45 @@
-// Port of shared/net/connection.ts — the WebSocket connection state machine.
+// Port of shared/net/connection.ts.
 //
-// The web client's Connection owns the socket, queues incoming frames and
-// decodes them on the game tick (never in the socket callback). We reproduce
-// that split: WebSocketTransport receives bytes on a background thread, pushes
-// them into a queue, and Game calls Pump() from Update().
+// The TS Connection abstracts a WebSocket and exposes onOpen/onMessage/onClose/
+// onError. On Unity the socket callbacks fire on a background thread, so the
+// transport pushes raw frames into a queue and the game calls Pump() from
+// Update() to dispatch them on the main thread (keeps join/pump/dispatch
+// deterministic, like the web client's single-threaded event loop).
 //
-// See Assets/Scripts/Net/WebSocketTransport.cs for the mobile socket adapter and
-// Assets/Scripts/Net/Messages.cs for the message classes.
+// Transport implementations: WebSocketSharpTransport (default) and
+// ClientWebSocketTransport. Use WebSocketTransport.Create(...) to pick.
 using System;
 using System.Collections.Generic;
 
 namespace Survev.Net
 {
+    /// <summary>Matches WebSocket.readyState (shared/net/connection.ts).</summary>
     public enum ConnectionState
     {
-        Disconnected,
-        Connecting,
-        Connected,
-        Closing,
-        Closed,
+        Connecting = 0,
+        Open = 1,
+        Closing = 2,
+        Closed = 3,
     }
 
-    /// <summary>Writer/reader callback type matching the TS message contract.</summary>
+    /// <summary>A message that can be (de)serialized over the wire.</summary>
     public interface IMessage
     {
-        void Serialize(Core.BitBuffer buffer);
-        void Deserialize(Core.BitBuffer buffer);
+        void Serialize(Core.BitBuffer s);
+        void Deserialize(Core.BitBuffer s);
     }
 
-    /// <summary>Port placeholder for <c>shared/net/connection.ts</c>.</summary>
+    /// <summary>Port of the abstract <c>Connection</c>.</summary>
     public sealed class Connection
     {
-        private readonly Queue<byte[]> _incoming = new Queue<byte[]>();
+        public Action OnOpen = () => { };
+        public Action<byte[]> OnMessage = _ => { };
+        public Action OnError = () => { };
+        public Action<int, string> OnClose = (_, _) => { };
 
-        public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
-
-        public event Action OnOpen;
-        public event Action<int, string> OnClose;
-        public event Action<byte[]> OnMessage;
-        public event Action<string> OnError;
+        private readonly Queue<byte[]> _pending = new Queue<byte[]>();
+        private readonly ITransport _transport;
+        private ConnectionState _state = ConnectionState.Closed;
 
         /// <summary>Transport abstraction so tests can inject an in-memory socket.</summary>
         public interface ITransport
@@ -48,43 +49,92 @@ namespace Survev.Net
             void Close();
         }
 
-        public void Connect(ITransport transport, string url)
+        public Connection(ITransport transport)
         {
-            State = ConnectionState.Connecting;
-            transport.Connect(url);
+            _transport = transport;
         }
 
-        /// <summary>Called by the transport on the socket thread; does not decode.</summary>
-        public void PushFrame(byte[] frame)
+        /// <summary>Default factory: websocket-sharp transport.</summary>
+        public static Connection Create(string url)
         {
-            lock (_incoming)
+            Connection connection = null;
+            connection = new Connection(WebSocketTransport.Create(connection));
+            connection.Open(url);
+            return connection;
+        }
+
+        public ConnectionState State => _state;
+
+        public void Open(string url)
+        {
+            _state = ConnectionState.Connecting;
+            _transport.Connect(url);
+        }
+
+        /// <summary>Called by the transport on its background thread: queue only.</summary>
+        public void Enqueue(byte[] frame)
+        {
+            lock (_pending)
             {
-                _incoming.Enqueue(frame);
+                _pending.Enqueue(frame);
             }
         }
 
-        /// <summary>Drain queued frames on the main thread (per game tick).</summary>
+        /// <summary>Dispatch queued frames on the main thread (once per game tick).</summary>
         public void Pump()
         {
             while (true)
             {
                 byte[] frame;
-                lock (_incoming)
+                lock (_pending)
                 {
-                    if (_incoming.Count == 0)
+                    if (_pending.Count == 0)
                     {
                         break;
                     }
-                    frame = _incoming.Dequeue();
+                    frame = _pending.Dequeue();
                 }
-                OnMessage?.Invoke(frame);
+                OnMessage(frame);
             }
         }
 
-        public void SetState(ConnectionState state) => State = state;
+        // Transport -> connection state notifications (already marshalled by Pump
+        // for data; open/close callbacks are safe to apply directly).
+        public void NotifyOpen()
+        {
+            _state = ConnectionState.Open;
+            OnOpen();
+        }
 
-        public void RaiseOpen() => OnOpen?.Invoke();
-        public void RaiseClose(int code, string reason) => OnClose?.Invoke(code, reason);
-        public void RaiseError(string message) => OnError?.Invoke(message);
+        public void NotifyClose(int code, string reason)
+        {
+            _state = ConnectionState.Closed;
+            OnClose(code, reason);
+        }
+
+        public void NotifyError()
+        {
+            OnError();
+        }
+
+        public void SetState(ConnectionState state) => _state = state;
+
+        public void Send(byte[] data) => _transport.Send(data);
+
+        public void Close()
+        {
+            _state = ConnectionState.Closing;
+            _transport.Close();
+        }
+
+        /// <summary>Port of <c>resetAndClose</c>: detach callbacks, then close.</summary>
+        public void ResetAndClose()
+        {
+            OnOpen = () => { };
+            OnMessage = _ => { };
+            OnError = () => { };
+            OnClose = (_, _) => { };
+            Close();
+        }
     }
 }

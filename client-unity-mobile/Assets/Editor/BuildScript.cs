@@ -46,6 +46,12 @@ namespace Survev.EditorTools
             // same; the x86_64 emulator can run the ARM build only under translation.)
             PlayerSettings.Android.targetArchitectures =
                 AndroidArchitecture.ARMv7 | AndroidArchitecture.ARM64;
+            // Mono for readable dev stack traces; IL2CPP for release is selected
+            // via the build menu / CI flag. Keep the repo default at Mono so the
+            // batch build stays fast unless overridden.
+            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.Mono2x);
+            PlayerSettings.SetApiCompatibilityLevel(
+                BuildTargetGroup.Android, ApiCompatibilityLevel.NET_Standard_2_0);
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel24;
             PlayerSettings.Android.bundleVersionCode = 1;
             PlayerSettings.bundleVersion = "0.4.3";

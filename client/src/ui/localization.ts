@@ -29,7 +29,6 @@ const Locales = {
     vn: "Tiếng Việt",
     tr: "Türkçe",
     jp: "日本語",
-    ko: "한국어",
     th: "ภาษาไทย",
     "zh-cn": "中文简体",
     "zh-tw": "中文繁體",
@@ -130,7 +129,7 @@ export class Localization {
         let detectedLocale = (
             navigator.language || (navigator as any).userLanguage
         ).toLowerCase();
-        const languageWildcards = ["pt", "de", "es", "fr", "ko", "ru", "en"];
+        const languageWildcards = ["pt", "de", "es", "fr", "ru", "en"];
         for (const wildcard of languageWildcards) {
             if (detectedLocale.includes(wildcard)) {
                 detectedLocale = wildcard;
