@@ -1,11 +1,10 @@
-# M7 UI (menu / loadout / team) — remaining work (handoff)
+# M7 UI (menu / loadout / team / HUD) — remaining work (handoff)
 
-This is a self-contained work order for finishing **M7 (native UI port)** in a
-new session. It records what already exists, the parts that must not be
-regressed, the exact build/test workflow, and the remaining tasks with enough
-spec to implement them. Read `plan.md` §"M7 / UI layer" and §10 decision **D1**
-for the original plan; **D1 is resolved as Option B (native axmol UI) — do not
-introduce a WebView.**
+This is a self-contained work order for finishing **M7 (native UI port)**. It
+records what already exists, the parts that must not be regressed, the exact
+build/test workflow, and the remaining tasks with enough spec to implement them.
+Read `plan.md` §"M7 / UI layer" and §10 decision **D1** for the original plan;
+**D1 is resolved as Option B (native axmol UI) — do not introduce a WebView.**
 
 > **Scope reminder.** The web client keeps *everything* outside the canvas in
 > HTML/CSS: `client/index.html` (menu + `#ui-game` overlay markup),
@@ -17,23 +16,38 @@ introduce a WebView.**
 
 ## 1. Current status
 
-The **engine-independent UI foundation and the scene-level join flow are
-implemented and host-tested**; the menu *screen* and the loadout/team *screens*
-are not built yet, and none of it has been run on device.
+The native menu, loadout, team screen and HUD are **implemented, host-tested and
+build clean for Android** (x86_64 `.so` + APK). The app boots into the native
+menu; it has not yet been driven end-to-end on a device in this session.
 
-- `surv_tests`: **1612 assertions, 0 failures, 75 tests** (green).
-- `src/ui` modules exist: JSON, config, localization, device, widget toolkit,
-  team client, and the in-game overlay.
-- `src/net` gained the URL parser, site-info fetch, and the UI-facing WebSocket
-  factory alias.
+- `surv_tests`: **1658 assertions, 0 failures, 79 tests** (green).
+- `src/ui` modules: JSON, config (UserDefault persistence), localization, device,
+  widget toolkit, team client, loadout, news, `StartMenu`, and the in-game
+  overlay.
+- `src/net`: URL parser, site-info fetch, and the UI-facing WebSocket factory.
 - `Game` carries the menu-supplied join identity; `GameScene` exposes a
   menu-driven enter/leave + find-game API with a multi-URL join fallback and the
   old `DevConfig` auto-connect **removed**.
-- **Not built:** `MenuScene` (the actual menu screen), the config persistence
-  binding to `ax::UserDefault`, `AppDelegate` wiring, the loadout screen, the
-  team screen, and the full HUD (ammo/weapon/killfeed).
-- **Never run on device** since the auto-connect was removed: with no
-  `MenuScene` the app currently boots into a hidden game scene and does nothing.
+- **Built in this session:** the `MenuScene` chrome (see §3.2), the loadout
+  screen, the team screen, the full HUD (weapon/ammo/killfeed/alive), the
+  `ax::UserDefault` config binding, `AppDelegate` wiring, high-quality PNG GUI
+  icons, the Roboto Condensed TTF, and permanent-landscape locking.
+- **Remaining:** on-device verification of the full loop (see T5) and a few
+  polish items listed in §4.
+
+### What was added this session (files)
+
+| File | What it is |
+|---|---|
+| `tools/build-gui-icons.mjs` | Rasterizes `client/public/img/gui/*.svg` to high-res PNGs (`Content/gui/<name>.png`, 512px @4x). Wired into `sync-content.ps1`. |
+| `tools/fetch-fonts.ps1` | Converts the web Roboto Condensed woff2 to `Content/fonts/RobotoCondensed-{Normal,Bold}.ttf` (needs Python + fontTools + brotli). Wired into `sync-content.ps1`. |
+| `src/ui/News.{h,cpp}` | Bundled news entries (the web `#news-block` list has no API); newest first. |
+| `src/ui/StartMenu.cpp` | The menu chrome helper: splash + logo, centred `#start-menu` block, news box, bottom-right cog/mute, settings/help/join modals. Declared in `UiOverlay.h`. |
+| `src/ui/LoadoutMenu.{h,cpp}` | Reworked to the web layout (category tabs, item grid, paging, selected highlight). |
+| `src/ui/Ui.{h,cpp}` | Button now draws the web `.btn-*` body + 2px shadow and supports PNG icons; `makeLabel`/`fontPath` picks the TTF; `Modal::setCloseLabel`. |
+| `src/app/MenuScene.{h,cpp}` | Thin scene wrapper: owns config/localization/team/overlay, drives `StartMenu`, team screen, matchmaking. |
+| `src/app/AppDelegate.cpp` | Registers the GUI font at startup; landscape note. |
+| `proj.android/app/AndroidManifest.xml` | `screenOrientation="landscape"` (permanent landscape). |
 
 ---
 
@@ -47,7 +61,7 @@ cd E:\work\survev\client-mobile
 # Host tests (engine-independent; no axmol)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
-.\build-tests\Release\surv_tests.exe        # currently 75 tests / 1612 assertions, 0 failures
+.\build-tests\Release\surv_tests.exe        # currently 79 tests / 1658 assertions, 0 failures
 
 # Native lib (one build dir per ABI; first build compiles the engine)
 .\tools\build-native.ps1 -Abis "x86_64"     # native emulator (best for crash stacks)
@@ -65,7 +79,23 @@ $adb = Join-Path $env:ANDROID_HOME 'platform-tools\adb.exe'
 & $adb shell am start -n com.survev.mobile/dev.axmol.app.AppActivity
 & $adb logcat -d -v brief
 & $adb logcat -b crash -d -v brief                  # native crash backtraces
-& $adb shell screencap -p /sdcard/s.png; & $adb pull /sdcard/s.png .\s.png
+```
+
+> **Adding source files:** `CMakeLists.txt` uses `file(GLOB_RECURSE ...)` for
+> `src/*.cpp`, so a new file needs a re-configure:
+> `.\tools\build-native.ps1 -Abis "x86_64"` does that for you (it re-runs CMake).
+> The same applies to `tests/CMakeLists.txt`, which lists files explicitly.
+
+### Content staging (required before packaging)
+
+`Content/` is gitignored, so run the staging script after a fresh checkout:
+
+```powershell
+.\tools\sync-content.ps1
+# - robocopy ../client/public -> Content
+# - copies en.json -> Content/l10n/en.json
+# - node tools/build-gui-icons.mjs --scale 4   -> Content/gui/<name>.png
+# - pwsh tools/fetch-fonts.ps1                 -> Content/fonts/*.ttf
 ```
 
 ### Dev server + emulator networking
@@ -100,202 +130,51 @@ $sym = Join-Path $env:ANDROID_NDK_HOME 'toolchains\llvm\prebuilt\windows-x86_64\
 
 ## 3. What already exists (so nothing is redone)
 
-### `src/ui/` — engine-independent foundation + widget toolkit
+### 3.1 `src/ui/` — engine-independent foundation + widget toolkit
 
 | File | What it is |
 |---|---|
 | `Json.h` | Minimal JSON reader (`JsonValue` tree + `JsonParser::parse`), `\u`/surrogate → UTF-8. No axmol. |
-| `Files.{h,cpp}` | axmol `FileUtils` wrapper: `readText/readBytes/readJson/exists/resolveRelative/fullPath`. Resolves Content-root-relative paths and `./`/`../` refs. |
-| `Config.{h,cpp}` | Port of `client/src/config.ts`. `ConfigStorage` (`read`/`write` string) + `MemoryConfigStorage`; `Config` with typed getters/setters, `save()`, listeners; web defaults; `defaultLoadout()`. `StorageConfigStorage` (UserDefault) **still to add**. |
-| `Localization.{h,cpp}` | Port of `client/src/ui/localization.ts`. 18 locales, `registerEnglish(json)`, `setLoader(loader)`, `setLocale`, `translate` (key → space-as-dash → English), `localeName`, `detectLocale`. |
-| `Device.{h,cpp}` | Port of the parts of `client/src/device.ts` the UI needs (`mobile`/`tablet`/`touch`/`isLandscape`/`uiLayout`). |
-| `Ui.{h,cpp}` | Widget toolkit (see §5): `kit::fromCssY/fromCss`, `Panel`, `Button`, `TextField`, `Slider`, `Modal`, `uiRoot`, `layoutUiRoot`, `swallowTouches`. |
-| `TeamMenu.{h,cpp}` | `/team_v2` JSON control channel: `connect(create, roomUrl)`, `leave`, `update`, `setRoomRegion/AutoFill/GameMode`, `tryStartGame`, `onGameComplete`, `handleMessage`; callbacks `onRoomChanged/onError/onPlay/onLostConnection`; `teamErrorL10n`. |
-| `UiOverlay.{h,cpp}` | In-game HUD + pause menu (see §5). |
+| `Files.{h,cpp}` | axmol `FileUtils` wrapper: `readText/readBytes/readJson/exists/resolveRelative/fullPath`, plus `registerFonts`/`fontFace` for the bundled TTF faces. |
+| `Config.{h,cpp}` | Port of `client/src/config.ts`. `ConfigStorage` + `MemoryConfigStorage` + `UserDefaultConfigStorage` (SharedPreferences); typed getters/setters, `save()`, listeners; web defaults; `defaultLoadout()`. |
+| `Localization.{h,cpp}` | Port of `client/src/ui/localization.ts`. 18 locales, `registerEnglish`, `setLoader`, `setLocale`, `translate`, `localeName`, `detectLocale`. |
+| `Device.{h,cpp}` | Port of the parts of `client/src/device.ts` the UI needs. |
+| `Ui.{h,cpp}` | Widget toolkit (`§5`): `kit::fromCssY`, `Panel`, `Button` (web colours + PNG icons), `TextField`, `Slider`, `Modal`, `makeLabel`/`fontPath`, `uiRoot`, `layoutUiRoot`, `swallowTouches`. |
+| `News.{h,cpp}` | Bundled news entries for the menu's news box. |
+| `TeamMenu.{h,cpp}` | `/team_v2` JSON control channel (create/join/roster/props/playGame/keep-alive/errors). |
+| `UiOverlay.{h,cpp}` | In-game HUD + pause menu (`§5`) and the `StartMenu` declaration. |
+| `StartMenu.cpp` | Main-menu chrome builder (web `#start-menu-wrapper`). |
+| `LoadoutMenu.{h,cpp}` | Native `#modal-customize` (category strip + item grid + paging). |
+| `Loadout.{h,cpp}` | Port of `shared/utils/loadout.ts` (selection/validation/`joinInfo`). |
 
-### `src/net/`
+### 3.2 `src/app/`
 
-| Change | Notes |
+| File | What it is |
 |---|---|
-| `WsUrl.{h,cpp}` | `WebSocketEndpoint` + `parseWebSocketUrl` (scheme/host/port/path/secure, IPv6, default ports). Host-tested. |
-| `SiteInfo.{h,cpp}` | `GameModeInfo`, `PopInfo`, `SiteInfo{modeIndexForTeamMode,hasTeamMode}`, `fetchSiteInfo(apiBaseUrl, cb)` over `ax::network::HttpClient` + rapidjson. |
-| `WebSocketConnection.{h,cpp}` | Added `createWebSocketConnectionTo(url)`. It is a thin alias of `createWebSocketConnection` — axmol's `WebSocket::open` already accepts a full `ws://host:port/path` URL. Use it for both `/play` and `/team_v2`. |
+| `MenuScene.{h,cpp}` | Starts the menu, owns config/localization/team/overlay, drives `StartMenu`, the team screen and matchmaking. |
+| `GameScene.{h,cpp}` | Gameplay scene; `enterWithJoin`/`enterWithFindGame`/`leaveGame`, overlay, close-code errors. |
+| `AppDelegate.cpp` | Creates `MenuScene` + `GameScene` (siblings), registers fonts, fixed 1280×720 landscape design resolution. |
 
-### `src/game/Game`
+### 3.3 Assets
 
-```cpp
-struct JoinInfo {
-    std::string name = "Player";
-    std::string outfit = "outfitBase";
-    std::string melee = "fists";
-    std::string heal = "heal_basic";
-    std::string boost = "boost_basic";
-    std::vector<std::string> emotes;
-};
-void setJoinInfo(const JoinInfo&);
-const JoinInfo& getJoinInfo() const;
-bool hasJoined() const;     // JoinedMsg or first UpdateMsg seen
-bool isConnecting() const;
-```
-
-`sendJoinMessage()` builds the `JoinMsg` from `_joinInfo` (name/outfit/melee/
-heal/boost/emotes). Defaults match `loadout.validate({})`.
-
-### `src/app/GameScene` (menu-driven join flow; `maybeAutoConnect` removed)
-
-```cpp
-struct FindGameResultInfo { bool ok; std::vector<std::string> urls; std::string joinToken; std::string error; };
-using FindGameRequest = std::function<void(const std::string& region, int gameModeIdx, FindGameDone done)>;
-
-void setFindGameRequest(FindGameRequest);           // app wires this to net/Api findGame()
-void setJoinInfo(const Game::JoinInfo&);            // identity for the next join
-void enterWithJoin(urls, joinToken);                // direct join (find_game or team)
-void enterWithFindGame(region, gameModeIdx);        // quick-start w/ backoff
-void leaveGame();
-bool isInGame()/isStarted()/isConnected()/isPlaying() const;
-void setOverlay(ui::UiOverlay*);                    // HUD + pause menu
-```
-
-- `init()` no longer connects and hides the world root + joystick pads.
-- `update()` services the quick-start delay, retries the **next URL with the same
-  token** when the socket closes before the server accepted us, maps close codes
-  → `index-*` l10n keys and otherwise `index-host-closed`, then drives the
-  overlay.
-- Close code map: 4001 invalid-token, 4002 invalid-protocol, 4003 invalid-packet,
-  4004 behind-proxy, 4005 player-not-found, 4006 ip-banned, 4007 rate-limited,
-  4008 server-crashed, 4009 server-restart, 4010 invalid-captcha,
-  4011 failed-finding-game.
-
-### Tests
-
-`tests/test_ui.cpp` — 8 tests: JSON round-trip/reject, config defaults +
-persistence, localization lookup/fallback, device layout, url parsing, team
-protocol (create/state/setRoomProps/playGame/joinGame/error), keep-alive.
-`tests/test_game.cpp::game_join_sends_joinmsg` now verifies a custom
-`Game::JoinInfo` round-trips through the `JoinMsg`.
+| Path | How it is produced |
+|---|---|
+| `Content/gui/*.png` | `tools/build-gui-icons.mjs` (from `client/public/img/gui/*.svg`, 4x = 512px). |
+| `Content/fonts/RobotoCondensed-*.ttf` | `tools/fetch-fonts.ps1` (from the web woff2). |
+| `Content/img/**`, `Content/audio/**`, `Content/l10n/*.json` | `tools/sync-content.ps1`. |
+| `Content/atlas/**` | `tools/build-atlas.mjs --res low`. |
 
 ---
 
 ## 4. Remaining tasks (priority order)
 
-### T1. `MenuScene` + config persistence + AppDelegate wiring — HIGHEST
-
-This is what makes the app usable again after the auto-connect removal.
-
-**`src/ui/Config` — add the UserDefault binding** (the only piece of the
-foundation left):
-
-```cpp
-class UserDefaultConfigStorage : public ConfigStorage {
-public:
-    // ax::UserDefault keys: "surviv_config" (the JSON blob). SharedPreferences
-    // on Android, so it survives restarts like localStorage does on the web.
-    std::string read() override;          // ud->getStringForKey("surviv_config", "")
-    void write(const std::string&) override;  // ud->setStringForKey("surviv_config", ...); flush
-};
-```
-
-**`src/app/MenuScene.{h,cpp}`** — a sibling of `GameScene`, built from the web
-menu markup (`client/index.html` `#start-menu-wrapper`/`#start-menu` →
-`#player-name-input-solo`, `#server-select-main`, `#btn-start-mode-0..2`,
-`#btn-join-team`, `#btn-create-team`, `#btn-help`; plus the sound/mute + volume
-controls from `main.ts tryLoad()`):
-
-1. **Background**: full-screen sprite `img/splashes/main.webp` (the web client's
-   default `cachedBgImg`), plus the `survev_logo_full.png` logo.
-2. **Name field** (`TextField`, max length `net.Constants.PlayerNameMaxLen` = 16)
-   → `config.setString("playerName", sanitized)`. Web sanitation lives in
-   `helpers.sanitizeNameInput`; port a minimal version (trim, strip control
-   chars, cap length).
-3. **Region select** — from `SiteInfo.pops` keys (`config.get("region")`,
-   default `"na"`); web uses `#server-select-main` fed by
-   `siteInfo.pops`/`l10n`. Selecting sets `config.setString("region", ...)`.
-4. **Play Solo / Duo / Squad** → the **game-mode index** is a `SiteInfo.modes`
-   index, not a team mode: look up `modes` for `teamMode == 1|2|4` via
-   `SiteInfo::modeIndexForTeamMode()` and call
-   `gameScene->enterWithFindGame(region, modeIdx)`.
-   - **Spinner + lockout + backoff**: `tryQuickStartGame` in `main.ts` — disable
-     the buttons, show a spinner while pending, and skip the request unless
-     `Date.now() - findGameTime > 30000` (the delay grows to
-     `min(attempts*2.5s, 7500ms)` inside the scene). `GameScene` already applies
-     the retry delay; the menu owns the button lockout/visibility.
-   - **Errors**: `GameScene::setError` writes into `UiOverlay::setMenuError`, but
-     the *menu* needs its own error line for pre-game failures — wire
-     `onError`-style text from the find-game callback into a menu label.
-5. **Join Team / Create Team** → `ui::TeamMenu` (`setUrl` = `wss?://<host>/team_v2`
-   derived from the API URL; see §6), then a `TeamScene`/modal (T3).
-6. **How to Play** modal (`Modal`) with the `index-controls` strings.
-7. **Customize** stub button (opens the loadout screen in T2; a disabled stub is
-   acceptable for the first pass).
-8. **Sound toggle + Master/SFX/Music sliders** (same widgets/keys as
-   `UiOverlay`: `muteAudio`, `masterVolume`, `soundVolume`, `musicVolume`) wired
-   to `AudioManager::setMute/setMasterVolume/setSoundVolume/setMusicVolume`.
-9. **Localization**: register English from `Content/l10n/en.json` via
-   `Files::readText`, then `setLocale(config.get("language"))` with a loader over
-   `Files::readText("l10n/" + locale + ".json")`.
-10. **Wiring**: the menu creates/owns `ui::Config`, `ui::Localization`,
-    `ui::TeamMenu`, `ui::UiOverlay`, and holds a pointer to the `GameScene`.
-    `AppDelegate` runs `MenuScene` first; `MenuScene` switches to the game path
-    when a match starts and switches back on `leaveGame()`/`onQuit`.
-
-**Acceptance:** app launches to a native menu, Play Solo joins the dev server and
-shows the HUD, Quit returns to the menu with no crash.
-
-### T2. Loadout menu (`client/src/ui/loadoutMenu.ts`)
-
-Server-authoritative, so no bundled item list is needed:
-
-- **Items** = `unlock_default.unlocks` (from `shared/defs/gameObjects/unlockDefs.ts`)
-  plus account items when accounts exist; every candidate is validated through
-  the generated `DefProvider::gameObject(type)` (category `outfit`/`melee`/
-  `heal_effect`/`boost_effect`).
-- **Categories** (web order): outfit, melee, emote, heal, boost, player_icon
-  (+ crosshair on desktop only — mobile skips it).
-- **Sprites**: outfits render with `skin.baseSprite` + `skin.baseTint` (and the
-  `baseTintRed`/`baseTintBlue` variants); melee/guns use `lootImg`. The atlas
-  cache has the outfit base/hands/feet frames but **no `emote_*`/`crosshair_*`
-  frames** — so the emote wheel shows text placeholders until a GUI atlas exists
-  (see §6).
-- **Selection** feeds `Game::JoinInfo` (`outfit`/`melee`/`heal`/`boost`/`emotes`).
-- **Acceptance:** changing outfit/melee/heal/boost changes what the player looks
-  like/uses on the next join.
-
-### T3. Team screen (`client/src/ui/teamMenu.ts`)
-
-- Wire `MenuScene` → `ui::TeamMenu::connect(create, roomUrl)`; render the roster
-  (`TeamMenu::players()`), room code (`roomUrl()`), region/autoFill/gameMode
-  properties (leader-only edits via `setRoomRegion/AutoFill/GameMode`), and a
-  **Start Game** button (`tryStartGame()`).
-- `onPlay` → `gameScene->enterWithJoin(match.urls, match.joinToken)`.
-- `onError` → localized via `teamErrorL10n` + `Localization::translate`
-  (`behind_proxy`/`banned` are surfaced to the main menu as in the web client).
-- `GameScene` leaving a team game should call `TeamMenu::onGameComplete()`.
-- **Acceptance:** create a room on device, join from the web client, see the
-  roster, start a match.
-
-### T4. HUD completion (`client/src/ui/ui2.ts`)
-
-`UiOverlay` currently draws health/boost bars, health, alive count, and empty
-weapon/ammo. Still needed:
-
-- **Ammo/weapon**: active player's `weapons[curWeapIdx]` (type + ammo) from the
-  active-player data; melee/throwable variants. Needs `Game` to expose the
-  active-player inventory (add an accessor rather than reaching into
-  `_lastUpdate`), then format with `game-hud-<type>` localization.
-- **Kill feed** (`ui-killfeed-contents`, `maxKillFeedLines = 6`): consume
-  `KillMsg` (currently deserialized and discarded in `Game::handleKill`).
-- **Alive/team counts**: factions show per-team; derive from
-  `UpdateMsg.playerInfos`/`playerStatus` rather than adding a wire field.
-- **Pause menu polish**: touch style/aim line/sound labels re-sync on show (the
-  values are already persisted by `UiOverlay`).
-- **Acceptance:** HUD mirrors the web HUD for ammo/weapon/killfeed.
-
-### T5. On-device verification (after T1)
+### T1. On-device verification (after every UI change) — HIGHEST
 
 Full loop, then record screenshots + `logcat -b crash` (must be empty):
 
 ```powershell
 . .\tools\android-env.ps1
+.\tools\sync-content.ps1
 .\tools\build-native.ps1 -Abis "x86_64"
 .\tools\build-apk.ps1 -Abis "x86_64"
 & $adb reverse tcp:8000 tcp:8000; & $adb reverse tcp:9000 tcp:9000
@@ -304,10 +183,52 @@ Full loop, then record screenshots + `logcat -b crash` (must be empty):
 & $adb shell am start -n com.survev.mobile/dev.axmol.app.AppActivity
 ```
 
-Drive with `adb shell input tap <x> <y>` / `swipe`; capture with
-`screencap`/`pull`. Verify: menu renders → Play Solo finds + joins a game
-(logcat `Connected to game server` / `Receiving game updates`) → pause menu →
-Quit returns to the menu.
+Verify: menu renders (centred menu, news box to its right, cog/mute bottom-right)
+→ Play Solo finds + joins a game (logcat `Connected to game server` /
+`Receiving game updates`) → HUD shows weapon/ammo/killfeed → pause menu → Quit
+returns to the menu. Keep screenshots few (each `screencap` is ~1 MB).
+
+### T2. Loadout polish (`client/src/ui/loadoutMenu.ts`)
+
+- The modal uses a text grid + the shared atlas frames. The web client renders
+  each item with its SVG/atlas image and an outfit 3-variant tint row — the
+  tint row works, but **emote/crosshair icons still have no frames** (the atlases
+  have no `emote_*`/`crosshair_*` entries). Either extend `build-atlas.mjs` or
+  keep text placeholders.
+- The web crosshair pane (colour/size/stroke) and the emote drag-and-drop wheel
+  are not ported; the native emote flow uses the "Emote slot N" button.
+- Selection currently writes straight to config; the web client confirms new
+  items (`#modal-item-confirm`) — not needed until accounts exist.
+
+### T3. Team screen polish (`client/src/ui/teamMenu.ts`)
+
+- Roster/region/mode/auto-fill/Play are wired; remaining: the invite link
+  copy button, per-player kick, and the in-game rename flow.
+- `onPlay` → `gameScene->enterWithJoin(match.urls, match.joinToken)` works;
+  `GameScene` leaving a team game calls `TeamMenu::onGameComplete()`.
+- The web client shows `#msg-wait-reason` for non-leaders; the native screen
+  hides the Play button for non-leaders instead.
+
+### T4. HUD completion (`client/src/ui/ui2.ts`)
+
+`UiOverlay` draws health/boost bars, health, alive count, weapon/ammo and the
+killfeed. Still needed:
+
+- **Team/faction colours** on the alive counter (web `game-red-team`/`game-blue-team`).
+- **Kill leader** + **spectate options** (web `#ui-kill-leader-*`,
+  `#ui-spectate-options`).
+- **Pause menu polish**: keybind tab and the tab strip (web `#btn-game-tabs`).
+- Weapon slot strip (`#ui-weapon-container`, 4 slots) — the native HUD shows the
+  active weapon only.
+
+### T5. Menu polish
+
+- **Language select** is a cycle button; the web client uses a `<select>` with
+  18 locales. Fine for now, a list modal is nicer.
+- **Social/ad columns**: the web `#left-column` (Discord/Wiki/Ko-fi + ads) and
+  the featured-streamer block are intentionally omitted (no sites backend).
+- **Persist the paging/category** of the loadout modal between opens (web keeps
+  the sort option in `#modal-customize-sort`).
 
 ---
 
@@ -316,41 +237,52 @@ Quit returns to the menu.
 ```
 web                          -> native
 <div class="menu-block">     -> ui::Panel      (LayerColor bg, top-left anchor)
-<a class="btn-darken">       -> ui::Button     (Scale9Sprite + Label + badge)
-<input type="text">          -> ui::TextField
+<a class="btn-darken">       -> ui::Button     (web body colour + 2px shadow + PNG icon)
+<a class="btn-green">        -> ui::Button     (setColors(#83af50, #5b7a38))
+<a class="btn-hollow">       -> ui::Button     (setHollow(true[, selected]))
+<input type="text">          -> ui::TextField  (setWhiteBackground for the name field)
 <input type="range">         -> ui::Slider
 #modal-... + overlay         -> ui::Modal      (dim LayerColor + centred Panel)
+<span class="highlight">     -> ui::makeLabel(text, size, bold) + gold colour
 ```
 
 - **Coordinates**: geometry is authored in CSS-like units (1280×720) with y
   growing **down**; every helper flips via `kit::fromCssY(y) = 720 - y`. The
   scene root is scaled to the real display by `layoutUiRoot`.
 - `Panel` anchor is `(0,1)`; `setCssPosition(x, y)` takes the **top-left** in CSS
-  coords.
-- `Button` installs its own touch listener (`setSwallowTouches(true)`, fires
-  `onClick` when released inside bounds).
-- `Slider` maps touch x → value in `onTouchBegan/Moved` and fires `onChanged`.
-- `Modal` builds a dim overlay + centred panel + close button; `onShow`/`onHide`.
+  coords. `placeCenter()` centres in the 1280×720 design rect.
+- `Button` installs its own touch listener (swallows touches, fires `onClick` on
+  release inside bounds); `setIcon("cog")` loads `Content/gui/cog.png`.
+- `makeLabel(text, size, bold)` uses the bundled Roboto Condensed TTF when it is
+  staged and falls back to the platform sans-serif otherwise.
+- `Modal` builds a dim overlay + centred panel + a corner close button;
+  `setCloseLabel` overrides its text.
+
+### Menu layout (web parity)
+
+The web client lays the main menu in a horizontally centred column (`#start-menu`
+inside `#start-row-top`) with the news column (`#news-block`, 300 px) to its
+right and `#start-bottom-right` (cog + mute) pinned to the bottom-right. The
+native `StartMenu` reproduces exactly that at the 1280×720 design resolution.
+The app is locked to landscape (`AndroidManifest.xml` `screenOrientation="landscape"`).
 
 ---
 
 ## 6. Key files & gotchas
 
-- **Fonts are woff2-only** (`Content/fonts/roboto-condensed-latin-400/700-normal.woff2`);
-  axmol cannot load woff2. The toolkit therefore uses `Label::createWithSystemFont`
-  ("sans-serif"). Shipping a TTF (Roboto Condensed) and switching to
-  `Label::createWithTTF` is the intended upgrade for exact web typography.
-- **GUI art is not in an atlas.** `Content/img/gui/*.svg` (buttons, icons,
-  `hamburger`, `cog`, `loadout-*`) is not covered by `tools/build-atlas.mjs`,
-  which only converts the web *virtual* atlases (game/loot/map sprites) from
-  `client/node_modules/.atlas-cache`. Either extend the atlas builder to also
-  pack `public/img/gui/**` into a `gui` sheet, or keep drawing buttons with the
-  translucent 9-slice/`DrawNode` fallbacks. `Button::init(label,w,h,bgFrame)`
-  already accepts an optional atlas frame; pass `""` until the GUI sheet exists.
-- **Atlas contents**: the cached atlases contain the `*.img` game frames
-  (incl. `player-base-*`/`player-hands-*`/`player-feet-*`) but **no**
-  `emote_*`/`crosshair_*` frames, so the loadout emote/crosshair categories
-  cannot show real icons yet.
+- **Fonts**: the web client only ships woff2 (`Content/fonts/*.woff2`), which
+  axmol cannot load. `tools/fetch-fonts.ps1` writes `RobotoCondensed-Normal.ttf`
+  and `RobotoCondensed-Bold.ttf`; `Files::fontFace` resolves the family+weight
+  and `ui::makeLabel` falls back to the system font when they are missing.
+- **GUI art**: `Content/gui/*.png` is generated from `client/public/img/gui/*.svg`
+  by `tools/build-gui-icons.mjs` (high-res, transparent). Do not hand-edit.
+- **`ui` namespace collision**: axmol itself declares `ax::ui`, and several
+  `src/app` files have `using namespace ax`. `GameScene.*` and `MenuScene.*`
+  therefore alias the toolkit (`namespace uikit = ::ui;` / `svui` / `menuui`)
+  instead of using `ui::` inside `namespace surv`. Keep that convention.
+- **`surv::ui` is not the toolkit.** `UiOverlay.h` keeps legacy
+  `namespace ui { class UiOverlay; }` forward declarations for the in-game
+  overlay; the toolkit is the global `::ui`.
 - **Protocol is bit-exact** (`tests/ReferenceData.h` fixtures are generated from
   the TS server, `node tools/gen_reference.mjs`). **Do not add fields to
   `UpdateMsg` or any message** without regenerating the fixtures *and* changing
@@ -358,17 +290,14 @@ web                          -> native
 - **`y_down` → `y_up`**: the world/render path is CSS-like y-down
   (`Camera::m_pointToScreen`), axmol is y-up; all UI geometry must go through
   `kit::fromCssY`.
-- **Placement over the world**: the overlay/HUD nodes are added to the scene
-  directly and are scaled by `layoutUiRoot`; keep them above the game layers
-  (`UiOverlay` uses z 100 for the HUD, 200 for the pause menu).
 - **Generated files** (`src/net/generatedDefs.inc`, `src/render/GeneratedDefs.cpp`,
   `src/audio/GeneratedSoundDefs.cpp`, `tests/ReferenceData.h`,
-  `Content/atlas/**`) must be regenerated with the `tools/codegen_*.mjs` /
-  `gen_reference.mjs` / `build-atlas.mjs` scripts, never hand-edited.
-- **`Content/` is gitignored**; run `build-atlas.mjs --res low` before packaging.
-- **Adapters**: any new engine API must be added to `src/render/PixiLike.h`
-  **and both** implementations (`AxmolPixi.h`, `NullPixi.h`). The UI widgets are
-  discrete `ax::Node` subclasses, not part of that adapter.
+  `Content/atlas/**`, `Content/gui/**`, `Content/fonts/*.ttf`) must be
+  regenerated with the `tools/*.mjs` / `tools/*.ps1` scripts, never hand-edited.
+- **`Content/` is gitignored**; run `sync-content.ps1` + `build-atlas.mjs --res low`
+  before packaging.
+- **New `.cpp` files need a CMake re-configure** (the glob is evaluated at
+  configure time) — `build-native.ps1` re-runs configure for you.
 
 ### Do NOT regress (carried from `M4_REMAINING.md` §1)
 
@@ -385,12 +314,15 @@ web                          -> native
 
 ## 7. Acceptance for M7
 
-- `surv_tests` stays green.
+- `surv_tests` stays green (currently 1658 assertions / 79 tests, 0 failures).
+- The Android x86_64 build links and the APK packages `assets/gui/**`,
+  `assets/fonts/*.ttf`, `assets/img/**`, `assets/atlas/**`, `assets/axslc/**`.
 - On device (x86_64 emulator, dev server via `adb reverse`): the app launches to
-  the **native menu**; Play Solo finds and joins a match; the pause menu opens
-  and returns to the menu; Quit Game leaves the match; a team room can be
-  created/joined and can start a match; the loadout selection is sent in the
-  `JoinMsg`.
+  the **native menu** (centred menu block, news box to its right, cog + mute
+  bottom-right, permanent landscape); Play Solo finds and joins a match; the HUD
+  shows weapon/ammo/killfeed/alive count; the pause menu opens and returns to the
+  menu; Quit Game leaves the match; a team room can be created/joined and can
+  start a match; the loadout selection is sent in the `JoinMsg`.
 - `adb logcat -b crash` is empty across the flows.
 - No WebView, no DOM: all UI is axmol nodes.
 
@@ -398,9 +330,9 @@ web                          -> native
 
 ## 8. Session log
 
-### Session 1 — foundation + join flow (this session)
+### Session 1 — foundation + join flow
 
-Implemented and host-verified (no device run yet):
+Implemented and host-verified:
 
 - `src/ui/{Json.h, Files.{h,cpp}, Config.{h,cpp}, Localization.{h,cpp},
   Device.{h,cpp}, Ui.{h,cpp}, TeamMenu.{h,cpp}, UiOverlay.{h,cpp}}` and
@@ -412,18 +344,48 @@ Implemented and host-verified (no device run yet):
   `enterWithFindGame`, `leaveGame`, `setFindGameRequest`, `setOverlay`,
   `setJoinInfo`, plus the multi-URL join fallback and localized close-code
   errors.
-- `test_game.cpp::game_join_sends_joinmsg` now sets a custom `JoinInfo` so the
-  menu-supplied identity is verified.
-- Reverted an experimental `UpdateMsg` wire field (it broke the bit-exact
-  `update-full` fixture); the HUD derives the alive count from
-  `Game::snapshot()` instead.
 
-`surv_tests`: **1612 assertions, 0 failures, 75 tests**.
+### Session 2 — menu / loadout / team / HUD (this session)
 
-**Verified UI logic:** JSON parse/reject, config defaults + persistence,
-localization fallback, device layout, URL parsing, team protocol
-(create/state/setRoomProps/playGame/joinGame/error) and keep-alive,
-custom join identity, and the existing net/render/audio suites.
+Implemented and host-verified (+ Android build):
 
-**Next:** T1 — `UserDefaultConfigStorage`, `src/app/MenuScene.{h,cpp}`, and the
-`AppDelegate` wiring.
+- **`StartMenu`** (`src/ui/StartMenu.cpp`): splash + `#start-overlay` wash, white
+  logo (`survev_logo_full.png`, 220 px), the **centred** `#start-menu` block
+  (name field, region cycle, Play Solo/Duo/Squad, Join/Create Team, Loadout,
+  How to Play, error line), the **news box to its right** (bundled `News.cpp`
+  entries with gold headers / grey dates / highlight styling), and the
+  **bottom-right cog + mute** icons (`Content/gui/cog.png`, `audio-on/off.png`).
+  Settings modal (language cycle + sound toggle + 3 volume sliders), How to Play
+  modal (touch control rows), Join Team modal, and the loadout modal.
+- **Loadout screen** reworked to the web layout: 6 category tabs with an active
+  highlight, a 12-item paged grid with badges + outfit tint previews, an emote
+  slot selector.
+- **Team screen** polish: `#<code>` invite code, invite-code status line, roster
+  with leader marker `*` and "(in game)" state, region/mode/auto-fill props
+  (leader-only), green Play button, Leave Team.
+- **HUD**: weapon/ammo (+reserve) from `activePlayerData`, killfeed from
+  `Game::killFeed()`, alive/faction counts from `Game::aliveCounts()`, and the
+  result panel. All HUD + menu labels now use the Roboto Condensed TTF when
+  staged.
+- **Web-exact buttons**: `.btn-green` (`#83af50`/`#5b7a38`), `.btn-darken`
+  (`#7a7a7a`/`#3e3e3e`), 2 px bottom shadow, translucent `menu-block` panels
+  (`rgba(0,0,0,.5)`), the white bold name field, gold news headers.
+- **High-quality PNG icons**: `tools/build-gui-icons.mjs` rasterizes all
+  `client/public/img/gui/*.svg` to `Content/gui/*.png` at 4x (512 px, alpha).
+- **Roboto Condensed TTF**: `tools/fetch-fonts.ps1` (Python fontTools) converts
+  the web woff2 to `Content/fonts/*.ttf`; `AppDelegate` registers it at startup
+  and `ui::makeLabel` uses it everywhere.
+- **Permanent landscape**: `AndroidManifest.xml` `screenOrientation="landscape"`
+  plus the fixed 1280×720 `NO_BORDER` design resolution.
+- **Build fixes for the axmol `ui` namespace collision**: `GameScene.*` /
+  `MenuScene.*` alias `::ui` (`svui` / `menuui`); `Ui.cpp` includes `Files.h`
+  for the TTF; `StartMenu` lives in `UiOverlay.h` so `MenuScene.h` never names
+  the widgets.
+
+**Verified:** `surv_tests` **1658 assertions, 0 failures, 79 tests**;
+`libSurvevMobile.so` links for x86_64; `SurvevMobile-debug.apk` (45.0 MB)
+packages `assets/gui/*.png`, `assets/fonts/RobotoCondensed-*.ttf`, the web
+assets and `assets/axslc/**`.
+
+**Next:** T1 — on-device verification of the full loop (menu → Play Solo → HUD →
+pause → Quit), then the §4 polish items.

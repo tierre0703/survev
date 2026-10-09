@@ -16,11 +16,13 @@
 #include "../ui/UiOverlay.h"
 
 #include <set>
+#include <algorithm>
 #include <sstream>
 
 USING_NS_AX;
 
 namespace surv {
+namespace svui = ::ui;
 
 // M4/T1: register the sprite atlases a map needs with the SpriteFrameCache.
 // tools/build-atlas.mjs writes Content/atlas/<atlas>/{*.plist,index.txt}; the
@@ -172,12 +174,7 @@ bool GameScene::init() {
     _audio->preloadSounds();
 
     _pixiFactory = std::make_unique<pix::AxPixiFactory>();
-    _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
-    _world->setAudio(_audio.get(), _ambiance.get());
-    pix::Container* worldRoot = _pixiFactory->createContainer();
-    _world->attachTo(worldRoot);
-    _gameRoot->addChild(static_cast<ax::Node*>(worldRoot->native()));
-    _world->setScreenSize(visible.width, visible.height);
+    resetWorld();
     _game->setMapCallback([this](const MapMsg& msg) {
         loadAtlasesForMap(msg.mapName);
         _world->loadMap(msg);
@@ -189,10 +186,23 @@ bool GameScene::init() {
     _movePad->setVisible(false);
     _aimPad->setVisible(false);
 
-    // Drive update() every frame.
     this->scheduleUpdate();
-
     return true;
+}
+
+void GameScene::resetWorld() {
+    _world.reset();
+    if (_worldRoot) {
+        static_cast<ax::Node*>(_worldRoot->native())->removeFromParent();
+        _worldRoot.reset();
+    }
+    _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
+    _world->setAudio(_audio.get(), _ambiance.get());
+    _worldRoot.reset(_pixiFactory->createContainer());
+    _world->attachTo(_worldRoot.get());
+    _gameRoot->addChild(static_cast<ax::Node*>(_worldRoot->native()));
+    const auto visible = ax::Director::getInstance()->getVisibleSize();
+    _world->setScreenSize(visible.width, visible.height);
 }
 
 GameScene::~GameScene() {
@@ -209,7 +219,11 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
         return;
     }
     clearError();
+    _game->free();
+    resetWorld();
     _inGame = true;
+    _notifiedStarted = false;
+    _joinElapsed = 0;
     _gameRoot->setVisible(true);
     _movePad->setVisible(true);
     _aimPad->setVisible(true);
@@ -223,6 +237,8 @@ void GameScene::enterWithFindGame(const std::string& region, int gameModeIdx) {
     _region = region;
     _gameModeIdx = gameModeIdx;
     _pendingFind = true;
+    _findInFlight = false;
+    ++_findGeneration;
     _findAttempts = 0;
     _lastAttemptClock = 0.0;
     _findDelay = 0.0f;
@@ -232,12 +248,15 @@ void GameScene::enterWithFindGame(const std::string& region, int gameModeIdx) {
 }
 
 void GameScene::leaveGame() {
-    clearError();
-    if (_game && _game->isConnected()) {
+    if (_game) {
         _game->free();
     }
     _inGame = false;
     _pendingFind = false;
+    _findInFlight = false;
+    ++_findGeneration;
+    _touch->display = false;
+    for (auto& touch : _touch->touches) touch.active = false;
     _awaitingJoin = false;
     _joinRetryUrls.clear();
     _gameRoot->setVisible(false);
@@ -249,6 +268,7 @@ void GameScene::leaveGame() {
 }
 
 void GameScene::setError(const std::string& key, const std::string& fallback) {
+    if (onError) onError(key, fallback);
     if (_overlay) {
         _overlay->setMenuError(key, fallback);
     }
@@ -282,27 +302,37 @@ void GameScene::runFindGameAttempt() {
         return;
     }
     _findAttempts++;
+    _findInFlight = true;
     _findTime = 0.0f;
     std::weak_ptr<std::atomic<bool>> weak = _alive;
     const std::string region = _region;
     const int mode = _gameModeIdx;
-    _findGameRequest(region, mode, [this, weak](const FindGameResultInfo& result) {
+    const unsigned generation = _findGeneration;
+    _findGameRequest(region, mode, [this, weak, generation](const FindGameResultInfo& result) {
         const auto alive = weak.lock();
-        if (!alive || !*alive) {
+        if (!alive || !*alive || generation != _findGeneration) {
             return;
         }
+        _findInFlight = false;
         if (result.ok && !result.urls.empty()) {
             _pendingFind = false;
             _findAttempts = 0;
             enterWithJoin(result.urls, result.joinToken);
             return;
         }
-        setError("index-failed-finding-game", "Failed to find game");
+        const std::string key = result.error == "banned" ? "index-ip-banned"
+            : result.error == "behind_proxy" ? "index-behind-proxy"
+            : result.error == "invalid_protocol" ? "index-invalid-protocol"
+            : result.error == "invalid_captcha" ? "index-invalid-captcha"
+            : result.error == "rate_limited" ? "index-rate-limited" : "index-failed-finding-game";
+        setError(key, "Failed to find game");
         // main.ts retries every 500ms until maxAttempts (2).
-        if (_findAttempts < 2) {
-            _findDelay = 0.5f;
+        if (_findAttempts < 2 && key == "index-failed-finding-game") {
+            _findDelay = std::min(_findAttempts * 2.5f, 7.5f);
+            _pendingFind = true;
         } else {
             _pendingFind = false;
+            if (onMatchEnded) onMatchEnded(key);
         }
     });
 }
@@ -324,6 +354,24 @@ void GameScene::resumeGame() {
 
 void GameScene::update(float delta) {
     _game->update(delta);
+    if (_findInFlight) {
+        _findTime += delta;
+        if (_findTime > 30) {
+            leaveGame();
+            if (onMatchEnded) onMatchEnded("index-failed-finding-game");
+        }
+    }
+    if (_inGame && !_notifiedStarted) {
+        _joinElapsed += delta;
+        if (_game->hasJoined()) {
+            _notifiedStarted = true;
+            _touch->display = true;
+            if (onMatchStarted) onMatchStarted();
+        } else if (_joinElapsed > 30) {
+            leaveGame();
+            if (onMatchEnded) onMatchEnded("index-failed-joining-game");
+        }
+    }
 
     // M7 quick-start: wait out the anti-spam delay, then issue the request.
     if (_pendingFind) {
@@ -335,7 +383,7 @@ void GameScene::update(float delta) {
         }
     }
 
-    if (_world) {
+    if (_world && _inGame) {
         _world->update(delta);
         if (Player* active = _world->activePlayer()) {
             // Camera follows the active player (M5 adds the smoothing/shake).
@@ -399,6 +447,7 @@ void GameScene::update(float delta) {
         }
         setError(key, "Connection lost");
         leaveGame();
+        if (onMatchEnded) onMatchEnded(key);
     } else if (_game->hasJoined()) {
         _awaitingJoin = false;
     }
@@ -407,7 +456,7 @@ void GameScene::update(float delta) {
         _overlay->update(delta, isStarted(), isPlaying(), isConnected(), _game.get());
     }
 
-    if (_game->isPlaying() && _game->getActivePlayerId() != 0) {
+    if (_game->isPlaying() && _game->getActivePlayerId() != 0 && (!_overlay || !_overlay->isOpen())) {
         updateInput(delta);
     }
     _touch->m_update(*_movePad, *_aimPad);
@@ -440,6 +489,7 @@ void GameScene::updateInput(float dt) {
 }
 
 void GameScene::onTouchBegan(float x, float y, int id) {
+    if (!_inGame || !_notifiedStarted || (_overlay && _overlay->isOpen())) return;
     _touch->touches[id].active = true;
     _touch->touches[id].posDown = Vec2(x, y);
     _touch->touches[id].pos = Vec2(x, y);

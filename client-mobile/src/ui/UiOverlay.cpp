@@ -2,6 +2,9 @@
 
 #include "../game/Game.h"
 #include "../ui/Touch.h"
+#include "../render/Defs.h"
+#include <numeric>
+#include <algorithm>
 
 #include <cmath>
 #include <string>
@@ -14,6 +17,10 @@ namespace {
 
 constexpr float kBarWidth = 200.0f;
 constexpr float kBarHeight = 14.0f;
+std::string tr(Localization* loc, const std::string& key, const std::string& fallback) {
+    const auto text = loc ? loc->translate(key) : "";
+    return text.empty() ? fallback : text;
+}
 
 void drawBar(ax::DrawNode* node, float value, const ax::Color4F& color, const ax::Color4F& back) {
     node->clear();
@@ -42,6 +49,10 @@ void UiOverlay::build(ax::Scene* scene, Config* config, Localization* localizati
     _config = config;
     _loc = localization;
     _touch = touch;
+    // The menu scene borrows the overlay and re-points it at the game scene's
+    // uiRoot at the same z order; honour that here so the HUD/pause share the
+    // menu's scaled design-space root and the toolkit tap mapping.
+    _hudRoot = scene ? static_cast<ax::Node*>(scene->getChildByTag(::ui::kUiRootTag)) : nullptr;
     buildHud(scene);
     buildPauseMenu(scene);
 }
@@ -49,11 +60,17 @@ void UiOverlay::build(ax::Scene* scene, Config* config, Localization* localizati
 void UiOverlay::buildHud(ax::Scene* scene) {
     const float designW = kit::designWidth();
     const float designH = kit::designHeight();
-    _hudRoot = ax::Node::create();
-    _hudRoot->setContentSize(ax::Size(designW, designH));
-    scene->addChild(_hudRoot, 100);
-    layoutUiRoot(_hudRoot, ax::Director::getInstance()->getVisibleSize(),
-                 ax::Vec2(designW, designH));
+    // Reuse the menu's design-space root (the scene attaches it at z 10); when
+    // absent (host use) create one so the HUD follows the same 1280x720 layout
+    // and the tap mapping used by the toolkit.
+    if (!_hudRoot) {
+        _hudRoot = ax::Node::create();
+        _hudRoot->setContentSize(ax::Size(designW, designH));
+        _hudRoot->setAnchorPoint(ax::Vec2(0.0f, 0.0f));
+        scene->addChild(_hudRoot, 100);
+    } else {
+        _hudRoot->setContentSize(ax::Size(designW, designH));
+    }
 
     // Health + boost bars (bottom-left, like the web HUD).
     _hudPanel = Panel::create(kBarWidth + 20.0f, 52.0f);
@@ -68,30 +85,46 @@ void UiOverlay::buildHud(ax::Scene* scene) {
     _boostBar->setPosition(ax::Vec2(10.0f, 12.0f));
     _hudPanel->addChild(_boostBar);
 
-    _healthText = ax::Label::createWithSystemFont("", "sans-serif", 14);
+    _healthText = makeLabel("", 14);
     _healthText->setAnchorPoint(ax::Vec2(1.0f, 0.5f));
     _healthText->setPosition(ax::Vec2(kBarWidth + 10.0f, 39.0f));
     _healthText->setTextColor(ax::Color4B::WHITE);
     _hudPanel->addChild(_healthText);
 
     // Weapon + ammo (bottom-right).
-    _weaponText = ax::Label::createWithSystemFont("", "sans-serif", 16);
+    _weaponText = makeLabel("", 16);
     _weaponText->setAnchorPoint(ax::Vec2(1.0f, 0.0f));
     _weaponText->setPosition(ax::Vec2(designW - 16.0f, 40.0f));
     _weaponText->setTextColor(ax::Color4B::WHITE);
     _hudRoot->addChild(_weaponText);
-    _ammoText = ax::Label::createWithSystemFont("", "sans-serif", 22);
+    _ammoText = makeLabel("", 22);
     _ammoText->setAnchorPoint(ax::Vec2(1.0f, 0.0f));
     _ammoText->setPosition(ax::Vec2(designW - 16.0f, 12.0f));
     _ammoText->setTextColor(ax::Color4B::WHITE);
     _hudRoot->addChild(_ammoText);
 
     // Players alive (top-right).
-    _aliveText = ax::Label::createWithSystemFont("", "sans-serif", 16);
+    _aliveText = makeLabel("", 16);
     _aliveText->setAnchorPoint(ax::Vec2(1.0f, 1.0f));
     _aliveText->setPosition(ax::Vec2(designW - 16.0f, kit::fromCssY(14.0f, designH)));
     _aliveText->setTextColor(ax::Color4B::WHITE);
     _hudRoot->addChild(_aliveText);
+    auto* pause = Button::create("Menu", 100, 42);
+    _hudRoot->addChild(pause);
+    pause->setCssPosition(16, 14);
+    pause->onClick = [this] { toggle(); };
+    _killFeedText = makeLabel("", 16);
+    _killFeedText->setAnchorPoint(ax::Vec2(0, 1));
+    _killFeedText->setPosition(kit::fromCss(16, 70));
+    _hudRoot->addChild(_killFeedText);
+    _resultText = makeLabel("", 24);
+    _resultText->setPosition(kit::fromCss(640, 260));
+    _hudRoot->addChild(_resultText);
+    _resultQuit = Button::create(tr(_loc, "game-quit-game", "Quit Game"), 260, 52);
+    _hudRoot->addChild(_resultQuit);
+    _resultQuit->setCssPosition(510, 360);
+    _resultQuit->setVisible(false);
+    _resultQuit->onClick = [this] { if (onQuit) onQuit(); };
 }
 
 void UiOverlay::buildPauseMenu(ax::Scene* scene) {
@@ -99,10 +132,11 @@ void UiOverlay::buildPauseMenu(ax::Scene* scene) {
     const float designH = kit::designHeight();
     _pauseRoot = ax::Node::create();
     _pauseRoot->setContentSize(ax::Size(designW, designH));
+    _pauseRoot->setAnchorPoint(ax::Vec2(0.0f, 0.0f));
     _pauseRoot->setVisible(false);
     scene->addChild(_pauseRoot, 200);
-    layoutUiRoot(_pauseRoot, ax::Director::getInstance()->getVisibleSize(),
-                 ax::Vec2(designW, designH));
+    _pauseRoot->setScale(_hudRoot ? _hudRoot->getScale() : 1.0f);
+    _pauseRoot->setPosition(_hudRoot ? _hudRoot->getPosition() : ax::Vec2::ZERO);
 
     auto* dim = ax::LayerColor::create(ax::Color4B(0, 0, 0, 160), designW, designH);
     dim->setAnchorPoint(ax::Vec2(0.0f, 0.0f));
@@ -120,7 +154,7 @@ void UiOverlay::buildPauseMenu(ax::Scene* scene) {
     _pauseRoot->addChild(panel);
 
     auto addLabel = [&](const std::string& text, float x, float y, float size) {
-        auto* label = ax::Label::createWithSystemFont(text, "sans-serif", size);
+        auto* label = makeLabel(text, size);
         label->setAnchorPoint(ax::Vec2(0.0f, 1.0f));
         label->setPosition(ax::Vec2(x, kit::fromCssY(y, panelH)));
         label->setTextColor(ax::Color4B::WHITE);
@@ -157,9 +191,10 @@ void UiOverlay::buildPauseMenu(ax::Scene* scene) {
     auto* music = Slider::create(panelW - 40.0f, _config ? _config->floatOrDefault("musicVolume") : 1.0f);
     music->setCssPosition(20.0f, 320.0f);
     panel->addChild(music);
+    _volumeSliders = {master, sound, music};
 
     // Error/status line (also used for matchmaking feedback).
-    _errorText = ax::Label::createWithSystemFont("", "sans-serif", 15);
+    _errorText = makeLabel("", 15);
     _errorText->setAnchorPoint(ax::Vec2(0.5f, 0.5f));
     _errorText->setPosition(ax::Vec2(panelW * 0.5f, kit::fromCssY(388.0f, panelH) - 8.0f));
     _errorText->setTextColor(ax::Color4B(255, 120, 120, 255));
@@ -215,6 +250,7 @@ void UiOverlay::buildPauseMenu(ax::Scene* scene) {
         }
         _touch->toggleAimLine();
         _config->setBool("touchAimLine", _touch->touchAimLine);
+        syncSettings();
         if (onAimLineChanged) {
             onAimLineChanged(_touch->touchAimLine);
         }
@@ -225,6 +261,7 @@ void UiOverlay::buildPauseMenu(ax::Scene* scene) {
         }
         const bool muted = !_config->boolOrDefault("muteAudio");
         _config->setBool("muteAudio", muted);
+        syncSettings();
         if (onMuteChanged) {
             onMuteChanged(muted);
         }
@@ -286,11 +323,28 @@ void UiOverlay::show() {
     _pauseRoot->setVisible(true);
     if (_touch) {
         _touch->display = false;
+        for (auto& touch : _touch->touches) touch.active = false;
     }
     if (_soundBtn && _config) {
         _soundBtn->setLabel(_config->boolOrDefault("muteAudio")
                                 ? (_loc ? _loc->translate("game-sound-off") : "Sound: Off")
                                 : (_loc ? _loc->translate("game-sound") : "Sound"));
+    }
+    syncSettings();
+}
+
+void UiOverlay::syncSettings() {
+    if (_touch) {
+        _moveStyleBtn->setLabel(_touch->moveStyle == surv::TouchStyle::Locked ? "Move: Locked" : "Move: Anywhere");
+        _aimStyleBtn->setLabel(_touch->aimStyle == surv::TouchStyle::Locked ? "Aim: Locked" : "Aim: Anywhere");
+        _aimLineBtn->setLabel(_touch->touchAimLine ? "Aim Line: On" : "Aim Line: Off");
+    }
+    if (_config) {
+        _soundBtn->setLabel(tr(_loc, _config->boolOrDefault("muteAudio") ? "game-sound-off" : "game-sound", "Sound"));
+        const char* keys[] = {"masterVolume", "soundVolume", "musicVolume"};
+        for (size_t i = 0; i < _volumeSliders.size(); ++i) {
+            _volumeSliders[i]->setValue(_config->floatOrDefault(keys[i]), false);
+        }
     }
 }
 
@@ -329,20 +383,59 @@ void UiOverlay::refreshHud(const surv::Game* game, bool started, bool playing) {
             ax::Color4F(0.15f, 0.15f, 0.15f, 0.9f));
     _healthText->setString(std::to_string(static_cast<int>(std::lround(_health))));
 
-    // Boost is not part of the snapshot; keep the bar hidden unless Game
-    // exposes it (the fill uses the same widget).
-    drawBar(_boostBar, 0.0f, ax::Color4F(0.95f, 0.75f, 0.1f, 1.0f),
+    const auto& active = game->activePlayerData();
+    drawBar(_boostBar, active.boost / 100.0f, ax::Color4F(0.95f, 0.75f, 0.1f, 1.0f),
             ax::Color4F(0.15f, 0.15f, 0.15f, 0.9f));
 
     // Ammo/weapon from the active player's inventory (tracked by the world's HUD
     // pass once the loadout/HUD port lands; empty until then).
     _ammo = -1;
     _weapon.clear();
+    std::string reserve;
+    if (active.curWeapIdx >= 0 && static_cast<size_t>(active.curWeapIdx) < active.weapons.size()) {
+        const auto& weapon = active.weapons[active.curWeapIdx];
+        _weapon = tr(_loc, "game-hud-" + weapon.type, tr(_loc, "game-" + weapon.type, weapon.type));
+        const auto* provider = surv::getDefProvider();
+        const auto* def = provider ? provider->gameObject(weapon.type) : nullptr;
+        if (def && def->category != "melee") _ammo = weapon.ammo;
+        if (def && def->category == "gun") {
+            const auto found = std::find(surv::defs::kBagSizeKeys.begin(), surv::defs::kBagSizeKeys.end(), def->ammoType);
+            const auto index = static_cast<size_t>(found - surv::defs::kBagSizeKeys.begin());
+            if (index < active.inventory.size()) reserve = " / " + std::to_string(active.inventory[index]);
+        }
+    }
     _weaponText->setString(_weapon);
-    _ammoText->setString(_ammo >= 0 ? std::to_string(_ammo) : "");
+    _ammoText->setString(_ammo >= 0 ? std::to_string(_ammo) + reserve : "");
 
-    _aliveCount = static_cast<int>(snap.players.size());
-    _aliveText->setString(std::to_string(_aliveCount));
+    const auto counts = game->aliveCounts();
+    _aliveCount = std::accumulate(counts.begin(), counts.end(), 0);
+    _aliveText->setString(counts.size() >= 2 ? "Red: " + std::to_string(counts[0]) + "  Blue: " + std::to_string(counts[1])
+        : std::to_string(_aliveCount) + " " + tr(_loc, "game-alive", "alive"));
+    std::string feed;
+    for (const auto& entry : game->killFeed()) {
+        const auto& msg = entry.message;
+        const auto item = tr(_loc, "game-hud-" + msg.itemSourceType,
+            tr(_loc, "game-" + msg.itemSourceType, msg.itemSourceType));
+        const auto verb = msg.downed ? tr(_loc, "game-knocked-out", "knocked out") : tr(_loc, "game-killed", "killed");
+        if (msg.damageType == surv::DamageType_Player) feed += entry.killerName + " " + verb + " " + entry.targetName;
+        else feed += entry.targetName + " - " + tr(_loc, msg.damageType == surv::DamageType_Gas ? "game-gas" : "game-died", "died");
+        if (!item.empty()) feed += " (" + item + ")";
+        feed += '\n';
+    }
+    _killFeedText->setString(feed);
+    const auto* over = game->gameOver();
+    _resultQuit->setVisible(over != nullptr);
+    std::string result;
+    if (over) {
+        result = "Rank #" + std::to_string(over->teamRank);
+        for (const auto& stats : over->playerStats) {
+            if (stats.playerId == game->getLocalPlayerId()) {
+                result += "\n" + std::to_string(stats.kills) + " " + tr(_loc, "game-kills", "Kills")
+                    + "   " + std::to_string(stats.damageDealt) + " damage";
+            }
+        }
+    }
+    _resultText->setString(result);
 }
 
 void UiOverlay::update(float dt, bool started, bool playing, bool connected,
@@ -350,7 +443,7 @@ void UiOverlay::update(float dt, bool started, bool playing, bool connected,
     (void)dt;
     (void)connected;
     if (_hudRoot) {
-        _hudRoot->setVisible(!_visible);
+        _hudRoot->setVisible(started && !_visible);
     }
     refreshHud(game, started, playing);
 }

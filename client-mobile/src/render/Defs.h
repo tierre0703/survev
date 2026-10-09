@@ -292,6 +292,8 @@ struct GameObjRenderDef {
     bool hasAura = false;
     bool useThrowParticles = false;
     std::vector<std::string> frozenSprites;
+    std::vector<std::string> unlocks; // unlock_default and future account unlocks
+    std::string ammoType; // gun reserve-ammo inventory key
 };
 
 // A [min,max] range or a constant (both stored as min==max for constants).

@@ -122,6 +122,15 @@ public:
     // Last close info (code/reason) for UI/retry decisions.
     uint16_t getCloseCode() const { return _closeCode; }
     const std::string& getCloseReason() const { return _closeReason; }
+    const ActivePlayerData& activePlayerData() const { return _activePlayer; }
+    struct KillFeedEntry {
+        KillMsg message;
+        std::string killerName, targetName;
+        float timeLeft = 8.0f;
+    };
+    const std::vector<KillFeedEntry>& killFeed() const { return _killFeed; }
+    std::vector<int> aliveCounts() const;
+    const GameOverMsg* gameOver() const { return _hasGameOver ? &_gameOver : nullptr; }
 
 private:
     void handleJoined(NetBitStream& s);
@@ -166,6 +175,12 @@ private:
     // full objects create/update, partial objects update, and del lists remove.
     ActivePlayerData _activePlayer;
     std::unordered_map<uint16_t, PlayerInfo> _playersById;
+    std::vector<uint16_t> _playerIds; // wire insertion order for playerStatus
+    std::unordered_map<uint16_t, PlayerStatus> _playerStatus;
+    std::vector<uint8_t> _aliveCounts;
+    std::vector<KillFeedEntry> _killFeed;
+    GameOverMsg _gameOver;
+    bool _hasGameOver = false;
     std::unordered_map<uint16_t, ObjectSnapshot> _objectsById;
 
     // Full last update (bullets/explosions/gas/... for M4+ rendering).

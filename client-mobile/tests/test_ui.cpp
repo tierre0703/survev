@@ -9,6 +9,9 @@
 #include "ui/Json.h"
 #include "ui/Localization.h"
 #include "ui/TeamMenu.h"
+#include "ui/Loadout.h"
+#include "ui/Layout.h"
+#include "render/GeneratedDefs.h"
 
 #include <deque>
 #include <memory>
@@ -85,6 +88,52 @@ private:
 } // namespace
 
 // ---------------------------------------------------------------------------
+TEST(ui_name_and_team_invite_helpers) {
+    CHECK_EQ(ui::sanitizePlayerName("  A\tB\n C  "), std::string("AB C"));
+    CHECK_EQ(ui::sanitizePlayerName("1234567890123456789"), std::string("1234567890123456"));
+    CHECK_EQ(ui::sanitizePlayerName("123456789012345\xc3\xa9"), std::string("123456789012345"));
+    CHECK_EQ(ui::teamEndpoint("https://example.com/api/"), std::string("wss://example.com/team_v2"));
+    CHECK_EQ(ui::teamEndpoint("http://[::1]:8000/"), std::string("ws://[::1]:8000/team_v2"));
+    CHECK_EQ(ui::teamInviteCode("https://example.com/#ABCD"), std::string("ABCD"));
+    CHECK_EQ(ui::teamInviteCode(" #ABCD "), std::string("ABCD"));
+}
+
+TEST(ui_loadout_available_validation_and_persistence) {
+    installGeneratedDefs();
+    ui::MemoryConfigStorage storage;
+    ui::Config config(&storage);
+    config.load();
+    ui::Loadout loadout(&config);
+    CHECK_EQ(loadout.items("outfit").size(), size_t(1));
+    CHECK_EQ(loadout.items("outfit")[0], std::string("outfitBase"));
+    CHECK(loadout.items("emote").size() > 50);
+    CHECK(!loadout.select("melee", "ak47"));
+    CHECK(!loadout.select("melee", "katana_rusted"));
+    loadout.setAccountItems({"katana_rusted", "outfitWoodland", "ak47", "katana_rusted"});
+    CHECK_EQ(loadout.items("melee").size(), size_t(2));
+    CHECK(loadout.select("melee", "katana_rusted"));
+    CHECK(loadout.select("outfit", "outfitWoodland"));
+    CHECK(loadout.select("emote", "emote_gg", 0));
+    CHECK(!loadout.select("emote", "emote_gg", 100));
+    CHECK(loadout.select("player_icon", "emote_gg"));
+    config.setString("playerName", "  Native  ");
+    const auto join = loadout.joinInfo();
+    CHECK_EQ(join.name, std::string("Native"));
+    CHECK_EQ(join.melee, std::string("katana_rusted"));
+    CHECK_EQ(join.outfit, std::string("outfitWoodland"));
+    CHECK_EQ(join.heal, std::string("heal_basic"));
+    CHECK_EQ(join.boost, std::string("boost_basic"));
+    CHECK_EQ(join.emotes[0], std::string("emote_gg"));
+    ui::Config reloaded(&storage);
+    reloaded.load();
+    ui::Loadout restored(&reloaded);
+    restored.setAccountItems({"katana_rusted", "outfitWoodland"});
+    CHECK_EQ(restored.joinInfo().melee, join.melee);
+    restored.setAccountItems({});
+    CHECK_EQ(restored.joinInfo().melee, std::string("fists"));
+    CHECK_EQ(restored.joinInfo().outfit, std::string("outfitBase"));
+}
+
 TEST(ui_json_parses_values) {
     const std::string text = R"({
         "s": "hello\nworld",
@@ -348,4 +397,52 @@ TEST(ui_team_menu_keepalive) {
         }
     }
     CHECK(sawKeepAlive);
+}
+
+// ---------------------------------------------------------------------------
+// M7: shared design-space root + overlay tag.
+TEST(ui_design_root_tag) {
+    // The menu tags its scaled 1280x720 root with `kUiRootTag`; the in-game
+    // overlay looks the tag up to adopt the same coordinate system.
+    CHECK_EQ(ui::kUiRootTag, 0x5A17);
+}
+
+// The web layout constants the native chrome is authored against; guards against
+// accidental drift from the CSS (`client/css/app.css`).
+TEST(ui_layout_constants) {
+    CHECK_EQ(ui::kit::kDesignWidth, 1280.0f);
+    CHECK_EQ(ui::kit::kDesignHeight, 720.0f);
+    // kit::fromCssY flips the web's y-down space into axmol's y-up space.
+    CHECK_EQ(ui::kit::fromCssY(0.0f), 720.0f);
+    CHECK_EQ(ui::kit::fromCssY(720.0f), 0.0f);
+    CHECK_EQ(ui::kit::fromCssY(100.0f, 400.0f), 300.0f);
+    const auto p = ui::kit::fromCss(40.0f, 60.0f);
+    CHECK_EQ(p.x, 40.0f);
+    CHECK_EQ(p.y, 660.0f);
+}
+
+// CSS colour parsing used for the web `.btn-*` palettes. Compiled without the
+// engine (the parser only needs `parseCss`/`parseHexColor`, both engine-free).
+TEST(ui_css_colors) {
+    const ui::Rgb green = ui::parseHexColorRgb("#83af50");
+    CHECK_EQ(int(green.r), 0x83);
+    CHECK_EQ(int(green.g), 0xaf);
+    CHECK_EQ(int(green.b), 0x50);
+
+    // Short form expands per-channel.
+    const ui::Rgb white = ui::parseHexColorRgb("#fff");
+    CHECK_EQ(int(white.r), 255);
+    CHECK_EQ(int(white.g), 255);
+    CHECK_EQ(int(white.b), 255);
+
+    const ui::Rgba half = ui::parseHexColorRgba("rgba(0,0,0,0.5)");
+    CHECK_EQ(int(half.r), 0);
+    CHECK_EQ(int(half.a), 127);
+
+    // An unparsable string yields the caller's fallback.
+    const ui::Rgb fallback{1, 2, 3};
+    const ui::Rgb bad = ui::parseHexColorRgb("not-a-color", fallback);
+    CHECK_EQ(int(bad.r), 1);
+    CHECK_EQ(int(bad.g), 2);
+    CHECK_EQ(int(bad.b), 3);
 }

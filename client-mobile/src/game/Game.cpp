@@ -1,5 +1,6 @@
 #include "Game.h"
 #include "../net/Net.h"
+#include "../render/Defs.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -41,6 +42,14 @@ void Game::free() {
     _inputSeq = 0;
     _inputSeqInFlight = false;
     _playersById.clear();
+    _playerIds.clear();
+    _playerStatus.clear();
+    _aliveCounts.clear();
+    _killFeed.clear();
+    _activePlayer = ActivePlayerData{};
+    _hasGameOver = false;
+    _lastUrl.clear();
+    _lastToken.clear();
     _objectsById.clear();
     _lastUpdate = UpdateMsg{};
     _hasUpdate = false;
@@ -114,7 +123,9 @@ void Game::resume() {
 }
 
 void Game::update(float dt) {
-    (void)dt;
+    for (auto& entry : _killFeed) entry.timeLeft -= dt;
+    _killFeed.erase(std::remove_if(_killFeed.begin(), _killFeed.end(),
+        [](const KillFeedEntry& entry) { return entry.timeLeft <= 0; }), _killFeed.end());
     // Pump queued WebSocket events/frames on the main thread, exactly like the
     // browser fires WebSocket events on the main thread. onOpen/onMessage/
     // onClose/onError are invoked from here, in arrival order.
@@ -196,7 +207,6 @@ void Game::onClose(uint16_t code, const std::string& reason) {
     _connecting = false;
     _connected = false;
     _playing = false;
-    _joined = false;
     _inputSeqInFlight = false;
     // M7: the UI observes isConnected()/isPlaying() transitions and surfaces
     // `reason` (GameWsDisconnectReason) with a localized message.
@@ -224,6 +234,14 @@ void Game::onServerMessage(uint8_t type, NetBitStream& s) {
             break;
         case MsgType_UpdatePass:
             break; // no-op, like UpdatePassMsg
+        case MsgType_AliveCounts: {
+            AliveCountsMsg m;
+            m.deserialize(s);
+            _aliveCounts = std::move(m.teamAliveCounts);
+            break;
+        }
+        case MsgType_PlayerStats: { PlayerStatsMsg m; m.deserialize(s); break; }
+        case MsgType_RoleAnnouncement: { RoleAnnouncementMsg m; m.deserialize(s); break; }
         default:
             break;
     }
@@ -270,14 +288,51 @@ void Game::handleUpdate(NetBitStream& s) {
         it->second = {obj.data.__id, obj.data.__type, obj.data.pos};
     }
     for (const auto& info : m.playerInfos) {
+        if (!_playersById.count(info.playerId)) _playerIds.push_back(info.playerId);
         _playersById[info.playerId] = info;
     }
     for (uint16_t id : m.deletedPlayerIds) {
         _playersById.erase(id);
+        _playerStatus.erase(id);
+        _playerIds.erase(std::remove(_playerIds.begin(), _playerIds.end(), id), _playerIds.end());
     }
 
     // Keep the full tick (bullets/gas/...) for the M4 renderer.
-    _activePlayer = m.activePlayerData;
+    // UpdateMsg carries deltas. Do not erase inventory/health on clean ticks.
+    const auto& data = m.activePlayerData;
+    if (data.healthDirty) _activePlayer.health = data.health;
+    if (data.boostDirty) _activePlayer.boost = data.boost;
+    if (data.zoomDirty) _activePlayer.zoom = data.zoom;
+    if (data.actionDirty) {
+        _activePlayer.actionTime = data.actionTime;
+        _activePlayer.actionDuration = data.actionDuration;
+        _activePlayer.actionTargetId = data.actionTargetId;
+    }
+    if (data.inventoryDirty) {
+        _activePlayer.inventory = data.inventory;
+        _activePlayer.scope = data.scope;
+    }
+    if (data.weapsDirty) {
+        _activePlayer.curWeapIdx = data.curWeapIdx;
+        _activePlayer.weapons = data.weapons;
+    }
+    if (data.spectatorCountDirty) _activePlayer.spectatorCount = data.spectatorCount;
+    if (m.playerStatusDirty) {
+        const auto* provider = getDefProvider();
+        const auto* map = provider ? provider->mapRender(_map.mapName) : nullptr;
+        const bool faction = map && map->factionMode;
+        const auto active = _playersById.find(_activePlayerId);
+        std::vector<uint16_t> ids;
+        for (auto id : _playerIds) {
+            if (faction || (active != _playersById.end()
+                && _playersById.at(id).teamId == active->second.teamId)) ids.push_back(id);
+        }
+        if (ids.size() == m.playerStatus.size()) {
+            for (size_t i = 0; i < ids.size(); ++i) {
+                if (m.playerStatus[i].hasData) _playerStatus[ids[i]] = m.playerStatus[i];
+            }
+        }
+    }
     _lastUpdate = std::move(m);
     _hasUpdate = true;
     if (_updateCallback) {
@@ -289,16 +344,21 @@ void Game::handleUpdate(NetBitStream& s) {
 void Game::handleKill(NetBitStream& s) {
     KillMsg m;
     m.deserialize(s);
-    // TODO(M7): killfeed UI + death screen.
-    (void)m;
+    auto name = [this](uint16_t id) {
+        const auto found = _playersById.find(id);
+        return found == _playersById.end() ? std::string("Player") : found->second.name;
+    };
+    _killFeed.push_back({m, name(m.killerId), name(m.targetId), 8.0f});
+    if (_killFeed.size() > 6) _killFeed.erase(_killFeed.begin());
+    if (m.killed) _playerStatus[m.targetId].dead = true;
 }
 
 void Game::handleGameOver(NetBitStream& s) {
     GameOverMsg m;
     m.deserialize(s);
     _playing = false;
-    // TODO(M7): stats screen.
-    (void)m;
+    _gameOver = std::move(m);
+    _hasGameOver = true;
 }
 
 void Game::handlePickup(NetBitStream& s) {
@@ -345,6 +405,22 @@ GameStateSnapshot Game::snapshot() const {
               [](const ObjectSnapshot& a, const ObjectSnapshot& b) { return a.id < b.id; });
 
     return out;
+}
+
+std::vector<int> Game::aliveCounts() const {
+    // The existing AliveCountsMsg is authoritative (including unseen enemies).
+    // Before it arrives, derive the best available count from infos/statuses.
+    if (!_aliveCounts.empty()) return {_aliveCounts.begin(), _aliveCounts.end()};
+    const auto* provider = getDefProvider();
+    const auto* map = provider ? provider->mapRender(_map.mapName) : nullptr;
+    std::vector<int> result(map && map->factionMode ? 2 : 1, 0);
+    for (const auto& pair : _playersById) {
+        const auto status = _playerStatus.find(pair.first);
+        if (status != _playerStatus.end() && status->second.dead) continue;
+        const size_t team = result.size() == 2 && pair.second.teamId == 2 ? 1 : 0;
+        ++result[team];
+    }
+    return result;
 }
 
 std::string Game::snapshotText() const {

@@ -114,6 +114,78 @@ TEST(game_join_sends_joinmsg) {
     CHECK_EQ(jm.boost, std::string("soda"));
 }
 
+TEST(game_hud_preserves_delta_inventory_and_health) {
+    Harness h;
+    h.game.tryJoinGame("ws://dev/play", "tok");
+    h.conn()->open();
+    auto update = makeUpdate();
+    update.activePlayerData.boostDirty = true;
+    update.activePlayerData.boost = 50;
+    update.activePlayerData.weapsDirty = true;
+    update.activePlayerData.curWeapIdx = 0;
+    update.activePlayerData.weapons.resize(WeaponSlot_Count);
+    update.activePlayerData.weapons[0] = {"ak47", 20};
+    update.activePlayerData.inventoryDirty = true;
+    update.activePlayerData.inventory.assign(defs::kBagSizeKeys.size(), 10);
+    h.conn()->pushFrame(makeFrame(MsgType_Update, update));
+    h.game.update(0);
+    UpdateMsg clean;
+    h.conn()->pushFrame(makeFrame(MsgType_Update, clean));
+    h.game.update(0);
+    CHECK_NEAR(h.game.activePlayerData().health, 100, 0.01f);
+    CHECK_NEAR(h.game.activePlayerData().boost, 50, 0.3f);
+    CHECK_EQ(h.game.activePlayerData().weapons[0].type, std::string("ak47"));
+    CHECK_EQ(h.game.activePlayerData().weapons[0].ammo, uint8_t(20));
+    CHECK_EQ(h.game.activePlayerData().inventory[0], uint16_t(10));
+    h.game.free();
+    CHECK(h.game.activePlayerData().weapons.empty());
+    CHECK_NEAR(h.game.activePlayerData().health, 0, 0.01f);
+}
+
+TEST(game_hud_killfeed_counts_and_gameover) {
+    Harness h;
+    h.game.tryJoinGame("ws://dev/play", "tok");
+    h.conn()->open();
+    auto update = makeUpdate();
+    PlayerInfo target;
+    target.playerId = 43;
+    target.name = "Target";
+    update.playerInfos.push_back(target);
+    h.conn()->pushFrame(makeFrame(MsgType_Update, update));
+    h.game.update(0);
+    CHECK_EQ(h.game.aliveCounts()[0], 2);
+    KillMsg kill;
+    kill.killerId = 42;
+    kill.targetId = 43;
+    kill.killed = true;
+    kill.itemSourceType = "ak47";
+    for (int i = 0; i < 7; ++i) h.conn()->pushFrame(makeFrame(MsgType_Kill, kill));
+    h.game.update(0);
+    CHECK_EQ(h.game.killFeed().size(), size_t(6));
+    CHECK_EQ(h.game.killFeed()[0].killerName, std::string("Player"));
+    CHECK_EQ(h.game.killFeed()[0].targetName, std::string("Target"));
+    CHECK_EQ(h.game.aliveCounts()[0], 1);
+    // Existing AliveCounts must be consumed without corrupting the next message.
+    AliveCountsMsg alive;
+    alive.teamAliveCounts = {12, 13};
+    GameOverMsg over;
+    over.teamRank = 2;
+    MsgStream stream(std::vector<uint8_t>(1024, 0));
+    stream.serializeMsg(MsgType_AliveCounts, [&alive](NetBitStream& s) { alive.serialize(s); });
+    stream.serializeMsg(MsgType_GameOver, [&over](NetBitStream& s) { over.serialize(s); });
+    h.conn()->pushFrame(stream.getBuffer());
+    h.game.update(0);
+    CHECK_EQ(h.game.aliveCounts()[0], 12);
+    CHECK_EQ(h.game.aliveCounts()[1], 13);
+    CHECK(h.game.gameOver() != nullptr);
+    CHECK_EQ(h.game.gameOver()->teamRank, uint8_t(2));
+    h.game.update(9);
+    CHECK(h.game.killFeed().empty());
+    h.game.free();
+    CHECK(h.game.gameOver() == nullptr);
+    CHECK_EQ(h.game.aliveCounts()[0], 0);
+}
+
 TEST(game_dispatch_joined_map_update) {
     Harness h;
     h.game.tryJoinGame("ws://dev/play", "tok");

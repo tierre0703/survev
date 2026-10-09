@@ -125,7 +125,8 @@ void TeamMenu::connect(bool create, const std::string& roomUrl) {
 void TeamMenu::leave() {
     if (_connection) {
         _connection->resetAndClose();
-        _connection.reset();
+        if (_pumping) _retiredConnection = std::move(_connection);
+        else _connection.reset();
     }
     _active = false;
     _joined = false;
@@ -137,7 +138,10 @@ void TeamMenu::leave() {
 
 void TeamMenu::update(float dt) {
     if (_connection) {
+        _pumping = true;
         _connection->pump();
+        _pumping = false;
+        _retiredConnection.reset();
     }
     if (!_active || !_joined) {
         return;

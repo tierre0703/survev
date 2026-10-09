@@ -362,6 +362,10 @@ for (const type of gameTypes) {
     if (!def) continue;
     const img = def.lootImg || def.img || null;
     const atk = def.attack || null;
+    if (def.unlocks || def.ammoType) {
+        playerEntries += `        _gameObjs.at(${str(type)}).unlocks={${(def.unlocks || []).map(str).join(",")}};
+        _gameObjs.at(${str(type)}).ammoType=${str(def.ammoType || "")};\n`;
+    }
     gameEntries += `    {${str(type)},${str(def.type || "")},${imgInit(img)},${img?.sprite ? 1 : 0},${str(def.emitter || "")},${str(def.aura?.sprite)},${n(def.aura?.tint, 0xff00ff)},${def.aura !== undefined ? 1 : 0},${atk ? 1 : 0},${n(atk?.offset?.x, 0)},${n(atk?.offset?.y, 0)},${n(atk?.rad, 0)},${def.cleave ? 1 : 0},${str(def.sound?.playerHit)},${str(def.sound?.punch)},${def.useThrowParticles ? 1 : 0}},\n`;
     if (!def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack" && !def.frozenSprites) continue;
     let idlePose = def.anim?.idlePose || "fists";

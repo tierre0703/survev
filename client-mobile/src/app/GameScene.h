@@ -20,6 +20,11 @@ class UiOverlay; // M7 in-game UI (HUD + pause menu)
 
 namespace surv {
 
+// The global UI toolkit (see ui/Ui.h). Aliased inside `surv` so `uikit::` reads
+// like the web `ui.ts` while staying distinct from the vestigial `surv::ui`
+// forward declarations above.
+namespace uikit = ::ui;
+
 class GameWorld;
 
 namespace audio {
@@ -89,12 +94,20 @@ public:
     bool isPlaying() const { return _game && _game->isPlaying(); }
 
     // UI overlay (HUD + pause menu). Not owned by the scene.
-    void setOverlay(ui::UiOverlay* overlay) { _overlay = overlay; }
+    void setOverlay(uikit::UiOverlay* overlay) { _overlay = overlay; }
+    // The menu's scaled design-space root; the overlay adopts it so HUD and
+    // pause geometry (plus the toolkit tap mapping) match the menu.
+    void setUiRoot(ax::Node* root) { _uiRoot = root; }
+    ax::Node* getUiRoot() const { return _uiRoot; }
     surv::Touch* getTouch() { return _touch.get(); }
     // Player name + loadout used for the next join (mirrors main.ts
     // setConfigFromDOM + JoinMsg fields).
     void setJoinInfo(const Game::JoinInfo& info) { _joinInfo = info; }
     const Game::JoinInfo& joinInfo() const { return _joinInfo; }
+    audio::AudioManager* audioManager() const { return _audio.get(); }
+    std::function<void()> onMatchStarted;
+    std::function<void(const std::string&)> onMatchEnded;
+    std::function<void(const std::string&, const std::string&)> onError;
 
     // App lifecycle hooks (AppDelegate).
     void pauseGame();
@@ -110,10 +123,12 @@ private:
     void runFindGameAttempt();
     void setError(const std::string& key, const std::string& fallback = "");
     void clearError();
+    void resetWorld();
 
     ax::Node* _gameRoot = nullptr;
     std::unique_ptr<Game> _game;
     std::unique_ptr<pix::Factory> _pixiFactory;
+    std::unique_ptr<pix::Container> _worldRoot;
     std::unique_ptr<GameWorld> _world;
     std::unique_ptr<audio::AxmolAudioBackend> _audioBackend;
     std::unique_ptr<audio::AudioManager> _audio;
@@ -128,9 +143,14 @@ private:
 
     // M7: matchmaking state (findGameAttempts/timers mirrored from main.ts).
     FindGameRequest _findGameRequest;
-    ui::UiOverlay* _overlay = nullptr;
+    uikit::UiOverlay* _overlay = nullptr;
+    ax::Node* _uiRoot = nullptr;
     Game::JoinInfo _joinInfo;
     bool _pendingFind = false;
+    bool _findInFlight = false;
+    unsigned _findGeneration = 0;
+    bool _notifiedStarted = false;
+    float _joinElapsed = 0.0f;
     float _findDelay = 0.0f;
     int _findAttempts = 0;
     float _findTime = 0.0f;

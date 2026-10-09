@@ -46,6 +46,8 @@ add_executable(surv_tests
     ${SURV_SRC}/ui/Device.cpp
     ${SURV_SRC}/ui/Localization.cpp
     ${SURV_SRC}/ui/TeamMenu.cpp
+    ${SURV_SRC}/ui/Loadout.cpp
+    ${SURV_SRC}/ui/Layout.cpp
 )
 target_include_directories(surv_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

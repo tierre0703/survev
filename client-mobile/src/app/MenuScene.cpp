@@ -5,38 +5,25 @@
 #include "../net/WsUrl.h"
 #include "../ui/Files.h"
 #include "../ui/UiOverlay.h"
+#include "../audio/AudioManager.h"
 
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 
-USING_NS_AX;
-
 namespace surv {
+
+namespace menuui = ::ui;
 
 namespace {
 
-// helpers.sanitizeNameInput: trim, drop control characters, cap at the
-// protocol's player-name length.
-std::string sanitizeName(const std::string& input) {
-    std::string out;
-    out.reserve(input.size());
-    for (char c : input) {
-        const unsigned char u = static_cast<unsigned char>(c);
-        if (u < 0x20 || u == 0x7f) {
-            continue;
-        }
-        out.push_back(c);
-    }
-    while (!out.empty() && out.front() == ' ') out.erase(out.begin());
-    while (!out.empty() && out.back() == ' ') out.pop_back();
-    if (out.size() > static_cast<size_t>(Constants::PlayerNameMaxLen)) {
-        out.resize(Constants::PlayerNameMaxLen);
-    }
-    return out;
+// Localization helper (key -> translated text, else fallback literal).
+std::string tr(menuui::Localization* loc, const std::string& key, const std::string& fallback) {
+    const std::string text = loc ? loc->translate(key) : "";
+    return text.empty() ? fallback : text;
 }
 
-std::string regionDisplayName(ui::Localization* loc, const std::string& region) {
+std::string regionDisplayName(menuui::Localization* loc, const std::string& region) {
     if (loc) {
         const std::string translated = loc->translate("index-" + region);
         if (!translated.empty()) {
@@ -61,29 +48,54 @@ MenuScene* MenuScene::createScene() {
     return nullptr;
 }
 
-MenuScene::~MenuScene() = default;
+MenuScene::~MenuScene() { *_alive = false; }
+
+void MenuScene::bindGame(GameScene* game) {
+    GameHooks hooks;
+    hooks.scene = [game] { return game; };
+    hooks.joinInfo = [this] { return joinInfo(); };
+    hooks.onMatchStarted = [game] { game->setVisible(true); };
+    hooks.onReturnToMenu = [game] { game->setVisible(false); };
+    setGameHooks(std::move(hooks));
+    // The overlay/game reuse the menu's scaled design-space root so HUD and
+    // pause geometry (and the toolkit's tap mapping) match the menu exactly.
+    game->setUiRoot(_uiRoot);
+    _overlay->build(game, _config.get(), _loc.get(), game->getTouch());
+    game->setOverlay(_overlay.get());
+    _overlay->onQuit = [this, game] { game->leaveGame(); onMatchEnded(); };
+    game->onMatchStarted = [this] { onMatchStarted(); };
+    game->onMatchEnded = [this](const std::string& key) { onMatchEnded(key); };
+    game->onError = [this](const std::string& key, const std::string& fallback) { setError(key, fallback); };
+    game->getTouch()->moveStyle = _config->getString("touchMoveStyle") == "locked"
+        ? TouchStyle::Locked : TouchStyle::Anywhere;
+    game->getTouch()->aimStyle = _config->getString("touchAimStyle") == "locked"
+        ? TouchStyle::Locked : TouchStyle::Anywhere;
+    game->getTouch()->touchAimLine = _config->boolOrDefault("touchAimLine");
+    game->getTouch()->display = false;
+    applyAudioFromConfig();
+}
 
 bool MenuScene::init() {
     if (!Scene::init()) {
         return false;
     }
     const ax::Size visible = ax::Director::getInstance()->getVisibleSize();
-    ui::Device::get().resize(visible.width, visible.height);
+    menuui::Device::get().resize(visible.width, visible.height);
 
     // --- config + localization ------------------------------------------
-    _storage = std::make_unique<ui::UserDefaultConfigStorage>("surviv_config");
-    _config = std::make_unique<ui::Config>(_storage.get());
+    _storage = std::make_unique<menuui::UserDefaultConfigStorage>("surviv_config");
+    _config = std::make_unique<menuui::Config>(_storage.get());
     _config->load();
 
-    _loc = std::make_unique<ui::Localization>();
-    const std::string english = ui::Files::readText("l10n/en.json");
+    _loc = std::make_unique<menuui::Localization>();
+    const std::string english = menuui::Files::readText("l10n/en.json");
     if (!english.empty()) {
         _loc->registerEnglish(english);
     } else {
         AXLOGW("Missing l10n/en.json; UI strings fall back to keys");
     }
     _loc->setLoader([](const std::string& locale) {
-        return ui::Files::readText("l10n/" + locale + ".json");
+        return menuui::Files::readText("l10n/" + locale + ".json");
     });
     _loc->setLocale(_config->getString("language", "en"));
 
@@ -91,43 +103,42 @@ bool MenuScene::init() {
     _region = _config->getString("region", "na");
 
     // --- UI --------------------------------------------------------------
-    _uiRoot = ui::uiRoot(this, 10);
-    ui::layoutUiRoot(_uiRoot, ax::Vec2(visible.width, visible.height),
-                     ax::Vec2(ui::kit::designWidth(), ui::kit::designHeight()));
-    buildBackground();
-    buildMenuPanel();
-    buildModals();
-    buildTeamScreen();
+    _uiRoot = menuui::uiRoot(this, 10);
+    menuui::layoutUiRoot(_uiRoot, ax::Vec2(visible.width, visible.height),
+                         ax::Vec2(menuui::kit::designWidth(), menuui::kit::designHeight()));
+    _uiRoot->setTag(menuui::kUiRootTag); // shared with UiOverlay's HUD/pause
+    // --- main-menu chrome (web `#start-menu-wrapper`) ---------------------
+    buildMenuChrome();
 
     // --- in-game overlay (handed to the game scene) ----------------------
-    _overlay = std::make_unique<ui::UiOverlay>();
+    _overlay = std::make_unique<menuui::UiOverlay>();
 
     // --- team client -----------------------------------------------------
-    _team = std::make_unique<ui::TeamMenu>();
+    _team = std::make_unique<menuui::TeamMenu>();
     _team->setFactory(createWebSocketConnectionTo);
-    _team->setUrl(_apiUrl + "/team_v2");
+    _team->setUrl(menuui::teamEndpoint(_apiUrl));
     _team->onRoomChanged = [this] { refreshTeamUi(); };
-    _team->onError = [this](ui::TeamErrorType type, const std::string&) {
-        leaveTeam(ui::teamErrorL10n(type));
+    _team->onError = [this](menuui::TeamErrorType type, const std::string&) {
+        leaveTeam(menuui::teamErrorL10n(type));
     };
-    _team->onPlay = [this](const ui::TeamMenu::MatchData& match) {
+    _team->onLostConnection = [this] { leaveTeam(menuui::teamErrorL10n(menuui::TeamErrorType::LostConn)); };
+    _team->onPlay = [this](const menuui::TeamMenu::MatchData& match) {
         if (_inGame || match.urls.empty()) {
             return;
         }
         if (GameScene* game = _hooks.scene ? _hooks.scene() : nullptr) {
-            _inGame = true;
-            _inTeam = false;
-            _pending = false;
+            _pending = true;
             clearError();
             refreshUi();
             game->setJoinInfo(_hooks.joinInfo ? _hooks.joinInfo() : Game::JoinInfo{});
             game->enterWithJoin(match.urls, match.joinToken);
-            onMatchStarted();
         }
     };
 
     populateRegions();
+    buildTeamScreen();
     applyConfigToUI();
+    _config->addListener([this](const std::string& key) { onConfigChanged(key); });
     refreshUi();
 
     this->scheduleUpdate();
@@ -135,262 +146,91 @@ bool MenuScene::init() {
 }
 
 // ---------------------------------------------------------------------------
-// Panel construction
+// Main-menu chrome (the StartMenu helper builds the web `#start-menu-wrapper`)
 // ---------------------------------------------------------------------------
-void MenuScene::buildBackground() {
-    const float w = ui::kit::designWidth();
-    const float h = ui::kit::designHeight();
-
-    // `cachedBgImg` mirrors the web client's splash (default main.webp).
-    std::string bgPath = _config->getString("cachedBgImg", "img/splashes/main.webp");
-    if (bgPath.empty()) {
-        bgPath = "img/splashes/main.webp";
-    }
-    _background = ax::Sprite::create(bgPath);
-    if (_background) {
-        _background->setAnchorPoint(ax::Vec2(0.0f, 0.0f));
-        _background->setPosition(ax::Vec2::ZERO);
-        const ax::Size size = _background->getContentSize();
-        if (size.width > 0.0f && size.height > 0.0f) {
-            _background->setScale(std::fmax(w / size.width, h / size.height));
-        }
-        _uiRoot->addChild(_background, 0);
-    } else {
-        auto* dim = ax::LayerColor::create(ax::Color4B(33, 39, 43, 255), w, h);
-        dim->setAnchorPoint(ax::Vec2(0.0f, 1.0f));
-        dim->setIgnoreAnchorPointForPosition(false);
-        dim->setPosition(ax::Vec2(0.0f, h));
-        _uiRoot->addChild(dim, 0);
-    }
-
-    _logo = ax::Sprite::create("img/survev_logo_full.png");
-    if (_logo) {
-        _logo->setAnchorPoint(ax::Vec2(0.5f, 1.0f));
-        _logo->setPosition(ax::Vec2(w * 0.5f, ui::kit::fromCssY(6.0f, h)));
-        const ax::Size size = _logo->getContentSize();
-        if (size.width > 0.0f) {
-            _logo->setScale(420.0f / size.width);
-        }
-        _uiRoot->addChild(_logo, 1);
-    }
+void MenuScene::buildMenuChrome() {
+    _startMenu = std::make_unique<menuui::StartMenu>();
+    _startMenu->build(_uiRoot, _config.get(), _loc.get());
+    _startMenu->onQuickStart = [this](int teamMode) { quickStart(teamMode); };
+    _startMenu->onTeamRequested = [this](bool create) { enterTeam(create); };
 }
 
-void MenuScene::buildMenuPanel() {
-    const float panelW = 460.0f;
-    const float panelH = 540.0f;
-    _menuPanel = ui::Panel::create(panelW, panelH);
-    _menuPanel->setBackgroundColor(ax::Color3B(28, 32, 36), 0.82f);
-    _menuPanel->placeCenter();
-    _uiRoot->addChild(_menuPanel);
-
-    const float pad = 24.0f;
-    const float fieldW = panelW - pad * 2.0f;
-    float y = 20.0f;
-
-    // Player name (config "playerName", protocol max 16 chars).
-    std::string nameHint = _loc->translate("index-enter-name-here");
-    if (nameHint.empty()) {
-        nameHint = "Enter your name here";
-    }
-    _nameField = ui::TextField::create(nameHint, fieldW, 46.0f);
-    _nameField->setCssPosition(pad, y);
-    _nameField->setMaxLength(16);
-    _nameField->setOnChanged([this](const std::string& text) {
-        _config->setString("playerName", sanitizeName(text));
-    });
-    _menuPanel->addChild(_nameField);
-    y += 58.0f;
-
-    // Region selector (cycles site_info.pops).
-    _regionBtn = ui::Button::create("Region: NA", fieldW, 44.0f);
-    _regionBtn->setCssPosition(pad, y);
-    _regionBtn->onClick = [this] {
-        if (_siteInfo.pops.empty()) {
-            return;
-        }
-        size_t idx = 0;
-        for (size_t i = 0; i < _siteInfo.pops.size(); i++) {
-            if (_siteInfo.pops[i].region == _region) {
-                idx = i;
-                break;
-            }
-        }
-        idx = (idx + 1) % _siteInfo.pops.size();
-        _region = _siteInfo.pops[idx].region;
-        _config->setString("region", _region);
-        applyConfigToUI();
-    };
-    _menuPanel->addChild(_regionBtn);
-    y += 56.0f;
-
-    // Play Solo / Duo / Squad (team modes 1 / 2 / 4).
-    const int teamModes[3] = { 1, 2, 4 };
-    const char* keys[3] = { "index-play-solo", "index-play-duo", "index-play-squad" };
-    const char* fallbacks[3] = { "Play Solo", "Play Duo", "Play Squad" };
-    for (int i = 0; i < 3; i++) {
-        std::string label = _loc->translate(keys[i]);
-        if (label.empty()) {
-            label = fallbacks[i];
-        }
-        _playBtns[i] = ui::Button::create(label, fieldW, 48.0f);
-        _playBtns[i]->setCssPosition(pad, y);
-        const int teamMode = teamModes[i];
-        _playBtns[i]->onClick = [this, teamMode] { quickStart(teamMode); };
-        _menuPanel->addChild(_playBtns[i]);
-        y += 60.0f;
-    }
-
-    // Customize (T2 replaces the stub with the loadout screen).
-    {
-        std::string label = _loc->translate("index-customize-loadout");
-        if (label.empty()) {
-            label = "Customize";
-        }
-        _customizeBtn = ui::Button::create(label, fieldW, 44.0f);
-        _customizeBtn->setCssPosition(pad, y);
-        _customizeBtn->onClick = [this] { _customizeModal.show(); };
-        _menuPanel->addChild(_customizeBtn);
-        y += 56.0f;
-    }
-
-    // Join Team / Create Team.
-    {
-        const float half = (fieldW - 12.0f) * 0.5f;
-        std::string joinLabel = _loc->translate("index-join-team");
-        if (joinLabel.empty()) {
-            joinLabel = "Join Team";
-        }
-        _joinTeamBtn = ui::Button::create(joinLabel, half, 44.0f);
-        _joinTeamBtn->setCssPosition(pad, y);
-        _joinTeamBtn->onClick = [this] { enterTeam(false); };
-        _menuPanel->addChild(_joinTeamBtn);
-
-        std::string createLabel = _loc->translate("index-create-team");
-        if (createLabel.empty()) {
-            createLabel = "Create Team";
-        }
-        _createTeamBtn = ui::Button::create(createLabel, half, 44.0f);
-        _createTeamBtn->setCssPosition(pad + half + 12.0f, y);
-        _createTeamBtn->onClick = [this] { enterTeam(true); };
-        _menuPanel->addChild(_createTeamBtn);
-        y += 56.0f;
-    }
-
-    // How to Play + Sound.
-    {
-        const float half = (fieldW - 12.0f) * 0.5f;
-        std::string helpLabel = _loc->translate("index-how-to-play");
-        if (helpLabel.empty()) {
-            helpLabel = "How to Play";
-        }
-        _helpBtn = ui::Button::create(helpLabel, half, 42.0f);
-        _helpBtn->setCssPosition(pad, y);
-        _helpBtn->onClick = [this] { _helpModal.show(); };
-        _menuPanel->addChild(_helpBtn);
-
-        _soundBtn = ui::Button::create("Sound", half, 42.0f);
-        _soundBtn->setCssPosition(pad + half + 12.0f, y);
-        _soundBtn->onClick = [this] {
-            _config->setBool("muteAudio", !_config->boolOrDefault("muteAudio"));
-            applyConfigToUI();
-        };
-        _menuPanel->addChild(_soundBtn);
-        y += 54.0f;
-    }
-
-    // Master / SFX / Music volume (config keys shared with the game scene).
-    const char* volKeys[3] = { "masterVolume", "soundVolume", "musicVolume" };
-    const char* volL10n[3] = { "index-master-volume", "index-sfx-volume", "index-music-volume" };
-    for (int i = 0; i < 3; i++) {
-        std::string label = _loc->translate(volL10n[i]);
-        if (label.empty()) {
-            label = volKeys[i];
-        }
-        auto* text = ax::Label::createWithSystemFont(label, "sans-serif", 14);
-        text->setAnchorPoint(ax::Vec2(0.0f, 1.0f));
-        text->setPosition(ax::Vec2(pad, ui::kit::fromCssY(y, panelH)));
-        _menuPanel->addChild(text);
-
-        auto* slider = ui::Slider::create(fieldW, _config->floatOrDefault(volKeys[i]));
-        slider->setCssPosition(pad, y + 16.0f);
-        const std::string key = volKeys[i];
-        slider->onChanged = [this, key](float v) { _config->setFloat(key, v); };
-        _menuPanel->addChild(slider);
-        _sliders.push_back(slider);
-        y += 42.0f;
-    }
-
-    // Error / status line.
-    _errorLabel = ax::Label::createWithSystemFont("", "sans-serif", 16);
-    _errorLabel->setAnchorPoint(ax::Vec2(0.5f, 0.0f));
-    _errorLabel->setPosition(ax::Vec2(panelW * 0.5f, 10.0f));
-    _errorLabel->setTextColor(ax::Color4B(255, 120, 120, 255));
-    _menuPanel->addChild(_errorLabel);
-}
-
-void MenuScene::buildModals() {
-    // How to Play (web `#btn-help` -> `#start-help`).
-    auto* helpPanel = _helpModal.build(640.0f, 420.0f,
-                                       _loc->translate("index-how-to-play").empty()
-                                           ? "How to Play"
-                                           : _loc->translate("index-how-to-play"));
-    const char* lines[] = {
-        "index-movement", "index-aim", "index-punch", "index-shoot",
-        "index-change-weapons", "index-reload", "index-scope-zoom",
-    };
-    float y = 70.0f;
-    for (const char* key : lines) {
-        const std::string text = _loc->translate(key);
-        if (text.empty()) {
-            continue;
-        }
-        auto* label = ax::Label::createWithSystemFont(text, "sans-serif", 16);
-        label->setAnchorPoint(ax::Vec2(0.0f, 1.0f));
-        label->setPosition(ax::Vec2(28.0f, ui::kit::fromCssY(y, 420.0f)));
-        label->setTextColor(ax::Color4B::WHITE);
-        helpPanel->addChild(label);
-        y += 40.0f;
-    }
-
-    // Customize stub (T2 replaces this with the loadout screen).
-    auto* customPanel = _customizeModal.build(520.0f, 200.0f, "Customize");
-    auto* note = ax::Label::createWithSystemFont("Loadout menu (M7 T2) coming soon.",
-                                                 "sans-serif", 16);
-    note->setAnchorPoint(ax::Vec2(0.5f, 0.5f));
-    note->setPosition(ax::Vec2(260.0f, ui::kit::fromCssY(110.0f, 200.0f)));
-    note->setTextColor(ax::Color4B::WHITE);
-    customPanel->addChild(note);
-}
-
+// ---------------------------------------------------------------------------
+// Team screen
+// ---------------------------------------------------------------------------
 void MenuScene::buildTeamScreen() {
+    // Web `#team-menu`: invite link/code, the roster, region + queue-mode +
+    // auto-fill properties and the green Play button.
     const float panelW = 620.0f;
-    const float panelH = 440.0f;
+    const float panelH = 560.0f;
     _teamRoot = ax::Node::create();
-    _teamRoot->setContentSize(ax::Size(ui::kit::designWidth(), ui::kit::designHeight()));
+    _teamRoot->setContentSize(ax::Size(menuui::kit::designWidth(), menuui::kit::designHeight()));
     _teamRoot->setVisible(false);
     _uiRoot->addChild(_teamRoot, 20);
-    ui::layoutUiRoot(_teamRoot, ax::Director::getInstance()->getVisibleSize(),
-                     ax::Vec2(ui::kit::designWidth(), ui::kit::designHeight()));
 
-    _teamPanel = ui::Panel::create(panelW, panelH);
-    _teamPanel->setBackgroundColor(ax::Color3B(28, 32, 36), 0.94f);
+    _teamPanel = menuui::Panel::create(panelW, panelH);
+    _teamPanel->setBackgroundColor(ax::Color3B(0, 0, 0), 0.8f);
     _teamPanel->placeCenter();
     _teamRoot->addChild(_teamPanel);
 
-    _teamTitle = ax::Label::createWithSystemFont("Team", "sans-serif", 24);
+    _teamTitle = menuui::makeLabel(tr(_loc.get(), "index-create-team", "Team"), 24, true);
     _teamTitle->setAnchorPoint(ax::Vec2(0.5f, 1.0f));
-    _teamTitle->setPosition(ax::Vec2(panelW * 0.5f, ui::kit::fromCssY(16.0f, panelH)));
+    _teamTitle->setPosition(ax::Vec2(panelW * 0.5f, menuui::kit::fromCssY(16.0f, panelH)));
     _teamTitle->setTextColor(ax::Color4B::WHITE);
     _teamPanel->addChild(_teamTitle);
 
-    _teamCode = ax::Label::createWithSystemFont("", "sans-serif", 26);
+    _teamCode = menuui::makeLabel("", 22, true);
     _teamCode->setAnchorPoint(ax::Vec2(0.5f, 1.0f));
-    _teamCode->setPosition(ax::Vec2(panelW * 0.5f, ui::kit::fromCssY(56.0f, panelH)));
+    _teamCode->setPosition(ax::Vec2(panelW * 0.5f, menuui::kit::fromCssY(56.0f, panelH)));
     _teamCode->setTextColor(ax::Color4B(140, 220, 140, 255));
     _teamPanel->addChild(_teamCode);
 
-    _teamStartBtn = ui::Button::create("Start Game", 240.0f, 48.0f);
-    _teamStartBtn->setCssPosition((panelW - 240.0f) * 0.5f, panelH - 116.0f);
+    _teamStatus = menuui::makeLabel("", 15, false);
+    _teamStatus->setAnchorPoint(ax::Vec2(0.5f, 1.0f));
+    _teamStatus->setPosition(ax::Vec2(panelW * 0.5f, menuui::kit::fromCssY(84.0f, panelH)));
+    _teamStatus->setTextColor(ax::Color4B(200, 200, 200, 255));
+    _teamPanel->addChild(_teamStatus);
+
+    // Roster header (web `#team-menu-members`).
+    auto* members = menuui::makeLabel(tr(_loc.get(), "index-players", "Players"), 16, true);
+    members->setAnchorPoint(ax::Vec2(0.0f, 1.0f));
+    members->setTextColor(ax::Color4B::WHITE);
+    members->setPosition(ax::Vec2(30.0f, menuui::kit::fromCssY(112.0f, panelH)));
+    _teamPanel->addChild(members);
+
+    // Region / Mode / Auto Fill (web `#team-menu-options`), leader-editable.
+    _teamRegionBtn = makeMenuButton("Region", 180, 42, false, 15);
+    _teamModeBtn = makeMenuButton("Mode", 180, 42, false, 15);
+    _teamAutoFillBtn = makeMenuButton("Auto Fill", 180, 42, false, 15);
+    menuui::Button* props[] = {_teamRegionBtn, _teamModeBtn, _teamAutoFillBtn};
+    for (int i = 0; i < 3; ++i) {
+        _teamPanel->addChild(props[i]);
+        props[i]->setCssPosition(28 + i * 192, 340);
+    }
+    _teamRegionBtn->onClick = [this] {
+        if (_siteInfo.pops.empty()) return;
+        size_t index = 0;
+        for (size_t i = 0; i < _siteInfo.pops.size(); ++i) {
+            if (_siteInfo.pops[i].region == _team->roomData().region) index = i;
+        }
+        _team->setRoomRegion(_siteInfo.pops[(index + 1) % _siteInfo.pops.size()].region);
+        refreshTeamUi();
+    };
+    _teamModeBtn->onClick = [this] {
+        const auto& modes = _team->roomData().enabledGameModeIdxs;
+        if (modes.empty()) return;
+        auto found = std::find(modes.begin(), modes.end(), _team->roomData().gameModeIdx);
+        const size_t next = found == modes.end() ? 0 : (found - modes.begin() + 1) % modes.size();
+        _team->setRoomGameMode(modes[next]);
+        refreshTeamUi();
+    };
+    _teamAutoFillBtn->onClick = [this] {
+        _team->setRoomAutoFill(!_team->roomData().autoFill);
+        refreshTeamUi();
+    };
+
+    _teamStartBtn = makeMenuButton(tr(_loc.get(), "index-play", "Play"), 260.0f, 52.0f, true, 18);
+    _teamStartBtn->setCssPosition((panelW - 260.0f) * 0.5f, panelH - 128.0f);
     _teamStartBtn->onClick = [this] {
         if (_team) {
             _team->tryStartGame();
@@ -398,17 +238,35 @@ void MenuScene::buildTeamScreen() {
     };
     _teamPanel->addChild(_teamStartBtn);
 
-    _teamLeaveBtn = ui::Button::create("Leave Team", 240.0f, 48.0f);
-    _teamLeaveBtn->setCssPosition((panelW - 240.0f) * 0.5f, panelH - 60.0f);
+    _teamLeaveBtn = makeMenuButton(tr(_loc.get(), "index-leave-team", "Leave Team"), 260.0f, 48.0f, false, 16);
+    _teamLeaveBtn->setCssPosition((panelW - 260.0f) * 0.5f, panelH - 68.0f);
     _teamLeaveBtn->onClick = [this] { leaveTeam(); };
     _teamPanel->addChild(_teamLeaveBtn);
+
+    _teamErrorLabel = menuui::makeLabel("", 15, false);
+    _teamErrorLabel->setAnchorPoint(ax::Vec2(0.5f, 1.0f));
+    _teamErrorLabel->setPosition(ax::Vec2(310, menuui::kit::fromCssY(400.0f, panelH)));
+    _teamErrorLabel->setTextColor(ax::Color4B(255, 120, 120, 255));
+    _teamPanel->addChild(_teamErrorLabel);
+}
+
+menuui::Button* MenuScene::makeMenuButton(const std::string& label, float w, float h,
+                                          bool green, float fontSize) {
+    auto* button = menuui::Button::create(label, w, h);
+    button->setColors(green ? ax::Color3B(131, 175, 80) : ax::Color3B(122, 122, 122),
+                      green ? ax::Color3B(91, 122, 56) : ax::Color3B(62, 62, 62));
+    button->setFontSize(fontSize);
+    return button;
 }
 
 // ---------------------------------------------------------------------------
 // Config / localization application
 // ---------------------------------------------------------------------------
 void MenuScene::populateRegions() {
-    fetchSiteInfo(_apiUrl, [this](SiteInfo info) {
+    std::weak_ptr<bool> weak = _alive;
+    fetchSiteInfo(_apiUrl, [this, weak](SiteInfo info) {
+        const auto alive = weak.lock();
+        if (!alive || !*alive) return;
         _siteInfo = std::move(info);
         if (!_siteInfo.pops.empty()) {
             bool found = false;
@@ -420,37 +278,36 @@ void MenuScene::populateRegions() {
             }
             if (!found) {
                 _region = _siteInfo.pops.front().region;
+                _config->setString("region", _region);
             }
         }
         applyConfigToUI();
+        refreshUi();
+        if (!_siteInfo.ok) setError("index-failed-finding-game", "Cannot reach API");
     });
 }
 
 void MenuScene::applyConfigToUI() {
-    if (_nameField) {
-        _nameField->setText(_config->getString("playerName", ""));
-    }
-    if (_regionBtn) {
-        _regionBtn->setLabel("Region: " + regionDisplayName(_loc.get(), _region));
-    }
-    if (_soundBtn) {
-        const bool muted = _config->boolOrDefault("muteAudio");
-        std::string label = muted ? _loc->translate("game-sound-off") : _loc->translate("game-sound");
-        if (label.empty()) {
-            label = muted ? "Sound: Off" : "Sound";
-        }
-        _soundBtn->setLabel(label);
+    if (_startMenu) {
+        _startMenu->refresh();
     }
 }
 
 void MenuScene::applyAudioFromConfig() {
-    // The game scene owns the AudioManager and applies these keys on entry; the
-    // menu only persists them. Kept as a hook for a future shared manager.
+    auto* game = _hooks.scene ? _hooks.scene() : nullptr;
+    auto* audio = game ? game->audioManager() : nullptr;
+    if (!audio) return;
+    audio->setMute(_config->boolOrDefault("muteAudio"));
+    audio->setMasterVolume(_config->floatOrDefault("masterVolume"));
+    audio->setSoundVolume(_config->floatOrDefault("soundVolume"));
+    audio->setMusicVolume(_config->floatOrDefault("musicVolume"));
 }
 
 void MenuScene::onConfigChanged(const std::string& key) {
-    (void)key;
-    applyConfigToUI();
+    if (key == "muteAudio" || key == "language" || key == "region") {
+        applyConfigToUI();
+    }
+    applyAudioFromConfig();
 }
 
 // ---------------------------------------------------------------------------
@@ -460,14 +317,11 @@ void MenuScene::quickStart(int teamMode) {
     if (_pending || _inGame || _inTeam) {
         return;
     }
-    if (!_siteInfo.modes.empty() && !_siteInfo.hasTeamMode(teamMode)) {
+    if (!_siteInfo.ok || !_siteInfo.hasTeamMode(teamMode)) {
         setError("index-failed-finding-game", "Mode unavailable");
         return;
     }
     int gameModeIdx = _siteInfo.modeIndexForTeamMode(teamMode);
-    if (gameModeIdx < 0) {
-        gameModeIdx = (teamMode == 1) ? 0 : (teamMode == 2 ? 1 : 2);
-    }
 
     GameScene* game = _hooks.scene ? _hooks.scene() : nullptr;
     if (!game) {
@@ -486,12 +340,8 @@ void MenuScene::quickStart(int teamMode) {
 }
 
 void MenuScene::setError(const std::string& l10nKey, const std::string& fallback) {
-    std::string text = _loc ? _loc->translate(l10nKey) : "";
-    if (text.empty()) {
-        text = fallback;
-    }
-    if (_errorLabel) {
-        _errorLabel->setString(text);
+    if (_startMenu) {
+        _startMenu->setError(l10nKey, fallback);
     }
     if (_overlay) {
         _overlay->setMenuError(l10nKey, fallback);
@@ -499,8 +349,8 @@ void MenuScene::setError(const std::string& l10nKey, const std::string& fallback
 }
 
 void MenuScene::clearError() {
-    if (_errorLabel) {
-        _errorLabel->setString("");
+    if (_startMenu) {
+        _startMenu->clearError();
     }
     if (_overlay) {
         _overlay->setMenuError("", "");
@@ -508,16 +358,23 @@ void MenuScene::clearError() {
 }
 
 void MenuScene::refreshUi() {
-    if (_menuPanel) {
-        _menuPanel->setVisible(!_inGame && !_inTeam);
+    const bool chromeVisible = !_inGame && !_inTeam;
+    if (_startMenu) {
+        _startMenu->setVisible(chromeVisible);
     }
     if (_teamRoot) {
         _teamRoot->setVisible(_inTeam);
     }
-    for (int i = 0; i < 3; i++) {
-        if (_playBtns[i]) {
-            _playBtns[i]->setEnabled(!_pending);
+
+    // Disable matchmaking while a request is pending (per mode availability).
+    if (_startMenu) {
+        for (int i = 0; i < 3; ++i) {
+            _startMenu->setPlayEnabled(i, !_pending && _siteInfo.hasTeamMode(i == 0 ? 1 : i == 1 ? 2 : 4));
         }
+    }
+    if (_pending) {
+        const int dots = static_cast<int>(_pendingTicker * 2) % 4;
+        setError("", tr(_loc.get(), "index-joining-game", "Finding game") + std::string(dots, '.'));
     }
 }
 
@@ -525,7 +382,7 @@ void MenuScene::refreshUi() {
 // Team
 // ---------------------------------------------------------------------------
 void MenuScene::enterTeam(bool create) {
-    if (_inGame || _inTeam) {
+    if (_inGame || _inTeam || _pending) {
         return;
     }
     _inTeam = true;
@@ -533,7 +390,8 @@ void MenuScene::enterTeam(bool create) {
     refreshUi();
     if (_team) {
         _team->setPlayerName(_config->getString("playerName", "Player"));
-        _team->connect(create, "");
+        _team->connect(create, create ? "" : _startMenu ? _startMenu->pendingRoomCode() : std::string());
+        refreshTeamUi();
     }
 }
 
@@ -552,32 +410,55 @@ void MenuScene::refreshTeamUi() {
     if (!_team || !_teamCode) {
         return;
     }
-    _teamCode->setString(_team->roomUrl());
-    const std::string title = _loc->translate("index-team-menu");
-    _teamTitle->setString(title.empty() ? "Team" : title);
+    _teamCode->setString(_team->isJoined() ? "#" + _team->roomUrl() : "");
+    _teamStatus->setString(_team->isJoined()
+                               ? tr(_loc.get(), "index-invite-code", "Invite code")
+                               : tr(_loc.get(), "index-joining-team", "Joining Team") + "...");
+    const auto& room = _team->roomData();
+    const bool editable = _team->isLeader() && !_team->isFindingGame() && !_pending;
+    _teamRegionBtn->setEnabled(editable);
+    _teamModeBtn->setEnabled(editable);
+    _teamAutoFillBtn->setEnabled(editable);
+    _teamRegionBtn->setLabel(regionDisplayName(_loc.get(), room.region));
+    std::string modeLabel = "Mode " + std::to_string(room.gameModeIdx + 1);
+    if (room.gameModeIdx >= 0 && static_cast<size_t>(room.gameModeIdx) < _siteInfo.modes.size()) {
+        const int tm = _siteInfo.modes[room.gameModeIdx].teamMode;
+        modeLabel = tr(_loc.get(),
+                       tm == 2 ? "index-play-duo" : tm == 4 ? "index-play-squad" : "index-play-solo",
+                       tm == 2 ? "Play Duo" : tm == 4 ? "Play Squad" : "Play Solo");
+    }
+    _teamModeBtn->setLabel(modeLabel);
+    _teamAutoFillBtn->setLabel(room.autoFill ? tr(_loc.get(), "index-auto-fill", "Auto Fill")
+                                             : tr(_loc.get(), "index-no-fill", "No Fill"));
+    _teamErrorLabel->setString(_team->gameError());
+    _teamTitle->setString(tr(_loc.get(), "index-create-team", "Team"));
     if (_teamStartBtn) {
-        _teamStartBtn->setEnabled(_team->isLeader() && !_team->isFindingGame());
+        _teamStartBtn->setVisible(_team->isLeader());
+        _teamStartBtn->setEnabled(editable);
+        _teamStartBtn->setLabel(_team->isFindingGame()
+                                    ? tr(_loc.get(), "index-joining-game", "Finding game")
+                                    : tr(_loc.get(), "index-play", "Play"));
     }
     for (auto* label : _teamPlayerLabels) {
         label->removeFromParent();
     }
     _teamPlayerLabels.clear();
-    float y = 104.0f;
+    float y = 140.0f;
     for (const auto& player : _team->players()) {
         std::string text = player.name;
         if (player.isLeader) {
             text += " *";
         }
         if (player.inGame) {
-            text += " (in game)";
+            text += " (" + tr(_loc.get(), "index-joining-game", "in game") + ")";
         }
-        auto* label = ax::Label::createWithSystemFont(text, "sans-serif", 16);
+        auto* label = menuui::makeLabel(text, 16, player.isLeader);
         label->setAnchorPoint(ax::Vec2(0.5f, 1.0f));
-        label->setPosition(ax::Vec2(310.0f, ui::kit::fromCssY(y, 440.0f)));
-        label->setTextColor(ax::Color4B::WHITE);
+        label->setTextColor(player.inGame ? ax::Color4B(180, 180, 180, 255) : ax::Color4B::WHITE);
+        label->setPosition(ax::Vec2(310.0f, menuui::kit::fromCssY(y, 560.0f)));
         _teamPanel->addChild(label);
         _teamPlayerLabels.push_back(label);
-        y += 28.0f;
+        y += 26.0f;
     }
 }
 
@@ -585,7 +466,11 @@ void MenuScene::refreshTeamUi() {
 // Menu <-> game transitions
 // ---------------------------------------------------------------------------
 void MenuScene::onMatchStarted() {
+    _inGame = true;
     _pending = false;
+    if (_startMenu) {
+        _startMenu->setVisible(false);
+    }
     refreshUi();
     if (_uiRoot) {
         _uiRoot->setVisible(false);
@@ -598,6 +483,9 @@ void MenuScene::onMatchStarted() {
 void MenuScene::onMatchEnded(const std::string& errorL10nKey) {
     _inGame = false;
     _pending = false;
+    _inTeam = _team && _team->isActive();
+    if (_inTeam) _team->onGameComplete(errorL10nKey.empty() ? "" : _loc->translate(errorL10nKey));
+    applyConfigToUI();
     if (_uiRoot) {
         _uiRoot->setVisible(true);
     }
@@ -619,13 +507,8 @@ void MenuScene::update(float delta) {
     }
     if (_pending) {
         _pendingTicker += delta;
-        // The game scene switches to the match on success; a timeout resets the
-        // buttons so the player can retry (main.ts lockout behaviour).
-        if (_pendingTicker > 30.0f) {
-            _pending = false;
-            setError("index-failed-finding-game", "Failed to find game");
-            refreshUi();
-        }
+        refreshUi();
+        if (_inTeam) refreshTeamUi();
     }
 }
 

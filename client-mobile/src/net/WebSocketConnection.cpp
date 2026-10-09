@@ -21,7 +21,7 @@ using ax::network::WebSocket;
 // WebSocket events already run on the main thread).
 class WebSocketConnectionImpl : public Connection, public WebSocket::Delegate {
 public:
-    explicit WebSocketConnectionImpl(const std::string& url) {
+    explicit WebSocketConnectionImpl(const std::string& url, bool text = false) : _text(text) {
         _ws = std::make_unique<WebSocket>();
         if (!_ws->open(this, url)) {
             _ws.reset();
@@ -58,7 +58,8 @@ public:
 
     void send(const uint8_t* data, size_t len) override {
         if (_ws && _ws->getReadyState() == WebSocket::State::OPEN) {
-            _ws->send(data, static_cast<unsigned int>(len));
+            if (_text) _ws->send(std::string_view(reinterpret_cast<const char*>(data), len));
+            else _ws->send(data, static_cast<unsigned int>(len));
         }
     }
 
@@ -144,6 +145,7 @@ private:
     };
 
     std::unique_ptr<WebSocket> _ws;
+    bool _text = false;
     mutable std::mutex _mutex;
     std::deque<Event> _events;
 };
@@ -161,7 +163,8 @@ std::unique_ptr<Connection> createWebSocketConnectionTo(const std::string& url) 
     // axmol's WebSocket::open accepts the full ws(s)://host:port/path URL (it
     // parses it with Uri::parse), so this is the same transport as the game
     // connection; the alias exists so the UI code reads clearly.
-    return createWebSocketConnection(url);
+    if (url.empty()) return nullptr;
+    return std::make_unique<WebSocketConnectionImpl>(url, true);
 }
 
 } // namespace surv

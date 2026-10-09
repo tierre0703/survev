@@ -1,11 +1,18 @@
 #include "AppDelegate.h"
 #include "GameScene.h"
 #include "MenuScene.h"
+#include "DevConfig.h"
 #include "../net/Api.h"
 #include "../net/Net.h"
+#include "../ui/Files.h"
+#include "../ui/Ui.h"
 #include "../ui/UiOverlay.h"
 
 using namespace ax;
+
+// Declared in Ui.h; the explicit `::surv::` scope is required because this
+// translation unit also has axmol's `ax::ui` in scope via `using namespace ax`.
+namespace surv { namespace ui { void registerGuiFonts(const char* dir); } }
 
 static ax::Size designResolutionSize = ax::Size(1280, 720);
 
@@ -39,28 +46,25 @@ bool AppDelegate::applicationDidFinishLaunching() {
     director->setStatsDisplay(false);
     director->setAnimationInterval(1.0f / 60);
 
-    // Lock the mobile layout to landscape (like the web client's mobile CSS).
+    // The app is permanently landscape: the design resolution is a fixed
+    // 1280x720 and NO_BORDER letterboxes/crops instead of rotating.
     renderView->setDesignResolutionSize(
         designResolutionSize.width,
         designResolutionSize.height,
         ResolutionPolicy::NO_BORDER);
 
-    // M7: the menu and the game are sibling scenes; the menu drives matchmaking
-    // and switches which one is running.
+    // The web client's UI font is Roboto Condensed (woff2). Stage the TTF copy
+    // (tools/fetch-fonts.ps1) and register it before any Label is created.
+    ::surv::ui::registerGuiFonts("fonts");
+    // One persistent scene keeps the team socket and matchmaking ticking even
+    // while their UI is hidden. Node ownership avoids dangling replaceScene pointers.
     auto* menuScene = surv::MenuScene::createScene();
     auto* gameScene = surv::GameScene::createScene();
 
     if (menuScene && gameScene) {
-        auto* overlay = menuScene->overlay();
-        if (overlay) {
-            overlay->build(gameScene, const_cast<surv::ui::Config*>(&menuScene->config()),
-                           nullptr, gameScene->getTouch());
-            overlay->onQuit = [menuScene, gameScene] {
-                gameScene->leaveGame();
-                menuScene->onMatchEnded();
-            };
-        }
-        gameScene->setOverlay(overlay);
+        menuScene->addChild(gameScene, 1);
+        gameScene->setVisible(false);
+        menuScene->bindGame(gameScene);
 
         // The menu owns the find_game HTTP call; the scene only schedules it.
         gameScene->setFindGameRequest(
@@ -87,12 +91,6 @@ bool AppDelegate::applicationDidFinishLaunching() {
                 });
             });
 
-        surv::MenuScene::GameHooks hooks;
-        hooks.scene = [gameScene] { return gameScene; };
-        hooks.joinInfo = [menuScene] { return menuScene->joinInfo(); };
-        hooks.onMatchStarted = [director, gameScene] { director->replaceScene(gameScene); };
-        hooks.onReturnToMenu = [director, menuScene] { director->replaceScene(menuScene); };
-        menuScene->setGameHooks(hooks);
     }
 
     director->runWithScene(menuScene ? static_cast<ax::Scene*>(menuScene)

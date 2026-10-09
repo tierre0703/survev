@@ -125,6 +125,8 @@ private:
 
     ConnectionFactory _factory;
     std::unique_ptr<Connection> _connection;
+    std::unique_ptr<Connection> _retiredConnection;
+    bool _pumping = false;
     std::string _teamUrl = "/team_v2";
     bool _active = false;
     bool _joined = false;

@@ -2,13 +2,20 @@
 // Native main menu (M7). Port of the web client's start screen
 // (client/index.html `#start-menu-wrapper` + `client/src/main.ts`):
 //
-//   splash background        -> `img/splashes/main.webp`
+//   splash background        -> `img/splashes/main.webp` (#background + overlay)
+//   #start-row-header        -> the survev logo (centered)
 //   #player-name-input-solo  -> ui::TextField   (config "playerName")
 //   #server-select-main      -> ui::Button      (config "region", from site_info.pops)
 //   #btn-start-mode-0..2     -> ui::Button      (quick start Solo/Duo/Squad)
 //   #btn-join-team / create  -> ui::TeamMenu    (team room screen)
 //   #btn-help                -> ui::Modal       ("How to Play")
-//   sound + volume controls  -> ui::Button/ui::Slider (AudioManager)
+//   #news-block              -> ui::Panel       (bundled news entries)
+//   #start-bottom-right      -> settings + mute icons (bottom-right)
+//
+// The web client lays `#start-menu` out in the horizontal centre of
+// `#start-row-top` with the news column to its right; the native port reproduces
+// that (the menu block is centred, the news box sits to its right) and is locked
+// to landscape (AppDelegate + the manifest).
 //
 // The scene owns the UI state (config/localization/team client/overlay) and
 // drives the game scene through the menu-driven API added in M7:
@@ -16,27 +23,33 @@
 // find_game HTTP call itself stays injected via
 // `GameScene::setFindGameRequest()`.
 #include "../net/Messages.h"
+#include "../game/Game.h"
 #include "../net/SiteInfo.h"
 #include "../ui/Config.h"
 #include "../ui/Device.h"
 #include "../ui/Localization.h"
 #include "../ui/TeamMenu.h"
 #include "../ui/Ui.h"
+#include "../ui/LoadoutMenu.h"
+#include "../ui/News.h"
 
 #include "axmol.h"
-
+#include "../ui/UiOverlay.h"
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace ui {
-class UiOverlay;
-}
-
 namespace surv {
 
+// The global UI toolkit (declared in ui/Ui.h / UiOverlay.h). Aliased because
+// `ui::` inside this namespace would otherwise collide with the vestigial
+// `surv::ui` forward declarations that UiOverlay.h keeps for legacy includes.
+namespace uikit = ::ui;
+
 class GameScene;
+
+class StartMenu;
 
 class MenuScene : public ax::Scene {
 public:
@@ -55,7 +68,12 @@ public:
     // Test/debug hooks.
     bool isInMenu() const { return !_inGame; }
     bool isPending() const { return _pending; }
-    const ui::Config& config() const { return *_config; }
+    const uikit::Config& config() const { return *_config; }
+    Game::JoinInfo joinInfo() const { return uikit::Loadout(_config.get()).joinInfo(); }
+    void bindGame(GameScene* game);
+    // The scaled design-space UI root (also used by the in-game HUD/pause
+    // overlay so both share one coordinate system).
+    ax::Node* uiRootNode() const { return _uiRoot; }
 
     // M7 wiring (AppDelegate): the menu drives the sibling game scene.
     // `scene` is the scene created alongside the menu; the callbacks let the
@@ -74,13 +92,12 @@ public:
     void onMatchEnded(const std::string& errorL10nKey = "");
 
     // The overlay is owned by the menu and handed to the game scene.
-    ui::UiOverlay* overlay() const { return _overlay.get(); }
+    uikit::UiOverlay* overlay() const { return _overlay.get(); }
 
 private:
-    void buildBackground();
-    void buildMenuPanel();
-    void buildModals();
     void buildTeamScreen();
+    void buildMenuChrome();
+    uikit::Button* makeMenuButton(const std::string& label, float w, float h, bool green, float fontSize);
 
     void applyConfigToUI();
     void applyAudioFromConfig();
@@ -99,41 +116,35 @@ private:
 
     void populateRegions();
 
-    std::unique_ptr<ui::UserDefaultConfigStorage> _storage;
-    std::unique_ptr<ui::Config> _config;
-    std::unique_ptr<ui::Localization> _loc;
-    std::unique_ptr<ui::TeamMenu> _team;
-    std::unique_ptr<ui::UiOverlay> _overlay;
+    std::unique_ptr<uikit::UserDefaultConfigStorage> _storage;
+    std::unique_ptr<uikit::Config> _config;
+    std::unique_ptr<uikit::Localization> _loc;
+    std::unique_ptr<uikit::TeamMenu> _team;
+    std::unique_ptr<uikit::UiOverlay> _overlay;
 
     ax::Node* _uiRoot = nullptr;
     ax::Node* _teamRoot = nullptr;
 
-    // Menu widgets.
-    ax::Sprite* _background = nullptr;
-    ax::Sprite* _logo = nullptr;
-    ui::Panel* _menuPanel = nullptr;
-    ui::Button* _playBtns[3] = {nullptr, nullptr, nullptr};
-    ui::TextField* _nameField = nullptr;
-    ui::Button* _regionBtn = nullptr;
-    ui::Button* _customizeBtn = nullptr;
-    ui::Button* _joinTeamBtn = nullptr;
-    ui::Button* _createTeamBtn = nullptr;
-    ui::Button* _helpBtn = nullptr;
-    ui::Button* _soundBtn = nullptr;
+    // Main-menu chrome (the centred menu block, the news box, the bottom-right
+    // icons and the menu modals) lives in a helper class so this scene wrapper
+    // never has to name the `ui::` widgets from a `using namespace ax` unit.
+    std::unique_ptr<uikit::StartMenu> _startMenu;
+
     ax::Label* _errorLabel = nullptr;
-    ui::Modal _helpModal;
-    ui::Modal _customizeModal;
+    uikit::Button* _teamRegionBtn = nullptr;
+    uikit::Button* _teamModeBtn = nullptr;
+    uikit::Button* _teamAutoFillBtn = nullptr;
+    ax::Label* _teamErrorLabel = nullptr;
+    std::shared_ptr<bool> _alive = std::make_shared<bool>(true);
 
     // Team room widgets.
-    ui::Panel* _teamPanel = nullptr;
+    uikit::Panel* _teamPanel = nullptr;
     ax::Label* _teamTitle = nullptr;
     ax::Label* _teamCode = nullptr;
-    ui::Button* _teamStartBtn = nullptr;
-    ui::Button* _teamLeaveBtn = nullptr;
+    ax::Label* _teamStatus = nullptr;
+    uikit::Button* _teamStartBtn = nullptr;
+    uikit::Button* _teamLeaveBtn = nullptr;
     std::vector<ax::Label*> _teamPlayerLabels;
-
-    // Volume sliders (kept for label refresh; owned by the panel).
-    std::vector<ui::Slider*> _sliders;
 
     SiteInfo _siteInfo;
     GameHooks _hooks;

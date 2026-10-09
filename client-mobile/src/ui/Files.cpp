@@ -69,10 +69,39 @@ std::string Files::fullPath(const std::string& path) {
     return ax::FileUtils::getInstance()->fullPathForFilename(path);
 }
 
+void Files::registerFonts(const std::string& dir) {
+    for (const auto& entry : kGuiFontFiles) {
+        const std::string path = dir.empty() ? std::string(entry.file) : dir + "/" + entry.file;
+        if (!exists(path)) {
+            continue;
+        }
+        // Touch the file so the FreeType face is parsed once at startup instead
+        // of on the first Label creation (axmol caches faces lazily).
+        std::string bytes;
+        readBytes(path, bytes);
+    }
+}
+
+std::string Files::fontFace(const std::string& family, bool bold) {
+    for (const auto& entry : kGuiFontFiles) {
+        const std::string name = entry.alias;
+        if (name.rfind(family, 0) != 0) {
+            continue;
+        }
+        const bool isBold = name.find("Bold") != std::string::npos;
+        if (isBold == bold) {
+            const std::string path = std::string("fonts/") + entry.file;
+            return exists(path) ? path : std::string();
+        }
+    }
+    return {};
+}
+
 std::string Files::resolveRelative(const std::string& documentPath, const std::string& ref) {
     if (ref.empty()) {
         return {};
     }
+
     // Absolute / already-resolved references pass through.
     if (ref[0] == '/' || (ref.size() > 1 && ref[1] == ':')) {
         return ref;
@@ -112,3 +141,11 @@ std::string Files::resolveRelative(const std::string& documentPath, const std::s
 }
 
 } // namespace ui
+
+// Free-function entry point declared in Ui.h (avoids naming the ambiguous
+// `ui::Files` from files that have `using namespace ax`).
+namespace surv { namespace ui {
+void registerGuiFonts(const char* dir) {
+    ::ui::Files::registerFonts(dir ? dir : "");
+}
+} } // namespace surv::ui
