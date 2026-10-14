@@ -153,6 +153,8 @@ void Player::m_init() {
     frozenTicker = 0.0f;
     frozenActive = false;
     submersion = 0.0f;
+    zoom = 0.0f;
+    zoomFast = false;
 }
 
 void Player::m_free() {
@@ -179,6 +181,12 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
     scale = data.scale;
     wearingPan = data.wearingPan;
     healEffect = data.healEffect;
+    // player.ts: zoomDirty assigns m_localData.m_zoom and clears zoomFast so the
+    // next scope change lerps in quickly.
+    if (data.zoomDirty) {
+        zoom = static_cast<float>(data.zoom);
+        zoomFast = false;
+    }
     // player.ts: m_rad = netData.m_scale * GameConfig.player.radius.
     rad = data.scale * PlayerConfig::radius;
     if ((hasteType != data.hasteType || hasteSeq != data.hasteSeq) && hasteEmitter) {
@@ -655,6 +663,24 @@ Collider Player::getMeleeCollider() const {
     const Vec2 pos = v2Add(this->pos, v2Rotate(off, ang));
     const float rad = meleeDef && meleeDef->hasAttack ? meleeDef->attackRad : 0.0f;
     return Collider::createCircle(pos, rad);
+}
+
+// player.ts m_getZoom(): m_zoom holds the step radius (a zoomDirty net field);
+// device.mobile remaps the desktop radii through the mobile table.
+float Player::getZoom(bool mobile) const {
+    const float zoom = this->zoom;
+    if (!mobile) {
+        return zoom;
+    }
+    for (int i = 0; i < defs::kScopeZoomRadiusCount; i++) {
+        if (defs::kScopeZoomRadiusDesktop[static_cast<size_t>(i)] != zoom) {
+            continue;
+        }
+        if (i < defs::kScopeZoomRadiusCount) {
+            return defs::kScopeZoomRadiusMobile[static_cast<size_t>(i)];
+        }
+    }
+    return zoom;
 }
 
 void Player::runAnimEffects(Ctx& ctx, float ticker, float effectTicker, bool lastFrame) {

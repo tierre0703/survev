@@ -210,6 +210,10 @@ class NullSprite : public NullNodeImpl<Sprite> {
 public:
     std::string frame;
     void setFrame(const std::string& f) override { frame = f; }
+    const std::string& getFrame() const { return frame; }
+    uint getTint() const { return tint; }
+    float getScaleX() const { return sx; }
+    float getScaleY() const { return sy; }
     float sourceWidth() const override { return 1.0f; }
     float sourceHeight() const override { return 1.0f; }
 };

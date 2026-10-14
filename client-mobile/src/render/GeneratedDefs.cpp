@@ -47,6 +47,7 @@ struct RawMapRender {
     int faction, potato, perk, turkey; float valueAdjust; const char* cameraEmitter;
     const char* const* atlases; int atlasCount;
     const char* ambMusic; const char* ambWind; const char* ambRiver; const char* ambWaves;
+    const char* airdropPlaneImg; const char* airdropPlaneSound; const char* airdropChuteImg;
 };
 struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura;
     int hasAttack; float attackOffX, attackOffY, attackRad; int cleave;
@@ -65,6 +66,42 @@ struct RawEmitter {
     int hasRot; RawRange rot; float maxCount; int hasMaxRate; RawRange maxRate; float maxElapsed;
     int hasZOrd; int zOrd;
 };
+struct RawPlane { float actionOffset; float planeVel, planeRad, soundRangeMult, soundRangeDelta, soundRangeMax, fallOff; };
+struct RawTracer { unsigned regular, saturated, chambered, apSaturated; float alphaRate, alphaMin; };
+struct RawBulletRender { float distance, speed, variance; const char* tracerColor; float tracerWidth, tracerLength; unsigned flareColor; float maxFlareScale; };
+
+static PlaneDef toPlane(const RawPlane& r) {
+    PlaneDef d;
+    d.planeVel = r.planeVel;
+    d.planeRad = r.planeRad;
+    d.soundRangeMult = r.soundRangeMult;
+    d.soundRangeDelta = r.soundRangeDelta;
+    d.soundRangeMax = r.soundRangeMax;
+    d.fallOff = r.fallOff;
+    return d;
+}
+static TracerColorDef toTracer(const RawTracer& r) {
+    TracerColorDef d;
+    d.regular = r.regular;
+    d.saturated = r.saturated;
+    d.chambered = r.chambered;
+    d.apSaturated = r.apSaturated;
+    d.alphaRate = r.alphaRate;
+    d.alphaMin = r.alphaMin;
+    return d;
+}
+static BulletRenderDef toBulletRender(const RawBulletRender& r) {
+    BulletRenderDef d;
+    d.distance = r.distance;
+    d.speed = r.speed;
+    d.variance = r.variance;
+    d.tracerColor = r.tracerColor ? r.tracerColor : "";
+    d.tracerWidth = r.tracerWidth;
+    d.tracerLength = r.tracerLength;
+    d.flareColor = r.flareColor;
+    d.maxFlareScale = r.maxFlareScale;
+    return d;
+}
 
 static Collider toCollider(const RawCollider& c) {
     if (c.type == 0) return Collider::createCircle(Vec2(c.a, c.b), c.c);
@@ -2654,6 +2691,92 @@ static const char* const kParticleImgs_26599[] = {"part-note-01.img"};
 static const char* const kParticleImgs_26791[] = {"part-boost-basic.img"};
 static const char* const kParticleImgs_26984[] = {"part-boost-basic.img"};
 static const char* const kParticleImgs_27175[] = {"part-boost-basic.img"};
+static const RawPlane kPlanes[] = {
+    {0,48,150,2.5,0.25,92,0},
+    {0,350,120,18,18,48,1.25},
+};
+static const char* const kTracerColors_names[] = {"9mm","9mm_suppressed_bonus","9mm_cursed","762mm","12gauge","556mm","50AE","308sub","flare","45acp","shrapnel","frag","invis"};
+static const RawTracer kTracerColors[] = {
+    {16704198,16767411,16744192,10832651,0.92,0.14},
+    {16704198,16767411,16744192,10832651,0.96,0.28},
+    {1247488,1247488,1247488,1247488,0.92,0.14},
+    {12965630,11257087,19711,200,0.94,0.2},
+    {16702684,16702684,16711680,10420224,0,0},
+    {11141010,11141010,3604224,3178496,0.92,0.14},
+    {16773256,16773256,16768768,16744448,0,0},
+    {2435840,4608000,1250816,2562,0.92,0.07},
+    {14869218,14869218,12895428,12895428,0,0},
+    {15515391,15183103,11862271,4653897,0,0},
+    {3355443,3355443,6686976,16777215,0,0},
+    {13303808,13303808,16777215,13303808,0,0},
+    {0,0,0,0,0,0},
+};
+static const char* const kBulletRender_names[] = {"bullet_mp5","bullet_ak47","bullet_scar","bullet_an94","bullet_groza","bullet_grozas","bullet_model94","bullet_blr","bullet_mosin","bullet_sv98","bullet_awc","bullet_scarssr","bullet_m39","bullet_svd","bullet_garand","bullet_buckshot","bullet_flechette","bullet_frag","bullet_slug","bullet_birdshot","bullet_m9","bullet_m9_cursed","bullet_m93r","bullet_p30l","bullet_ot38","bullet_ots38","bullet_colt45","bullet_m1911","bullet_m1a1","bullet_mkg45","bullet_deagle","bullet_barrett","bullet_sw500","bullet_ash12","bullet_mac10","bullet_ump9","bullet_vector","bullet_vector45","bullet_scorpion","bullet_vss","bullet_dp28","bullet_bar","bullet_imbel","bullet_pkp","bullet_glock","bullet_famas","bullet_hk416","bullet_m4a1","bullet_mk12","bullet_l86","bullet_m249","bullet_qbb97","bullet_scout","bullet_flare","bullet_invis","shrapnel_barrel","shrapnel_stove","shrapnel_frag","shrapnel_strobe","shrapnel_usas","shrapnel_mirv_mini","shrapnel_bomb_iron","shrapnel_cobalt"};
+static const RawBulletRender kBulletRender[] = {
+    {100,85,0,"9mm",0.1,0.7,16777215,1},
+    {200,100,0,"762mm",0.1,0.9,16777215,1},
+    {175,108,0,"762mm",0.1,0.9,16777215,1},
+    {300,120,0,"762mm",0.1,0.9,16777215,1},
+    {175,104,0,"762mm",0.1,0.9,16777215,1},
+    {185,106,0,"762mm",0.1,0.9,16777215,1},
+    {175,156,0,"45acp",0.12,1,16777215,1},
+    {400,160,0,"762mm",0.14,1,16777215,1},
+    {500,178,0,"762mm",0.16,1,16777215,1},
+    {520,182,0,"762mm",0.2,1,16777215,1},
+    {300,136,0,"308sub",0.2,1,16777215,1},
+    {200,108,0,"308sub",0.14,1,16777215,1},
+    {400,125,0,"762mm",0.1,0.9,16777215,1},
+    {425,127,0,"762mm",0.1,0.9,16777215,1},
+    {444,144,0,"762mm",0.12,0.9,16777215,1},
+    {27,66,0,"12gauge",0.1,0.8,16777215,1},
+    {45,88,0,"12gauge",0.075,0.5,16777215,1},
+    {24,72,0,"frag",0.1,0.5,16777215,1},
+    {60,118,0,"12gauge",0.2,0.4,16777215,1},
+    {25,66,0,"12gauge",0.1,0.1,16777215,1},
+    {100,85,0,"9mm",0.1,0.7,16777215,1},
+    {100,85,0,"9mm_cursed",0.1,0.7,16777215,1},
+    {100,85,0,"9mm",0.1,0.7,16777215,1},
+    {100,94,0,"9mm",0.12,0.8,16777215,1},
+    {125,112,0,"762mm",0.09,0.8,16777215,1},
+    {135,115,0,"762mm",0.1,0.8,16777215,1},
+    {110,106,0,"45acp",0.09,0.8,16777215,1},
+    {88,80,0,"45acp",0.1,0.7,16777215,1},
+    {88,80,0,"45acp",0.1,0.7,16777215,1},
+    {145,126,0,"45acp",0.1,0.9,16777215,1},
+    {120,115,0,"50AE",0.12,0.8,16777215,1},
+    {400,214,0,"50AE",0.225,1.2,16777215,1},
+    {160,150,0,"50AE",0.16,0.95,16777215,1},
+    {70,85,0,"50AE",0.12,0.7,16777215,1},
+    {50,75,0,"9mm",0.1,0.7,16777215,1},
+    {100,100,0,"9mm",0.1,0.7,16777215,1},
+    {46,88,0,"9mm",0.1,0.7,16777215,1},
+    {45,82,0,"45acp",0.1,0.7,16777215,1},
+    {120,90,0,"9mm",0.1,0.7,16777215,1},
+    {125,110,0,"9mm",0.1,0.8,16777215,1},
+    {225,110,0,"762mm",0.1,0.9,16777215,1},
+    {275,114,0,"762mm",0.1,0.9,16777215,1},
+    {200,92,0,"556mm",0.1,0.9,16777215,1},
+    {200,120,0,"762mm",0.1,0.9,16777215,1},
+    {44,70,0,"9mm",0.1,0.7,16777215,1},
+    {150,110,0,"556mm",0.1,0.9,16777215,1},
+    {175,105,0,"556mm",0.1,0.9,16777215,1},
+    {165,98,0,"556mm",0.1,0.9,16777215,1},
+    {400,132,0,"556mm",0.1,0.9,16777215,1},
+    {425,134,0,"556mm",0.1,0.9,16777215,1},
+    {220,125,0,"556mm",0.1,0.9,16777215,1},
+    {200,118,0,"556mm",0.1,0.9,16777215,1},
+    {450,164,0,"556mm",0.14,0.95,16777215,1},
+    {16,4,0,"flare",0.3,1.2,16733184,2},
+    {1,100,0,"invis",0,1.2,16777215,1},
+    {8,20,1.5,"shrapnel",0.125,0.6,16777215,1},
+    {24,30,1.5,"shrapnel",0.125,0.6,16777215,1},
+    {8,20,1.5,"shrapnel",0.125,0.6,16777215,1},
+    {3,20,1.5,"shrapnel",0.1,0.3,16777215,1},
+    {5,20,1.2,"shrapnel",0.1,0.5,16777215,1},
+    {5,20,1.3,"shrapnel",0.1,0.5,16777215,1},
+    {12,24,1.5,"shrapnel",0.125,0.6,16777215,1},
+    {8,20,1.5,"shrapnel",0.15,0.4,16777215,1},
+};
 
 static const RawMapObj kMapObjs[] = {
     {"house_door_01",{"map-door-01.img",0.5,1,14671839,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"whiteChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
@@ -3729,48 +3852,48 @@ static const RawMapObj kMapObjs[] = {
     {"loot_tier_helmet_forest",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
 };
 static const char* const kMapAtlases_0[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_199[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_426[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_636[] = {"loadout","shared","desert"};
-static const char* const kMapAtlases_841[] = {"loadout","shared","faction"};
-static const char* const kMapAtlases_1041[] = {"loadout","shared","faction","potato"};
-static const char* const kMapAtlases_1260[] = {"loadout","shared","halloween"};
-static const char* const kMapAtlases_1488[] = {"loadout","shared","main","potato"};
-static const char* const kMapAtlases_1706[] = {"loadout","shared","main","potato"};
-static const char* const kMapAtlases_1936[] = {"loadout","shared","snow"};
-static const char* const kMapAtlases_2153[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_2368[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_2591[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_2820[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_3051[] = {"loadout","shared","savannah"};
-static const char* const kMapAtlases_3258[] = {"loadout","shared","cobalt"};
-static const char* const kMapAtlases_3456[] = {"loadout","shared","turkey"};
-static const char* const kMapAtlases_3661[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_3866[] = {"loadout","shared","main","beach"};
-static const char* const kMapAtlases_4071[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_4280[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_248[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_524[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_783[] = {"loadout","shared","desert"};
+static const char* const kMapAtlases_1037[] = {"loadout","shared","faction"};
+static const char* const kMapAtlases_1287[] = {"loadout","shared","faction","potato"};
+static const char* const kMapAtlases_1555[] = {"loadout","shared","halloween"};
+static const char* const kMapAtlases_1832[] = {"loadout","shared","main","potato"};
+static const char* const kMapAtlases_2099[] = {"loadout","shared","main","potato"};
+static const char* const kMapAtlases_2378[] = {"loadout","shared","snow"};
+static const char* const kMapAtlases_2646[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_2910[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_3182[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_3460[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_3740[] = {"loadout","shared","savannah"};
+static const char* const kMapAtlases_3996[] = {"loadout","shared","cobalt"};
+static const char* const kMapAtlases_4243[] = {"loadout","shared","turkey"};
+static const char* const kMapAtlases_4497[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_4751[] = {"loadout","shared","main","beach"};
+static const char* const kMapAtlases_5005[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_5263[] = {"loadout","shared","main"};
 static const RawMapRender kMapRenders[] = {
-    {"main",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_0,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"main_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_199,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"main_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_426,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"desert",6976835,13206586,14657367,11689508,9083726,13756037,9530919,4370618,11792639,4001027,0,0,0,0,1,"",kMapAtlases_636,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"faction",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,0,0,0,1,"",kMapAtlases_841,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"faction_potato",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,1,0,0,1,"falling_pvt",kMapAtlases_1041,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"halloween",1507328,6570254,2171908,3939077,2621440,1048833,3939077,2621440,1048833,1181697,0,0,0,0,0.3,"falling_leaf_halloween",kMapAtlases_1260,3,"menu_music_02","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"potato",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,1,0,0,1,"falling_potato",kMapAtlases_1488,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"potato_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,1,0,0,1,"falling_leaf_potato",kMapAtlases_1706,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_fast",kMapAtlases_1936,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"woods",2118510,15709019,9339690,7812619,3310251,11792639,7812619,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf",kMapAtlases_2153,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"woods_snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_slow",kMapAtlases_2368,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"woods_spring",2118510,15709019,4351497,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_2591,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"woods_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_summer",kMapAtlases_2820,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"savannah",1858399,13332786,11841582,11689508,4301994,9892086,11689508,4301994,9892086,4001027,0,0,0,0,1,"",kMapAtlases_3051,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"cobalt",134680,6834230,5069416,4472122,13681,11792639,4472122,13681,11792639,1772803,0,0,1,0,1,"",kMapAtlases_3258,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"turkey",4672842,13408091,10521391,12409889,7371638,8292740,12409889,7371638,8292740,1772803,0,0,0,1,1,"",kMapAtlases_3456,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"birthday",2118510,7444036,8433481,9461284,8433481,11792639,9461284,8433481,11792639,1772803,0,0,0,0,1,"",kMapAtlases_3661,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"beach",2118510,16771002,8104037,10711321,4370618,11792639,10711321,4370618,11792639,1772803,0,0,0,0,1,"",kMapAtlases_3866,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"test_normal",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4071,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
-    {"test_faction",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,1,0,0,0,1,"",kMapAtlases_4280,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01"},
+    {"main",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_0,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"main_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_248,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"main_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_524,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"desert",6976835,13206586,14657367,11689508,9083726,13756037,9530919,4370618,11792639,4001027,0,0,0,0,1,"",kMapAtlases_783,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"faction",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,0,0,0,1,"",kMapAtlases_1037,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"faction_potato",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,1,0,0,1,"falling_pvt",kMapAtlases_1287,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"halloween",1507328,6570254,2171908,3939077,2621440,1048833,3939077,2621440,1048833,1181697,0,0,0,0,0.3,"falling_leaf_halloween",kMapAtlases_1555,3,"menu_music_02","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"potato",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,1,0,0,1,"falling_potato",kMapAtlases_1832,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"potato_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,1,0,0,1,"falling_leaf_potato",kMapAtlases_2099,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_fast",kMapAtlases_2378,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01x.img","plane_02","map-chute-01x.img"},
+    {"woods",2118510,15709019,9339690,7812619,3310251,11792639,7812619,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf",kMapAtlases_2646,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"woods_snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_slow",kMapAtlases_2910,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"woods_spring",2118510,15709019,4351497,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_3182,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"woods_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_summer",kMapAtlases_3460,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"savannah",1858399,13332786,11841582,11689508,4301994,9892086,11689508,4301994,9892086,4001027,0,0,0,0,1,"",kMapAtlases_3740,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"cobalt",134680,6834230,5069416,4472122,13681,11792639,4472122,13681,11792639,1772803,0,0,1,0,1,"",kMapAtlases_3996,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"turkey",4672842,13408091,10521391,12409889,7371638,8292740,12409889,7371638,8292740,1772803,0,0,0,1,1,"",kMapAtlases_4243,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"birthday",2118510,7444036,8433481,9461284,8433481,11792639,9461284,8433481,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4497,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"beach",2118510,16771002,8104037,10711321,4370618,11792639,10711321,4370618,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4751,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"test_normal",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_5005,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"test_faction",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,1,0,0,0,1,"",kMapAtlases_5263,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
 };
 static const RawGameObj kGameObjs[] = {
     {"bullet_mp5","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0,0,0,0,0,0,"","",0},
@@ -4859,6 +4982,9 @@ public:
             d.ambienceWind = r.ambWind ? r.ambWind : "";
             d.ambienceRiver = r.ambRiver ? r.ambRiver : "";
             d.ambienceWaves = r.ambWaves ? r.ambWaves : "";
+            d.airdropPlaneImg = r.airdropPlaneImg ? r.airdropPlaneImg : "map-plane-01.img";
+            d.airdropPlaneSound = r.airdropPlaneSound ? r.airdropPlaneSound : "plane_01";
+            d.airdropChuteImg = r.airdropChuteImg ? r.airdropChuteImg : "map-chute-01.img";
             _mapRenders[r.name] = d;
         }
         for (const auto& r : kGameObjs) {
@@ -11717,6 +11843,14 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
             d.zOrd = r.zOrd;
             _emitters[r.name] = std::move(d);
         }
+        _planes.reserve(2);
+        for (const auto& r : kPlanes) _planes.push_back(toPlane(r));
+        for (int i = 0; i < 13; ++i) {
+            _tracers[kTracerColors_names[i]] = toTracer(kTracerColors[i]);
+        }
+        for (int i = 0; i < 63; ++i) {
+            _bullets[kBulletRender_names[i]] = toBulletRender(kBulletRender[i]);
+        }
     }
 
     const MapObjectDef* mapObject(const std::string& type) const override {
@@ -11747,15 +11881,30 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         auto it = _animations.find(type);
         return it == _animations.end() ? nullptr : &it->second;
     }
+    const PlaneDef* plane(int type) const override {
+        if (type < 0 || type >= static_cast<int>(_planes.size())) return nullptr;
+        return &_planes[static_cast<size_t>(type)];
+    }
+    const TracerColorDef* tracerColor(const std::string& name) const override {
+        auto it = _tracers.find(name);
+        return it == _tracers.end() ? nullptr : &it->second;
+    }
+    const BulletRenderDef* bullet(const std::string& type) const override {
+        auto it = _bullets.find(type);
+        return it == _bullets.end() ? nullptr : &it->second;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
     std::unordered_map<std::string, MapRenderDef> _mapRenders;
     std::unordered_map<std::string, GameObjRenderDef> _gameObjs;
     std::unordered_map<std::string, ParticleDef> _particles;
+    std::unordered_map<std::string, TracerColorDef> _tracers;
+    std::unordered_map<std::string, BulletRenderDef> _bullets;
     std::unordered_map<std::string, EmitterDef> _emitters;
     std::unordered_map<std::string, PlayerPose> _poses;
     std::unordered_map<std::string, PlayerAnimationDef> _animations;
+    std::vector<PlaneDef> _planes;
 };
 
 } // namespace

@@ -20,6 +20,7 @@ const LocaleInfo kLocales[] = {
     {"vn", "Tiếng Việt"},
     {"tr", "Türkçe"},
     {"jp", "日本語"},
+    {"ko", "한국어"},
     {"th", "ภาษาไทย"},
     {"zh-cn", "中文简体"},
     {"zh-tw", "中文繁體"},

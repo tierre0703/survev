@@ -36,6 +36,11 @@ static Collider colliderToAabbDef(const Collider& c) {
     return Collider::createAabb(c.min, c.max);
 }
 
+// util.sameLayer (shared/utils/util.ts): objects on the same render layer.
+static bool sameGameLayer(int a, int b) {
+    return ((a & 0x1) == (b & 0x1)) || (((a & 0x2) != 0) && ((b & 0x2) != 0));
+}
+
 static Vec2 randomUnitDir() {
     const float angle = (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) *
                         2.0f * 3.14159265358979f;
@@ -1436,6 +1441,501 @@ Player* PlayerBarn::getPlayerById(uint16_t playerId) {
         }
     }
     return nullptr;
+}
+
+// ---------------------------------------------------------------------------
+// Airdrop (airdrop.ts)
+// ---------------------------------------------------------------------------
+namespace GameConfigAirdrop {
+constexpr float fallTime = defs::kAirdropFallTime;
+}
+namespace GameConfigBullet {
+constexpr float reflectDistDecay = defs::kBulletReflectDistDecay;
+}
+
+void Airdrop::m_init() {
+    playedLandFx = false;
+    landed = false;
+    isNew = false;
+    fallTicker = 0.0f;
+    rad = 1.0f;
+    pos = Vec2(0.0f, 0.0f);
+}
+
+void Airdrop::m_free() {
+    if (sprite) {
+        sprite->setVisible(false);
+    }
+}
+
+void Airdrop::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_, Ctx& ctx) {
+    if (isNew_) {
+        isNew = true;
+        fallTicker = data.fallT * GameConfigAirdrop::fallTime;
+        if (!sprite) {
+            sprite = ctx.factory()->createSprite();
+            sprite->setAnchor(0.5f, 0.5f);
+        }
+        const MapRenderDef& mapDef = ctx.map().mapDef;
+        sprite->setFrame(mapDef.airdropChuteImg.empty() ? std::string("map-chute-01.img")
+                                                        : mapDef.airdropChuteImg);
+    }
+    if (fullUpdate) {
+        pos = data.pos;
+    }
+    landed = data.landed;
+}
+
+void AirdropBarn::update(float dt, GameWorld& ctx) {
+    if (!ctx.activePlayer()) {
+        return;
+    }
+    const int activeLayer = ctx.activePlayer()->layer;
+    for (auto* airdrop : airdropPool.m_getPool()) {
+        if (!airdrop->active || !airdrop->sprite) {
+            continue;
+        }
+
+        airdrop->fallTicker += dt;
+        const float fallT = math::clamp(airdrop->fallTicker / GameConfigAirdrop::fallTime, 0.0f, 1.0f);
+
+        int layer = 0;
+        if ((sameGameLayer(0, activeLayer) || (activeLayer & 0x2) != 0) &&
+            ((activeLayer & 0x2) == 0 ||
+             !ctx.map().insideStructureMask(Collider::createCircle(airdrop->pos, 1.0f)))) {
+            layer |= 0x2;
+        }
+
+        if (airdrop->landed && !airdrop->playedLandFx) {
+            airdrop->playedLandFx = true;
+
+            if (!airdrop->isNew) {
+                // Crate dust.
+                for (int j = 0; j < 10; j++) {
+                    const Vec2 vel = randomUnitDir();
+                    ctx.particleBarn().addParticle(ctx.factory(), "airdropSmoke", layer, airdrop->pos, vel);
+                }
+
+                // Water landing ripples.
+                const Map::GroundSurface surface = ctx.map().getGroundSurface(airdrop->pos, layer);
+                if (surface.type == Map::SurfaceType::Water) {
+                    for (int j = 0; j < 12; j++) {
+                        const Vec2 ripplePos =
+                            v2Add(airdrop->pos, v2RandomUnit(rnd(4.5f, 6.0f)));
+                        ctx.particleBarn().addRippleParticle(ctx.factory(), ripplePos, layer,
+                                                             surface.rippleColor);
+                    }
+                }
+
+                // Crate hitting the ground.
+                if (ctx.audio()) {
+                    audio::PlaySoundOptions opts;
+                    opts.channel = "sfx";
+                    opts.hasSoundPos = true;
+                    opts.soundPos = airdrop->pos;
+                    opts.hasLayer = true;
+                    opts.layer = layer;
+                    opts.filter = "muffled";
+                    ctx.audio()->playSound(surface.type == Map::SurfaceType::Water ? "airdrop_crash_02"
+                                                                                  : "airdrop_crash_01",
+                                           opts);
+                }
+            }
+        }
+
+        // Chute + falling loop sounds (only for a live fall, not a join snapshot).
+        if (ctx.audio() && !airdrop->isNew) {
+            if (fallT <= 0.1f) {
+                audio::PlaySoundOptions opts;
+                opts.channel = "sfx";
+                opts.hasSoundPos = true;
+                opts.soundPos = airdrop->pos;
+                opts.hasLayer = true;
+                opts.layer = layer;
+                opts.rangeMult = 1.75f;
+                ctx.audio()->playSound("airdrop_chute_01", opts);
+            }
+            if (!airdrop->landed) {
+                audio::PlaySoundOptions opts;
+                opts.channel = "sfx";
+                opts.hasSoundPos = true;
+                opts.soundPos = airdrop->pos;
+                opts.hasLayer = true;
+                opts.layer = layer;
+                opts.rangeMult = 1.75f;
+                opts.ignoreMinAllowable = true;
+                opts.offset = airdrop->fallTicker;
+                ctx.audio()->playSound("airdrop_fall_01", opts);
+            }
+        }
+
+        airdrop->rad = math::lerp(std::pow(1.0f - fallT, 1.1f), 5.0f, 12.0f);
+        ctx.renderer().addPIXIObj(airdrop->sprite, layer, 1500, airdrop->__id);
+
+        const Vec2 screenPos = ctx.camera().m_pointToScreen(airdrop->pos);
+        const float screenScale = ctx.camera().m_pixels((2.0f * airdrop->rad) / ctx.camera().m_ppu);
+        airdrop->sprite->setPosition(screenPos.x, screenPos.y);
+        airdrop->sprite->setScale(screenScale, screenScale);
+        airdrop->sprite->setTint(0xffff00);
+        airdrop->sprite->setAlpha(1.0f);
+        airdrop->sprite->setVisible(!airdrop->landed);
+
+        airdrop->isNew = false;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Flare (flare.ts)
+// ---------------------------------------------------------------------------
+void FlareBarn::addFlare(GameWorld& ctx, const Bullet& bullet) {
+    FlareVisual* b = nullptr;
+    for (auto* v : bullets) {
+        if (!v->alive && !v->collided) {
+            b = v;
+            break;
+        }
+    }
+    if (!b) {
+        b = new FlareVisual();
+        b->container = ctx.factory()->createContainer();
+        b->container->setVisible(false);
+        b->trail = ctx.factory()->createSprite("player-bullet-trail-02.img");
+        b->trail->setAnchor(0.5f, 0.5f);
+        b->trail->setBlendMode(pix::BlendMode::Add);
+        b->container->addChild(b->trail);
+        b->flare = ctx.factory()->createSprite("part-flare-01.img");
+        b->flare->setAnchor(0.5f, 0.5f);
+        b->flare->setBlendMode(pix::BlendMode::Add);
+        b->container->addChild(b->flare);
+        bullets.push_back(b);
+    }
+
+    const DefProvider* provider = getDefProvider();
+    const BulletRenderDef* bulletDef = provider ? provider->bullet(bullet.bulletType) : nullptr;
+    const float defDistance = bulletDef ? bulletDef->distance : 0.0f;
+    const float defSpeed = bulletDef ? bulletDef->speed : 0.0f;
+    const float variance = 1.0f + bullet.varianceT * (bulletDef ? bulletDef->variance : 0.0f);
+    const float distAdj = math::remap(static_cast<float>(bullet.distAdjIdx), 0.0f, 32.0f, -1.0f, 1.0f);
+    const float distance = defDistance / std::pow(GameConfigBullet::reflectDistDecay, bullet.reflectCount);
+
+    b->alive = true;
+    b->collided = false;
+    b->flareScale = 0.01f;
+    b->trailScale = 1.0f;
+    b->timeAlive = 0.0f;
+    b->maxTimeAlive = 2.5f;
+    b->startPos = bullet.pos;
+    b->pos = bullet.pos;
+    b->dir = bullet.dir;
+    b->layer = bullet.layer;
+    b->playerId = bullet.playerId;
+    b->speed = defSpeed * variance;
+    b->distance = distance * variance + distAdj;
+
+    b->container->setRotation(std::atan2(b->dir.x, b->dir.y) - pi / 2.0f);
+
+    Player* player = ctx.playerBarn().getPlayerById(b->playerId);
+    if (player && (player->layer & 2) != 0) {
+        b->layer |= 2;
+    }
+
+    const std::string tracerName = bulletDef ? bulletDef->tracerColor : std::string();
+    const TracerColorDef* tracer = provider ? provider->tracerColor(tracerName) : nullptr;
+    const uint32_t tracerColor = tracer ? tracer->regular : 0xffffff;
+    b->tracerLength = bulletDef ? bulletDef->tracerLength : 0.0f;
+    b->maxFlareScale = bulletDef ? bulletDef->maxFlareScale : 1.0f;
+    b->tracerAlphaRate = tracer ? tracer->alphaRate : 0.0f;
+    b->tracerAlphaMin = tracer ? tracer->alphaMin : 0.0f;
+    b->trail->setScale(0.8f, bulletDef ? bulletDef->tracerWidth : 1.0f);
+    b->trail->setTint(tracerColor);
+    b->trail->setAlpha(1.0f);
+    b->flare->setScale(1.0f, 1.0f);
+    b->flare->setTint(bulletDef ? bulletDef->flareColor : 0xffffff);
+    b->flare->setAlpha(0.8f);
+    b->container->setVisible(true);
+
+    (void)defDistance;
+}
+
+void FlareBarn::update(float dt, GameWorld& ctx) {
+    const Player* activePlayer = ctx.activePlayer();
+    const int activeLayer = activePlayer ? activePlayer->layer : 0;
+
+    for (auto* d : bullets) {
+        if (!d->container) {
+            continue;
+        }
+        // The flare keeps the bullet def it was spawned with via the tracer
+        // length; the flare render only needs the max flare scale, stashed on
+        // the object at spawn time.
+        if (d->collided) {
+            d->flareScale = math::max(d->flareScale - dt * 0.5f, 0.0f);
+            d->flare->setAlpha(math::max(d->flare->getAlpha() - dt, 0.0f));
+            d->trailScale = math::max(d->trailScale - dt * 6.0f, 0.0f);
+            d->trail->setAlpha(math::max(d->trail->getAlpha() - dt, 0.0f));
+            d->pos = v2Add(d->pos, v2Mul(d->dir, dt * d->speed));
+            if (d->flare->getAlpha() <= 0.0f) {
+                d->collided = false;
+                d->container->setVisible(false);
+            }
+        }
+
+        if (d->alive) {
+            if (d->tracerAlphaRate > 0.0f) {
+                const float rate = (activePlayer && activePlayer->__id == d->playerId)
+                                       ? d->tracerAlphaRate
+                                       : d->tracerAlphaRate * 0.9f;
+                d->trail->setAlpha(math::max(d->tracerAlphaMin, d->trail->getAlpha() * rate));
+            }
+
+            d->timeAlive += dt;
+            d->flareScale = math::easeOutExpo(d->timeAlive / d->maxTimeAlive) * d->maxFlareScale;
+
+            const float distLeft = d->distance - v2Length(v2Sub(d->startPos, d->pos));
+            const float distTravel = math::min(distLeft, dt * d->speed);
+            d->pos = v2Add(d->pos, v2Mul(d->dir, distTravel));
+            if (math::eqAbs(distLeft, distTravel)) {
+                d->collided = true;
+                d->alive = false;
+            }
+
+            int layer = 0;
+            if ((sameGameLayer(0, activeLayer) || (activeLayer & 2) != 0) &&
+                ((activeLayer & 2) == 0 ||
+                 !ctx.map().insideStructureMask(Collider::createCircle(d->pos, 1.0f)))) {
+                layer |= 2;
+            }
+            ctx.renderer().addPIXIObj(d->trail, layer, 1000, 0);
+            ctx.renderer().addPIXIObj(d->flare, layer, 1000, 1);
+        }
+
+        // flare.ts m_render: screen-space placement for alive or fading flares.
+        if (d->alive || d->collided) {
+            const Vec2 screenPos = ctx.camera().m_pointToScreen(d->pos);
+            const float screenScale = ctx.camera().m_pixels(1.0f);
+            d->container->setPosition(screenPos.x, screenPos.y);
+            d->container->setScale(screenScale * d->flareScale, screenScale * d->flareScale);
+            const float dist = v2Length(v2Sub(d->pos, d->startPos));
+            const float trailLength = math::min(d->tracerLength * 15.0f, dist / 2.0f);
+            d->trail->setPosition(0.0f, 0.0f);
+            d->trail->setScale(screenScale * trailLength * d->trailScale, screenScale);
+        }
+    }
+}
+// ---------------------------------------------------------------------------
+// Plane + airstrike zones (plane.ts)
+// ---------------------------------------------------------------------------
+void PlaneObj::init(GameWorld& ctx, const PlaneData& data, const Map& map) {
+    id = data.id;
+    pos = data.pos;
+    planeDir = data.planeDir;
+    actionComplete = data.actionComplete;
+    active = true;
+
+    alpha = 0.75f;
+    renderAlpha = 1.0f;
+    spriteUpdateTime = 0.0f;
+    soundUpdateThrottle = 0.0f;
+    soundPlaying = false;
+    type = data.action;
+
+    const DefProvider* provider = getDefProvider();
+    const PlaneDef* def = provider ? provider->plane(type) : nullptr;
+    config = def ? *def : PlaneDef{};
+
+    rad = config.planeRad;
+
+    // plane.ts picks the sprite + sound from the biome's airdrop block for an
+    // airdrop plane, and the fixed fighter sprite for an airstrike.
+    const std::string spriteName = type == 0
+        ? (map.mapDef.airdropPlaneImg.empty() ? std::string("map-plane-01.img")
+                                              : map.mapDef.airdropPlaneImg)
+        : std::string("map-plane-02.img");
+    planeSound = type == 0
+        ? (map.mapDef.airdropPlaneSound.empty() ? std::string("plane_01")
+                                                : map.mapDef.airdropPlaneSound)
+        : std::string("fighter_01");
+
+    if (!sprite) {
+        sprite = ctx.factory()->createSprite();
+        sprite->setAnchor(0.5f, 0.5f);
+        sprite->setBlendMode(pix::BlendMode::Add);
+    }
+    sprite->setFrame(spriteName);
+    sprite->setVisible(true);
+    sprite->setRotation(std::atan2(planeDir.x, planeDir.y));
+}
+void PlaneBarn::updatePlanes(GameWorld& ctx, const std::vector<PlaneData>& data) {
+    for (auto* p : planes) {
+        p->dirty = true;
+    }
+
+    for (const auto& d : data) {
+        PlaneObj* plane = nullptr;
+        for (auto* p : planes) {
+            if (p->active && p->id == d.id) {
+                plane = p;
+                break;
+            }
+        }
+        if (!plane) {
+            for (auto* p : planes) {
+                if (!p->active) {
+                    plane = p;
+                    break;
+                }
+            }
+            if (!plane) {
+                plane = new PlaneObj();
+                planes.push_back(plane);
+            }
+            plane->init(ctx, d, ctx.map());
+        }
+        plane->dirty = false;
+        plane->actionComplete = d.actionComplete;
+
+        // Reconcile if the server position is too far from the local guess.
+        if (std::fabs(plane->pos.x - d.pos.x) > 8.0f ||
+            std::fabs(plane->pos.y - d.pos.y) > 8.0f) {
+            plane->pos = d.pos;
+        }
+    }
+
+    // Delete planes absent from the update.
+    for (auto* p : planes) {
+        if (p->active && p->dirty) {
+            p->active = false;
+            if (p->sprite) {
+                p->sprite->setVisible(false);
+            }
+        }
+    }
+}
+
+void PlaneBarn::update(float dt, GameWorld& ctx) {
+    if (!ctx.activePlayer()) {
+        return;
+    }
+    const Player* activePlayer = ctx.activePlayer();
+    const int activeLayer = activePlayer->layer;
+
+    for (auto* p : planes) {
+        if (!p->active) {
+            continue;
+        }
+        int layer = 0;
+        if ((sameGameLayer(0, activeLayer) || (activeLayer & 2) != 0) &&
+            ((activeLayer & 2) == 0 ||
+             !ctx.map().insideStructureMask(Collider::createCircle(p->pos, 1.0f)))) {
+            layer |= 2;
+        }
+
+        p->pos = v2Add(p->pos, v2Mul(p->planeDir, dt * p->config.planeVel));
+
+        if (p->actionComplete) {
+            p->spriteUpdateTime = math::min(p->spriteUpdateTime + dt, 2.0f);
+            p->rad = math::lerp(p->spriteUpdateTime, p->config.planeRad, p->config.planeRad * 1.25f);
+            p->alpha = math::lerp(p->spriteUpdateTime, 0.75f, 0.75f * 0.75f);
+            p->soundRangeMult =
+                math::max(0.0f, math::lerp(p->spriteUpdateTime, p->config.soundRangeMult,
+                                            p->config.soundRangeMult - p->config.soundRangeDelta));
+        }
+
+        ctx.renderer().addPIXIObj(p->sprite, layer, 1501, p->id);
+
+        const Vec2 screenPos = ctx.camera().m_pointToScreen(p->pos);
+        const float screenScale = ctx.camera().m_pixels(p->rad / ctx.camera().m_ppu);
+        const bool indoors = ctx.map().insideBuildingCeiling(
+            Collider::createCircle(activePlayer->pos, 0.01f), true);
+        float alphaTarget = p->alpha;
+        if (activeLayer == 1) {
+            alphaTarget = 0.0f;
+        } else if (indoors || (activeLayer & 1) != 0) {
+            alphaTarget = 0.15f;
+        }
+        p->renderAlpha = math::lerp(dt * 3.0f, p->renderAlpha, alphaTarget);
+        p->sprite->setPosition(screenPos.x, screenPos.y);
+        p->sprite->setScale(screenScale, screenScale);
+        p->sprite->setTint(0xffff00);
+        p->sprite->setAlpha(p->renderAlpha);
+        p->sprite->setVisible(true);
+    }
+
+    for (auto* zone : airstrikeZones) {
+        if (zone->active) {
+            zone->ticker += dt;
+            if (zone->ticker >= zone->duration) {
+                zone->active = false;
+                if (zone->gfx) {
+                    zone->gfx->setVisible(false);
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Shot (shot.ts)
+// ---------------------------------------------------------------------------
+void ShotBarn::addShot(const Bullet& data) {
+    ShotObj* shot = nullptr;
+    for (auto* s : shots) {
+        if (!s->active) {
+            shot = s;
+            break;
+        }
+    }
+    if (!shot) {
+        shot = new ShotObj();
+        shots.push_back(shot);
+    }
+    shot->active = true;
+    shot->pos = data.pos;
+    shot->layer = data.layer;
+    shot->playerId = data.playerId;
+    shot->weaponType = data.shotSourceType;
+    shot->offhand = data.shotOffhand;
+    shot->lastShot = data.lastShot;
+    shot->shotAlt = data.shotAlt;
+    shot->splinter = data.splinter;
+    shot->trailSaturated = data.trailSaturated;
+    shot->apRounds = data.apRounds;
+    shot->highVelocity = data.highVelocity;
+    shot->ticker = 0.0f;
+    shot->pullDelay = 0.0f;
+}
+
+void ShotBarn::update(float dt, GameWorld& ctx) {
+    for (auto* shot : shots) {
+        if (!shot->active) {
+            continue;
+        }
+        const GameObjRenderDef* def = gameDefFor(shot->weaponType);
+
+        if (shot->ticker == 0.0f) {
+            Player* player = ctx.playerBarn().getPlayerById(shot->playerId);
+
+            if (ctx.dt() >= 0.0f && shot->splinter) {
+                // Splinter shots reuse the same sound with a detune; the mixer
+                // handles the variants below.
+            }
+            if (player) {
+                // Hand + gun recoil (the visual recoil is applied here; the
+                // per-shot weapon fire sound is wired per-def in §audio).
+                const bool leftHand = shot->offhand || !(def && def->isDual);
+                const bool rightHand = !shot->offhand || !(def && def->isDual);
+                if (def && def->category == "gun") {
+                    if (leftHand) player->gunRecoil[0] += def->recoil;
+                    if (rightHand) player->gunRecoil[1] += def->recoil;
+                }
+            }
+        }
+
+        shot->ticker += dt;
+        if (shot->ticker >= shot->pullDelay) {
+            shot->active = false;
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -5,9 +5,9 @@
 // animData.ts idle poses/animation keyframes) used by the M4 rendering port.
 //
 // Usage: node --experimental-transform-types tools/codegen_render_defs.mjs
-import { fileURLToPath } from "node:url";
-import * as path from "node:path";
 import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const sharedDir = path.resolve(here, "../../shared");
@@ -37,7 +37,7 @@ const f = (x, d = 0) => {
     if (v < -3.402823466e38) v = -3.402823466e38;
     return v;
 };
-const esc = (s) => String(s ?? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+const esc = (s) => String(s ?? "").replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 const str = (s) => `"${esc(s)}"`;
 
 function colInit(c) {
@@ -47,20 +47,22 @@ function colInit(c) {
 }
 function imgInit(img) {
     const i = img || {};
-    return `{${str(i.sprite)},${n(i.scale, 1)},${n(i.alpha, 1)},${n(i.tint, 0xffffff)},${n(
-        i.zIdx,
-        0,
-    )},${i.mirrorX ? 1 : 0},${i.mirrorY ? 1 : 0},${n(i.ori, 0)}}`;
+    return `{${str(i.sprite)},${n(i.scale, 1)},${n(i.alpha, 1)},${n(i.tint, 0xffffff)},${
+        n(
+            i.zIdx,
+            0,
+        )
+    },${i.mirrorX ? 1 : 0},${i.mirrorY ? 1 : 0},${n(i.ori, 0)}}`;
 }
 // building FloorImage -> RawBImg.
 function bimgInit(img) {
     const i = img || {};
-    return `{${str(i.sprite)},${n(i.scale, 1)},${n(i.alpha, 1)},${n(i.tint, 0xffffff)},${n(
-        i.pos?.x,
-        0,
-    )},${n(i.pos?.y, 0)},${n(i.rot, 0)},${i.mirrorX ? 1 : 0},${i.mirrorY ? 1 : 0},${
-        i.removeOnDamaged ? 1 : 0
-    }}`;
+    return `{${str(i.sprite)},${n(i.scale, 1)},${n(i.alpha, 1)},${n(i.tint, 0xffffff)},${
+        n(
+            i.pos?.x,
+            0,
+        )
+    },${n(i.pos?.y, 0)},${n(i.rot, 0)},${i.mirrorX ? 1 : 0},${i.mirrorY ? 1 : 0},${i.removeOnDamaged ? 1 : 0}}`;
 }
 function unionBounds(cols) {
     let min = { x: Infinity, y: Infinity };
@@ -209,10 +211,12 @@ for (let i = 0; i < mapTypes.length; i++) {
         const name = `kEmitters_${i}`;
         arrays += `static const RawBEmitter ${name}[] = {\n`;
         for (const e of emitters) {
-            arrays += `    {${str(e.type)},${n(e.pos?.x)},${n(e.pos?.y)},${n(e.rot, 0)},${n(
-                e.scale,
-                1,
-            )},${n(e.layer, 0)},${e.parentToCeiling ? 1 : 0},${n(e.dir?.x, 1)},${n(e.dir?.y, 0)}},\n`;
+            arrays += `    {${str(e.type)},${n(e.pos?.x)},${n(e.pos?.y)},${n(e.rot, 0)},${
+                n(
+                    e.scale,
+                    1,
+                )
+            },${n(e.layer, 0)},${e.parentToCeiling ? 1 : 0},${n(e.dir?.x, 1)},${n(e.dir?.y, 0)}},\n`;
         }
         arrays += `};\n`;
         refs.emitters = name;
@@ -246,54 +250,80 @@ for (let i = 0; i < mapTypes.length; i++) {
         }
     }
 
-    entries += `    {${str(type)},${imgInit(img)},${hasImg ? 1 : 0},${colInit(collision)},${
-        hasCollision ? 1 : 0
-    },${def.isDoor ? 1 : 0},${def.isButton ? 1 : 0},${def.isTree ? 1 : 0},${def.isWall ? 1 : 0},${
+    entries += `    {${str(type)},${imgInit(img)},${hasImg ? 1 : 0},${colInit(collision)},${hasCollision ? 1 : 0},${
+        def.isDoor ? 1 : 0
+    },${def.isButton ? 1 : 0},${def.isTree ? 1 : 0},${def.isWall ? 1 : 0},${
         def.img && def.img.randomRotation ? 1 : 0
-    },${def.explosion !== undefined ? 1 : 0},${str(
-        Array.isArray(def.explosion) ? def.explosion[0] : def.explosion,
-    )},${n(def.door?.slideOffset, 0)},${str(def.door?.casingImg?.sprite)},${n(
-        def.door?.casingImg?.pos?.x,
-        0,
-    )},${n(def.door?.casingImg?.pos?.y, 0)},${n(def.door?.casingImg?.scale, 1)},${n(
-        def.door?.casingImg?.tint,
-        0xffffff,
-    )},${n(def.door?.casingImg?.alpha, 1)},${n(def.door?.spriteAnchor?.x, 0.5)},${n(
-        def.door?.spriteAnchor?.y,
-        0.5,
-    )},${defHeight},${defCollidable ? 1 : 0},${defIsWindow ? 1 : 0},${str(hitParticle)},${str(
-        punchSound,
-    )},${surface ? 1 : 0},${surfaceTypeId},${n(surface?.data?.waterColor, 0)},${n(
-        surface?.data?.rippleColor,
-        0,
-    )},${gore ? 1 : 0},${n(gore?.fade?.start, 0)},${n(gore?.fade?.end, 1)},${n(
-        gore?.fade?.pow,
-        1,
-    )},${n(gore?.fade?.speed, 1)},${gore && gore.tint !== undefined ? 1 : 0},${n(
-        gore?.tint,
-        0xffffff,
-    )},${gore && gore.alpha !== undefined ? 1 : 0},${n(gore?.alpha, 1)},${
+    },${def.explosion !== undefined ? 1 : 0},${
+        str(
+            Array.isArray(def.explosion) ? def.explosion[0] : def.explosion,
+        )
+    },${n(def.door?.slideOffset, 0)},${str(def.door?.casingImg?.sprite)},${
+        n(
+            def.door?.casingImg?.pos?.x,
+            0,
+        )
+    },${n(def.door?.casingImg?.pos?.y, 0)},${n(def.door?.casingImg?.scale, 1)},${
+        n(
+            def.door?.casingImg?.tint,
+            0xffffff,
+        )
+    },${n(def.door?.casingImg?.alpha, 1)},${n(def.door?.spriteAnchor?.x, 0.5)},${
+        n(
+            def.door?.spriteAnchor?.y,
+            0.5,
+        )
+    },${defHeight},${defCollidable ? 1 : 0},${defIsWindow ? 1 : 0},${str(hitParticle)},${
+        str(
+            punchSound,
+        )
+    },${surface ? 1 : 0},${surfaceTypeId},${n(surface?.data?.waterColor, 0)},${
+        n(
+            surface?.data?.rippleColor,
+            0,
+        )
+    },${gore ? 1 : 0},${n(gore?.fade?.start, 0)},${n(gore?.fade?.end, 1)},${
+        n(
+            gore?.fade?.pow,
+            1,
+        )
+    },${n(gore?.fade?.speed, 1)},${gore && gore.tint !== undefined ? 1 : 0},${
+        n(
+            gore?.tint,
+            0xffffff,
+        )
+    },${gore && gore.alpha !== undefined ? 1 : 0},${n(gore?.alpha, 1)},${
         gore && gore.waterColor !== undefined ? 1 : 0
-    },${n(gore?.waterColor, 0)},${gore && gore.rippleColor !== undefined ? 1 : 0},${n(
-        gore?.rippleColor,
-        0,
-    )},${img?.flicker ? 1 : 0},${n(img?.flickerMin, 1)},${n(img?.flickerMax, 1)},${n(
-        img?.flickerRate,
-        1,
-    )},${img?.ignoreAdjust ? 1 : 0},${hasLifetime ? 1 : 0},${lifetimeMin},${lifetimeMax},${
+    },${n(gore?.waterColor, 0)},${gore && gore.rippleColor !== undefined ? 1 : 0},${
+        n(
+            gore?.rippleColor,
+            0,
+        )
+    },${img?.flicker ? 1 : 0},${n(img?.flickerMin, 1)},${n(img?.flickerMax, 1)},${
+        n(
+            img?.flickerRate,
+            1,
+        )
+    },${img?.ignoreAdjust ? 1 : 0},${hasLifetime ? 1 : 0},${lifetimeMin},${lifetimeMax},${
         map && map.display === false ? 0 : 1
-    },${map && map.color !== undefined ? 1 : 0},${n(map?.color, 0)},${n(map?.scale, 1)},${colInit(
-        bounds,
-    )},${bounds ? 1 : 0},${refs.layers},${layers ? layers.length : 0},${refs.stairs},${
+    },${map && map.color !== undefined ? 1 : 0},${n(map?.color, 0)},${n(map?.scale, 1)},${
+        colInit(
+            bounds,
+        )
+    },${bounds ? 1 : 0},${refs.layers},${layers ? layers.length : 0},${refs.stairs},${
         stairs ? stairs.length : 0
-    },${refs.mask},${mask ? mask.length : 0},${refs.shapes},${shapes.length},${zIdx},${
-        refs.floorImgs
-    },${floorImgs.length},${refs.ceilingImgs},${ceilingImgs.length},${n(vision.dist, 5.5)},${n(
-        vision.width,
-        2.75,
-    )},${n(vision.linger, 0)},${n(vision.fadeRate, 12)},${str(destroyResidue)},${refs.emitters},${
-        emitters.length
-    },${refs.zoomIns},${zoomIns.length}},\n`;
+    },${refs.mask},${
+        mask ? mask.length : 0
+    },${refs.shapes},${shapes.length},${zIdx},${refs.floorImgs},${floorImgs.length},${refs.ceilingImgs},${ceilingImgs.length},${
+        n(vision.dist, 5.5)
+    },${
+        n(
+            vision.width,
+            2.75,
+        )
+    },${n(vision.linger, 0)},${n(vision.fadeRate, 12)},${
+        str(destroyResidue)
+    },${refs.emitters},${emitters.length},${refs.zoomIns},${zoomIns.length}},\n`;
 }
 
 // Map render defs.
@@ -306,22 +336,36 @@ for (const [name, def] of Object.entries(MapDefs)) {
     const amb = def?.biome?.ambience || {};
     const atlasArr = `kMapAtlases_${mapRenderEntries.length}`;
     mapAtlasArrays += `static const char* const ${atlasArr}[] = {${atlases.map(str).join(",")}};\n`;
-    mapRenderEntries += `    {${str(name)},${n(c.background, 0x2b2b2b)},${n(
-        c.beach,
-        0xd9c38a,
-    )},${n(c.grass, 0x5a9e4c)},${n(c.riverbank, 0xc2b280)},${n(c.water, 0x3a6ea5)},${n(
-        c.waterRipple,
-        0x5a8ec5,
-    )},${n(c.lakeRiverbank, n(c.riverbank, 0xc2b280))},${n(c.lakeWater, n(c.water, 0x3a6ea5))},${n(
-        c.lakeWaterRipple,
-        n(c.waterRipple, 0x5a8ec5),
-    )},${n(c.underground, 0x1b0e0b)},${gm.factionMode ? 1 : 0},${gm.potatoMode ? 1 : 0},${
-        gm.perkMode ? 1 : 0
-    },${gm.turkeyMode ? 1 : 0},${n(def?.biome?.valueAdjust, 1)},${str(
-        def?.biome?.particles?.camera || "",
-    )},${atlasArr},${atlases.length},${str(amb.music || "")},${str(amb.wind || "")},${str(
-        amb.river || "",
-    )},${str(amb.waves || "")}},\n`;
+    mapRenderEntries += `    {${str(name)},${n(c.background, 0x2b2b2b)},${
+        n(
+            c.beach,
+            0xd9c38a,
+        )
+    },${n(c.grass, 0x5a9e4c)},${n(c.riverbank, 0xc2b280)},${n(c.water, 0x3a6ea5)},${
+        n(
+            c.waterRipple,
+            0x5a8ec5,
+        )
+    },${n(c.lakeRiverbank, n(c.riverbank, 0xc2b280))},${n(c.lakeWater, n(c.water, 0x3a6ea5))},${
+        n(
+            c.lakeWaterRipple,
+            n(c.waterRipple, 0x5a8ec5),
+        )
+    },${n(c.underground, 0x1b0e0b)},${gm.factionMode ? 1 : 0},${gm.potatoMode ? 1 : 0},${gm.perkMode ? 1 : 0},${
+        gm.turkeyMode ? 1 : 0
+    },${n(def?.biome?.valueAdjust, 1)},${
+        str(
+            def?.biome?.particles?.camera || "",
+        )
+    },${atlasArr},${atlases.length},${str(amb.music || "")},${str(amb.wind || "")},${
+        str(
+            amb.river || "",
+        )
+    },${str(amb.waves || "")},${str(def?.biome?.airdrop?.planeImg || "map-plane-01.img")},${
+        str(
+            def?.biome?.airdrop?.planeSound || "plane_01",
+        )
+    },${str(def?.biome?.airdrop?.airdropImg || "map-chute-01.img")}},\n`;
 }
 
 // Game object render defs (loot images and separate player skin/held images).
@@ -366,12 +410,31 @@ for (const type of gameTypes) {
         playerEntries += `        _gameObjs.at(${str(type)}).unlocks={${(def.unlocks || []).map(str).join(",")}};
         _gameObjs.at(${str(type)}).ammoType=${str(def.ammoType || "")};\n`;
     }
-    gameEntries += `    {${str(type)},${str(def.type || "")},${imgInit(img)},${img?.sprite ? 1 : 0},${str(def.emitter || "")},${str(def.aura?.sprite)},${n(def.aura?.tint, 0xff00ff)},${def.aura !== undefined ? 1 : 0},${atk ? 1 : 0},${n(atk?.offset?.x, 0)},${n(atk?.offset?.y, 0)},${n(atk?.rad, 0)},${def.cleave ? 1 : 0},${str(def.sound?.playerHit)},${str(def.sound?.punch)},${def.useThrowParticles ? 1 : 0}},\n`;
-    if (!def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack" && !def.frozenSprites) continue;
+    gameEntries += `    {${str(type)},${str(def.type || "")},${imgInit(img)},${img?.sprite ? 1 : 0},${
+        str(def.emitter || "")
+    },${str(def.aura?.sprite)},${n(def.aura?.tint, 0xff00ff)},${def.aura !== undefined ? 1 : 0},${atk ? 1 : 0},${
+        n(atk?.offset?.x, 0)
+    },${n(atk?.offset?.y, 0)},${n(atk?.rad, 0)},${def.cleave ? 1 : 0},${str(def.sound?.playerHit)},${
+        str(def.sound?.punch)
+    },${def.useThrowParticles ? 1 : 0},${str(def.bulletType)},${fp(def.barrelLength)}},\n`;
+    if (
+        !def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack"
+        && !def.frozenSprites
+    ) continue;
     let idlePose = def.anim?.idlePose || "fists";
-    if (def.type === "gun") idlePose = def.pistol ? (def.isDual ? "dualPistol" : "pistol")
-        : def.isBullpup ? "bullpup" : def.isLauncher ? "launcher" : def.isMinigun ? "minigun"
-        : def.isDual ? "dualRifle" : "rifle";
+    if (def.type === "gun") {
+        idlePose = def.pistol
+            ? (def.isDual ? "dualPistol" : "pistol")
+            : def.isBullpup
+            ? "bullpup"
+            : def.isLauncher
+            ? "launcher"
+            : def.isMinigun
+            ? "minigun"
+            : def.isDual
+            ? "dualRifle"
+            : "rifle";
+    }
     if (def.type === "throwable") idlePose = "throwable";
     playerEntries += `        { auto& d = _gameObjs.at(${str(type)});
         ${skinAssignments(def.skinImg, "d.skin")} ${skinAssignments(def.visorImg, "d.visor")}
@@ -385,16 +448,24 @@ for (const type of gameTypes) {
         d.deployAnims={${(def.anim?.deployAnims || []).map(str).join(",")}};
         d.idleAnims={${(def.anim?.idleAnims || []).map(str).join(",")}};
         d.frozenSprites={${(def.frozenSprites || []).map(str).join(",")}};
-        ${["equip", "cook", "throwing"].flatMap((state, i) => ["left", "right"].map((side, j) =>
-            heldAssignments(def.handImg?.[state]?.[side], `d.handImgs[${i}][${j}]`))).join("\n")}
+        ${
+        ["equip", "cook", "throwing"].flatMap((state, i) =>
+            ["left", "right"].map((side, j) => heldAssignments(def.handImg?.[state]?.[side], `d.handImgs[${i}][${j}]`))
+        ).join("\n")
+    }
         }\n`;
 }
 
 const boneInit = (p) => `{${vec(p?.pivot)},${fp(p?.rot)},${vec(p?.pos)}}`;
 const poseInit = (bones) => `{{${Array.from({ length: 6 }, (_, i) => boneInit(bones[i])).join(",")}}}`;
-const easings = [[math.easeInSine, "InSine"], [math.easeOutSine, "OutSine"],
-    [math.easeInOutSine, "InOutSine"], [math.easeOutQuart, "OutQuart"],
-    [math.easeOutBounce, "OutBounce"], [math.easeOutQuad, "OutQuad"]];
+const easings = [
+    [math.easeInSine, "InSine"],
+    [math.easeOutSine, "OutSine"],
+    [math.easeInOutSine, "InOutSine"],
+    [math.easeOutQuart, "OutQuart"],
+    [math.easeOutBounce, "OutBounce"],
+    [math.easeOutQuad, "OutQuad"],
+];
 let poseEntries = "";
 for (const [name, bones] of Object.entries(IdlePoses)) {
     poseEntries += `        _poses[${str(name)}]=${poseInit(bones)};\n`;
@@ -408,9 +479,7 @@ for (const [name, animation] of Object.entries(Animations)) {
         const mask = Object.keys(frame.bones).reduce((bits, key) => bits | (1 << Number(key)), 0);
         const easing = easings.find(([fn]) => fn === frame.easing)?.[1] || "Linear";
         if (frame.easing && easing === "Linear") throw new Error(`Unknown easing in ${name}`);
-        return `{${fp(frame.time)},${mask},${poseInit(frame.bones)},PoseEasing::${easing},${
-            noMask & ~mask
-        }}`;
+        return `{${fp(frame.time)},${mask},${poseInit(frame.bones)},PoseEasing::${easing},${noMask & ~mask}}`;
     });
     poseEntries += `        _animations[${str(name)}].keyframes={${frames.join(",")}};\n`;
     const effects = (animation.effects || []).map((e) => {
@@ -537,17 +606,25 @@ for (const [name, def] of Object.entries(ParticleDefs)) {
     const hasAlphaIn = def.alphaIn !== undefined ? 1 : 0;
     const alphaInLerp = flat(def.alphaIn?.lerp, 0, 1);
     const color = sampleColor(def.color);
-    particleEntries += `    {${str(name)},${arrName},${images.length},${n(def.zOrd, 20)},${rangeInit(
-        life,
-    )},${rangeInit(drag)},${rangeInit(rotVel)},${rangeInit(scaleStart)},${rangeInit(
-        scaleEnd,
-    )},${rangeInit(scaleLerp)},${scaleUseExp},${n(def.scale?.exp)},${n(def.alpha?.start, 1)},${n(
-        def.alpha?.end,
-        0,
-    )},${rangeInit(alphaLerp)},${alphaUseExp},${n(def.alpha?.exp)},${hasAlphaIn},${n(
-        def.alphaIn?.start,
-        0,
-    )},${n(def.alphaIn?.end, 0)},${rangeInit(alphaInLerp)},${color.has},${color.value},${
+    particleEntries += `    {${str(name)},${arrName},${images.length},${n(def.zOrd, 20)},${
+        rangeInit(
+            life,
+        )
+    },${rangeInit(drag)},${rangeInit(rotVel)},${rangeInit(scaleStart)},${
+        rangeInit(
+            scaleEnd,
+        )
+    },${rangeInit(scaleLerp)},${scaleUseExp},${n(def.scale?.exp)},${n(def.alpha?.start, 1)},${
+        n(
+            def.alpha?.end,
+            0,
+        )
+    },${rangeInit(alphaLerp)},${alphaUseExp},${n(def.alpha?.exp)},${hasAlphaIn},${
+        n(
+            def.alphaIn?.start,
+            0,
+        )
+    },${n(def.alphaIn?.end, 0)},${rangeInit(alphaInLerp)},${color.has},${color.value},${
         def.ignoreValueAdjust ? 1 : 0
     }},\n`;
 }
@@ -561,16 +638,98 @@ for (const [name, def] of Object.entries(EmitterDefs)) {
     const maxRate = flat(def.maxRate, 0, 0);
     const hasMaxRate = def.maxRate !== undefined ? 1 : 0;
     const hasZOrd = def.zOrd !== undefined ? 1 : 0;
-    emitterEntries += `    {${str(name)},${str(def.particle)},${rangeInit(rate)},${n(
-        def.radius,
-    )},${rangeInit(speed)},${n(def.angle)},${hasRot},${rangeInit(rot)},${f(
-        def.maxCount,
-        Number.MAX_VALUE,
-    )},${hasMaxRate},${rangeInit(maxRate)},${n(def.maxElapsed)},${hasZOrd},${n(
-        def.zOrd,
-    )}},\n`;
+    emitterEntries += `    {${str(name)},${str(def.particle)},${rangeInit(rate)},${
+        n(
+            def.radius,
+        )
+    },${rangeInit(speed)},${n(def.angle)},${hasRot},${rangeInit(rot)},${
+        f(
+            def.maxCount,
+            Number.MAX_VALUE,
+        )
+    },${hasMaxRate},${rangeInit(maxRate)},${n(def.maxElapsed)},${hasZOrd},${
+        n(
+            def.zOrd,
+        )
+    }},\n`;
 }
 
+// GameConfig plane tuning + bullet tracer colours (plane.ts / flare.ts / shot.ts).
+const { GameConfig } = await import(pathToFile(sharedDir, "gameConfig.ts"));
+const { BulletDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/bulletDefs.ts"));
+let gameConfigArrays = "";
+let tracerNamesCount = 0;
+let bulletNamesCount = 0;
+{
+    const planeEntries = [
+        ["Airdrop", GameConfig.airdrop],
+        ["Airstrike", GameConfig.airstrike],
+    ];
+    gameConfigArrays += `static const RawPlane kPlanes[] = {\n`;
+    for (const [, c] of planeEntries) {
+        gameConfigArrays += `    {${n(c.actionOffset, 0)},${f(c.planeVel, 48)},${f(c.planeRad, 150)},${
+            f(
+                c.soundRangeMult,
+                2.5,
+            )
+        },${f(c.soundRangeDelta, 0.25)},${f(c.soundRangeMax, 92)},${f(c.fallOff, 0)}},\n`;
+    }
+    gameConfigArrays += `};\n`;
+
+    const tracerNames = Object.keys(GameConfig.tracerColors || {});
+    const tracerArray = "kTracerColors";
+    gameConfigArrays += `static const char* const ${tracerArray}_names[] = {${
+        tracerNames
+            .map(str)
+            .join(",")
+    }};\n`;
+    gameConfigArrays += `static const RawTracer ${tracerArray}[] = {\n`;
+    for (const name of tracerNames) {
+        const t = GameConfig.tracerColors[name] || {};
+        gameConfigArrays += `    {${n(t.regular, 0xffffff)},${n(t.saturated, 0xffffff)},${
+            n(
+                t.chambered,
+                0xffffff,
+            )
+        },${n(t.apSaturated, 0xffffff)},${f(t.alphaRate, 0)},${f(t.alphaMin, 0)}},\n`;
+    }
+    gameConfigArrays += `};\n`;
+
+    const bulletNames = Object.keys(BulletDefs || {});
+    tracerNamesCount = tracerNames.length;
+    bulletNamesCount = bulletNames.length;
+    const bulletArray = "kBulletRender";
+    gameConfigArrays += `static const char* const ${bulletArray}_names[] = {${
+        bulletNames
+            .map(str)
+            .join(",")
+    }};\n`;
+    gameConfigArrays += `static const RawBulletRender ${bulletArray}[] = {\n`;
+    for (const name of bulletNames) {
+        const b = BulletDefs[name] || {};
+        let flareColor = 0xffffff;
+        if (typeof b.flareColor === "string") {
+            const parsed = Number.parseInt(b.flareColor.replace(/^#/, ""), 16);
+            flareColor = Number.isFinite(parsed) ? parsed : 0xffffff;
+        } else if (Number.isFinite(Number(b.flareColor))) {
+            flareColor = Number(b.flareColor);
+        }
+        gameConfigArrays += `    {${f(b.distance, 0)},${f(b.speed, 0)},${
+            f(
+                b.variance,
+                0,
+            )
+        },${str(b.tracerColor || "")},${f(b.tracerWidth, 1)},${f(b.tracerLength, 0)},${
+            n(
+                flareColor,
+                0xffffff,
+            )
+        },${f(b.maxFlareScale, 1)}},\n`;
+    }
+    gameConfigArrays += `};\n`;
+}
+const tracerCount = tracerNamesCount;
+const bulletCount = bulletNamesCount;
 const out = `// GENERATED FILE - do not edit. Run tools/codegen_render_defs.mjs.
 #include "Defs.h"
 #include <string>
@@ -620,10 +779,12 @@ struct RawMapRender {
     int faction, potato, perk, turkey; float valueAdjust; const char* cameraEmitter;
     const char* const* atlases; int atlasCount;
     const char* ambMusic; const char* ambWind; const char* ambRiver; const char* ambWaves;
+    const char* airdropPlaneImg; const char* airdropPlaneSound; const char* airdropChuteImg;
 };
 struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura;
     int hasAttack; float attackOffX, attackOffY, attackRad; int cleave;
-    const char* playerHit; const char* punchSound; int useThrowParticles; };
+    const char* playerHit; const char* punchSound; int useThrowParticles;
+    const char* bulletType; float barrelLength; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -638,6 +799,42 @@ struct RawEmitter {
     int hasRot; RawRange rot; float maxCount; int hasMaxRate; RawRange maxRate; float maxElapsed;
     int hasZOrd; int zOrd;
 };
+struct RawPlane { float actionOffset; float planeVel, planeRad, soundRangeMult, soundRangeDelta, soundRangeMax, fallOff; };
+struct RawTracer { unsigned regular, saturated, chambered, apSaturated; float alphaRate, alphaMin; };
+struct RawBulletRender { float distance, speed, variance; const char* tracerColor; float tracerWidth, tracerLength; unsigned flareColor; float maxFlareScale; };
+
+static PlaneDef toPlane(const RawPlane& r) {
+    PlaneDef d;
+    d.planeVel = r.planeVel;
+    d.planeRad = r.planeRad;
+    d.soundRangeMult = r.soundRangeMult;
+    d.soundRangeDelta = r.soundRangeDelta;
+    d.soundRangeMax = r.soundRangeMax;
+    d.fallOff = r.fallOff;
+    return d;
+}
+static TracerColorDef toTracer(const RawTracer& r) {
+    TracerColorDef d;
+    d.regular = r.regular;
+    d.saturated = r.saturated;
+    d.chambered = r.chambered;
+    d.apSaturated = r.apSaturated;
+    d.alphaRate = r.alphaRate;
+    d.alphaMin = r.alphaMin;
+    return d;
+}
+static BulletRenderDef toBulletRender(const RawBulletRender& r) {
+    BulletRenderDef d;
+    d.distance = r.distance;
+    d.speed = r.speed;
+    d.variance = r.variance;
+    d.tracerColor = r.tracerColor ? r.tracerColor : "";
+    d.tracerWidth = r.tracerWidth;
+    d.tracerLength = r.tracerLength;
+    d.flareColor = r.flareColor;
+    d.maxFlareScale = r.maxFlareScale;
+    return d;
+}
 
 static Collider toCollider(const RawCollider& c) {
     if (c.type == 0) return Collider::createCircle(Vec2(c.a, c.b), c.c);
@@ -676,7 +873,7 @@ static RangeDef toRange(const RawRange& r) {
     return d;
 }
 
-${arrays}${particleArrays}
+${arrays}${particleArrays}${gameConfigArrays}
 static const RawMapObj kMapObjs[] = {
 ${entries}};
 ${mapAtlasArrays}static const RawMapRender kMapRenders[] = {
@@ -821,6 +1018,9 @@ public:
             d.ambienceWind = r.ambWind ? r.ambWind : "";
             d.ambienceRiver = r.ambRiver ? r.ambRiver : "";
             d.ambienceWaves = r.ambWaves ? r.ambWaves : "";
+            d.airdropPlaneImg = r.airdropPlaneImg ? r.airdropPlaneImg : "map-plane-01.img";
+            d.airdropPlaneSound = r.airdropPlaneSound ? r.airdropPlaneSound : "plane_01";
+            d.airdropChuteImg = r.airdropChuteImg ? r.airdropChuteImg : "map-chute-01.img";
             _mapRenders[r.name] = d;
         }
         for (const auto& r : kGameObjs) {
@@ -843,7 +1043,11 @@ public:
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}
-${Object.entries(MapDefs).map(([name, d]) => `        _mapRenders.at(${str(name)}).colors.playerGhillie=${n(d.biome?.colors?.playerGhillie, 0x5a9e4c)};`).join("\n")}
+${
+    Object.entries(MapDefs).map(([name, d]) =>
+        `        _mapRenders.at(${str(name)}).colors.playerGhillie=${n(d.biome?.colors?.playerGhillie, 0x5a9e4c)};`
+    ).join("\n")
+}
         for (const auto& r : kParticles) {
             ParticleDef d;
             d.images.reserve(static_cast<size_t>(r.imageCount));
@@ -888,6 +1092,14 @@ ${Object.entries(MapDefs).map(([name, d]) => `        _mapRenders.at(${str(name)
             d.zOrd = r.zOrd;
             _emitters[r.name] = std::move(d);
         }
+        _planes.reserve(2);
+        for (const auto& r : kPlanes) _planes.push_back(toPlane(r));
+        for (int i = 0; i < ${tracerCount}; ++i) {
+            _tracers[kTracerColors_names[i]] = toTracer(kTracerColors[i]);
+        }
+        for (int i = 0; i < ${bulletCount}; ++i) {
+            _bullets[kBulletRender_names[i]] = toBulletRender(kBulletRender[i]);
+        }
     }
 
     const MapObjectDef* mapObject(const std::string& type) const override {
@@ -918,15 +1130,30 @@ ${Object.entries(MapDefs).map(([name, d]) => `        _mapRenders.at(${str(name)
         auto it = _animations.find(type);
         return it == _animations.end() ? nullptr : &it->second;
     }
+    const PlaneDef* plane(int type) const override {
+        if (type < 0 || type >= static_cast<int>(_planes.size())) return nullptr;
+        return &_planes[static_cast<size_t>(type)];
+    }
+    const TracerColorDef* tracerColor(const std::string& name) const override {
+        auto it = _tracers.find(name);
+        return it == _tracers.end() ? nullptr : &it->second;
+    }
+    const BulletRenderDef* bullet(const std::string& type) const override {
+        auto it = _bullets.find(type);
+        return it == _bullets.end() ? nullptr : &it->second;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
     std::unordered_map<std::string, MapRenderDef> _mapRenders;
     std::unordered_map<std::string, GameObjRenderDef> _gameObjs;
     std::unordered_map<std::string, ParticleDef> _particles;
+    std::unordered_map<std::string, TracerColorDef> _tracers;
+    std::unordered_map<std::string, BulletRenderDef> _bullets;
     std::unordered_map<std::string, EmitterDef> _emitters;
     std::unordered_map<std::string, PlayerPose> _poses;
     std::unordered_map<std::string, PlayerAnimationDef> _animations;
+    std::vector<PlaneDef> _planes;
 };
 
 } // namespace

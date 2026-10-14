@@ -4,8 +4,10 @@
 // the per-frame object updates that position scene nodes.
 #include "Gas.h"
 #include "../net/Messages.h"
+#include "../render/Defs.h"
 #include "../render/Camera.h"
 #include "../render/PixiLike.h"
+#include "AimLine.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -26,6 +28,10 @@ class ExplosionBarn;
 class PlayerBarn;
 class ParticleBarn;
 class DecalBarn;
+class AirdropBarn;
+class FlareBarn;
+class PlaneBarn;
+class ShotBarn;
 class Gas;
 
 namespace audio {
@@ -47,10 +53,20 @@ public:
     void applyUpdate(const UpdateMsg& msg);
     void update(float dt);
 
+    // plane.ts: reconciled each UpdateMsg from `msg.planes` (see game.ts).
+    void updatePlanes(const std::vector<PlaneData>& planes);
+
+    // game.ts update(): lerp the camera zoom toward the active player's view
+    // radius (player.ts m_getZoom). No-op before the first map is loaded.
+    void updateCameraZoom(float dt);
+
     pix::Factory* factory() { return _factory; }
     Camera& camera() { return _camera; }
     Renderer& renderer() { return *_renderer; }
     Map& map() { return *_map; }
+    const Camera& camera() const { return _camera; }
+    const Renderer& renderer() const { return *_renderer; }
+    const Map& map() const { return *_map; }
     LootBarn& lootBarn() { return *_lootBarn; }
     DeadBodyBarn& deadBodyBarn() { return *_deadBodyBarn; }
     ProjectileBarn& projectileBarn() { return *_projectileBarn; }
@@ -60,6 +76,10 @@ public:
     PlayerBarn& playerBarn() { return *_playerBarn; }
     ParticleBarn& particleBarn() { return *_particleBarn; }
     DecalBarn& decalBarn() { return *_decalBarn; }
+    AirdropBarn& airdropBarn() { return *_airdropBarn; }
+    FlareBarn& flareBarn() { return *_flareBarn; }
+    PlaneBarn& planeBarn() { return *_planeBarn; }
+    ShotBarn& shotBarn() { return *_shotBarn; }
     Gas& gas() { return _gas; }
 
     Player* activePlayer() { return _activePlayer; }
@@ -102,6 +122,10 @@ private:
     std::unique_ptr<PlayerBarn> _playerBarn;
     std::unique_ptr<ParticleBarn> _particleBarn;
     std::unique_ptr<DecalBarn> _decalBarn;
+    std::unique_ptr<AirdropBarn> _airdropBarn;
+    std::unique_ptr<FlareBarn> _flareBarn;
+    std::unique_ptr<PlaneBarn> _planeBarn;
+    std::unique_ptr<ShotBarn> _shotBarn;
     Gas _gas;
     std::unique_ptr<ObjectCreator> _creator;
 

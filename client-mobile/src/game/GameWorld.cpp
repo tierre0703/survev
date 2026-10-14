@@ -71,6 +71,10 @@ GameWorld::GameWorld(pix::Factory* factory, bool canvasMode) : _factory(factory)
     _playerBarn = std::make_unique<PlayerBarn>();
     _particleBarn = std::make_unique<ParticleBarn>();
     _decalBarn = std::make_unique<DecalBarn>();
+    _airdropBarn = std::make_unique<AirdropBarn>();
+    _flareBarn = std::make_unique<FlareBarn>();
+    _planeBarn = std::make_unique<PlaneBarn>();
+    _shotBarn = std::make_unique<ShotBarn>();
     _creator = std::make_unique<ObjectCreator>();
     registerPools();
 }
@@ -87,6 +91,7 @@ void GameWorld::registerPools() {
     _creator->registerPool<Projectile>(ObjectType_Projectile, &_projectileBarn->projectilePool);
     _creator->registerPool<Smoke>(ObjectType_Smoke, &_smokeBarn->m_smokePool);
     _creator->registerPool<Decal>(ObjectType_Decal, &_decalBarn->decalPool);
+    _creator->registerPool<Airdrop>(ObjectType_Airdrop, &_airdropBarn->airdropPool);
     _map->setDecalBarn(_decalBarn.get());
 }
 
@@ -137,8 +142,7 @@ void GameWorld::loadMap(const MapMsg& msg) {
 
     // M6: point the ambience mixer at this map's tracks.
     if (_ambiance && _audio) {
-        audio::AmbienceMap amb;
-        amb.music = _map->mapDef.ambienceMusic;
+        audio::AmbienceMap amb;        amb.music = _map->mapDef.ambienceMusic;
         amb.wind = _map->mapDef.ambienceWind;
         amb.river = _map->mapDef.ambienceRiver;
         amb.waves = _map->mapDef.ambienceWaves;
@@ -179,15 +183,18 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
     }
 
     for (const auto& bullet : msg.bullets) {
+        // flare.ts splits a flare-gun shot out of the normal bullet barn.
+        const DefProvider* provider = getDefProvider();
+        const BulletRenderDef* bulletDef =
+            provider ? provider->bullet(bullet.bulletType) : nullptr;
+        if (bulletDef && bulletDef->flareColor != 0 && bulletDef->tracerLength > 0.0f &&
+            bullet.bulletType == "bullet_flare") {
+            _flareBarn->addFlare(*this, bullet);
+        }
         _bulletBarn->spawn(_factory, bullet);
         if (bullet.shotFx) {
-            auto* p = _playerBarn->getPlayerById(bullet.playerId);
-            const auto* defs = getDefProvider();
-            const auto* weapon = defs ? defs->gameObject(bullet.shotSourceType) : nullptr;
-            if (p && weapon && weapon->category == "gun") {
-                if (!weapon->isDual || bullet.shotOffhand) p->gunRecoil[0] += weapon->recoil;
-                if (!weapon->isDual || !bullet.shotOffhand) p->gunRecoil[1] += weapon->recoil;
-            }
+            // shot.ts: per-shot weapon handling (recoil + fireDelay + sound).
+            _shotBarn->addShot(bullet);
         }
     }
 
@@ -218,7 +225,30 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
         _gas.setProgress(msg.gasT);
     }
 
+    // plane.ts: reconcile the plane list from each update.
+    _planeBarn->updatePlanes(*this, msg.planes);
+
     _activePlayer = _playerBarn->getPlayerById(_activePlayerId);
+}
+
+void GameWorld::updatePlanes(const std::vector<PlaneData>& planes) {
+    _planeBarn->updatePlanes(*this, planes);
+}
+
+// game.ts update() zoom block: the scoped view radius drives the camera zoom.
+void GameWorld::updateCameraZoom(float dt) {
+    if (!_activePlayer) {
+        return;
+    }
+    const float minDim = math::min(_camera.m_screenWidth, _camera.m_screenHeight);
+    const float maxDim = math::max(_camera.m_screenWidth, _camera.m_screenHeight);
+    const float maxScreenDim = math::max(minDim * (16.0f / 9.0f), maxDim);
+    const float zoom = math::max(_activePlayer->getZoom(true), 1.0f);
+    _camera.m_targetZoom = (maxScreenDim * 0.5f) / (zoom * _camera.m_ppu);
+    const float zoomLerpIn = _activePlayer->zoomFast ? 3.0f : 2.0f;
+    const float zoomLerpOut = _activePlayer->zoomFast ? 3.0f : 1.4f;
+    const float zoomLerp = _camera.m_targetZoom > _camera.m_zoom ? zoomLerpIn : zoomLerpOut;
+    _camera.m_zoom = math::lerp(dt * zoomLerp, _camera.m_zoom, _camera.m_targetZoom);
 }
 
 void GameWorld::update(float dt) {
@@ -234,12 +264,20 @@ void GameWorld::update(float dt) {
     _smokeBarn->update(dt, *this);
     _bulletBarn->update(dt, *this);
     _explosionBarn->update(dt, *this);
+    _planeBarn->update(dt, *this);
+    _shotBarn->update(dt, *this);
+    _flareBarn->update(dt, *this);
+    _airdropBarn->update(dt, *this);
     _particleBarn->update(dt, *this);
     _decalBarn->update(dt, *this);
 
     _renderer->m_update(dt, _camera, *_map, false);
     _map->m_render(_camera);
     _gas.m_render(_factory, dt, _camera);
+
+    // game.ts update(): the camera target zoom follows the active player's view
+    // radius (m_getZoom), computed before the render transform is used.
+    updateCameraZoom(dt);
 
     // M6: drive the audio manager + ambience (game.ts update order).
     if (_activePlayer) {

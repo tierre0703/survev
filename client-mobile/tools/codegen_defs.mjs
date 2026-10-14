@@ -1,6 +1,6 @@
-import { fileURLToPath } from "node:url";
-import * as path from "node:path";
 import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const sharedDir = path.resolve(here, "../../shared");
@@ -57,6 +57,27 @@ for (const k of bagSizeKeys) {
     out += `    "${k}",\n`;
 }
 out += `};
+
+// GameConfig values the native object ports need (shared/gameConfig.ts).
+inline constexpr float kAirdropFallTime = ${GameConfig.airdrop.fallTime};
+inline constexpr float kBulletReflectDistDecay = ${GameConfig.bullet.reflectDistDecay};
+inline constexpr float kBulletHeight = ${GameConfig.bullet.height};
+inline constexpr float kProjectileMaxHeightGame = ${GameConfig.projectile.maxHeight};
+
+// player.ts m_getZoom(): the aim line clamps its range to the camera radius, so
+// it needs the active player's zoom. On mobile the desktop radius steps are
+// remapped through GameConfig.scopeZoomRadius.mobile (player.ts mobileZoomRads).
+inline constexpr int kScopeZoomRadiusCount = ${Object.keys(GameConfig.scopeZoomRadius.desktop).length};
+inline constexpr std::array<float, kScopeZoomRadiusCount> kScopeZoomRadiusDesktop = {
+${
+    Object.values(GameConfig.scopeZoomRadius.desktop).map((v) => `    ${v}.0f,`).join("\n")
+}
+};
+inline constexpr std::array<float, kScopeZoomRadiusCount> kScopeZoomRadiusMobile = {
+${
+    Object.values(GameConfig.scopeZoomRadius.mobile).map((v) => `    ${v}.0f,`).join("\n")
+}
+};
 
 } // namespace defs
 } // namespace surv

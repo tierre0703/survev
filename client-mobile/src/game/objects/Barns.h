@@ -372,6 +372,109 @@ public:
     void update(float dt, GameWorld& ctx);
 };
 
+// --- airdrop.ts ------------------------------------------------------------
+// Port of client/src/objects/airdrop.ts: the falling parachute sprite, the
+// landing FX (smoke + water ripples + crash sound) and the chute/fall sounds.
+class Airdrop : public AbstractObject {
+public:
+    pix::Sprite* sprite = nullptr;
+    Vec2 pos;
+    bool playedLandFx = false;
+    bool landed = false;
+    bool isNew = false;
+    float fallTicker = 0.0f;
+    float rad = 1.0f;
+
+    void m_init() override;
+    void m_free() override;
+    void m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) override;
+};
+
+class AirdropBarn {
+public:
+    Pool<Airdrop> airdropPool;
+    void update(float dt, GameWorld& ctx);
+};
+
+// --- flare.ts --------------------------------------------------------------
+// Port of client/src/objects/flare.ts (flare-gun projectile visual).
+struct FlareVisual {
+    bool alive = false;
+    bool collided = false;
+    Vec2 startPos, pos, dir;
+    int layer = 0;
+    float speed = 0.0f;
+    float distance = 0.0f;
+    float timeAlive = 0.0f;
+    float maxTimeAlive = 2.5f;
+    float flareScale = 0.01f;
+    float trailScale = 1.0f;
+    float tracerLength = 0.0f;
+    float maxFlareScale = 1.0f;
+    float tracerAlphaRate = 0.0f;
+    float tracerAlphaMin = 0.0f;
+    uint16_t playerId = 0;
+    pix::Container* container = nullptr;
+    pix::Sprite* flare = nullptr;
+    pix::Sprite* trail = nullptr;
+};
+
+class FlareBarn {
+public:
+    std::vector<FlareVisual*> bullets;
+
+    void addFlare(GameWorld& ctx, const struct Bullet& data);
+    void update(float dt, GameWorld& ctx);
+};
+
+// --- plane.ts --------------------------------------------------------------
+// Port of client/src/objects/plane.ts: the plane flyover (sprite elevation,
+// looping engine sound) and the airstrike warning zone (`UpdateMsg.planes[]`).
+struct AirstrikeZone {
+    bool active = false;
+    Vec2 pos;
+    float rad = 0.0f;
+    float duration = 0.0f;
+    float ticker = 0.0f;
+    Vec2 renderPos;
+    float renderRad = 0.0f;
+    bool hasRender = false;
+    pix::Graphics* gfx = nullptr;
+};
+
+class PlaneObj {
+public:
+    bool active = false;
+    pix::Sprite* sprite = nullptr;
+
+    uint8_t id = 0;
+    Vec2 pos, planeDir;
+    bool actionComplete = false;
+    bool dirty = false;
+    int type = 0;
+    float alpha = 0.75f;
+    float renderAlpha = 1.0f;
+    float spriteUpdateTime = 0.0f;
+    float rad = 0.0f;
+    float soundRangeMult = 1.0f;
+    float soundUpdateThrottle = 0.0f;
+    bool soundPlaying = false;
+    std::string planeSound;
+    PlaneDef config;
+
+    void init(GameWorld& ctx, const struct PlaneData& data, const Map& map);
+};
+
+class PlaneBarn {
+public:
+    std::vector<PlaneObj*> planes;
+    std::vector<AirstrikeZone*> airstrikeZones;
+    pix::Graphics* airstrikeZoneGfx = nullptr;
+
+    void updatePlanes(GameWorld& ctx, const std::vector<struct PlaneData>& data);
+    void update(float dt, GameWorld& ctx);
+};
+
 // --- bullet.ts (visual only) ----------------------------------------------
 struct BulletVisual {
     bool active = false;
@@ -414,6 +517,33 @@ public:
 class ExplosionBarn {
 public:
     Pool<ExplosionObj> explosionPool;
+    void update(float dt, GameWorld& ctx);
+};
+
+// --- shot.ts ---------------------------------------------------------------
+// Port of client/src/objects/shot.ts: per-shot weapon handling (fire sound with
+// team/last/alt/Splinter/AP/high-velocity variants, hand recoil, fireDelay).
+struct ShotObj {
+    bool active = false;
+    Vec2 pos;
+    int layer = 0;
+    uint16_t playerId = 0;
+    std::string weaponType;
+    bool offhand = false;
+    bool lastShot = false;
+    bool shotAlt = false;
+    bool splinter = false;
+    bool trailSaturated = false;
+    bool apRounds = false;
+    bool highVelocity = false;
+    float ticker = 0.0f;
+    float pullDelay = 0.0f;
+};
+
+class ShotBarn {
+public:
+    std::vector<ShotObj*> shots;
+    void addShot(const struct Bullet& data);
     void update(float dt, GameWorld& ctx);
 };
 
@@ -529,6 +659,10 @@ public:
     float scale = 1.0f;
     bool wearingPan = false;
     bool healEffect = false;
+    // player.ts m_localData.m_zoom (player.ts m_getZoom): the effective view
+    // radius step, fed by ObjectData.zoom when zoomDirty. 0 = unscoped default.
+    float zoom = 0.0f;
+    bool zoomFast = false;
     int hasteType = HasteType_None;
     int hasteSeq = -1;
     std::array<float, 2> gunRecoil{};
@@ -613,6 +747,9 @@ public:
     void updateFrozenState(float dt, Ctx& ctx);
     // player.ts getMeleeCollider (attack offset capsule).
     Collider getMeleeCollider() const;
+    // player.ts m_getZoom(): the active player's view radius used by the camera
+    // and the touch.ts aim line. `mobile` remaps the desktop step (device.mobile).
+    float getZoom(bool mobile) const;
     // player.ts animation effects (animPlaySound/animMeleeCollision/...).
     void runAnimEffects(Ctx& ctx, float ticker, float effectTicker, bool lastFrame);
     void animMeleeCollision(Ctx& ctx, const std::string& playerHit);

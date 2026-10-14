@@ -779,6 +779,8 @@ TEST(player_dual_recoil_and_emitters) {
     bullet.shotOffhand = true;
     msg.bullets.push_back(bullet);
     world.applyUpdate(msg);
+    // shot.ts sets the recoil on the first ShotBarn tick (not in the update).
+    world.shotBarn().update(0.0f, world);
     auto* p = world.playerBarn().getPlayerById(42);
     CHECK(p != nullptr);
     if (!p) return;

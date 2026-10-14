@@ -210,6 +210,10 @@ struct MapRenderDef {
     std::string ambienceWind;
     std::string ambienceRiver;
     std::string ambienceWaves;
+    // biome.airdrop (plane.ts / airdrop.ts sprite + sound selection).
+    std::string airdropPlaneImg = "map-plane-01.img";
+    std::string airdropPlaneSound = "plane_01";
+    std::string airdropChuteImg = "map-chute-01.img";
 };
 
 // player.ts uses skinImg/worldImg, not the item's lootImg.
@@ -286,6 +290,9 @@ struct GameObjRenderDef {
     bool cleave = false;
     std::string playerHit;  // meleeDefs sound.playerHit
     std::string punchSound; // meleeDefs/obstacleDefs sound.punch
+    // gunDefs.bulletType + barrelLength (touch.ts LineSprites aim-line range).
+    std::string bulletType;
+    float barrelLength = 0.0f;
     // player.ts action aura (heal/boost defs) and frozen patch sprites.
     std::string auraSprite;
     uint32_t auraTint = 0xff00ff;
@@ -294,6 +301,36 @@ struct GameObjRenderDef {
     std::vector<std::string> frozenSprites;
     std::vector<std::string> unlocks; // unlock_default and future account unlocks
     std::string ammoType; // gun reserve-ammo inventory key
+};
+
+struct PlaneDef {
+    int type = 0; // GameConfig.Plane
+    float planeVel = 48.0f;
+    float planeRad = 150.0f;
+    float soundRangeMult = 2.5f;
+    float soundRangeDelta = 0.25f;
+    float soundRangeMax = 92.0f;
+    float fallOff = 0.0f;
+};
+
+struct TracerColorDef {
+    uint32_t regular = 0xffffff;
+    uint32_t saturated = 0xffffff;
+    uint32_t chambered = 0xffffff;
+    uint32_t apSaturated = 0xffffff;
+    float alphaRate = 0.0f;
+    float alphaMin = 0.0f;
+};
+
+struct BulletRenderDef {
+    float distance = 0.0f;
+    float speed = 0.0f;
+    float variance = 0.0f;
+    std::string tracerColor;
+    float tracerWidth = 1.0f;
+    float tracerLength = 0.0f;
+    uint32_t flareColor = 0xffffff;
+    float maxFlareScale = 1.0f;
 };
 
 // A [min,max] range or a constant (both stored as min==max for constants).
@@ -366,6 +403,10 @@ public:
     virtual const EmitterDef* emitter(const std::string&) const { return nullptr; }
     virtual const PlayerPose* playerPose(const std::string&) const { return nullptr; }
     virtual const PlayerAnimationDef* playerAnimation(const std::string&) const { return nullptr; }
+    // GameConfig plane tuning (plane.ts) and bullet tracer colours (shot/flare).
+    virtual const PlaneDef* plane(int /*type*/) const { return nullptr; }
+    virtual const TracerColorDef* tracerColor(const std::string&) const { return nullptr; }
+    virtual const BulletRenderDef* bullet(const std::string&) const { return nullptr; }
 };
 
 // Process-wide provider, installed by the app/generated code. May be null.

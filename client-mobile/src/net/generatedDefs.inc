@@ -1880,5 +1880,11 @@ inline constexpr std::array<std::string_view, 25> kBagSizeKeys = {
     "15xscope",
 };
 
+// GameConfig values the native object ports need (shared/gameConfig.ts).
+inline constexpr float kAirdropFallTime = 8;
+inline constexpr float kBulletReflectDistDecay = 1.5;
+inline constexpr float kBulletHeight = 0.25;
+inline constexpr float kProjectileMaxHeightGame = 5;
+
 } // namespace defs
 } // namespace surv

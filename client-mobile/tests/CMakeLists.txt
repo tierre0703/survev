@@ -23,6 +23,7 @@ add_executable(surv_tests
     test_game.cpp
     test_touch_input.cpp
     test_render.cpp
+    test_objects.cpp
     test_audio.cpp
     test_ui.cpp
     ${SURV_SRC}/net/Net.cpp
