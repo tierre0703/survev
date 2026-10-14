@@ -1,9 +1,9 @@
 // Generates reference hex fixtures from the real shared/ TS code so the
 // C++ port can be verified bit-for-bit. Output is a C++ test header.
 // Usage: node --experimental-transform-types tools/gen_reference.mjs > tests/ReferenceData.h
-import { fileURLToPath } from "node:url";
-import * as path from "node:path";
 import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const sharedDir = path.resolve(here, "../../shared");
@@ -169,7 +169,7 @@ const fixtures = [];
     const buf = new ArrayBuffer(1024);
     const s = new net.BitStream(buf);
 
-// build the partial + full streams the same way the server does
+    // build the partial + full streams the same way the server does
     // (see server/src/game/objects/gameObject.ts serializePartial/serializeFull)
     const objType = 1; // Player
     const objId = 5;
@@ -447,7 +447,9 @@ const fixtures = [];
     for (const p of t.grass) parts.push(fmt(p.x) + "," + fmt(p.y));
     parts.push("rivers:" + t.rivers.length);
     for (const r of t.rivers) {
-        parts.push("aabb:" + fmt(r.aabb.min.x) + "," + fmt(r.aabb.min.y) + "," + fmt(r.aabb.max.x) + "," + fmt(r.aabb.max.y));
+        parts.push(
+            "aabb:" + fmt(r.aabb.min.x) + "," + fmt(r.aabb.min.y) + "," + fmt(r.aabb.max.x) + "," + fmt(r.aabb.max.y),
+        );
         parts.push("wp:" + r.waterPoly.length);
         for (const p of r.waterPoly) parts.push(fmt(p.x) + "," + fmt(p.y));
         parts.push("sp:" + r.shorePoly.length);

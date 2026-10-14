@@ -110,8 +110,13 @@ public:
     // dispatched, so the render layer can build terrain and apply object deltas.
     using MapCallback = std::function<void(const MapMsg&)>;
     using UpdateCallback = std::function<void(const UpdateMsg&)>;
+    // Fired after the app registers a map's sprite atlases, i.e. after the map
+    // callback has run: sprites that were created before any map (the touch
+    // pads) re-resolve their atlas frames here.
+    using AtlasCallback = std::function<void()>;
     void setMapCallback(MapCallback cb) { _mapCallback = std::move(cb); }
     void setUpdateCallback(UpdateCallback cb) { _updateCallback = std::move(cb); }
+    void setAtlasCallback(AtlasCallback cb) { _atlasCallback = std::move(cb); }
 
     // Headless state snapshot for replay verification.
     GameStateSnapshot snapshot() const;
@@ -193,6 +198,7 @@ private:
 
     MapCallback _mapCallback;
     UpdateCallback _updateCallback;
+    AtlasCallback _atlasCallback;
 };
 
 } // namespace surv

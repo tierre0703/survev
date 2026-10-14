@@ -5,7 +5,9 @@
 #include "render/NullPixi.h"
 
 #include "game/GameWorld.h"
+#include "game/AimLine.h"
 #include "game/objects/Barns.h"
+#include "game/TouchInput.h"
 #include "net/Messages.h"
 #include "render/Defs.h"
 #include "render/GeneratedDefs.h"
@@ -340,4 +342,212 @@ TEST(airdrop_via_update_message) {
         CHECK_NEAR(airdrop->fallTicker, 0.25f * defs::kAirdropFallTime, 1e-4f);
         CHECK_EQ(airdrop->pos.x, 200.0f);
     }
+}
+
+// ---------------------------------------------------------------------------
+// SmokeParticle: the sprite survives a world reset (the adapter nodes are
+// factory-owned and are released together with the factory).
+// ---------------------------------------------------------------------------
+namespace {
+// Counts sprite allocations so the test can tell a re-create from a reuse.
+struct CountingFactory : public pix::NullPixiFactory {
+    int sprites = 0;
+    pix::Sprite* createSprite() override { sprites++; return pix::NullPixiFactory::createSprite(); }
+};
+} // namespace
+
+// SmokeParticle::ensureSprite() creates exactly one sprite per particle and
+// reuses it afterwards.
+TEST(smoke_particle_ensure_sprite) {
+    CountingFactory factory;
+    SmokeParticle particle;
+    particle.m_init(&factory, Vec2(10.0f, 20.0f), 4.0f, 0, 0);
+    CHECK(particle.sprite != nullptr);
+    CHECK_EQ(factory.sprites, 1);
+
+    pix::Sprite* first = particle.sprite;
+    particle.ensureSprite();
+    CHECK(particle.sprite == first);
+    CHECK_EQ(factory.sprites, 1);
+
+    // m_init() keeps the existing sprite (no re-allocation).
+    particle.m_init(&factory, Vec2(11.0f, 21.0f), 4.0f, 0, 0);
+    CHECK(particle.sprite == first);
+    CHECK_EQ(factory.sprites, 1);
+
+    // With no factory cached, ensureSprite() cannot create one.
+    SmokeParticle orphan;
+    orphan.ensureSprite();
+    CHECK(orphan.sprite == nullptr);
+}
+
+// SmokeBarn::onFactoryReset() clears every particle so the next world re-creates
+// its sprite instead of dereferencing a node the (destroyed) factory owned.
+TEST(smoke_barn_factory_reset) {
+    CountingFactory factory;
+    SmokeBarn barn;
+    SmokeParticle* a = barn.m_allocParticle(&factory);
+    SmokeParticle* b = barn.m_allocParticle(&factory);
+    CHECK(a != nullptr);
+    CHECK(b != nullptr);
+    if (a) {
+        a->m_init(&factory, Vec2(1.0f, 2.0f), 3.0f, 0, 0);
+        CHECK(a->sprite != nullptr);
+    }
+    barn.onFactoryReset();
+    CHECK(a->sprite == nullptr);
+    CHECK(a->factory == nullptr);
+    CHECK(b->sprite == nullptr);
+
+    // The next world re-creates the sprite lazily (new factory, same pool).
+    a->m_init(&factory, Vec2(3.0f, 4.0f), 3.0f, 0, 0);
+    CHECK(a->sprite != nullptr);
+}
+
+// ---------------------------------------------------------------------------
+// touch.ts LineSprites: the dotted aim line (M5 parity gap).
+// ---------------------------------------------------------------------------
+namespace {
+// A live player with a loaded gun, standing on an empty map.
+Player* addGunPlayer(GameWorld& world, const std::string& weapon, float x, float y) {
+    Player* p = world.playerBarn().playerPool.m_alloc();
+    p->__id = 1;
+    p->__type = ObjectType_Player;
+    p->active = true;
+    p->layer = 0;
+    p->pos = Vec2(x, y);
+    p->dir = Vec2(1.0f, 0.0f);
+    p->activeWeapon = weapon;
+    p->zoom = 0.0f;
+    world.setActivePlayer(p);
+    world.setActivePlayerId(1);
+    return p;
+}
+
+bool lineVisible(GameWorld& world) {
+    return world.lineSprites().container && world.lineSprites().container->isVisible();
+}
+} // namespace
+
+// The gun def carries the barrel length + bullet type the line needs.
+TEST(aim_line_gun_def_fields) {
+    installGeneratedDefs();
+    const DefProvider* provider = getDefProvider();
+    CHECK(provider != nullptr);
+    if (!provider) {
+        return;
+    }
+    const GameObjRenderDef* mosin = provider->gameObject("mosin");
+    CHECK(mosin != nullptr);
+    if (mosin) {
+        CHECK_EQ(mosin->category, std::string("gun"));
+        CHECK_EQ(mosin->bulletType, std::string("bullet_mosin"));
+        // gunDefs.ts barrelLength (mosin = 3.95).
+        CHECK_NEAR(mosin->barrelLength, 3.95f, 1e-4f);
+    }
+    // The mosin range is barrelLength + BulletDefs.bullet_mosin.distance.
+    CHECK_NEAR(mosin->barrelLength + provider->bullet(mosin->bulletType)->distance, 503.95f, 1e-3f);
+    const BulletRenderDef* bullet = provider->bullet("bullet_mosin");
+    CHECK(bullet != nullptr);
+    if (bullet) {
+        // BulletDefs.bullet_mosin.distance = 500 (the aim-line range, not speed).
+        CHECK_NEAR(bullet->distance, 500.0f, 1e-4f);
+    }
+    // Non-guns keep the 30-unit default: no bullet/barrel data.
+    const GameObjRenderDef* fists = provider->gameObject("fists");
+    CHECK(fists != nullptr);
+    if (fists) {
+        CHECK_EQ(fists->category, std::string("melee"));
+        CHECK(fists->bulletType.empty());
+    }
+}
+
+// Fists (no barrel) render dots out to the default 30-unit range, scaled 0.3.
+TEST(aim_line_default_range) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(basicMap());
+    Player* p = addGunPlayer(world, "fists", 256.0f, 256.0f);
+
+    LineSprites line;
+    line.update(true, *p, world.map(), world.camera(), world.renderer(), &factory, true);
+
+    CHECK(line.container != nullptr);
+    CHECK(lineVisible(world) == false); // not attached to the renderer yet
+    CHECK(line.container->isVisible());
+    CHECK_NEAR(line.container->getAlpha(), 0.3f, 1e-4f);
+    // dist = 30, startOffset 3.5, increment 1.5 -> ceil(26.5/1.5) = 18 dots.
+    CHECK_EQ(line.dots.size(), 18u);
+    CHECK_EQ(asSprite(line.dots[0])->getFrame(), std::string("dot.img"));
+    CHECK_NEAR(asSprite(line.dots[0])->getScaleX(), (1.0f / 32.0f) * 0.375f, 1e-6f);
+    CHECK_NEAR(asSprite(line.dots[0])->x, 256.0f + 3.5f, 1e-4f);
+    CHECK_NEAR(asSprite(line.dots[1])->x, 256.0f + 5.0f, 1e-4f);
+    CHECK(!line.dots[17]->isVisible());
+    CHECK(line.dots[16]->isVisible());
+
+    // Hidden when the aim pad is not touched / the option is off.
+    line.update(false, *p, world.map(), world.camera(), world.renderer(), &factory, true);
+    CHECK(!line.container->isVisible());
+}
+
+// A gun's range is barrelLength + bullet distance, clamped to the camera radius.
+TEST(aim_line_gun_range_and_clamp) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(basicMap());
+    Player* p = addGunPlayer(world, "mosin", 256.0f, 256.0f);
+
+    LineSprites line;
+    // Unscoped (zoom 0): cameraRad = sqrt(0 * 1.414 * 0) = 0 -> clamped to 0.
+    line.update(true, *p, world.map(), world.camera(), world.renderer(), &factory, true);
+    CHECK_EQ(line.dots.size(), 0u);
+
+    // 1x scope (desktop 28 -> mobile 32): cameraRad = sqrt(32 * 1.414 * 32) = 38.05,
+    // still below the mosin's 3.95 + 178 = 181.95 range.
+    p->zoom = 28.0f;
+    CHECK_NEAR(p->getZoom(true), 32.0f, 1e-4f);
+    CHECK_NEAR(p->getZoom(false), 28.0f, 1e-4f);
+    line.update(true, *p, world.map(), world.camera(), world.renderer(), &factory, true);
+    const float rad = std::sqrt(32.0f * 1.414f * 32.0f);
+    const int expected = static_cast<int>(std::ceil((rad - 3.5f) / 1.5f));
+    CHECK_EQ(static_cast<int>(line.dots.size()), expected);
+    CHECK(line.dots.size() > 18u);
+}
+
+// The line is clipped at the first obstacle that blocks bullets.
+TEST(aim_line_stops_at_obstacle) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(basicMap());
+    Player* p = addGunPlayer(world, "mosin", 100.0f, 100.0f);
+    p->zoom = 28.0f;
+
+    // A tall, collidable wall 10 units ahead (obstacle.ts sets these from the def).
+    Obstacle* wall = world.map().obstaclePool.m_alloc();
+    wall->__id = 5;
+    wall->__type = ObjectType_Obstacle;
+    wall->active = true;
+    wall->layer = 0;
+    wall->pos = Vec2(110.0f, 100.0f);
+    wall->collider = Collider::createAabb(Vec2(109.0f, 95.0f), Vec2(111.0f, 105.0f));
+    wall->height = 2.0f;
+    wall->collidable = true;
+
+    LineSprites line;
+    line.update(true, *p, world.map(), world.camera(), world.renderer(), &factory, true);
+    // Clipped at x = 109 -> dist 9 -> ceil((9 - 3.5) / 1.5) = 4 dots.
+    CHECK_EQ(line.dots.size(), 4u);
+    CHECK_NEAR(asSprite(line.dots[3])->x, 100.0f + 3.5f + 3.0f * 1.5f, 1e-3f);
+
+    // A window (or a low obstacle) does not block the aim line.
+    wall->isWindow = true;
+    line.update(true, *p, world.map(), world.camera(), world.renderer(), &factory, true);
+    CHECK(line.dots.size() > 4u);
+    wall->isWindow = false;
+    wall->height = 0.1f; // below GameConfig.bullet.height
+    line.update(true, *p, world.map(), world.camera(), world.renderer(), &factory, true);
+    CHECK(line.dots.size() > 4u);
 }

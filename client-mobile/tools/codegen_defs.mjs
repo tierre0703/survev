@@ -69,14 +69,10 @@ inline constexpr float kProjectileMaxHeightGame = ${GameConfig.projectile.maxHei
 // remapped through GameConfig.scopeZoomRadius.mobile (player.ts mobileZoomRads).
 inline constexpr int kScopeZoomRadiusCount = ${Object.keys(GameConfig.scopeZoomRadius.desktop).length};
 inline constexpr std::array<float, kScopeZoomRadiusCount> kScopeZoomRadiusDesktop = {
-${
-    Object.values(GameConfig.scopeZoomRadius.desktop).map((v) => `    ${v}.0f,`).join("\n")
-}
+${Object.values(GameConfig.scopeZoomRadius.desktop).map((v) => `    ${v}.0f,`).join("\n")}
 };
 inline constexpr std::array<float, kScopeZoomRadiusCount> kScopeZoomRadiusMobile = {
-${
-    Object.values(GameConfig.scopeZoomRadius.mobile).map((v) => `    ${v}.0f,`).join("\n")
-}
+${Object.values(GameConfig.scopeZoomRadius.mobile).map((v) => `    ${v}.0f,`).join("\n")}
 };
 
 } // namespace defs

@@ -1886,5 +1886,24 @@ inline constexpr float kBulletReflectDistDecay = 1.5;
 inline constexpr float kBulletHeight = 0.25;
 inline constexpr float kProjectileMaxHeightGame = 5;
 
+// player.ts m_getZoom(): the aim line clamps its range to the camera radius, so
+// it needs the active player's zoom. On mobile the desktop radius steps are
+// remapped through GameConfig.scopeZoomRadius.mobile (player.ts mobileZoomRads).
+inline constexpr int kScopeZoomRadiusCount = 5;
+inline constexpr std::array<float, kScopeZoomRadiusCount> kScopeZoomRadiusDesktop = {
+    28.0f,
+    36.0f,
+    48.0f,
+    68.0f,
+    104.0f,
+};
+inline constexpr std::array<float, kScopeZoomRadiusCount> kScopeZoomRadiusMobile = {
+    32.0f,
+    40.0f,
+    48.0f,
+    64.0f,
+    88.0f,
+};
+
 } // namespace defs
 } // namespace surv

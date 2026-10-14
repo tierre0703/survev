@@ -49,6 +49,10 @@ public:
     void attachTo(pix::Node* root);
 
     void setScreenSize(float width, float height);
+    // The adapter nodes are factory-owned and released together with the
+    // factory; GameScene calls this right before the factory is destroyed so
+    // objects that cache adapter pointers do not dangle on the next world.
+    void onFactoryReset();
     void loadMap(const MapMsg& msg);
     void applyUpdate(const UpdateMsg& msg);
     void update(float dt);
@@ -81,6 +85,8 @@ public:
     PlaneBarn& planeBarn() { return *_planeBarn; }
     ShotBarn& shotBarn() { return *_shotBarn; }
     Gas& gas() { return _gas; }
+    // touch.ts LineSprites: the dotted aim line for the active player.
+    LineSprites& lineSprites() { return _lineSprites; }
 
     Player* activePlayer() { return _activePlayer; }
     void setActivePlayer(Player* p) { _activePlayer = p; }
@@ -103,6 +109,17 @@ public:
 
     // Frame delta for the current update (obstacle.ts skin position interp).
     float dt() const { return _dt; }
+
+    // M5/touch.ts: aim-line visibility (device.touch && touchingAim && touchAimLine)
+    // is owned by the scene, which owns the Touch state.
+    void setAimLineState(bool touchingAim, bool aimLineEnabled) {
+        _touchAiming = touchingAim;
+        _touchAimLine = aimLineEnabled;
+    }
+    // device.mobile: the player zoom remap (player.ts m_getZoom) only runs on
+    // touch devices. Defaults to true (the Android target).
+    void setMobilePlatform(bool mobile) { _mobile = mobile; }
+    bool mobile() const { return _mobile; }
 
 private:
     void registerPools();
@@ -127,6 +144,7 @@ private:
     std::unique_ptr<PlaneBarn> _planeBarn;
     std::unique_ptr<ShotBarn> _shotBarn;
     Gas _gas;
+    LineSprites _lineSprites;
     std::unique_ptr<ObjectCreator> _creator;
 
     Player* _activePlayer = nullptr;
@@ -135,6 +153,10 @@ private:
     std::string _emptyName;
     audio::AudioManager* _audio = nullptr;
     audio::Ambiance* _ambiance = nullptr;
+    bool _touchAiming = false;
+    bool _touchAimLine = true;
+    bool _aimLineVisible = true;
+    bool _mobile = true;
     float _dt = 0.0f;
 };
 

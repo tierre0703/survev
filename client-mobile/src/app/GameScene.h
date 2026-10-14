@@ -7,6 +7,7 @@
 #include "../ui/Touch.h"
 #include <atomic>
 #include <memory>
+#include <string>
 
 namespace ax {
 class Node;
@@ -33,7 +34,7 @@ class AudioManager;
 class Ambiance;
 } // namespace audio
 
-// axmol PadGraphics implementation (draws the joystick circles).
+// axmol PadGraphics implementation (touch.ts pad.img sprites).
 class TouchPadGfx : public PadGraphics {
 public:
     explicit TouchPadGfx(ax::Node* parent);
@@ -43,10 +44,26 @@ public:
     void setCenterScale(float s) override;
     void setTouchScale(float s) override;
     void update() override;
+    // A map load registers the atlas holding `pad.img` after the pads were
+    // created; call this then (see Game::setAtlasCallback).
+    void refreshPadFrame();
+    // True when the pad texture resolved (pad.img frame or gui/pad.png).
+    bool hasTexture() const;
+    // True once the pads are using the atlas `pad.img` (not the GUI fallback).
+    bool isAtlasPad() const;
+    const std::string& padFrame() const;
 
 private:
-    ax::DrawNode* _center = nullptr;
-    ax::DrawNode* _touch = nullptr;
+    // Applies `_padScale` to a raw Touch scale (see GameScene.cpp).
+    void sizeSprite(ax::Sprite* sprite, float scale);
+
+    ax::Sprite* _center = nullptr;
+    ax::Sprite* _touch = nullptr;
+    std::string _padFrame;
+    // Maps touch.ts's pad.img scale onto `_padFrame`'s pixel size.
+    float _padScale = 0.25f;
+    bool _textureReady = false;
+    bool _atlasPad = false;
 };
 
 // Main scene: owns the game (simulation + net), the renderer adapter,
@@ -137,6 +154,8 @@ private:
     std::unique_ptr<audio::AxmolAudioBackend> _audioBackend;
     std::unique_ptr<audio::AudioManager> _audio;
     std::unique_ptr<audio::Ambiance> _ambiance;
+    // The pad sprites outlive resetWorld(): they are created once against
+    // _gameRoot and merely re-positioned by Touch each frame.
     std::unique_ptr<Touch> _touch;
     std::unique_ptr<TouchPadGfx> _movePad;
     std::unique_ptr<TouchPadGfx> _aimPad;

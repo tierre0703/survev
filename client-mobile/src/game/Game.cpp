@@ -376,7 +376,11 @@ void Game::handleMap(NetBitStream& s) {
     if (_mapCallback) {
         _mapCallback(_map);
     }
-    // TODO(M4): construct map / terrain from _map (seed + rivers + objects).
+    // The map callback is where the app registers the map's sprite atlases; tell
+    // sprites that were built before any map that their frames may now resolve.
+    if (_atlasCallback) {
+        _atlasCallback();
+    }
 }
 
 GameStateSnapshot Game::snapshot() const {

@@ -5,6 +5,7 @@
 #include "objects/Barns.h"
 #include "objects/GameObject.h"
 #include "render/Renderer.h"
+#include "render/PixiLike.h"
 #include "../audio/Ambiance.h"
 #include "../audio/AudioManager.h"
 
@@ -102,6 +103,11 @@ void GameWorld::attachTo(pix::Node* root) {
     root->addChild(_renderer->layers[1]);
     root->addChild(_renderer->layers[2]);
     root->addChild(_renderer->layers[3]);
+    // The aim line renders with the player layer (renderer.addPIXIObj re-parents
+    // it each frame anyway; creating it once keeps the node owned).
+    if (_lineSprites.container) {
+        root->addChild(_lineSprites.container);
+    }
     // The gas overlay draws above the world (gas.ts m_render runs after the
     // map/objects, before the UI).
     if (_gas.gasRenderer.display) {
@@ -115,6 +121,10 @@ void GameWorld::setScreenSize(float width, float height) {
     if (mapLoaded()) {
         _renderer->resize(*_map, _camera);
     }
+}
+
+void GameWorld::onFactoryReset() {
+    _smokeBarn->onFactoryReset();
 }
 
 bool GameWorld::mapLoaded() const {
@@ -275,9 +285,18 @@ void GameWorld::update(float dt) {
     _map->m_render(_camera);
     _gas.m_render(_factory, dt, _camera);
 
-    // game.ts update(): the camera target zoom follows the active player's view
-    // radius (m_getZoom), computed before the render transform is used.
+    // game.ts restores the camera to the active player and re-derives the zoom
+    // every frame; the aim-line transform reads the same camera.
+    if (_activePlayer) {
+        _camera.m_pos = _activePlayer->pos;
+    }
     updateCameraZoom(dt);
+
+    // touch.ts LineSprites: driven each frame while the aim pad is touched.
+    if (_activePlayer) {
+        _lineSprites.update(_aimLineVisible && _touchAiming && _touchAimLine, *_activePlayer, *_map,
+                            _camera, *_renderer, _factory, _mobile);
+    }
 
     // M6: drive the audio manager + ambience (game.ts update order).
     if (_activePlayer) {

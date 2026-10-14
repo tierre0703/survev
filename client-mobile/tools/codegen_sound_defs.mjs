@@ -3,9 +3,9 @@
 // transform loader.
 //
 // Usage: node --experimental-transform-types tools/codegen_sound_defs.mjs
-import { fileURLToPath } from "node:url";
-import * as path from "node:path";
 import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const clientDir = path.resolve(here, "../../client");
@@ -18,7 +18,7 @@ const { default: soundDefs } = await import(pathToFile(clientDir, "src/soundDefs
 const { Sounds, Groups, Channels, Reverbs } = soundDefs;
 
 const n = (x, d = 0) => (Number.isFinite(Number(x)) ? Number(x) : d);
-const esc = (s) => String(s ?? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+const esc = (s) => String(s ?? "").replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 const str = (s) => `"${esc(s)}"`;
 
 let soundArrays = "";
@@ -28,18 +28,22 @@ for (const [list, sounds] of Object.entries(Sounds)) {
     for (const [name, def] of Object.entries(sounds)) {
         soundEntries += `    {${str(list)},${str(name)},${str(def.path)},${n(def.volume, 1)},${
             def.canCoalesce ? 1 : 0
-        },${n(def.maxInstances, 0)},${def.preload === undefined || def.preload ? 1 : 0},${n(
-            def.loadPriority,
-            0,
-        )}},\n`;
+        },${n(def.maxInstances, 0)},${def.preload === undefined || def.preload ? 1 : 0},${
+            n(
+                def.loadPriority,
+                0,
+            )
+        }},\n`;
     }
 }
 
 let channelEntries = "";
 for (const [name, def] of Object.entries(Channels)) {
-    channelEntries += `    {${str(name)},${n(def.volume, 1)},${n(def.maxRange, 48)},${str(
-        def.list,
-    )},${def.type === "music" ? 1 : 0}},\n`;
+    channelEntries += `    {${str(name)},${n(def.volume, 1)},${n(def.maxRange, 48)},${
+        str(
+            def.list,
+        )
+    },${def.type === "music" ? 1 : 0}},\n`;
 }
 
 let groupArrays = "";
@@ -53,10 +57,12 @@ for (const [name, def] of Object.entries(Groups)) {
 
 let reverbEntries = "";
 for (const [name, def] of Object.entries(Reverbs)) {
-    reverbEntries += `    {${str(name)},${str(def.path || "")},${n(def.volume, 1)},${n(
-        def.stereoSpread,
-        0,
-    )},${n(def.echoVolume, 0)},${n(def.echoDelay, 0)},${n(def.echoLowPass, 0)}},\n`;
+    reverbEntries += `    {${str(name)},${str(def.path || "")},${n(def.volume, 1)},${
+        n(
+            def.stereoSpread,
+            0,
+        )
+    },${n(def.echoVolume, 0)},${n(def.echoDelay, 0)},${n(def.echoLowPass, 0)}},\n`;
 }
 
 // Registered sounds: for each channel, every sound in its Sounds list. This is
@@ -66,12 +72,14 @@ for (const [channelName, channel] of Object.entries(Channels)) {
     const list = Sounds[channel.list];
     if (!list) continue;
     for (const [name, def] of Object.entries(list)) {
-        registeredEntries += `    {${str(channelName)},${str(name)},${str(def.path)},${n(
-            def.volume,
-            1,
-        )},${def.canCoalesce ? 1 : 0},${n(def.maxInstances, 0)},${
-            def.preload === undefined || def.preload ? 1 : 0
-        },${n(def.loadPriority, 0)}},\n`;
+        registeredEntries += `    {${str(channelName)},${str(name)},${str(def.path)},${
+            n(
+                def.volume,
+                1,
+            )
+        },${def.canCoalesce ? 1 : 0},${n(def.maxInstances, 0)},${def.preload === undefined || def.preload ? 1 : 0},${
+            n(def.loadPriority, 0)
+        }},\n`;
     }
 }
 

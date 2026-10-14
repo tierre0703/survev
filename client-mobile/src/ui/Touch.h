@@ -6,6 +6,8 @@
 #include "../core/MathUtil.h"
 #include "../core/Vec2.h"
 
+#include <cmath>
+
 namespace surv {
 
 struct TouchPoint {
@@ -206,7 +208,9 @@ public:
         return r;
     }
 
-    // Update pad graphics through the renderer interface.
+    // Update pad graphics through the renderer interface. The scale arguments
+    // mirror touch.ts (`padScaleBase * padScaleDown` / `* padScalePos`); the
+    // axmol implementation maps them onto the texture it loaded.
     void m_update(PadGraphics& movePad, PadGraphics& aimPad) {
         for (int i = 0; i < 2; i++) {
             PadGraphics* gfx = i == 0 ? &movePad : &aimPad;

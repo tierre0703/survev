@@ -247,6 +247,24 @@ public:
 
     size_t bitsLeft() const { return _length - _index; }
 
+    // Speculative-read helpers: peek without consuming, and restore a saved
+    // bit position + 16 raw bits after an over-eager read.
+    uint32_t peekUint32() const { return _view.getBits(_index, 32, false); }
+    void restoreBits(size_t bitIndex, uint16_t value) {
+        _view.setBits(bitIndex, value, 16);
+        _index = bitIndex;
+    }
+    void setBitsAt(size_t bitIndex, uint16_t value, int bits) {
+        _view.setBits(bitIndex, value, bits);
+    }
+
+    // Backing buffer access (NetBitStream parses multi-stream frames). The view
+    // does not own the bytes; `data()`/`byteLength()` expose them so a caller
+    // can spot the end of the buffer or repair a speculative read.
+    const uint8_t* data() const { return _view.data(); }
+    uint8_t* data() { return _view.data(); }
+    size_t byteLength() const { return _view.byteLength(); }
+
     // Ceil the returned value, over-compensating for the amount of
     // bits written to the stream.
     size_t byteIndex() const { return (_index + 7) / 8; }

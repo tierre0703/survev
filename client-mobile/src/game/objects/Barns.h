@@ -337,6 +337,7 @@ class SmokeParticle {
 public:
     bool active = false;
     int zIdx = 0;
+    pix::Factory* factory = nullptr;
     pix::Sprite* sprite = nullptr;
     Vec2 pos, posTarget;
     float rad = 0.0f, radTarget = 0.0f;
@@ -346,7 +347,13 @@ public:
     uint32_t tint = 0xffffff;
     int layer = 0, interior = 0;
 
+    // `factory` is cached so the particle can re-create its sprite after the
+    // factory released the nodes on a world reset (see GameScene::resetWorld):
+    // the smoke pool outlives the adapter nodes, so a stale `sprite` would
+    // dangle. Tests may pass nullptr and pre-assign `sprite`.
     void m_init(pix::Factory* factory, const Vec2& pos, float rad, int layer, int interior);
+    // Item 1 of the M5 parity queue: the particle's adapter sprite.
+    void ensureSprite();
     void fadeOut() { fade = true; }
 };
 
@@ -370,6 +377,9 @@ public:
 
     SmokeParticle* m_allocParticle(pix::Factory* factory);
     void update(float dt, GameWorld& ctx);
+    // GameScene::resetWorld(): the adapter nodes are factory-owned and released
+    // on reset; drop the particles' references so they re-create lazily.
+    void onFactoryReset();
 };
 
 // --- airdrop.ts ------------------------------------------------------------

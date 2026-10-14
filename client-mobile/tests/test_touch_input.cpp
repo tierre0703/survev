@@ -89,3 +89,77 @@ TEST(touch_input_no_latch_releases_when_pulled_back) {
     CHECK(!released.shootHold);
     CHECK(!released.shootStart);
 }
+
+// ---------------------------------------------------------------------------
+// touch.ts pad.img joystick rings (M5 parity): the geometry Touch feeds the
+// GameScene::TouchPadGfx sprites.
+// ---------------------------------------------------------------------------
+namespace {
+// Records exactly what Touch::m_update() sends to a pad's sprite.
+struct PadGfxRecorder : public PadGraphics {
+    bool visible = false;
+    Vec2 center, touch;
+    float centerScale = 0.0f, touchScale = 0.0f;
+    int updates = 0;
+
+    void setVisible(bool v) override { visible = v; }
+    void setCenterPos(float x, float y) override { center = Vec2(x, y); }
+    void setTouchPos(float x, float y) override { touch = Vec2(x, y); }
+    void setCenterScale(float s) override { centerScale = s; }
+    void setTouchScale(float s) override { touchScale = s; }
+    void update() override { updates++; }
+};
+} // namespace
+
+// Web `createPadSprite`: centre scale = padScaleBase * padScaleDown (0.6),
+// touch scale = padScaleBase * padScalePos (0.25); the ring sits at the locked
+// pad center and the dot rests on it while the pad is untouched.
+TEST(touch_pad_gfx_locked_scales_and_positions) {
+    Touch t(kWidth, kHeight, true);
+    PadGfxRecorder move;
+    PadGfxRecorder aim;
+    t.m_update(move, aim);
+
+    CHECK_EQ(move.updates, 1);
+    CHECK_EQ(aim.updates, 1);
+    CHECK_EQ(move.visible, true);
+    CHECK_EQ(aim.visible, true);
+    CHECK_NEAR(move.centerScale, 0.6f, 1e-6f);
+    CHECK_NEAR(move.touchScale, 0.25f, 1e-6f);
+    // Locked landscape offsets: left (126, 480-100), right (800-126, 380).
+    CHECK_NEAR(move.center.x, 126.0f, 1e-4f);
+    CHECK_NEAR(move.center.y, 380.0f, 1e-4f);
+    CHECK_NEAR(move.touch.x, 126.0f, 1e-4f);
+    CHECK_NEAR(move.touch.y, 380.0f, 1e-4f);
+    CHECK_NEAR(aim.center.x, 674.0f, 1e-4f);
+    CHECK_NEAR(aim.touch.x, 674.0f, 1e-4f);
+
+    // Portrait (padScaleBase 0.8) and hideAll().
+    Touch portrait(480.0f, 800.0f, false);
+    PadGfxRecorder pmove;
+    PadGfxRecorder paim;
+    portrait.m_update(pmove, paim);
+    CHECK_NEAR(pmove.centerScale, 0.48f, 1e-6f); // 0.8 * 0.6
+    CHECK_NEAR(pmove.touchScale, 0.20f, 1e-6f);  // 0.8 * 0.25
+
+    t.hideAll();
+    t.m_update(move, aim);
+    CHECK_EQ(move.visible, false);
+    CHECK_EQ(aim.visible, false);
+}
+
+// "Anywhere" style: the ring centre follows the touch-down point, and the dot
+// follows the finger (clamped to padPosRange).
+TEST(touch_pad_gfx_anywhere_follows_touch) {
+    Touch t(kWidth, kHeight, true);
+    PadGfxRecorder move;
+    PadGfxRecorder aim;
+    t.setMoveStyle(TouchStyle::Anywhere);
+    setMovePull(t, 20.0f, 0.0f); // posDown (100,380), pos (146,380)
+    t.m_update(move, aim);
+
+    CHECK_NEAR(move.center.x, 100.0f, 1e-4f);
+    CHECK_NEAR(move.center.y, 380.0f, 1e-4f);
+    CHECK_NEAR(move.touch.x, 146.0f, 1e-4f);
+    CHECK_NEAR(move.touch.y, 380.0f, 1e-4f);
+}

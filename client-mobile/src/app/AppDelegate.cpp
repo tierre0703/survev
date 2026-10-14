@@ -76,9 +76,14 @@ bool AppDelegate::applicationDidFinishLaunching() {
                 body.playerCount = 1;
                 body.autoFill = true;
                 body.gameModeIdx = gameModeIdx;
-                const std::string apiUrl(
-                    ax::UserDefault::getInstance()->getStringForKey(
-                        surv::dev::kKeyApiUrl, surv::dev::kApiBaseUrl));
+                // Same guard as MenuScene: android.os.Build returns "unknown"
+                // for a missing property (the manifest does not declare
+                // surv_apiUrl), which must fall back to the built-in default.
+                std::string apiUrl(ax::UserDefault::getInstance()->getStringForKey(
+                    surv::dev::kKeyApiUrl, ""));
+                if (apiUrl.rfind("http://", 0) != 0 && apiUrl.rfind("https://", 0) != 0) {
+                    apiUrl = surv::dev::kApiBaseUrl;
+                }
                 surv::findGame(apiUrl, body, [done](surv::FindGameResult result) {
                     surv::GameScene::FindGameResultInfo info;
                     info.ok = result.ok;

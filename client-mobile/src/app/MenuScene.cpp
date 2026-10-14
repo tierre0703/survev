@@ -99,8 +99,29 @@ bool MenuScene::init() {
     });
     _loc->setLocale(_config->getString("language", "en"));
 
-    _apiUrl = ax::UserDefault::getInstance()->getStringForKey(dev::kKeyApiUrl, dev::kApiBaseUrl);
-    _region = _config->getString("region", "na");
+    // axmol's AxmolActivity reads every manifest meta-data property, and
+    // android.os.Build.getString returns "unknown" for a missing one; accept the
+    // override only when it is a real HTTP(S) URL.
+    _apiUrl = ax::UserDefault::getInstance()->getStringForKey(dev::kKeyApiUrl, "");
+    if (_apiUrl.rfind("http://", 0) != 0 && _apiUrl.rfind("https://", 0) != 0) {
+        _apiUrl = dev::kApiBaseUrl;
+    }
+    // The UserDefault override (set with `adb shell setprop debug.surv_region`)
+    // wins over the config default, so a dev run can select the local region
+    // without the site-info list containing it (web parity: the ?region URL
+    // parameter, main.ts).
+    _region = ax::UserDefault::getInstance()->getStringForKey(dev::kKeyRegion, "");
+    if (_region.empty()) {
+        _region = _config->getString("region", "na");
+    }
+    // Dev diagnostics: `adb shell setprop debug.surv_debug 1` turns on the
+    // find_game/join-URL tracing below (and re-enables axmol's debug logging).
+    _devLog = ax::UserDefault::getInstance()->getStringForKey(dev::kKeyDebug, "0") == "1";
+    if (_devLog) {
+        ax::setLogLevel(ax::LogLevel::DEBUG);
+        AXLOGI("[dev] region={} api={} local={}", _region, _apiUrl,
+               _apiUrl.find("127.0.0.1") != std::string::npos ? "yes" : "no");
+    }
 
     // --- UI --------------------------------------------------------------
     _uiRoot = menuui::uiRoot(this, 10);
@@ -336,6 +357,9 @@ void MenuScene::quickStart(int teamMode) {
     _pendingTicker = 0.0f;
     clearError();
     refreshUi();
+    if (_devLog) {
+        AXLOGI("[dev] quickStart region={} gameModeIdx={} urls(logged on join)", _region, gameModeIdx);
+    }
 
     // The scene owns the anti-spam delay/retries; this only asks for the mode.
     game->setJoinInfo(_hooks.joinInfo ? _hooks.joinInfo() : Game::JoinInfo{});

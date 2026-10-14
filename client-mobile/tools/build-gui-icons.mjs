@@ -11,10 +11,10 @@
 //   node tools/build-gui-icons.mjs [--scale 4] [--out <dir>] [--only cog,news]
 //
 // Output: Content/gui/<name>.png  (one PNG per SVG)
-import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
-import * as path from "node:path";
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -42,6 +42,13 @@ if (!fs.existsSync(srcDir)) {
 // A handful of icons are referenced from `client/src/en.json`/CSS by a name that
 // differs from the file name (the flag/emote art lives in another directory);
 // the ones the native menu needs keep their file name.
+//
+// `pad.svg` is square but not 128x128 (it is the 208x208 joystick ring), so a
+// fixed 128*scale render would resize it and break the native pad's
+// content-size normalization (TouchPadGfx::sizeSprite). Those files keep their
+// intrinsic size scaled by `--scale`.
+const NATIVE_SIZE = new Set(["pad"]);
+
 const files = fs.readdirSync(srcDir)
     .filter((f) => f.toLowerCase().endsWith(".svg"))
     .filter((f) => only.length === 0 || only.includes(path.basename(f, ".svg")))
@@ -58,18 +65,26 @@ for (const file of files) {
     const name = path.basename(file, ".svg");
     const src = path.join(srcDir, file);
     const svg = fs.readFileSync(src);
-    // Render at a fixed high resolution (the SVGs are 128x128 viewBox art) and
-    // let axmol scale the sprite down; this keeps text/small icons sharp.
-    const px = Math.round(128 * scale);
     const png = path.join(outRoot, `${name}.png`);
     try {
-        await sharp(svg, { density: 72 * scale })
-            .resize(px, px, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
-            .png({ compressionLevel: 9 })
-            .toFile(png);
+        const image = sharp(svg, { density: 72 * scale });
+        if (NATIVE_SIZE.has(name)) {
+            // Keep the intrinsic aspect/size (pad.svg is 208x208); the native
+            // pad sizes the sprite from its content size, so the PNG must match
+            // the web client's `pad.img` dimensions times `--scale`.
+            await image.png({ compressionLevel: 9 }).toFile(png);
+        } else {
+            // Render at a fixed high resolution (the SVGs are 128x128 viewBox
+            // art) and let axmol scale the sprite down; keeps icons sharp.
+            const px = Math.round(128 * scale);
+            await image
+                .resize(px, px, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+                .png({ compressionLevel: 9 })
+                .toFile(png);
+        }
         count++;
     } catch (error) {
         console.warn(`  ! ${name}: ${error.message}`);
     }
 }
-console.log(`wrote ${count} GUI icons (${scale}x, ${128 * scale}px) to ${outRoot}`);
+console.log(`wrote ${count} GUI icons (${scale}x) to ${outRoot}`);

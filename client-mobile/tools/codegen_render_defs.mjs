@@ -1040,6 +1040,8 @@ public:
             d.playerHit = r.playerHit ? r.playerHit : "";
             d.punchSound = r.punchSound ? r.punchSound : "";
             d.useThrowParticles = r.useThrowParticles != 0;
+            d.bulletType = r.bulletType ? r.bulletType : "";
+            d.barrelLength = r.barrelLength;
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}

@@ -3,11 +3,20 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <map>
 
 namespace ui {
 
 namespace {
+
+// Port of the `getEnvVar` helper config.ts uses to seed the defaults from the
+// environment ("SURV_..." overrides). Android has no environment, so the plain
+// `getenv` result is empty there and nothing changes.
+std::string envOrDefault(const char* name, const std::string& fallback) {
+    const char* value = std::getenv(name);
+    return (value && *value) ? std::string(value) : fallback;
+}
 
 const std::map<std::string, JsonValue>& webDefaults() {
     static const std::map<std::string, JsonValue> defaults = [] {
@@ -49,7 +58,9 @@ const std::map<std::string, JsonValue>& webDefaults() {
         text("cachedBgImg", "img/splashes/main.webp");
         text("language", "en");
         text("playerName", "");
-        text("region", "na");
+        // config.ts: `region: getEnvVar("REGION", "na")` — lets the emulator
+        // target the local dev region without a UI toggle (set SURV_REGION=local).
+        text("region", envOrDefault("SURV_REGION", "na"));
         boolean("regionSelected", false);
         text("sessionCookie", "");
         num("gameModeIdx", 2);

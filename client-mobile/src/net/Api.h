@@ -37,6 +37,12 @@ struct FindGameResult {
 
 using FindGameCallback = std::function<void(FindGameResult)>;
 
+// Dev diagnostics (see `DevConfig.h` kKeyDebug): when the `surv_debug`
+// UserDefault is "1", find_game logs its request body and, on success, the
+// advertised join URLs. Implemented in Api.cpp; kept out of the header so the
+// host tests do not need the engine.
+bool isDevLogEnabled();
+
 // POSTs `body` as JSON to `apiBaseUrl + "/api/find_game_v2"` (mirrors
 // main.ts findGame()). The callback runs on the main thread. `apiBaseUrl` may
 // be empty to post to the relative path (only meaningful when a proxy base is

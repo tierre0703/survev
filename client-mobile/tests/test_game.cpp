@@ -44,6 +44,9 @@ UpdateMsg makeUpdate() {
     u.activePlayerIdDirty = true;
     u.activePlayerData.healthDirty = true;
     u.activePlayerData.health = 100.0f;
+    // The vendored web build has no active-player zoom field; keep the tail
+    // flags false so the synthesized frames match it (ObjectSerializeFns.h).
+    u.activePlayerData.zoomDirty = false;
 
     PlayerInfo pi;
     pi.playerId = 42;

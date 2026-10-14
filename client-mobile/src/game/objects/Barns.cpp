@@ -1199,10 +1199,26 @@ void SmokeParticle::m_init(pix::Factory* factory, const Vec2& p, float r, int l,
     tint = 0xf2f2f2;
     layer = l;
     interior = interior_;
-    if (!sprite) {
+    // Cache the factory: the smoke pool outlives the adapter nodes, which are
+    // released on a world reset, so the sprite is re-created in ensureSprite().
+    this->factory = factory;
+    if (factory && !sprite) {
         sprite = factory->createSprite();
         sprite->setAnchor(0.5f, 0.5f);
     }
+    if (sprite) {
+        const char* frames[2] = {"part-smoke-02.img", "part-smoke-03.img"};
+        sprite->setFrame(frames[std::rand() % 2]);
+        sprite->setVisible(true);
+    }
+}
+
+void SmokeParticle::ensureSprite() {
+    if (sprite || !factory) {
+        return;
+    }
+    sprite = factory->createSprite();
+    sprite->setAnchor(0.5f, 0.5f);
     const char* frames[2] = {"part-smoke-02.img", "part-smoke-03.img"};
     sprite->setFrame(frames[std::rand() % 2]);
     sprite->setVisible(true);
@@ -1250,15 +1266,26 @@ SmokeParticle* SmokeBarn::m_allocParticle(pix::Factory* factory) {
         particle = new SmokeParticle();
         m_particles.push_back(particle);
     }
-    (void)factory;
+    particle->factory = factory;
     particle->active = true;
     particle->zIdx = zIdx--;
     return particle;
 }
 
+void SmokeBarn::onFactoryReset() {
+    for (auto* p : m_particles) {
+        p->sprite = nullptr;
+        p->factory = nullptr;
+    }
+}
+
 void SmokeBarn::update(float dt, GameWorld& ctx) {
     for (auto* p : m_particles) {
-        if (!p->active || !p->sprite) {
+        if (!p->active) {
+            continue;
+        }
+        p->ensureSprite();
+        if (!p->sprite) {
             continue;
         }
         p->rad = math::lerp(dt * 3.0f, p->rad, p->radTarget);

@@ -6,7 +6,13 @@
 #   . .\tools\android-env.ps1
 $root = Split-Path $PSScriptRoot -Parent
 
-$env:AX_ROOT          = Join-Path $root 'axmol'
+# axmol engine root. Prefer the vendored copy at ../axmol; fall back to the
+# shared checkout (AGENTS.md: AX_ROOT -> E:\work\survev-tools\axmol-2.11.5).
+$env:AX_ROOT          = if (Test-Path (Join-Path $root 'axmol')) {
+    Join-Path $root 'axmol'
+} else {
+    'E:\work\survev-tools\axmol-2.11.5'
+}
 $env:ANDROID_HOME     = "E:\work\survev-tools\Sdk"
 $env:ANDROID_SDK_ROOT = "E:\work\survev-tools\Sdk"
 $env:ANDROID_NDK_HOME = "E:\work\survev-tools\Sdk\ndk\27.1.12297006"

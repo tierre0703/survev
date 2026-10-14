@@ -18,10 +18,10 @@
 // Resolution: `low` (0.5, the web client's mobile path) is the default. The
 // plist geometry is emitted at the sheet's native pixel scale; the app sets
 // Director::setContentScaleFactor(0.5) so low-res frames render at full size.
-import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
-import * as path from "node:path";
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -97,10 +97,14 @@ function writePlist(sheet, textureFile, destPlist) {
         const src = f.sourceSize || { w: fr.w, h: fr.h };
         const off = frameOffset(sss, fr, src);
         out += `\t\t<key>${xmlEscape(name)}</key>\n\t\t<dict>\n`;
-        out += `\t\t\t<key>frame</key>\n\t\t\t<string>{{${num(fr.x)},${num(fr.y)}},{${num(fr.w)},${num(fr.h)}}}</string>\n`;
+        out += `\t\t\t<key>frame</key>\n\t\t\t<string>{{${num(fr.x)},${num(fr.y)}},{${num(fr.w)},${
+            num(fr.h)
+        }}}</string>\n`;
         out += `\t\t\t<key>offset</key>\n\t\t\t<string>{${num(off.x)},${num(off.y)}}</string>\n`;
         out += `\t\t\t<key>rotated</key>\n\t\t\t<${f.rotated ? "true" : "false"}/>\n`;
-        out += `\t\t\t<key>sourceColorRect</key>\n\t\t\t<string>{{${num(sss.x)},${num(sss.y)}},{${num(fr.w)},${num(fr.h)}}}</string>\n`;
+        out += `\t\t\t<key>sourceColorRect</key>\n\t\t\t<string>{{${num(sss.x)},${num(sss.y)}},{${num(fr.w)},${
+            num(fr.h)
+        }}}</string>\n`;
         out += `\t\t\t<key>sourceSize</key>\n\t\t\t<string>{${num(src.w)},${num(src.h)}}</string>\n`;
         out += `\t\t</dict>\n`;
     }

@@ -47,6 +47,23 @@ pnpm --filter @survev/tests test   # vitest suite in tests/
 Game server details (`server/`): `dev:api`, `dev:game`, `db:generate`,
 `db:migrate`, `db:studio`, `db:seed`, `db:wipe`, `stressTest`, `typecheck`.
 
+## Local bundle services (server + web client)
+
+A packaged Windows bundle (Postgres + Redis + API + game server + built web
+client) lives outside this repo at `E:\work\survev-tools\windows-service\survev-windows-x64`.
+Use it instead of `pnpm dev` when you need a running backend for the native
+client or on-device testing. Each script resolves the bundle root from its own
+location, so no path arguments are needed:
+
+```powershell
+E:\work\survev-tools\windows-service\survev-windows-x64\scripts\start.ps1    # PostgreSQL :5432, Redis :6379, API :8000, game :8001, web :3000
+E:\work\survev-tools\windows-service\survev-windows-x64\scripts\status.ps1   # report what is up
+E:\work\survev-tools\windows-service\survev-windows-x64\scripts\stop.ps1     # stop API/game/web + PostgreSQL/Redis
+```
+
+`start.ps1` is idempotent (skips processes already listening) and writes logs to
+`<bundle>\runtime\logs`. Stop the stack with `stop.ps1` before re-running it.
+
 ## Lint & formatting
 
 - Formatting is enforced with **dprint** (`dprint.json`, 4-space indent for TS,

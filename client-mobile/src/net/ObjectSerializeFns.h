@@ -60,6 +60,9 @@ struct ObjectData {
     int hasteSeq = -1;
     std::string actionItem;
     std::string role;
+    // player.ts zoomDirty (m_localData.m_zoom): the scoped view radius step.
+    bool zoomDirty = false;
+    uint8_t zoom = 0;
     struct Perk {
         std::string type;
         bool droppable = false;
@@ -172,6 +175,38 @@ inline void deserializePart(ObjectType ot, NetBitStream& s, ObjectData& d) {
     }
 }
 
+// player.ts m_getZoom() consumes the active-player `zoom` field. The vendored
+// web build this port mirrors predates that field, but the server/TS defs write
+// it, so it is read speculatively: the four dirty flags that follow confirm it.
+// When they run past the end of the buffer the field didn't exist and the
+// speculative read is repaired (see deserializeFull).
+struct ZoomTail {
+    bool present = false;
+    size_t savedBit = 0;
+    uint16_t savedValue = 0;
+};
+
+inline ZoomTail readActivePlayerZoom(NetBitStream& s, ObjectData& data) {
+    ZoomTail tail;
+    tail.savedBit = s.index();
+    tail.savedValue = static_cast<uint16_t>(s.peekUint32() >> 16);
+
+    const bool zoomDirty = s.readBoolean();
+    uint8_t zoom = 0;
+    if (zoomDirty) {
+        zoom = s.readUint8();
+    }
+    const bool restFits = s.bitsLeft() >= 4;
+    const bool tailFlags = restFits && s.readBoolean() && s.readBoolean() &&
+        s.readBoolean() && s.readBoolean();
+    if (tailFlags) {
+        tail.present = true;
+        data.zoomDirty = zoomDirty;
+        data.zoom = zoom;
+    }
+    return tail;
+}
+
 inline void deserializeFull(ObjectType ot, NetBitStream& s, ObjectData& d) {
     switch (ot) {
         case ObjectType_Player:
@@ -208,6 +243,17 @@ inline void deserializeFull(ObjectType ot, NetBitStream& s, ObjectData& d) {
                 ? s.readFloat(Constants::PlayerMinScale, Constants::PlayerMaxScale, 8)
                 : 1.0f;
             d.role = s.readBoolean() ? s.readGameType() : "";
+            {
+                // The web build this port mirrors has no zoom field, and the
+                // player fixtures are produced by it. When the four dirty flags
+                // that follow run past the end of the buffer the zoom field
+                // isn't there: rewind and restore the bytes the speculative read
+                // overwrote.
+                const ZoomTail zoomTail = readActivePlayerZoom(s, d);
+                if (!zoomTail.present) {
+                    s.restoreBits(zoomTail.savedBit, zoomTail.savedValue);
+                }
+            }
             d.perks.clear();
             if (s.readBoolean()) {
                 const uint32_t n = s.readBits(BitSizes::Perks);
@@ -223,8 +269,7 @@ inline void deserializeFull(ObjectType ot, NetBitStream& s, ObjectData& d) {
         case ObjectType_Obstacle:
             d.healthT = s.readFloat(0.0f, 1.0f, 8);
             d.type = s.readMapType();
-            d.layer = static_cast<int>(s.readBits(2));
-            d.dead = s.readBoolean();
+            d.layer = static_cast<int>(s.readBits(2));            d.dead = s.readBoolean();
             d.isDoor = s.readBoolean();
             if (d.isDoor) {
                 d.doorOpen = s.readBoolean();
@@ -399,8 +444,11 @@ inline void serializeFull(ObjectType ot, NetBitStream& s, const ObjectData& d) {
             if (hasRole) {
                 s.writeGameType(d.role);
             }
-            const bool hasPerks = !d.perks.empty();
-            s.writeBoolean(hasPerks);
+            s.writeBoolean(d.zoomDirty);
+            if (d.zoomDirty) {
+                s.writeUint8(d.zoom);
+            }
+            const bool hasPerks = !d.perks.empty();            s.writeBoolean(hasPerks);
             if (hasPerks) {
                 s.writeBits(static_cast<uint32_t>(d.perks.size()), BitSizes::Perks);
                 for (const auto& perk : d.perks) {

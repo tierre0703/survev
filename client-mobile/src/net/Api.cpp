@@ -12,6 +12,11 @@
 #include <utility>
 
 namespace surv {
+
+bool isDevLogEnabled() {
+    return ax::UserDefault::getInstance()->getStringForKey("surv_debug", "0") == "1";
+}
+
 namespace {
 
 using ax::network::HttpClient;
@@ -115,6 +120,9 @@ void findGame(const std::string& apiBaseUrl, const FindGameBody& body, FindGameC
     url += "/api/find_game_v2";
 
     const std::string payload = buildRequestBody(body);
+    if (isDevLogEnabled()) {
+        AXLOGI("[dev] find_game POST {} body={}", url, payload);
+    }
 
     auto* request = new HttpRequest();
     request->setRequestType(HttpRequest::Type::POST);
@@ -128,8 +136,17 @@ void findGame(const std::string& apiBaseUrl, const FindGameBody& body, FindGameC
                 const auto* data = response->getResponseData();
                 const std::string json(data ? data->data() : "", data ? data->size() : 0);
                 result = parseResponse(json);
+                if (isDevLogEnabled()) {
+                    AXLOGI("[dev] find_game <- ok={} error={} urls={}", result.ok, result.error,
+                           result.data.urls.empty() ? std::string("(none)")
+                                                    : result.data.urls.front());
+                }
             } else {
                 result.error = "find_game_failed";
+                if (isDevLogEnabled()) {
+                    const int code = response ? response->getResponseCode() : 0;
+                    AXLOGE("[dev] find_game transport failed (http code={})", code);
+                }
             }
             if (cb) {
                 cb(std::move(result));

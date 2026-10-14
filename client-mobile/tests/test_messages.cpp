@@ -111,6 +111,12 @@ TEST(update_full) {
     fo.data.animSeq = 2;
     fo.data.actionType = 2;
     fo.data.actionSeq = 3;
+    // The reference fixture is produced by the vendored web build, whose player
+    // object uses 2-bit orient. Keep ori in that range so the fixture stays
+    // byte-reproducible (ObjectSerializeFns.h).
+    fo.data.ori = 3;
+    fo.data.scale = 1.1f;
+    fo.data.role = "";
     fo.data.wearingPan = true;
     fo.data.healEffect = false;
     fo.data.lastStandEffect = false;
@@ -215,6 +221,12 @@ TEST(update_full) {
     Buffer rb2(1024);
     u2.serialize(rb2.stream);
     CHECK(matchReference("update-full", rb2.hex()));
+
+    // The active-player zoom round-trips (player.ts m_getZoom): the serialize
+    // path writes the field, and the byte stream still matches the vendored
+    // build because zoomDirty arranges the tail flags to be byte-identical.
+    CHECK(u2.activePlayerData.zoomDirty);
+    CHECK_EQ(static_cast<int>(u2.activePlayerData.zoom), 2);
 }
 
 TEST(kill) {

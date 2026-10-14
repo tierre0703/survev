@@ -152,6 +152,10 @@ private:
 
     SiteInfo _siteInfo;
     GameHooks _hooks;
+    // Dev-only: set `debug.surv_debug` to 1 to log the find_game request and
+    // every advertised join URL (needed when the emulator cannot reach the
+    // advertised address). Logs only; never changes behaviour.
+    bool _devLog = false;
     std::string _region = "na";
     std::string _apiUrl;
     bool _inGame = false;

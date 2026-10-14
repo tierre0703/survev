@@ -7,6 +7,7 @@
 #include "../game/Map.h"
 #include "../game/objects/Barns.h"
 #include "../render/AxmolPixi.h"
+#include "../render/PixiLike.h"
 #include "../render/Defs.h"
 #include "../render/GeneratedDefs.h"
 #include "../audio/AudioManager.h"
@@ -17,7 +18,10 @@
 
 #include <set>
 #include <algorithm>
+#include <cmath>
 #include <sstream>
+#include <string>
+#include <utility>
 
 USING_NS_AX;
 
@@ -65,39 +69,101 @@ static void loadAtlasesForMap(const std::string& mapName) {
 }
 
 // ---------------------------------------------------------------------------
-// TouchPadGfx (vector-drawn joystick pads; no external texture required)
+// TouchPadGfx (touch.ts pad.img sprites)
 // ---------------------------------------------------------------------------
+// Port of touch.ts createPadSprite(): the joystick ring is the web client's
+// `pad.img` (client/public/img/gui/pad.svg, a grey circle stroke). The web
+// client tints the centre black at 20% alpha and the touch dot white, both
+// anchored at 0.5; the scale comes from Touch (padScaleBase * 0.6 / 0.25).
+// `pad.img` lives in the virtual atlas (Content/atlas/**) because that is how
+// the web client resolves it; `gui/pad.png` (tools/build-gui-icons.mjs) is the
+// loose fallback for a build whose atlas cache is unavailable.
 TouchPadGfx::TouchPadGfx(ax::Node* parent) {
-    _center = ax::DrawNode::create();
-    _center->drawDot(ax::Vec2(0, 0), 24.0f, ax::Color4F(1.0f, 1.0f, 1.0f, 0.20f));
-    _center->setVisible(false);
-    parent->addChild(_center, 1000);
+    // touch.ts's 0.6/0.25 sprite scales are relative to the *point* size of the
+    // 208 px `pad.img` art drawn at 0.5 device/point scale, i.e. 125 px / 52 px
+    // on screen. `gui/pad.png` (the loose fallback) is 4x that, so it needs 1/4
+    // of the same scale to land on the same on-screen size.
+    const bool frameReady =
+        ax::SpriteFrameCache::getInstance()->getSpriteFrameByName("pad.img") != nullptr;
+    _padFrame = frameReady ? "pad.img" : "gui/pad.png";
+    _padScale = frameReady ? 0.25f : 0.0625f;
 
-    _touch = ax::DrawNode::create();
-    _touch->drawDot(ax::Vec2(0, 0), 12.0f, ax::Color4F(1.0f, 1.0f, 1.0f, 0.90f));
-    _touch->setVisible(false);
-    parent->addChild(_touch, 1001);
+    auto createPadSprite = [this, parent](const ax::Color3B& tint, float alpha) -> ax::Sprite* {
+        ax::Sprite* sprite = ax::Sprite::create(_padFrame);
+        if (!sprite) {
+            return nullptr;
+        }
+        sprite->setAnchorPoint(ax::Vec2(0.5f, 0.5f));
+        sprite->setColor(tint);
+        sprite->setOpacity(static_cast<uint8_t>(alpha * 255.0f + 0.5f));
+        sprite->setVisible(false);
+        parent->addChild(sprite, 1000);
+        return sprite;
+    };
+    _center = createPadSprite(ax::Color3B(0, 0, 0), 0.2f);
+    _touch = createPadSprite(ax::Color3B::WHITE, 1.0f);
+
+    // The pad sprites are created from the menu, before any map (and therefore
+    // before the atlas) is loaded; `_atlasPad` reports whether the atlas frame
+    // is what is currently on the sprites, and `refreshPadFrame` re-resolves it
+    // once a map load has registered the atlas.
+    if (_center) {
+        _textureReady = _center->getTexture() != nullptr;
+        _atlasPad = _textureReady && _padFrame == "pad.img";
+    }
+    // Always start hidden; setVisible(false) hides either sprite.
+    setVisible(false);
 }
 
+void TouchPadGfx::refreshPadFrame() {
+    if (_atlasPad || !_center) {
+        return;
+    }
+    if (!ax::SpriteFrameCache::getInstance()->getSpriteFrameByName("pad.img")) {
+        return;
+    }
+    _padFrame = "pad.img";
+    _padScale = 0.25f;
+    _atlasPad = true;
+    for (ax::Sprite* sprite : {_center, _touch}) {
+        if (sprite) {
+            sprite->setSpriteFrame("pad.img");
+        }
+    }
+}
+
+bool TouchPadGfx::hasTexture() const { return _textureReady; }
+bool TouchPadGfx::isAtlasPad() const { return _atlasPad; }
+const std::string& TouchPadGfx::padFrame() const { return _padFrame; }
+
 void TouchPadGfx::setVisible(bool visible) {
-    _center->setVisible(visible);
-    _touch->setVisible(visible);
+    if (_center) _center->setVisible(visible);
+    if (_touch) _touch->setVisible(visible);
+}
+
+// `scale` is the raw product Touch computes (touch.ts scales the pad.img
+// sprites by padScaleBase * padScaleDown for the ring and * padScalePos for the
+// dot); `_padScale` maps that onto the texture actually in use.
+void TouchPadGfx::sizeSprite(ax::Sprite* sprite, float scale) {
+    if (sprite) {
+        sprite->setScale(scale * _padScale);
+    }
 }
 
 void TouchPadGfx::setCenterPos(float x, float y) {
-    _center->setPosition(ax::Vec2(x, y));
+    if (_center) _center->setPosition(ax::Vec2(x, y));
 }
 
 void TouchPadGfx::setTouchPos(float x, float y) {
-    _touch->setPosition(ax::Vec2(x, y));
+    if (_touch) _touch->setPosition(ax::Vec2(x, y));
 }
 
 void TouchPadGfx::setCenterScale(float s) {
-    _center->setScale(s);
+    sizeSprite(_center, s);
 }
 
 void TouchPadGfx::setTouchScale(float s) {
-    _touch->setScale(s);
+    sizeSprite(_touch, s);
 }
 
 void TouchPadGfx::update() {}
@@ -153,6 +219,16 @@ bool GameScene::init() {
     _touch = std::make_unique<Touch>(visible.width, visible.height, isLandscape);
     _movePad = std::make_unique<TouchPadGfx>(this);
     _aimPad = std::make_unique<TouchPadGfx>(this);
+    // Touch keeps feeding setCenterScale/setTouchScale with the raw touch.ts
+    // ratios (asserted by the host tests); TouchPadGfx::sizeSprite maps those
+    // onto the texture actually in use, so the on-screen ring size no longer
+    // depends on the sprite's pixel size (the 208 px atlas frame vs the 4x
+    // gui/pad.png fallback). Prime the sprite scale once here.
+    _touch->m_update(*_movePad, *_aimPad);
+    if (!_movePad->hasTexture()) {
+        AXLOGW("Touch pad texture missing (pad.img / gui/pad.png); run tools/build-atlas.mjs "
+               "and tools/build-gui-icons.mjs");
+    }
 
     _alive = std::make_shared<std::atomic<bool>>(true);
 
@@ -174,6 +250,14 @@ bool GameScene::init() {
     _audio->preloadSounds();
 
     _pixiFactory = std::make_unique<pix::AxPixiFactory>();
+    // `pad.img` lives in the map's atlas, which loadAtlasesForMap() registers
+    // later; resolve the frame now and again on every atlas load.
+    _movePad->refreshPadFrame();
+    _aimPad->refreshPadFrame();
+    _game->setAtlasCallback([this] {
+        _movePad->refreshPadFrame();
+        _aimPad->refreshPadFrame();
+    });
     resetWorld();
     _game->setMapCallback([this](const MapMsg& msg) {
         loadAtlasesForMap(msg.mapName);
@@ -191,11 +275,19 @@ bool GameScene::init() {
 }
 
 void GameScene::resetWorld() {
+    if (_world) {
+        // The adapter nodes (and therefore every object's sprite) are owned by
+        // _pixiFactory; tell the world before the factory goes away.
+        _world->onFactoryReset();
+    }
     _world.reset();
     if (_worldRoot) {
         static_cast<ax::Node*>(_worldRoot->native())->removeFromParent();
         _worldRoot.reset();
     }
+    // Drop the previous factory (and all of its nodes) together; a stale sprite
+    // from the old factory must never reach the new world's renderer.
+    _pixiFactory = std::make_unique<pix::AxPixiFactory>();
     _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
     _world->setAudio(_audio.get(), _ambiance.get());
     _worldRoot.reset(_pixiFactory->createContainer());
@@ -225,8 +317,11 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
     _notifiedStarted = false;
     _joinElapsed = 0;
     _gameRoot->setVisible(true);
-    _movePad->setVisible(true);
-    _aimPad->setVisible(true);
+    // The pads stay hidden until the server confirms the join (game.ts shows
+    // them from the first started frame, not during matchmaking).
+    _touch->display = false;
+    _movePad->setVisible(false);
+    _aimPad->setVisible(false);
     _game->setJoinInfo(_joinInfo);
     _awaitingJoin = true;
     _joinRetryUrls.clear();
@@ -255,7 +350,8 @@ void GameScene::leaveGame() {
     _pendingFind = false;
     _findInFlight = false;
     ++_findGeneration;
-    _touch->display = false;
+    // touch.ts hideAll(): the pads stay hidden until the next match starts.
+    _touch->hideAll();
     for (auto& touch : _touch->touches) touch.active = false;
     _awaitingJoin = false;
     _joinRetryUrls.clear();
@@ -293,6 +389,9 @@ void GameScene::tryJoinUrls(const std::vector<std::string>& urls, const std::str
     _joinRetryToken = joinToken;
     _joinRetryIndex = index;
     _awaitingJoin = true;
+    if (_devLog && index == 0) {
+        AXLOGI("[dev] joining {} (advertised urls={})", urls[0], urls.size());
+    }
     _game->tryJoinGame(urls[index], joinToken);
 }
 
@@ -376,6 +475,8 @@ void GameScene::update(float delta) {
         _joinElapsed += delta;
         if (_game->hasJoined()) {
             _notifiedStarted = true;
+            // The match is actually running; show the joystick pads (game.ts
+            // only enables the touch display once the game starts).
             _touch->display = true;
             if (onMatchStarted) onMatchStarted();
         } else if (_joinElapsed > 30) {
