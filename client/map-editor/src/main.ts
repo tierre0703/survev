@@ -72,7 +72,7 @@ class Application {
         onLoadCompleteCb();
     }
 
-    tryLoad() {
+    async tryLoad() {
         if (this.domContentLoaded && this.configLoaded && !this.initialized) {
             this.initialized = true;
             const language = this.config.get("language") || this.localization.detectLocale();
@@ -153,6 +153,15 @@ class Application {
                 );
             }
 
+            // `?mapData=<url>` loads a map captured from the server
+            // (`server/src/mapdoc/captureMap.ts`). It wins over the autosave so
+            // a link is reproducible, and it must resolve before the UI is
+            // created so the pane reads the loaded document.
+            const mapDataUrl = new URLSearchParams(window.location.search).get("mapData");
+            if (mapDataUrl) {
+                await this.loadMapData(mapDataUrl);
+            }
+
             this.ui = new EditorUi(
                 this.config,
                 this.editorDisplay,
@@ -166,6 +175,20 @@ class Application {
         device.onResize();
         this.pixi?.renderer.resize(device.screenWidth, device.screenHeight);
         this.editorDisplay?.resize();
+    }
+
+    /** Loads a captured map document, switching the loaded assets to its biome. */
+    async loadMapData(url: string) {
+        try {
+            const doc = await this.editorContext!.loadMapDataUrl(url);
+            this.resourceManager!.loadMapAssets(doc.mapName);
+            console.log(
+                `[map-editor] Loaded ${doc.objects.length} object(s) from ${url}`,
+            );
+        } catch (e) {
+            console.error(e);
+            console.log(`[map-editor] Failed to load ${url}`);
+        }
     }
 
     setAppActive(active: boolean) {

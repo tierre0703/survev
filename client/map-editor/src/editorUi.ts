@@ -109,6 +109,21 @@ export class EditorUi {
             const input = document.getElementById("map-editor-file") as HTMLInputElement | null;
             input?.click();
         });
+        folder.addButton({ title: "Load server map" }).on("click", async () => {
+            const url = window.prompt(
+                "Map capture URL (written by the server's capture-map tool)",
+                "maps/main.json",
+            );
+            if (!url) return;
+            try {
+                await ctx.loadMapDataUrl(url);
+                this.refreshMapParams();
+                ctx.onNotice(`Loaded ${url}`);
+            } catch (e) {
+                console.error(e);
+                ctx.onNotice(`Failed to load ${url}`);
+            }
+        });
         folder.addButton({ title: "Reset document" }).on("click", () => {
             ctx.resetDoc();
             this.refreshMapParams();

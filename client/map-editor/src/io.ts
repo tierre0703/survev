@@ -171,6 +171,49 @@ export function toDocument(mapMsg: MapMsg, fallbackMapName: MapDoc["mapName"]): 
     );
 }
 
+/**
+ * Converts a captured `mapData` object — the JSON form of the server's
+ * `MapMsg` written by `server/src/mapdoc/captureMap.ts` — into a `MapDoc`.
+ *
+ * The captured file carries two things the `MapMsg` wire format drops:
+ * `groundPatches` (the cordoned-off building pads) and a `layer` per object.
+ * Both are preserved here so a captured map keeps its authored floor.
+ *
+ * `mapData.places` is shared verbatim from the map def rather than copied, so
+ * the places are cloned onto a fresh document instead of being reused by the
+ * caller.
+ */
+export function mapDataToDocument(
+    mapData: Partial<MapMsg>,
+    fallbackMapName: MapDoc["mapName"],
+): MapDoc {
+    const base = toDocument(
+        {
+            ...(mapData as MapMsg),
+            objects: [],
+            places: mapData.places ?? [],
+        },
+        fallbackMapName,
+    );
+
+    if (Array.isArray(mapData.objects)) {
+        base.objects = mapData.objects
+            .map((obj): MapObjectEntry => {
+                const raw = obj as { layer?: number };
+                return {
+                    type: obj.type,
+                    pos: v2.copy(obj.pos),
+                    ori: obj.ori,
+                    scale: obj.scale,
+                    layer: raw.layer ?? 0,
+                };
+            })
+            .filter((entry) => entry.type.length > 0);
+    }
+
+    return base;
+}
+
 export function docToJson(doc: MapDoc) {
     return JSON.stringify(doc, null, 4);
 }

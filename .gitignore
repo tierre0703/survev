@@ -67,4 +67,7 @@ Temporary Items
 # Built Visual Studio Code Extensions
 *.vsix
 
+# Captured map documents (`server/src/mapdoc/cli.ts`)
+maps/
+
 todo.md

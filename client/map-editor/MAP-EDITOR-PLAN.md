@@ -4,8 +4,10 @@ Status: **implemented (phases 1–6).** Target directory: `client/map-editor/`.
 Derived from a read of `client/building-editor/`, `client/src/{map,config,main,input,objects/*}.ts`,
 `shared/net/mapMsg.ts`, `shared/defs/*`, and `server/src/game/map.ts`.
 
-> Implementation notes live in §10. Phase 7 (playing an authored map) is still
-> deferred.
+> Implementation notes live in §10. Phase 7 (playing an authored map) is now
+> **partially implemented**: a live generated map can be *captured* to a map
+> editor document JSON and loaded back into the editor (§12). Feeding an authored
+> document back into `GameMap.init()` is still deferred.
 >
 > **Local verification note:** the page boots and renders (terrain grid, tweakpane
 > UI, editor player) when driven headlessly:
@@ -25,7 +27,8 @@ Derived from a read of `client/building-editor/`, `client/src/{map,config,main,i
 >
 > Independently verified with `dprint check`, `oxlint`, `tsc --noEmit` in
 > `client/` and `server/`, and `pnpm --filter @survev/tests test` (11 files,
-> 11841 tests green).
+> 11841 tests green). §12 adds `server/src/mapdoc/` (capture) and
+> `tests/src/captureMap.test.ts` (12 files, 11849 tests green).
 
 ## 1. Goal and scope
 
@@ -395,4 +398,66 @@ editor currently reloads the same document into a potentially different arrangem
 wire-format array caps, JSON round trip, unknown object types). The UI itself needs a running
 `pnpm dev:client`; the module-level def access in `client/src/resources.ts` makes the editor page
 unusable from a production build, which is why it stays a dev-only entry.
+
+## 12. Capture: server map → editor JSON
+
+Phase 7 in reverse. `server/src/mapdoc/` turns a *generated* `GameMap` into the same document shape
+`mapDocument.ts` accepts, so the current server map can be inspected and edited in the map editor.
+
+| File | Role |
+|---|---|
+| `server/src/mapdoc/captureMap.ts` | `captureMapDoc(game)` walks a finished `GameMap`; `generateMapDoc({mapName, seed, teamMode})` builds a `Game` and captures it |
+| `server/src/mapdoc/cli.ts` | CLI: `tsx server/src/mapdoc/cli.ts [map] [--seed n] [--team-mode solo] [--out file] [--stdout]` |
+| `server/src/mapdoc/exportCurrentMap.ts` | Alias entry point for the same CLI |
+| `maps/<map>-<seed>.json` | Output; repo root (gitignored) |
+| `client/map-editor/src/io.ts#mapDataToDocument` | Reads a captured file into a `MapDoc` |
+| `client/map-editor/src/editorContext.ts#loadMapDataUrl` | Fetches a capture and rebuilds the world |
+| `client/map-editor/src/main.ts` | `?mapData=<url>` query parameter loads a capture at boot |
+| `client/map-editor/src/editorUi.ts` | "Load server map" button |
+
+```sh
+npx tsx server/src/mapdoc/cli.ts main --seed 218051654 --team-mode squad
+# -> Wrote maps/main-218051654.json (313 objects, 65 types)
+
+# or from the repo root
+pnpm capture-map main --seed 218051654 --team-mode squad
+```
+
+`--team-mode solo` (the default) is the 512px map, `duo`/`squad` the 720px one, matching
+`GameMap`'s own scale choice. Without `--seed` the map is regenerated until it has a river.
+
+Then, with `pnpm dev:client` running:
+
+```sh
+# 1. serve the capture: any path the dev server returns works, e.g. vite's public dir
+cp maps/main-218051654.json client/public/my-map.json
+# 2. open the editor with the capture
+chrome "http://127.0.0.1:3000/map-editor/?mapData=/my-map.json"
+```
+
+`?mapData=` is authoritative: it wins over the autosaved document and over the default, so a link
+reproduces exactly the captured map. The pane's **Load server map** button does the same at runtime.
+
+The document is deliberately **lossy**, because it has to rebuild through
+`EditorDisplay.addAuto`:
+
+- Only **top level** `mapGen` output is authored. Building/structure children are recreated by the
+  parent (so a rebuild cannot double walls or doors), and density spawns (`tree_01`, `bush_01`, ...)
+  are skipped because a `MapDef` regenerates them from `mapGen.densitySpawns[0]`.
+- **Fading decals are skipped** (`decal.lifetime` — the lights and explosions). Everything static
+  (`decal_vent_*`, `decal_pipes_*`, `decal_oil_*`, ...) is captured.
+- **Ground patches are captured**, not the decals that painted the floor, mirroring the editor's own
+  derived `mapMsg.groundPatches`.
+- **`ori` is folded into 0..3** and **stair side layers (2/3) fold to 0/1**, matching
+  `MapObjectEntry`.
+- Rivers keep their `MapRiverData` verbatim. The `MapMsg` wire cap of 8 points per river is only
+  applied by `normalizeDoc` (the editor document is not the wire message), so a captured 34-point
+  river survives the round trip.
+- `generateMapDoc` without a `--seed` retries until the map has a river, so a convenient default
+  document is never riverless.
+
+This is the *capture* half of phase 7. Making an authored document playable (a `MapDef` holding the
+object list, a `Map.init()` branch that spawns from it, grid/bounds registration) is unchanged and
+still open.
+
 

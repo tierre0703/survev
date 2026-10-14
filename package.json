@@ -11,6 +11,7 @@
     "dev:game": "cd server && pnpm dev:game",
     "dev:client": "cd client && pnpm dev",
     "build": "cd server && pnpm build && cd ../client && pnpm build",
+    "capture-map": "cd server && tsx src/mapdoc/cli.ts",
     "stressTest": "cd server && pnpm stressTest",
     "lint": "oxlint --fix; dprint fmt",
     "lint:ci": "oxlint; dprint check"

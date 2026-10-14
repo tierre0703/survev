@@ -1,11 +1,12 @@
 import { MapDefs } from "../../../shared/defs/mapDefs.ts";
 import { MapObjectDefs } from "../../../shared/defs/register.ts";
+import type { MapMsg } from "../../../shared/net/mapMsg.ts";
 import { math } from "../../../shared/utils/math.ts";
 import { util } from "../../../shared/utils/util.ts";
 import { v2, type Vec2 } from "../../../shared/utils/v2.ts";
 import type { ConfigManager } from "../../src/config.ts";
 import type { EditorDisplay } from "./editorDisplay.ts";
-import { exportJson, loadFromLocalStorage, saveToLocalStorage, toMapMsg } from "./io.ts";
+import { exportJson, loadFromLocalStorage, mapDataToDocument, saveToLocalStorage, toMapMsg } from "./io.ts";
 import { createDefaultDoc, type MapDoc, normalizeDoc } from "./mapDocument.ts";
 
 export interface EditorContextOptions {
@@ -174,6 +175,36 @@ export class EditorContext {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Loads a map captured by `server/src/mapdoc/captureMap.ts` (or by a
+     * `MapMsg` in the same JSON shape). Used when the page is opened with
+     * `?mapData=<url>`.
+     *
+     * The map key from the document is trusted only if it is a real `MapDef`;
+     * `loadDoc` -> `display.loadDocument` still validates it before loading
+     * assets.
+     */
+    async loadMapDataUrl(url: string) {
+        const res = await fetch(url);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status} for ${url}`);
+        }
+        const json: unknown = await res.json();
+        const raw = json as { mapData?: unknown } | null;
+        const mapData = (raw?.mapData && typeof raw.mapData === "object"
+            ? raw.mapData
+            : json) as Partial<MapMsg>;
+
+        const fallback = this.doc.mapName;
+        const candidate = mapData.mapName;
+        const mapName = typeof candidate === "string" && candidate in MapDefs
+            ? (candidate as MapDoc["mapName"])
+            : fallback;
+
+        this.loadDoc(mapDataToDocument(mapData, mapName));
+        return this.doc;
     }
 
     resetDoc() {
