@@ -50,7 +50,15 @@ export const zFindGamePrivateBody = z.object({
     ),
 });
 
-export type FindGamePrivateBody = z.infer<typeof zFindGamePrivateBody>;
+export type FindGamePrivateBody =
+    & z.infer<typeof zFindGamePrivateBody>
+    & {
+        /**
+         * Zones the client is willing to play in. Only used by the API server
+         * and by the team menu; the region game server ignores it.
+         */
+        zones?: string[];
+    };
 
 export type FindGamePrivateRes =
     | {

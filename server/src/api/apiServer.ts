@@ -7,11 +7,24 @@ import { GIT_VERSION } from "../utils/gitRevision.ts";
 import { defaultLogger, ServerLogger } from "../utils/logger.ts";
 import type { FindGamePrivateBody, FindGamePrivateRes } from "../utils/types.ts";
 
+// The last find_game response is cached per zone for a short time. This lets a
+// client retry the discovery request, e.g. after a lost response, reuse the join
+// token instead of consuming a new one. Join tokens are single use, so without
+// this the retry would always fail.
+const FIND_GAME_CACHE_TTL = 10 * 1000;
+
 class Region {
     data: (typeof Config)["regions"][string];
     playerCount = 0;
 
     lastUpdateTime = Date.now();
+
+    /**
+     * Cached find_game response, keyed by zone. This is the exact body
+     * returned to the region game server, so a cached response contains the
+     * join token that was generated for the player.
+     */
+    findGameCache: Record<string, { data: FindGamePrivateRes; lastUpdateTime: number }> = {};
 
     constructor(readonly id: string) {
         this.data = Config.regions[this.id];
@@ -41,9 +54,25 @@ class Region {
     }
 
     async findGame(body: FindGamePrivateBody): Promise<FindGamePrivateRes> {
+        // The API server dispatches by region, so the zone is only used as a
+        // cache key here. It already made sure the zones belong to this region.
+        const zone = body.zones?.[0] ?? "";
+
+        const cached = this.findGameCache[zone];
+        if (cached && Date.now() - cached.lastUpdateTime < FIND_GAME_CACHE_TTL) {
+            return cached.data;
+        }
+
         const data = await this.fetch<FindGamePrivateRes>("api/find_game", body);
         if (!data) {
             return { error: "find_game_failed" };
+        }
+
+        if (!("error" in data)) {
+            this.findGameCache[zone] = {
+                data,
+                lastUpdateTime: Date.now(),
+            };
         }
         return data;
     }
@@ -109,6 +138,15 @@ export class ApiServer {
     async findGame(body: FindGamePrivateBody): Promise<FindGamePrivateRes> {
         if (body.region in this.regions) {
             return await this.regions[body.region].findGame(body);
+        }
+
+        // Unknown regions are almost always a stale or misconfigured client, and
+        // clients also send the region in their zones. Try the requested zones
+        // before giving up on the request.
+        for (const zone of body.zones ?? []) {
+            if (zone in this.regions) {
+                return await this.regions[zone].findGame(body);
+            }
         }
         return { error: "invalid_region" };
     }
