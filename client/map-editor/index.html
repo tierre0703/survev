@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>survev.io Map Editor</title>
+        <meta
+            name="viewport"
+            content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=auto, user-scalable=no"
+        >
+        <link rel="icon" href="/favicon.ico" type="image/x-icon">
+        <link rel="stylesheet" href="./src/editor.css">
+    </head>
+
+    <body>
+        <input id="map-editor-file" type="file" accept="application/json, .json" style="display: none">
+        <div id="editor-ui"></div>
+        <div id="editor-side-ui"></div>
+        <div id="editor-help">
+            <b>Map Editor</b><br>
+            Left click: select &middot; drag: move &middot; Shift+click: multi-select &middot; Right drag: pan<br>
+            <b>P</b>: place at cursor &middot; <b>R</b>: rotate &middot; <b>F</b>: flip &middot; <b>Del</b>: delete
+            &middot;
+            <b>Ctrl+D</b>/<b>Ctrl+C</b>/<b>Ctrl+V</b>: duplicate/copy/paste<br>
+            <b>&larr;&uarr;&darr;&rarr;</b>: nudge (Ctrl/Shift: 5) &middot; <b>-</b>/<b>=</b>: scale &middot;
+            <b>Ctrl+Z</b>/<b>Ctrl+Y</b>: undo/redo &middot; <b>`</b>: jump to selection &middot;
+            <b>Wheel</b>: zoom &middot; <b>Esc</b>: deselect
+        </div>
+        <canvas tabindex="1" id="cvs"></canvas>
+        <div id="game-touch-area" style="display: none"></div>
+        <script type="module" src="./src/main.ts"></script>
+    </body>
+</html>

@@ -88,6 +88,10 @@ export default defineConfig(({ mode }) => {
                                 import.meta.dirname,
                                 "building-editor/index.html",
                             ),
+                            "map-editor": resolve(
+                                import.meta.dirname,
+                                "map-editor/index.html",
+                            ),
                         }
                         : {}),
                 },

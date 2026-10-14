@@ -94,6 +94,23 @@ export const BuildingEditorConfig = {
     showGrid: true,
 };
 
+/**
+ * UI/camera state for the map editor. The authored map document itself is
+ * deliberately *not* stored here: `ConfigManager.store()` runs on every `set`
+ * and would serialize the whole map to localStorage on each edit.
+ */
+export const MapEditorConfig = {
+    zoom: 1,
+    pos: v2.create(0, 0),
+    layer: 0,
+    object: "house_red_01",
+    ori: 0,
+    map: "main" as MapDefKey,
+    hideCeilings: false,
+    showGrid: true,
+    showBounds: false,
+};
+
 const defaultConfig = {
     anonPlayerNames: false,
     highResTex: true,
@@ -140,6 +157,7 @@ const defaultConfig = {
 
     debugHUD: debugHUDConfig,
     buildingEditor: BuildingEditorConfig,
+    mapEditor: MapEditorConfig,
 };
 
 export type ConfigType = typeof defaultConfig;

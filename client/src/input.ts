@@ -318,6 +318,7 @@ export class InputHandler {
 
 export enum Key {
     Backspace = 8,
+    Tab = 9,
     Enter = 13,
     Shift = 16,
     Control = 17,
@@ -345,17 +346,26 @@ export enum Key {
     E = 69,
     F = 70,
     G = 71,
+    H = 72,
+    I = 73,
+    J = 74,
+    K = 75,
     L = 76,
     M = 77,
     N = 78,
+    O = 79,
     P = 80,
     Q = 81,
     R = 82,
     S = 83,
     T = 84,
+    U = 85,
     V = 86,
     W = 87,
     X = 88,
+    Y = 89,
+    Z = 90,
+    Delete = 46,
     Windows = 91,
     ContextMenu = 93,
     F1 = 112,
@@ -372,8 +382,12 @@ export enum Key {
     F12 = 123,
     Plus = 187,
     Minus = 189,
+    // `Equal` is the unshifted key 187 (`=`); `Plus` above is its shifted form.
+    Equal = Plus,
     FwdSlash = 191,
     Tilde = 192,
+    // `Backquote` is the unshifted key 192 (`` ` ``); `Tilde` above is `~`.
+    Backquote = Tilde,
 }
 
 export enum MouseButton {

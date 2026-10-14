@@ -105,14 +105,17 @@ class Decal implements AbstractObject {
             // Adjust properties based on the gore level
             if (def.gore.tint !== undefined) {
                 const tint = lerpColor(this.goreT, def.img.tint, def.gore.tint);
-                this.decalRender!.setTint(tint);
+                this.decalRender?.setTint(tint);
             }
             if (def.gore.alpha !== undefined) {
-                this.decalRender!.spriteAlpha = math.lerp(
-                    this.goreT,
-                    def.img.alpha,
-                    def.gore.alpha,
-                );
+                const decalRender = this.decalRender;
+                if (decalRender) {
+                    decalRender.spriteAlpha = math.lerp(
+                        this.goreT,
+                        def.img.alpha,
+                        def.gore.alpha,
+                    );
+                }
             }
             if (def.gore.waterColor !== undefined && this.surface) {
                 this.surface.data.waterColor = lerpColor(
@@ -130,6 +133,51 @@ class Decal implements AbstractObject {
             }
         }
         this.isNew = false;
+    }
+
+    /**
+     * Pushes this decal's transform onto its sprite.
+     *
+     * Called from `DecalBarn.m_update` for every decal that has a render, so a
+     * decal on its way out still gets its sprite refreshed (the fade in
+     * `DecalRender.updateState` needs to be driven every frame).
+     *
+     * The one behaviour change from driving `DecalRender.update` off the barn's
+     * own list is the reclaim check below: in a live game the render is only
+     * recycled one server update after the decal is deleted, so it is defensive
+     * rather than a fix for normal play.
+     */
+    updateRender(dt: number, camera: Camera, renderer: Renderer) {
+        const decalRender = this.decalRender;
+        if (!decalRender || !decalRender.active) {
+            // The render was reclaimed by a newer decal (or freed). Drop this
+            // decal rather than pushing its transform through someone else's
+            // sprite.
+            this.active = false;
+            return;
+        }
+
+        decalRender.updateState(dt);
+
+        if (decalRender.deactivated && (!decalRender.fadeout || !!math.eqAbs(decalRender.fadeAlpha, 0))) {
+            decalRender.sprite.visible = false;
+            this.active = false;
+        }
+
+        const screenPos = camera.m_pointToScreen(decalRender.pos);
+        const screenScale = camera.m_pixels(decalRender.scale * decalRender.imgScale);
+        decalRender.sprite.position.set(screenPos.x, screenPos.y);
+        decalRender.sprite.scale.set(screenScale, screenScale);
+        decalRender.sprite.rotation = -decalRender.rot;
+        decalRender.sprite.alpha = decalRender.spriteAlpha
+            * (decalRender.inWater ? 0.3 : 1)
+            * decalRender.fadeAlpha;
+        renderer.addPIXIObj(
+            decalRender.sprite,
+            decalRender.layer,
+            decalRender.zIdx,
+            decalRender.zOrd,
+        );
     }
 }
 
@@ -217,18 +265,17 @@ class DecalRender {
         this.sprite.tint = color;
     }
 
-    update(dt: number, camera: Camera, renderer: Renderer) {
+    /**
+     * Advances the fade/flicker state. The transform is pushed by
+     * `Decal.updateRender` afterwards.
+     */
+    updateState(dt: number) {
         if (this.deactivated && this.fadeout) {
             this.fadeAlpha = math.lerp(dt * 3, this.fadeAlpha, 0);
             if (this.fadeAlpha < 0.01) {
                 this.fadeAlpha = 0;
             }
         }
-        if (!!this.deactivated && (!this.fadeout || !!math.eqAbs(this.fadeAlpha, 0))) {
-            this.sprite.visible = false;
-            this.active = false;
-        }
-
         if (this.flicker) {
             if (this.flickerCooldown < 0) {
                 this.flickerTarget = util.random(this.flickerMin, this.flickerMax);
@@ -243,13 +290,6 @@ class DecalRender {
                 this.flickerCooldown -= dt;
             }
         }
-        const screenPos = camera.m_pointToScreen(this.pos);
-        const screenScale = camera.m_pixels(this.scale * this.imgScale);
-        this.sprite.position.set(screenPos.x, screenPos.y);
-        this.sprite.scale.set(screenScale, screenScale);
-        this.sprite.rotation = -this.rot;
-        this.sprite.alpha = this.spriteAlpha * (this.inWater ? 0.3 : 1) * this.fadeAlpha;
-        renderer.addPIXIObj(this.sprite, this.layer, this.zIdx, this.zOrd);
     }
 }
 export class DecalBarn {
@@ -279,11 +319,10 @@ export class DecalBarn {
             if (decal.active) {
                 decal.update(dt);
             }
-        }
-        for (let i = 0; i < this.decalRenders.length; i++) {
-            const decalRender = this.decalRenders[i];
-            if (decalRender.active) {
-                decalRender.update(dt, camera, renderer);
+            // `decalRender` is only allocated by an `isNew` full update, so a
+            // decal without one has never been shown.
+            if (decal.decalRender) {
+                decal.updateRender(dt, camera, renderer);
             }
         }
     }
