@@ -68,6 +68,12 @@ public:
     explicit Map(pix::Factory* factory, bool canvasMode);
 
     void loadMap(const MapMsg& msg, Camera& camera);
+    // map.ts `clear()`: frees every pooled obstacle/building/structure and
+    // clears the per-match id sets. Called by loadMap so a reused Map never
+    // renders a previous match's objects. (The other barns' pools are reused
+    // across matches in the web client too; only map.ts's are reset here.) The
+    // ObjectCreator's id->object map is reset by GameWorld::loadMap.
+    void resetObjectPools();
     void renderTerrain(pix::Graphics* gfx, float gridThickness, bool canvasMode, bool mapRender);
     void m_render(const Camera& camera);
     void update(float dt, GameWorld& ctx);

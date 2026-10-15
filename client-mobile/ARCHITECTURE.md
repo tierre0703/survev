@@ -462,5 +462,16 @@ Each step: `. tools/android-env.ps1`, `build-native`, `sync-content`,
 ## 10. Status / changelog
 
 * **2026-10-14** — document created; decisions A1–A4 recorded; supersedes
-  `plan.md` §5.6 D1 and `M7_REMAININGS.md`'s "native axmol UI" scope. No code
-  migrated yet: S1 is the next work item (`plan.md` §12, `REMAININGS.md` §5).
+  `plan.md` §5.6 D1 and `M7_REMAININGS.md`'s "native axmol UI" scope.
+* **2026-10-15** — **S1 implemented**. `src/app/UiHost.{h,cpp}` (engine-free
+  `UiHost`/`UiBridge` interfaces, no-op defaults, `installUiBridge`),
+  `src/app/UiBridge.cpp` (Android-only: JNI entry points for
+  `dev.axmol.app.SurvBridge`, the `AndroidUiHost` C++→Java callbacks, and the
+  config/l10n/loadout/audio writes into the shared `ui::Config`),
+  `src/ui/{L10nJson,NewsJson,SiteInfoJson}.*` (the documents Java reads),
+  `proj.android/app/src/dev/axmol/app/{SurvBridge,JavaUiHost,MenuFragment,Json}.java`
+  and the `AppActivity` container, plus `tests/test_bridge.cpp`. The S1 gate
+  (bridge round-trip visible in logcat) is exercised by
+  `JavaUiHost.probeBridge()` + `MenuFragment`'s self-test button. Gate status:
+  APK installs/builds, `surv_tests` green except the pre-existing
+  `update_full` fixture drift (see `REMAININGS.md` §6). **S2 is next.**

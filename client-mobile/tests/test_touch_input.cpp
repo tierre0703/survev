@@ -118,6 +118,9 @@ TEST(touch_pad_gfx_locked_scales_and_positions) {
     Touch t(kWidth, kHeight, true);
     PadGfxRecorder move;
     PadGfxRecorder aim;
+    // The zoom-driven offset scale is process-wide state on Touch (GameWorld
+    // publishes it every frame); pin it to the unscoped view for this test.
+    t.setPadOffsetScale(1.0f);
     t.m_update(move, aim);
 
     CHECK_EQ(move.updates, 1);
@@ -127,7 +130,10 @@ TEST(touch_pad_gfx_locked_scales_and_positions) {
     CHECK_NEAR(move.centerScale, 0.6f, 1e-6f);
     CHECK_NEAR(move.touchScale, 0.25f, 1e-6f);
     // Locked landscape offsets: left (126, 480-100), right (800-126, 380).
-    CHECK_NEAR(move.center.x, 126.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, 126.0f, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.x, 674.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.y, 380.0f, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.y, 380.0f, 1e-4f);
     CHECK_NEAR(move.center.y, 380.0f, 1e-4f);
     CHECK_NEAR(move.touch.x, 126.0f, 1e-4f);
     CHECK_NEAR(move.touch.y, 380.0f, 1e-4f);
@@ -148,14 +154,45 @@ TEST(touch_pad_gfx_locked_scales_and_positions) {
     CHECK_EQ(aim.visible, false);
 }
 
+// touch.ts `padOffsetScale`: the locked offsets (and the pad radius) scale with
+// the active player's zoom, so a scoped player moves the joysticks inward
+// proportionally and shifts their detect radius with them.
+TEST(touch_pad_offsets_scale_with_zoom) {
+    Touch t(kWidth, kHeight, true);
+    CHECK_NEAR(t.leftLockedPadCenter.x, 126.0f, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.x, 674.0f, 1e-4f);
+    CHECK_NEAR(t.padPosRange, 48.0f, 1e-4f);
+
+    t.setPadOffsetScale(1.5f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, 189.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.y, 480.0f - 150.0f, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.x, 800.0f - 189.0f, 1e-4f);
+    // The pad radius scales with the zoom too (padPosBase * padScaleBase *
+    // padOffsetScale), so the aim threshold moves with the offsets.
+    CHECK_NEAR(t.padPosRange, 72.0f, 1e-4f);
+
+    // A zoom <= 0 is ignored (keep the last valid scale).
+    t.setPadOffsetScale(0.0f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, 189.0f, 1e-4f);
+
+    // Back to the unscoped view.
+    t.setPadOffsetScale(1.0f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, 126.0f, 1e-4f);
+    CHECK_NEAR(t.padPosRange, 48.0f, 1e-4f);
+}
+
 // "Anywhere" style: the ring centre follows the touch-down point, and the dot
 // follows the finger (clamped to padPosRange).
 TEST(touch_pad_gfx_anywhere_follows_touch) {
     Touch t(kWidth, kHeight, true);
     PadGfxRecorder move;
     PadGfxRecorder aim;
+    // The zoom-driven offset scale shifts the locked centres; the anywhere
+    // style must not depend on it, so pin it to the unscoped view.
+    t.setPadOffsetScale(1.0f);
     t.setMoveStyle(TouchStyle::Anywhere);
     setMovePull(t, 20.0f, 0.0f); // posDown (100,380), pos (146,380)
+    t.getMovement(kWidth);
     t.m_update(move, aim);
 
     CHECK_NEAR(move.center.x, 100.0f, 1e-4f);

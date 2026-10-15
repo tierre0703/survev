@@ -85,10 +85,53 @@ void Map::loadMap(const MapMsg& msg, Camera& camera) {
     places = msg.places;
     objects = msg.objects;
     groundPatches = msg.groundPatches;
+    // map.ts drops the previous match's objects on a (re)load. GameWorld reuses
+    // a single Map across matches, so the obstacle/building pools must be reset
+    // here or the new match would render/query the old map's survivors. The
+    // ObjectCreator's id->object map is reset by GameWorld::loadMap (map.ts
+    // `clear()` also resets the creator, but the creator is owned there).
+    resetObjectPools();
     mapLoaded = true;
 
     groundGfx->clear();
     renderTerrain(groundGfx, 2.0f / camera.m_ppu, _canvasMode, false);
+}
+
+void Map::resetObjectPools() {
+    // map.ts `clear()` walks the pools with m_free and then empties the
+    // per-match suppression lists. The pools keep their allocations (Pool<T>
+    // has no shrink path) but every survivor is deactivated so a pooled reload
+    // cannot hand out a stale object.
+    // Pool::m_free decrements the active count, so only live objects may be
+    // freed; the pools keep their (now inactive) allocations for reuse.
+    if (obstaclePool.activeCount() > 0) {
+        for (auto* obstacle : obstaclePool.m_getPool()) {
+            if (obstacle->active) {
+                obstaclePool.m_free(obstacle);
+            }
+        }
+    }
+    if (buildingPool.activeCount() > 0) {
+        for (auto* building : buildingPool.m_getPool()) {
+            if (building->active) {
+                buildingPool.m_free(building);
+            }
+        }
+    }
+    if (structurePool.activeCount() > 0) {
+        for (auto* structure : structurePool.m_getPool()) {
+            if (structure->active) {
+                structurePool.m_free(structure);
+            }
+        }
+    }
+    deadObstacleIds.clear();
+    deadCeilingIds.clear();
+    solvedPuzzleIds.clear();
+    lootDropSfxIds.clear();
+    // The biome camera emitter outlives the map def; GameWorld::loadMap stops
+    // it after this returns, so drop the pointer here to avoid a dangling read.
+    cameraEmitter = nullptr;
 }
 
 void Map::renderTerrain(pix::Graphics* g, float gridThickness, bool canvasMode, bool mapRender) {

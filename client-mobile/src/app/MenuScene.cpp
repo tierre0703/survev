@@ -4,6 +4,8 @@
 #include "../net/WebSocketConnection.h"
 #include "../net/WsUrl.h"
 #include "../ui/Files.h"
+#include "../ui/NewsJson.h"
+#include "../ui/SiteInfoJson.h"
 #include "../ui/UiOverlay.h"
 #include "../audio/AudioManager.h"
 
@@ -118,7 +120,7 @@ bool MenuScene::init() {
     // find_game/join-URL tracing below (and re-enables axmol's debug logging).
     _devLog = ax::UserDefault::getInstance()->getStringForKey(dev::kKeyDebug, "0") == "1";
     if (_devLog) {
-        ax::setLogLevel(ax::LogLevel::DEBUG);
+        ax::setLogLevel(ax::LogLevel::Debug);
         AXLOGI("[dev] region={} api={} local={}", _region, _apiUrl,
                _apiUrl.find("127.0.0.1") != std::string::npos ? "yes" : "no");
     }
@@ -292,6 +294,7 @@ void MenuScene::populateRegions() {
         const auto alive = weak.lock();
         if (!alive || !*alive) return;
         _siteInfo = std::move(info);
+        _siteInfoJson = menuui::siteInfoToJson(_siteInfo);
         if (!_siteInfo.pops.empty()) {
             bool found = false;
             for (const auto& pop : _siteInfo.pops) {
@@ -378,6 +381,18 @@ void MenuScene::cancelPending() {
     }
     clearError();
     refreshUi();
+}
+
+// S1 bridge surface: the Java menu renders the same bundled news column
+// (ARCHITECTURE.md §5.1 — News stays data in C++).
+std::string MenuScene::newsJson() const {
+    return menuui::newsToJson(menuui::newsEntries());
+}
+
+void MenuScene::saveConfig() {
+    if (_config) {
+        _config->save();
+    }
 }
 
 void MenuScene::setError(const std::string& l10nKey, const std::string& fallback) {

@@ -29,15 +29,29 @@ import android.os.Bundle;
 import dev.axmol.lib.AxmolActivity;
 import dev.axmol.lib.SharedLoader;
 import android.os.Build;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.WindowManager.LayoutParams;
+import android.widget.FrameLayout;
 
 public class AppActivity extends AxmolActivity {
     static {
         // DNT remove, some android simulator require explicit load shared libraries, otherwise will crash
         SharedLoader.load();
     }
-    
+
+    private static AppActivity sCurrent;
+    private JavaUiHost mJavaUi;
+
+    /**
+     * The live activity, for the bridge's C++ -> Java callbacks (they arrive on
+     * the GL thread and must be posted to the UI thread; see SurvBridge.post).
+     */
+    public static AppActivity current() {
+        return sCurrent;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.setEnableVirtualButton(false);
@@ -58,7 +72,40 @@ public class AppActivity extends AxmolActivity {
             getWindow().setAttributes(lp);
         }
         // DO OTHER INITIALIZATION BELOW
-        
+        sCurrent = this;
+        installJavaUi();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (sCurrent == this) {
+            sCurrent = null;
+        }
+        super.onDestroy();
+    }
+
+    /**
+     * Adds the Java UI layer above the axmol GLSurfaceView (ARCHITECTURE.md
+     * section 3.2 rule 1). `mFrameLayout` already exists here because
+     * `super.onCreate` ran AxmolActivity.init(); the container is added after
+     * the GL surface so the Java screens draw on top of the game canvas.
+     */
+    private void installJavaUi() {
+        if (mFrameLayout == null) {
+            return;
+        }
+        FrameLayout container = new FrameLayout(this);
+        container.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        container.setVisibility(View.VISIBLE);
+        // The container must not swallow touches: it hosts the Java screens, the
+        // GLSurfaceView below keeps receiving input for the world/touch pads.
+        container.setClickable(false);
+        container.setFocusable(false);
+        mFrameLayout.addView(container);
+        mJavaUi = new JavaUiHost(this, container);
+        SurvBridge.setHost(mJavaUi);
+        mJavaUi.install();
     }
 
 }

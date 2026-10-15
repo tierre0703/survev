@@ -506,6 +506,9 @@ public:
     std::vector<BulletVisual*> bullets;
     void spawn(pix::Factory* factory, const Bullet& data);
     void update(float dt, GameWorld& ctx);
+    // bullet.ts: mid-flight visuals are match state, so a new map drops any
+    // that are still alive instead of stepping them into the next match.
+    void clear();
 };
 
 // --- explosion.ts (visual only) -------------------------------------------
@@ -655,6 +658,9 @@ public:
     Particle* addRippleParticle(pix::Factory* factory, const Vec2& pos, int layer, uint32_t color);
     Emitter* addEmitter(pix::Factory* factory, const std::string& type, const EmitterOptions& opts);
     void update(float dt, GameWorld& ctx);
+    // particles.ts `clear()`: every particle/emitter belongs to the match that
+    // spawned it, so a reused GameWorld must drop them all on the next map load.
+    void clear();
 };
 
 // --- player.ts skeletal rendering -----------------------------------------

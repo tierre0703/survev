@@ -26,6 +26,7 @@ add_executable(surv_tests
     test_objects.cpp
     test_audio.cpp
     test_ui.cpp
+    test_bridge.cpp
     ${SURV_SRC}/net/Net.cpp
     ${SURV_SRC}/net/WsUrl.cpp
     ${SURV_SRC}/game/Game.cpp
@@ -46,9 +47,14 @@ add_executable(surv_tests
     ${SURV_SRC}/ui/Config.cpp
     ${SURV_SRC}/ui/Device.cpp
     ${SURV_SRC}/ui/Localization.cpp
+    ${SURV_SRC}/ui/L10nJson.cpp
+    ${SURV_SRC}/ui/NewsJson.cpp
+    ${SURV_SRC}/ui/SiteInfoJson.cpp
     ${SURV_SRC}/ui/TeamMenu.cpp
     ${SURV_SRC}/ui/Loadout.cpp
     ${SURV_SRC}/ui/Layout.cpp
+    ${SURV_SRC}/ui/News.cpp
+    ${SURV_SRC}/app/UiHost.cpp
 )
 target_include_directories(surv_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}

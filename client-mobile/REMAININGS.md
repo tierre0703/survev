@@ -12,10 +12,13 @@ This file is a **summary/index**; the detailed work orders live in:
   FairyGUI, every other screen = Android Java, one JNI bridge (`SurvBridge`).**
   Read §5 (move matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **88 host tests / 1746 assertions green** (after §6),
-x86_64 `libSurvevMobile.so` builds, APK packages and installs, `logcat -b crash`
-empty across the recorded flows. **No UI migration code has landed yet: S1 of
-`ARCHITECTURE.md` §7 is the next work item.**
+Latest recorded state: **S1 of the UI migration has landed** (`ARCHITECTURE.md`
+§7): the JNI `SurvBridge` (`UiHost`/`UiBridge` seam, `src/app/UiBridge.cpp` +
+`proj.android/app/src/dev/axmol/app/*.java`) exists, the Java UI container is
+mounted above the GL surface, and the config/l10n/news/site-info round-trip is
+host-tested (**93 host tests green**, `tests/test_bridge.cpp`). x86_64
+`libSurvevMobile.so` builds and the APK packages/installs. S2 (FairyGUI
+`HUD_pkg`/`Touch_pkg`) is the next work item.
 
 ---
 
@@ -30,7 +33,7 @@ empty across the recorded flows. **No UI migration code has landed yet: S1 of
 | M4 | Rendering | **done, latest verified** | terrain/island hole, obstacles, buildings + ceilings, particles, decals, gas, skeletal player. |
 | M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; joystick gfx is a placeholder shape; aim-line dots missing. |
 | M6 | Audio | **partial** | engine + mixer + ambience done; only a handful of events are wired (see §3.4). |
-| M7 | UI layer | **architecture changed 2026-10-14** | native axmol menu/loadout/team/HUD/pause exist but are being **replaced** per `ARCHITECTURE.md`: gameplay HUD → axmol + **FairyGUI**, all other screens → **Android Java** over the `SurvBridge` JNI bridge. Migration steps S1–S7; nothing deleted until its Java/FairyGUI replacement lands. |
+| M7 | UI layer | **S1 landed 2026-10-15** | the JNI `SurvBridge` seam (`src/app/UiHost.{h,cpp}`, `src/app/UiBridge.cpp`, `proj.android/app/src/dev/axmol/app/{SurvBridge,JavaUiHost,MenuFragment,Json,AppActivity}.java`) is in place: gameplay stays axmol, the Java container sits above the GL surface, config/l10n/loadout/news/site-info round-trip through the bridge. Gameplay HUD → axmol + **FairyGUI** (S2), menu/loadout/team/pause → **Android Java** (S3–S6). |
 | M8 | Accounts / API | **not started** | login/profile/team-link/quests/pass. |
 | M9 | Polish & release | **not started** | lifecycle, perf, soak, store-ready AAB. |
 
@@ -210,14 +213,17 @@ from the host build (see `ARCHITECTURE.md` §4.1, §6.2).
 
 ## 5. Suggested next queue
 
-0. **S1 of the UI migration (`ARCHITECTURE.md` §7)** — the `UiHost` interface,
-   `src/app/UiBridge.cpp`, `SurvBridge.java`, the Java UI container in
-   `AppActivity`, and the config round-trip. Everything UI-shaped now depends
-   on this seam existing.
-1. **Touch aim-line dots + real pad sprites** — folds into S2 (FairyGUI
-   `Touch_pkg`), the most visible M5 parity gap.
-2. **On-device end-to-end pass** — menu → match → Quit, once Java drives the menu
-   (S3); until then the current C++ menu still works.
+0. ~~**S1 of the UI migration (`ARCHITECTURE.md` §7)**~~ — **done** (see the
+   session log below): the `UiHost`/`UiBridge` seam, `src/app/UiBridge.cpp`,
+   `SurvBridge.java`, the Java UI container in `AppActivity` and the
+   config/l10n/news/site-info round-trip are all in place.
+1. **S2 — FairyGUI `HUD_pkg`/`Touch_pkg`** (`third_party/fairygui` +
+   `tools/build-fgui.ps1`): the HUD (health/boost/ammo/killfeed/alive) and the
+   touch pads/aim line move from `UiOverlay`/`TouchPadGfx` into exported
+   packages. This also closes the M5 gaps (pad sprites, aim-line dots).
+2. **S3 — Java `MenuFragment` + `SurvApi`** (`SurvBridge.onJoinUrls`,
+   `onNativeMatchStarted`/`onNativeMatchEnded`): move matchmaking HTTP to OkHttp
+   and delete the C++ `StartMenu`.
 3. **Minimap/big map + `mapIndicator`** — needed for team pings and airdrop markers.
 4. **Audio event wiring** (bullets, footsteps, pickup, UI) — biggest feel gap.
 5. **Emote/ping wheel + `emote` barn** — touch UX feature with existing defs.
@@ -253,3 +259,37 @@ new `tests/test_objects.cpp` (6 tests: the new def tables, airdrop fall/land,
 plane reconcile/elevate/retire, flare growth + burnout, dual-wield shot recoil,
 and an airdrop through `UpdateMsg`). `dprint check` clean. On-device verification
 is manual (the user runs the emulator/APK pass).
+
+### Session 2 — S1: the JNI UI bridge
+
+`ARCHITECTURE.md` §7 step **S1** is implemented: the seam the whole UI
+migration depends on now exists, and the app is unchanged from the player's
+point of view (gameplay still renders, the C++ menu is still the real menu).
+
+| Piece | Where |
+|---|---|
+| `UiBridge`/`UiHost` interfaces + safe no-op defaults + process-wide slots | `src/app/UiHost.h` / `UiHost.cpp` (host-testable, engine-free). |
+| The Android implementation: JNI entry points + C++ → Java callbacks, config/l10n/loadout/audio writes into the same `ui::Config` | `src/app/UiBridge.cpp` (Android-only; `installUiBridge` from `AppDelegate`). |
+| Java bridge class + UI host + S1 menu + tiny JSON reader | `proj.android/app/src/dev/axmol/app/{SurvBridge,JavaUiHost,MenuFragment,Json}.java`. |
+| Java UI container (`FrameLayout`) above the GL surface | `AppActivity.installJavaUi()`. |
+| Bridge JSON documents | `ui/L10nJson.{h,cpp}` (flat `{"key":"text"}` table), `ui/NewsJson.*` (news array), `ui/SiteInfoJson.*` (site-info snapshot), `MenuScene::newsJson()`/`siteInfoJson()`/`config()`. |
+| Tests | `tests/test_bridge.cpp` (5 tests): slot defaults + host notifications, l10n flattening/encoding, config round-trip + `Loadout::joinInfo`, news shape, site-info document. |
+
+**APK verification (this session):** `libSurvevMobile.so` links for x86_64,
+`SurvevMobile-debug.apk` (44.9 MB) packages/signs/verifies (v2+v3), and the
+package now contains `classes.dex` with `dev.axmol.app.{SurvBridge,JavaUiHost,
+MenuFragment,Json}` plus all 17 `Java_dev_axmol_app_SurvBridge_*` JNI exports in
+the `.so` (checked with `llvm-nm`), so both halves of the bridge are in the
+build. On-device logcat verification (`JavaUiHost` lines + the `SurvBridge`
+round-trip) is still pending a running emulator.
+
+**Verification:** `surv_tests` green for every test except `update_full`
+(`test_messages.cpp`), which fails **independently of this work**: the
+`update-full` fixture in `tests/ReferenceData.h` predates the `zoom`/
+`actionDirty` active-player fields, so the fixture and the current serializer
+disagree in the 4 bytes after the health value (byte 33 of the frame). It fails
+identically with `src/` at HEAD (verified by stashing this session's changes),
+so it is a pre-existing protocol-fixture drift to be regenerated
+(`node tools/gen_reference.mjs`) or re-based deliberately — **not** a regression
+from S1. The Java UI compiles under the APK pipeline's `-source 8 -target 8`
+(no lambdas/AndroidX; see `BUILDING.md`).

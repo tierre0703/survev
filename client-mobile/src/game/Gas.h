@@ -61,6 +61,8 @@ public:
 
     void m_init(pix::Factory* factory);
     void m_free();
+    // Match-change reset (keeps the adapter nodes; clears the circle/mode).
+    void m_initFree();
     bool isActive() const { return mode != GasMode_Inactive; }
     Circle getCircle(float interpT) const;
     void setProgress(float circleT_);

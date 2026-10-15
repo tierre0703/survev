@@ -516,7 +516,7 @@ client-mobile/build-tests/Release/surv_tests.exe
 3. **M5**: input → `InputMsg` is implemented and host-tested (`TouchInput.h` +
    `GameScene::updateInput`); remaining is on-device verification of
    move/aim/fire once M4 rendering lands.
-4. **M7**: UI split per `ARCHITECTURE.md` — first the **S1 bridge** (`UiHost` +
-   `SurvBridge.java` + the Java UI container), then **S2** FairyGUI gameplay HUD,
-   then the Java menu/loadout/team screens (§7). The axmol-side UI toolkit is
-   deleted as each Java screen lands.
+4. **M7**: UI split per `ARCHITECTURE.md` — **S1 (the `UiHost` +
+   `SurvBridge.java` bridge + the Java UI container) landed 2026-10-15**, then
+   **S2** FairyGUI gameplay HUD, then the Java menu/loadout/team screens (§7).
+   The axmol-side UI toolkit is deleted as each Java screen lands.

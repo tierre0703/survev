@@ -133,6 +133,26 @@ std::string Localization::translate(const std::string& key) const {
     return out;
 }
 
+std::map<std::string, std::string> Localization::flattened() const {
+    // English first, then the active locale on top: exactly the lookup order
+    // `translate` uses, so a key that only exists in en.json is still visible
+    // to the Java UI (it would otherwise render its raw key).
+    std::map<std::string, std::string> table;
+    auto english = _tables.find("en");
+    if (english != _tables.end()) {
+        table = english->second;
+    }
+    if (_locale != "en") {
+        auto current = _tables.find(_locale);
+        if (current != _tables.end()) {
+            for (const auto& entry : current->second) {
+                table[entry.first] = entry.second;
+            }
+        }
+    }
+    return table;
+}
+
 std::string Localization::localeName(const std::string& code) const {
     for (int i = 0; i < kLocaleCount; i++) {
         if (code == kLocales[i].code) {

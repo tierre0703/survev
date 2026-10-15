@@ -130,6 +130,17 @@ void Gas::m_init(pix::Factory* factory) {
 
 void Gas::m_free() { gasRenderer.m_free(); }
 
+// Reset for a new match (GameWorld::loadMap). Unlike m_free this leaves the
+// adapter nodes alone: it only clears the simulation state, so the overlay
+// cannot show the previous match's circle before the first map/gas message.
+void Gas::m_initFree() {
+    mode = GasMode_Inactive;
+    circleT = circleTOld = 0.0f;
+    duration = 0.0f;
+    interpolationT = 0.0f;
+    circleOld = circleNew = {Vec2(), 0.0f};
+}
+
 Gas::Circle Gas::getCircle(float interpT) const {
     const float t = mode == GasMode_Moving ? math::lerp(interpT, circleTOld, circleT) : 0.0f;
     return {v2Lerp(t, circleOld.pos, circleNew.pos),

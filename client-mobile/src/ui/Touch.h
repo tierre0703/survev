@@ -47,6 +47,11 @@ public:
     float padPosRange = 0.0f;
     float movePadDetectMult = 1.0f;
     float shotPadDetectMult = 1.075f;
+    // The web client scales the locked pad offsets by the on-screen zoom
+    // (touch.ts `padOffsetScale`): at a wider zoom the pads sit proportionally
+    // further in. 1.0 = the unscoped view; GameWorld publishes the active
+    // player's zoom each frame.
+    float padOffsetScale = 1.0f;
 
     bool moveDetected = false;
     bool shotDetected = false;
@@ -87,24 +92,67 @@ public:
     };
     Pad pads[2];
 
+    // Last resize arguments, so `setPadOffsetScale` can re-derive the centers.
+    float _screenWidth = 0.0f;
+    float _screenHeight = 0.0f;
+    bool _landscape = true;
+    // The last `padOffsetScale` the locked centers were derived with.
+    float _appliedOffsetScale = 1.0f;
+
     explicit Touch(float screenWidth, float screenHeight, bool isLandscape) {
         resize(screenWidth, screenHeight, isLandscape);
     }
 
-    // Left/right locked pad centers, re-derived on resize.
+    // Left/right locked pad centers, re-derived on resize (and whenever the
+    // zoom-driven `padOffsetScale` changes).
     void resize(float screenWidth, float screenHeight, bool isLandscape) {
         padScaleBase = isLandscape ? 1.0f : 0.8f;
-        padPosRange = padPosBase * padScaleBase;
+        // The GeoJSON-ish zoom scale may have been published since the last
+        // resize; fold it into the pad geometry (touch.ts padOffsetScale).
+        padPosRange = padPosBase * padScaleBase * padOffsetScale;
 
-        const float offX = isLandscape ? 126.0f : 96.0f;
-        const float offY = isLandscape ? 100.0f : 160.0f;
+        _screenWidth = screenWidth;
+        _screenHeight = screenHeight;
+        _landscape = isLandscape;
+        const float offX = (isLandscape ? 126.0f : 96.0f) * padOffsetScale;
+        const float offY = (isLandscape ? 100.0f : 160.0f) * padOffsetScale;
         leftLockedPadCenter = Vec2(offX, screenHeight - offY);
         rightLockedPadCenter = Vec2(screenWidth - offX, screenHeight - offY);
+        _appliedOffsetScale = padOffsetScale;
     }
 
     // Returns true if a touch on the left side should control movement.
     bool isLeftSideTouch(float posX, float screenWidth) const {
         return posX < screenWidth * 0.5f;
+    }
+
+    // touch.ts `padOffsetScale`: the locked offsets (and the pad radius) grow
+    // with the active player's zoom, so the joysticks keep their relative
+    // on-screen position when the view widens (1.0 = the unscoped view).
+    void setPadOffsetScale(float scale) {
+        if (scale <= 0.0f || scale == padOffsetScale) {
+            return;
+        }
+        padOffsetScale = scale;
+        resize(_screenWidth, _screenHeight, _landscape);
+        updatePadLayout(moveStyle, true);
+        updatePadLayout(aimStyle, false);
+    }
+
+    // Re-derives one pad's drawn centre/dot from its last move/aim sample.
+    // getMovement/getAim run before the draw pass each frame, so a resize or
+    // zoom change between frames is picked up without losing the sample.
+    void updatePadLayout(TouchStyle::Value style, bool movePad) {
+        const Vec2& locked = movePad ? leftLockedPadCenter : rightLockedPadCenter;
+        Pad& pad = pads[movePad ? 0 : 1];
+        if (pad.touched && style == TouchStyle::Anywhere) {
+            pad.centerPos = pad.touchPos;
+        } else {
+            pad.centerPos = locked;
+        }
+        if (!pad.touched) {
+            pad.touchPos = locked;
+        }
     }
 
     Movement getMovement(float screenWidth) {
@@ -212,12 +260,26 @@ public:
     // mirror touch.ts (`padScaleBase * padScaleDown` / `* padScalePos`); the
     // axmol implementation maps them onto the texture it loaded.
     void m_update(PadGraphics& movePad, PadGraphics& aimPad) {
+        // GameScene publishes the active player's zoom here every frame; the
+        // host tests drive m_update directly, so make sure the locked centers
+        // and the pad layout reflect the current scale before reading them.
+        if (padOffsetScale != _appliedOffsetScale) {
+            resize(_screenWidth, _screenHeight, _landscape);
+        }
         for (int i = 0; i < 2; i++) {
             PadGraphics* gfx = i == 0 ? &movePad : &aimPad;
-            const Pad& pad = pads[i];
+            // getMovement/getAim (which publish the pad centres) only run while
+            // a match is live; when they are idle the pads keep their locked
+            // position, so refresh that here rather than drawing a stale centre.
+            const Vec2& locked = i == 0 ? leftLockedPadCenter : rightLockedPadCenter;
+            if (pads[i].centerPos.x == 0.0f && pads[i].centerPos.y == 0.0f) {
+                gfx->setCenterPos(locked.x, locked.y);
+                gfx->setTouchPos(locked.x, locked.y);
+            } else {
+                gfx->setCenterPos(pads[i].centerPos.x, pads[i].centerPos.y);
+                gfx->setTouchPos(pads[i].touchPos.x, pads[i].touchPos.y);
+            }
             gfx->setVisible(display);
-            gfx->setCenterPos(pad.centerPos.x, pad.centerPos.y);
-            gfx->setTouchPos(pad.touchPos.x, pad.touchPos.y);
             gfx->setCenterScale(padScaleBase * padScaleDown);
             gfx->setTouchScale(padScaleBase * padScalePos);
             gfx->update();

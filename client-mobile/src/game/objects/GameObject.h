@@ -70,6 +70,18 @@ public:
 
     int activeCount() const { return _activeCount; }
 
+    // Deactivates every object without shrinking the pool (Pool<T> keeps its
+    // allocations for reuse). Used on a match change, where the barn/creator
+    // tables are rebuilt but the objects themselves are recycled.
+    void clear() {
+        for (auto& p : _pool) {
+            p->m_free();
+            p->active = false;
+        }
+        _activeCount = 0;
+        rebuild();
+    }
+
 private:
     void rebuild() const {
         _raw.clear();
@@ -102,6 +114,16 @@ public:
     void deleteObj(uint16_t id);
 
     const std::vector<AbstractObject*>& objects() const { return _order; }
+
+    // objectPool.ts `Creator.reset()`: drop every id->object mapping so a new
+    // match never resolves ids against a previous match's pool entries. The
+    // pools keep their objects (they are reused), but a stale `_order` entry
+    // would make the world hand out an object a pooled reload has since
+    // re-initialised, so it is cleared here too.
+    void reset() {
+        _idToObj.clear();
+        _order.clear();
+    }
 
 private:
     std::unordered_map<uint8_t, std::function<AbstractObject*()>> _alloc;

@@ -106,3 +106,26 @@ Gradle, stop the Astrill `ASProxy` service (admin) or whitelist `java.exe`.
   FairyGUI packages exist, and `proj.android/app/libs/*.jar` are linked into
   `javac`/`d8` by `build-apk.ps1`. See `ARCHITECTURE.md` §6 for the UI split,
   the FairyGUI export step and the OkHttp vendoring rule.
+
+## Java UI build without Gradle (S1)
+
+`tools/build-apk.ps1` compiles `proj.android/app/src/**/*.java` (the axmol
+`dev.axmol.lib` sources plus our `dev.axmol.app.*` bridge/UI classes) with
+`javac -source 8 -target 8`, so **only Java 8 APIs are available**. In
+particular `java.util.function.*` and AndroidX are *not* on the classpath: write
+the UI with the platform `View`/`View.OnClickListener` types (anonymous inner
+classes) rather than lambdas.
+
+The Java UI layer for the S1 bridge step is:
+
+| File | Role |
+|---|---|
+| `src/dev/axmol/app/SurvBridge.java` | the single JNI bridge: `native` methods (C++ implementations in `src/app/UiBridge.cpp`) + the `onNative*` handlers the C++ side calls. |
+| `src/dev/axmol/app/JavaUiHost.java` | owns the `surv_java_ui` `FrameLayout` above the GL surface and switches between screens; the Java end of the C++ callbacks. |
+| `src/dev/axmol/app/MenuFragment.java` | the S1 stand-in menu (name field + bridge self test); replaced by the real menu in S3. |
+| `src/dev/axmol/app/Json.java` | tiny key reader for the bridge JSON (config/l10n/news). |
+| `src/dev/axmol/app/AppActivity.java` | adds the Java UI container after `super.onCreate()`. |
+
+The APK build does not need extra flags for these — it globs
+`proj.android/app/src` already. When OkHttp is vendored (S3, `app/libs/*.jar`)
+the same script links and dexes it.

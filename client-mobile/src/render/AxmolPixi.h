@@ -137,6 +137,13 @@ public:
             _parentNode->removeChild(this);
         }
     }
+    void removeAllChildren() override {
+        auto kids = _children; // removeChild mutates `_children`
+        for (Node* child : kids) {
+            removeChild(child);
+        }
+        _children.clear();
+    }
     Node* getParent() const override { return _parentNode; }
     void setParent(Node* parent) override { _parentNode = parent; }
     int getChildIndex(Node* child) const override {

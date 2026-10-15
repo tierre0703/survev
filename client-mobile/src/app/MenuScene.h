@@ -69,6 +69,14 @@ public:
     bool isInMenu() const { return !_inGame; }
     bool isPending() const { return _pending; }
     const uikit::Config& config() const { return *_config; }
+    // Mutable access to the config blob for the JNI bridge: Java edits the same
+    // `ui::Config` the C++ menu reads, so there is one source of truth
+    // (ARCHITECTURE.md §5.3). Never null after init().
+    uikit::Config& config() { return *_config; }
+    uikit::Localization& localization() { return *_loc; }
+    // Cached GET /api/site_info response for the Java UI ("" until the first
+    // fetch responds; the C++ menu does the request today).
+    std::string siteInfoJson() const { return _siteInfoJson; }
     Game::JoinInfo joinInfo() const { return uikit::Loadout(_config.get()).joinInfo(); }
     void bindGame(GameScene* game);
     // The scaled design-space UI root (also used by the in-game HUD/pause
@@ -94,6 +102,16 @@ public:
     // Aborts an in-flight matchmaking request and restores the main menu. Wired
     // to the matchmaking overlay's "Back to Main Menu" button.
     void cancelPending();
+
+    // --- S1 bridge surface (ARCHITECTURE.md §7) ---------------------------
+    // Quick-start a mode on behalf of the Java menu (the C++ menu calls the
+    // same code path through its own buttons).
+    void quickStartFromBridge(int teamMode) { quickStart(teamMode); }
+    // Sidebar column: the bundled news entries as a JSON array (the Java menu
+    // renders them; see ui::News::toJson).
+    std::string newsJson() const;
+    // Persist the config blob (Java calls this before backgrounding).
+    void saveConfig();
 
     // The overlay is owned by the menu and handed to the game scene.
     uikit::UiOverlay* overlay() const { return _overlay.get(); }
@@ -151,6 +169,10 @@ private:
     std::vector<ax::Label*> _teamPlayerLabels;
 
     SiteInfo _siteInfo;
+    // Raw JSON of the last /api/site_info response (the Java UI reads this via
+    // SurvBridge.getSiteInfoJson once Java owns matchmaking; S1 keeps it as a
+    // snapshot only).
+    std::string _siteInfoJson;
     GameHooks _hooks;
     // Dev-only: set `debug.surv_debug` to 1 to log the find_game request and
     // every advertised join URL (needed when the emulator cannot reach the

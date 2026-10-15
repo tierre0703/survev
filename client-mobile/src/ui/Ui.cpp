@@ -95,14 +95,14 @@ ax::Label* makeLabel(const std::string& text, float size, bool bold, bool bulk) 
         const std::string face = fontPath(kGuiFamily, bold);
         if (!face.empty() && ax::FileUtils::getInstance()->isFileExist(face)) {
             // axmol substitutes a fixed ~12pt face whenever `createWithTTF` is
-            // given the (float) point size, so route through `createWithTTF`'s
-            // `FontDefinition` to get an integer point size, then scale the
-            // label by the content factor so it rasterises at the right size.
+            // given the (float) point size, so route through the `TTFConfig`
+            // overload to get an integer point size, then scale the label by the
+            // content factor so it rasterises at the right size.
             // (This is what `axmol::ui::RichText`/`Label::createWithTTF` do
             // internally for their own content-scale handling.)
-            ax::FontDefinition def;
-            def._fontName = face;
-            def._fontSize = static_cast<int>(size + 0.5f);
+            ax::TTFConfig def;
+            def.fontFilePath = face;
+            def.fontSize = static_cast<float>(static_cast<int>(size + 0.5f));
             if (auto* label = ax::Label::createWithTTF(def, text)) {
                 const float scale = ax::Director::getInstance()->getContentScaleFactor();
                 if (scale > 0.0f) {

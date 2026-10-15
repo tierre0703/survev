@@ -1353,6 +1353,25 @@ void BulletBarn::spawn(pix::Factory* factory, const Bullet& data) {
     b->gfx->setVisible(true);
 }
 
+void BulletBarn::clear() {
+    for (auto* b : bullets) {
+        if (!b) {
+            continue;
+        }
+        b->active = false;
+        if (b->gfx) {
+            b->gfx->setVisible(false);
+            b->gfx->clear();
+        }
+    }
+    // The visuals are heap-owned by the barn (not a Pool<T>), so drop them: the
+    // next spawn reallocates lazily and nothing references the old frames.
+    for (auto* b : bullets) {
+        delete b;
+    }
+    bullets.clear();
+}
+
 void BulletBarn::update(float dt, GameWorld& ctx) {
     for (size_t i = 0; i < bullets.size(); i++) {
         BulletVisual* b = bullets[i];
@@ -2249,6 +2268,19 @@ void ParticleBarn::update(float dt, GameWorld& ctx) {
             p->m_free();
         }
     }
+}
+
+void ParticleBarn::clear() {
+    for (auto* emitter : emitters) {
+        emitter->m_free();
+    }
+    for (auto* particle : particles) {
+        particle->m_free();
+    }
+    // particles.ts re-allocates these lazily; dropping the containers keeps the
+    // next match from stepping a previous match's (now inactive) objects.
+    emitters.clear();
+    particles.clear();
 }
 
 } // namespace surv

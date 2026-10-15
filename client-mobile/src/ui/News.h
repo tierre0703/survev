@@ -32,4 +32,9 @@ struct NewsEntry {
 // Newest first, mirroring the web client's `#news-block` order.
 const std::vector<NewsEntry>& newsEntries();
 
+// JSON re-encoding for the Java UI (`SurvBridge.getNewsJson`); implemented in
+// NewsJson.cpp. Declared here so the menu side can build the document without
+// pulling in the encoder's header too.
+std::string newsToJson(const std::vector<NewsEntry>& entries);
+
 } // namespace ui

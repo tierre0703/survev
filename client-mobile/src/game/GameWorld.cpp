@@ -132,6 +132,31 @@ bool GameWorld::mapLoaded() const {
 }
 
 void GameWorld::loadMap(const MapMsg& msg) {
+    // game.ts loads the map once per match. A reused GameWorld must therefore
+    // start from a clean object table: map.ts `clear()` empties the barns and
+    // resets the creator, otherwise ids from the previous match would resolve
+    // to pooled objects that still belong to it.
+    for (auto* obj : _creator->objects()) {
+        if (obj) {
+            obj->active = false;
+        }
+    }
+    _creator->reset();
+    _playerBarn->playerPool.clear();
+    _lootBarn->lootPool.clear();
+    _deadBodyBarn->deadBodyPool.clear();
+    _projectileBarn->projectilePool.clear();
+    _bulletBarn->clear();
+    _smokeBarn->m_smokePool.clear();
+    _particleBarn->clear();
+    _decalBarn->decalPool.clear();
+    _airdropBarn->airdropPool.clear();
+    _map->resetObjectPools();
+    _gas.m_initFree();
+    _lineSprites.m_free();
+    _renderer->reset();
+    _activePlayer = nullptr;
+    _activePlayerId = 0;
     _map->loadMap(msg, _camera);
     _particleBarn->valueAdjust = _map->mapDef.valueAdjust;
     _renderer->resize(*_map, _camera);

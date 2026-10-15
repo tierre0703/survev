@@ -72,8 +72,33 @@ void Renderer::addPIXIObj(pix::Node* obj, int layer_, int zOrd, int zIdx_) {
     _layerDirty[layerIdx] = true;
 }
 
-void Renderer::resize(Map& map, Camera& camera) {
-    _groundColor = map.mapLoaded ? map.mapDef.colors.underground : 1772803u;
+// New-match reset (GameWorld::loadMap). The assembly lists only ever hold live
+// objects, so clearing them here is what stops the next frame from masking or
+// stepping a pooled object that belongs to the previous match.
+void Renderer::reset() {
+    zIdx = 0;
+    layer = 0;
+    layerAlpha = 0.0f;
+    groundAlpha = 0.0f;
+    underground = false;
+    _objLayer.clear();
+    for (int i = 0; i < 4; i++) {
+        _layerDirty[i] = true;
+        if (layers[i]) {
+            layers[i]->removeAllChildren();
+        }
+    }
+    ground->clear();
+    ground->setAlpha(1.0f);
+    _groundAlphaDrawn = -1.0f;
+    layerMaskDirty = true;
+    layerMaskActive = false;
+    if (layerMask) {
+        layerMask->clear();
+    }
+}
+
+void Renderer::resize(Map& map, Camera& camera) {    _groundColor = map.mapLoaded ? map.mapDef.colors.underground : 1772803u;
     _groundAlphaDrawn = -1.0f;
     redrawGround(camera);
     layerMaskDirty = true;

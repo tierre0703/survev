@@ -31,6 +31,9 @@ public:
     Renderer(pix::Factory* factory, bool canvasMode);
 
     void m_free();
+    // Match-change reset (GameWorld::loadMap): detaches every assembled object
+    // and clears the per-match z-index/layer state.
+    void reset();
 
     void addPIXIObj(pix::Node* obj, int layer_, int zOrd, int zIdx = kNoZIdx);
     void setActiveLayer(int layer_) { this->layer = layer_; }

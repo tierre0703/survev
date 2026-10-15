@@ -427,7 +427,63 @@ Player* addGunPlayer(GameWorld& world, const std::string& weapon, float x, float
 bool lineVisible(GameWorld& world) {
     return world.lineSprites().container && world.lineSprites().container->isVisible();
 }
+
+// A bullet for the JustSpawned paths (the barn copies the server's fields).
+Bullet makeBullet(uint16_t playerId, float x, float y) {
+    Bullet bullet;
+    bullet.playerId = playerId;
+    bullet.startPos = Vec2(x, y);
+    bullet.pos = Vec2(x, y);
+    bullet.dir = Vec2(1.0f, 0.0f);
+    bullet.bulletType = "bullet_mosin";
+    bullet.layer = 0;
+    bullet.distance = 100.0f;
+    return bullet;
+}
 } // namespace
+
+// --- Match change (game.ts: a new MapMsg starts a new match) ---------------
+// Loading a second map into the same GameWorld must drop everything the first
+// match left behind: map.ts clear() empties the barns/creator, so a reused
+// world cannot render (or collide with) the previous match's objects.
+TEST(world_load_map_resets_objects) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(basicMap());
+
+    // First match: an obstacle, a live player and a bullet in flight.
+    Obstacle* obstacle = world.map().obstaclePool.m_alloc();
+    obstacle->__id = 11;
+    obstacle->__type = ObjectType_Obstacle;
+    obstacle->pos = Vec2(40.0f, 40.0f);
+    obstacle->active = true;
+    Player* player = addGunPlayer(world, "mosin", 100.0f, 100.0f);
+    CHECK_EQ(world.map().obstaclePool.activeCount(), 1);
+    CHECK(player->active);
+
+    world.bulletBarn().spawn(&factory, makeBullet(1, 100.0f, 100.0f));
+    CHECK_EQ(world.bulletBarn().bullets.size(), size_t(1));
+
+
+    // A second map arrives (a re-queued match on the same world).
+    world.loadMap(basicMap());
+
+    // map.ts drops the previous match's pooled objects and the creator table.
+    // The pooled instances themselves are recycled (the same Player allocation
+    // comes back for the new match), so the *id table* is what must be empty;
+    // the pointers below are only used to reach it.
+    (void)player;
+    (void)obstacle;
+    CHECK_EQ(world.map().obstaclePool.activeCount(), 0);
+    CHECK_EQ(world.playerBarn().playerPool.activeCount(), 0);
+    // The bullet was deleted (the barn owns its visuals); other pools reset too.
+    CHECK_EQ(world.bulletBarn().bullets.size(), size_t(0));
+    CHECK_EQ(world.lootBarn().lootPool.activeCount(), 0);
+    CHECK_EQ(world.decalBarn().decalPool.activeCount(), 0);
+    // The active player does not carry over into the new match.
+    CHECK(world.activePlayer() == nullptr);
+}
 
 // The gun def carries the barrel length + bullet type the line needs.
 TEST(aim_line_gun_def_fields) {

@@ -57,6 +57,12 @@ public:
 
     bool hasLocale(const std::string& locale) const;
 
+    // The flattened key -> text table for the current locale (English entries
+    // fill any key the locale does not translate, mirroring `translate`). Used
+    // by the JNI bridge to hand the whole table to the Java UI at once
+    // (ARCHITECTURE.md §5.3) and by the host tests.
+    std::map<std::string, std::string> flattened() const;
+
 private:
     std::string get(const std::string& locale, const std::string& key) const;
 

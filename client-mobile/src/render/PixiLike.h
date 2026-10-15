@@ -65,6 +65,10 @@ public:
     virtual void addChildAt(Node* child, int index) = 0;
     virtual void removeChild(Node* child) = 0;
     virtual void removeFromParent() = 0;
+    // Detaches every child (PIXI `removeChildren()`); used by the per-match
+    // renderer reset so pooled objects from the previous match are not left in
+    // a z-sorted layer.
+    virtual void removeAllChildren() = 0;
     virtual Node* getParent() const = 0;
     virtual void setParent(Node* parent) = 0;
     virtual int getChildIndex(Node* child) const = 0;

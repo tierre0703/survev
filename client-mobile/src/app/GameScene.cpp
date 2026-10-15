@@ -389,7 +389,8 @@ void GameScene::tryJoinUrls(const std::vector<std::string>& urls, const std::str
     _joinRetryToken = joinToken;
     _joinRetryIndex = index;
     _awaitingJoin = true;
-    if (_devLog && index == 0) {
+    // `debug.surv_debug=1` keeps the join trace (same switch MenuScene reads).
+    if (ax::UserDefault::getInstance()->getStringForKey(dev::kKeyDebug, "0") == "1" && index == 0) {
         AXLOGI("[dev] joining {} (advertised urls={})", urls[0], urls.size());
     }
     _game->tryJoinGame(urls[index], joinToken);
@@ -500,6 +501,9 @@ void GameScene::update(float delta) {
         if (Player* active = _world->activePlayer()) {
             // Camera follows the active player (M5 adds the smoothing/shake).
             _world->camera().m_pos = active->pos;
+            // touch.ts scales the locked joystick offsets with the player's
+            // zoom (a scoped player pushes the pads inward proportionally).
+            _touch->setPadOffsetScale(active->getZoom(_world->mobile()));
         }
     }
 

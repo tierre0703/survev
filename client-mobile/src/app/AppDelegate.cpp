@@ -2,6 +2,7 @@
 #include "GameScene.h"
 #include "MenuScene.h"
 #include "DevConfig.h"
+#include "UiHost.h"
 #include "../net/Api.h"
 #include "../net/Net.h"
 #include "../ui/Files.h"
@@ -102,6 +103,9 @@ bool AppDelegate::applicationDidFinishLaunching() {
                                      : static_cast<ax::Scene*>(gameScene));
     _menuScene = menuScene;
     _gameScene = gameScene;
+    // M7/S1: hand the scenes to the platform UI seam. Android installs the JNI
+    // bridge/host (src/app/UiBridge.cpp); every other build installs a no-op.
+    surv::installUiBridge(menuScene, gameScene);
     return true;
 }
 
