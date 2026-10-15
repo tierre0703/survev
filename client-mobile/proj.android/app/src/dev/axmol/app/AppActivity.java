@@ -25,10 +25,11 @@ THE SOFTWARE.
 ****************************************************************************/
 package dev.axmol.app;
 
+import android.app.Activity;
 import android.os.Bundle;
+import android.os.Build;
 import dev.axmol.lib.AxmolActivity;
 import dev.axmol.lib.SharedLoader;
-import android.os.Build;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;

@@ -13,7 +13,7 @@
 # set(AX_ENABLE_EXT_SPINE OFF CACHE BOOL "Build extension spine" FORCE)
 # set(AX_ENABLE_EXT_DRAGONBONES OFF CACHE BOOL "Build extension DragonBones" FORCE)
 # set(AX_ENABLE_EXT_COCOSTUDIO OFF CACHE BOOL "Build extension cocostudio" FORCE)
-# set(AX_ENABLE_EXT_FAIRYGUI OFF CACHE BOOL "Build extension FairyGUI" FORCE)
+set(AX_ENABLE_EXT_FAIRYGUI ON CACHE BOOL "Build extension FairyGUI" FORCE)
 # set(AX_ENABLE_EXT_IMGUI OFF CACHE BOOL "Build extension ImGui" FORCE)
 # set(AX_ENABLE_EXT_JSONDEFAULT OFF CACHE BOOL "Build extension JSONDefault" FORCE)
 

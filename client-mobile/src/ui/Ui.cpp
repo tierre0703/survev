@@ -1,5 +1,6 @@
 #include "Ui.h"
 #include "Files.h"
+#include "CssColor.h"
 
 #include <algorithm>
 #include <cmath>
@@ -192,7 +193,7 @@ void Panel::setCssPosition(float x, float y) {
     _cssPosition = ax::Vec2(x, y);
     _hasCssPosition = true;
     // Panel anchor is top-left; axmol wants the node's bottom-left.
-    ax::Node::setPosition(ax::Vec2(x, kit::fromCssY(y, parentHeight(this))));
+    ax::Node::setPosition(x, ::ui::kit::fromCssY(y, parentHeight(this)));
 }
 
 void Panel::setInteractive(bool interactive) {
@@ -553,19 +554,22 @@ void Button::setBulkFont(bool bulk) {
 void Button::setCssPosition(float x, float y) {
     _cssPosition = ax::Vec2(x, y);
     _hasCssPosition = true;
-    setPosition(kit::fromCss(x, y, parentHeight(this)));
+    const ::ui::kit::Vec2 p = ::ui::kit::fromCss(x, y, parentHeight(this));
+    setPosition(p.x, p.y);
 }
 
 void TextField::setCssPosition(float x, float y) {
     _cssPosition = ax::Vec2(x, y);
     _hasCssPosition = true;
-    setPosition(kit::fromCss(x, y, parentHeight(this)));
+    const ::ui::kit::Vec2 p = ::ui::kit::fromCss(x, y, parentHeight(this));
+    setPosition(p.x, p.y);
 }
 
 void Slider::setCssPosition(float x, float y) {
     _cssPosition = ax::Vec2(x, y);
     _hasCssPosition = true;
-    setPosition(kit::fromCss(x, y, parentHeight(this)));
+    const ::ui::kit::Vec2 p = ::ui::kit::fromCss(x, y, parentHeight(this));
+    setPosition(p.x, p.y);
 }
 
 void Panel::onEnter() {

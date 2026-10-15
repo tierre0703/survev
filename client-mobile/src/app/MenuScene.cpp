@@ -59,12 +59,10 @@ void MenuScene::bindGame(GameScene* game) {
     hooks.onMatchStarted = [game] { game->setVisible(true); };
     hooks.onReturnToMenu = [game] { game->setVisible(false); };
     setGameHooks(std::move(hooks));
-    // The overlay/game reuse the menu's scaled design-space root so HUD and
-    // pause geometry (and the toolkit's tap mapping) match the menu exactly.
+    // S6: the overlay/pause menu is now Java (GamePauseDialog).
+    // The C++ overlay is not built; game->setOverlay is not called.
+    // The UIRoot is still shared for coordinate scaling.
     game->setUiRoot(_uiRoot);
-    _overlay->build(game, _config.get(), _loc.get(), game->getTouch());
-    game->setOverlay(_overlay.get());
-    _overlay->onQuit = [this, game] { game->leaveGame(); onMatchEnded(); };
     game->onMatchStarted = [this] { onMatchStarted(); };
     game->onMatchEnded = [this](const std::string& key) { onMatchEnded(key); };
     game->onError = [this](const std::string& key, const std::string& fallback) { setError(key, fallback); };
@@ -134,10 +132,14 @@ bool MenuScene::init() {
     buildMenuChrome();
 
     // --- in-game overlay (handed to the game scene) ----------------------
-    _overlay = std::make_unique<menuui::UiOverlay>();
+    // S6: pause dialog is now Java. The C++ overlay is no longer the pause
+    // menu. We keep the _overlay stored so the reference doesn't crash old
+    // code, but it's never created — _overlay stays null.
+    // _overlay = std::make_unique<menuui::UiOverlay>();  // deleted in S6
     // The pause/menu overlay is shared with the game scene; when the player
     // quits out of a lobby it restores the main menu.
-    _overlay->onQuit = [this] { cancelPending(); };
+    // S6: _overlay is not created (null), so skip the quit handler.
+    // _overlay->onQuit = [this] { cancelPending(); };
 
     // --- team client -----------------------------------------------------
     _team = std::make_unique<menuui::TeamMenu>();

@@ -18,6 +18,9 @@ class Factory;
 namespace ui {
 class UiOverlay; // M7 in-game UI (HUD + pause menu)
 }
+namespace fairygui {
+class GRoot;
+}
 
 namespace surv {
 
@@ -28,6 +31,12 @@ namespace uikit = ::ui;
 
 class GameWorld;
 
+fairygui::GRoot* fguiRoot();
+
+class FguiHud;
+
+class FguiPadGraphics;
+
 namespace audio {
 class AxmolAudioBackend;
 class AudioManager;
@@ -35,6 +44,8 @@ class Ambiance;
 } // namespace audio
 
 // axmol PadGraphics implementation (touch.ts pad.img sprites).
+// S2: touch pad graphics replaced by FguiPadGraphics; the old TouchPadGfx
+// class is kept for the legacy atlas fallback path, but no longer instantiated.
 class TouchPadGfx : public PadGraphics {
 public:
     explicit TouchPadGfx(ax::Node* parent);
@@ -157,18 +168,21 @@ private:
     // The pad sprites outlive resetWorld(): they are created once against
     // _gameRoot and merely re-positioned by Touch each frame.
     std::unique_ptr<Touch> _touch;
-    std::unique_ptr<TouchPadGfx> _movePad;
-    std::unique_ptr<TouchPadGfx> _aimPad;
+    std::unique_ptr<FguiPadGraphics> _movePad;
+    std::unique_ptr<FguiPadGraphics> _aimPad;
     std::shared_ptr<std::atomic<bool>> _alive;
     bool _wasConnected = false;
     bool _wasPlaying = false;
     bool _inGame = false;
 
-    // M7: matchmaking state (findGameAttempts/timers mirrored from main.ts).
+    std::unique_ptr<FguiHud> _hud;
     FindGameRequest _findGameRequest;
     uikit::UiOverlay* _overlay = nullptr;
     ax::Node* _uiRoot = nullptr;
     Game::JoinInfo _joinInfo;
+    // S6: the pause menu is now Java (GamePauseDialog). The C++ _overlay
+    // reference is kept as nullptr so the legacy UiOverlay code paths
+    // become no-ops. The JavaUiHost owns the pause lifecycle via the bridge.
     bool _pendingFind = false;
     bool _findInFlight = false;
     unsigned _findGeneration = 0;

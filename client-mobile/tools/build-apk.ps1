@@ -99,7 +99,9 @@ $srcs += Get-ChildItem (Join-Path $axJava 'src') -Recurse -Filter *.java |
     Select-Object -ExpandProperty FullName
 $srcs += Get-ChildItem (Join-Path $root 'proj.android\app\src') -Recurse -Filter *.java | Select-Object -ExpandProperty FullName
 $srcs += Join-Path $stub 'AxmolMediaEngine.java'
-$srcs += Get-ChildItem $genDir -Recurse -Filter *.java | Select-Object -ExpandProperty FullName
+# gen dir is empty after aapt2; skip if empty
+$genFiles = Get-ChildItem $genDir -Recurse -Filter *.java -ErrorAction SilentlyContinue
+if ($genFiles.Count -gt 0) { $srcs += $genFiles | Select-Object -ExpandProperty FullName }
 Write-Host "   $($srcs.Count) source files"
 
 $argsFile = Join-Path $work 'javac.args'

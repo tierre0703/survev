@@ -10,6 +10,7 @@
 #include "ui/Localization.h"
 #include "ui/TeamMenu.h"
 #include "ui/Loadout.h"
+#include "ui/CssColor.h"
 #include "ui/Layout.h"
 #include "render/GeneratedDefs.h"
 

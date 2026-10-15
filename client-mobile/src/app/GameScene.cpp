@@ -14,7 +14,11 @@
 #include "../audio/Ambiance.h"
 #include "../audio/AxmolAudioBackend.h"
 #include "../audio/GeneratedSoundDefs.h"
-#include "../ui/UiOverlay.h"
+#include "../ui/FguiHud.h"
+#include "../ui/FguiPadGraphics.h"
+
+#include "fairygui/GRoot.h"
+#include "fairygui/FairyGUI.h"
 
 #include <set>
 #include <algorithm>
@@ -68,8 +72,14 @@ static void loadAtlasesForMap(const std::string& mapName) {
     }
 }
 
+// S2: FairyGUI GRoot for the HUD layer.
+// Created once in init(), used by FguiHud and FguiPadGraphics.
+static fairygui::GRoot* s_fguiRoot = nullptr;
+
+fairygui::GRoot* fguiRoot() { return s_fguiRoot; }
+
 // ---------------------------------------------------------------------------
-// TouchPadGfx (touch.ts pad.img sprites)
+// TouchPadGfx (touch.ts pad.img sprites) — replaced by FguiPadGraphics in S2
 // ---------------------------------------------------------------------------
 // Port of touch.ts createPadSprite(): the joystick ring is the web client's
 // `pad.img` (client/public/img/gui/pad.svg, a grey circle stroke). The web
@@ -189,6 +199,14 @@ bool GameScene::init() {
     const ax::Size visible = ax::Director::getInstance()->getVisibleSize();
     const bool isLandscape = visible.width >= visible.height;
 
+    // S2: create the FairyGUI root for gameplay HUD overlay.
+    s_fguiRoot = fairygui::GRoot::create(this, 500);
+    if (!s_fguiRoot) {
+        AXLOGW("Failed to create FairyGUI root; HUD will be missing");
+    } else {
+        AXLOGI("FairyGUI GRoot created");
+    }
+
     _gameRoot = ax::Node::create();
     this->addChild(_gameRoot);
 
@@ -217,23 +235,24 @@ bool GameScene::init() {
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
     _touch = std::make_unique<Touch>(visible.width, visible.height, isLandscape);
-    _movePad = std::make_unique<TouchPadGfx>(this);
-    _aimPad = std::make_unique<TouchPadGfx>(this);
+    // S2: replace the axmol Sprite-based TouchPadGfx with FairyGUI pad graphics.
+    _movePad = std::make_unique<FguiPadGraphics>(this, true);
+    _aimPad = std::make_unique<FguiPadGraphics>(this, false);
     // Touch keeps feeding setCenterScale/setTouchScale with the raw touch.ts
     // ratios (asserted by the host tests); TouchPadGfx::sizeSprite maps those
     // onto the texture actually in use, so the on-screen ring size no longer
     // depends on the sprite's pixel size (the 208 px atlas frame vs the 4x
     // gui/pad.png fallback). Prime the sprite scale once here.
     _touch->m_update(*_movePad, *_aimPad);
-    if (!_movePad->hasTexture()) {
-        AXLOGW("Touch pad texture missing (pad.img / gui/pad.png); run tools/build-atlas.mjs "
-               "and tools/build-gui-icons.mjs");
-    }
 
     _alive = std::make_shared<std::atomic<bool>>(true);
 
     _game = std::make_unique<Game>();
     _game->init(this, createWebSocketConnection);
+
+    // S2: build the FairyGUI HUD.
+    _hud = std::make_unique<FguiHud>();
+    _hud->build(this);
 
     // M4: render world (terrain + z-sorted object layers) driven by the map /
     // update messages the game dispatches.
@@ -250,13 +269,10 @@ bool GameScene::init() {
     _audio->preloadSounds();
 
     _pixiFactory = std::make_unique<pix::AxPixiFactory>();
-    // `pad.img` lives in the map's atlas, which loadAtlasesForMap() registers
-    // later; resolve the frame now and again on every atlas load.
-    _movePad->refreshPadFrame();
-    _aimPad->refreshPadFrame();
+    // S2: remove atlas callback for old TouchPadGfx; FguiPadGraphics draws
+    // programmatic circles and does not need pad.img frames.
     _game->setAtlasCallback([this] {
-        _movePad->refreshPadFrame();
-        _aimPad->refreshPadFrame();
+        // No-op: the pads no longer use atlas frames.
     });
     resetWorld();
     _game->setMapCallback([this](const MapMsg& msg) {
@@ -365,15 +381,11 @@ void GameScene::leaveGame() {
 
 void GameScene::setError(const std::string& key, const std::string& fallback) {
     if (onError) onError(key, fallback);
-    if (_overlay) {
-        _overlay->setMenuError(key, fallback);
-    }
+    // S6: the pause menu is now Java (GamePauseDialog); errors are routed
+    // through the bridge. The C++ overlay no longer holds the pause menu.
 }
 
 void GameScene::clearError() {
-    if (_overlay) {
-        _overlay->setMenuError("", "");
-    }
 }
 
 void GameScene::tryJoinUrls(const std::vector<std::string>& urls, const std::string& joinToken,
@@ -568,11 +580,14 @@ void GameScene::update(float delta) {
         _awaitingJoin = false;
     }
 
-    if (_overlay) {
-        _overlay->update(delta, isStarted(), isPlaying(), isConnected(), _game.get());
+    // S2: route the HUD update through FguiHud instead of UiOverlay.
+    if (_hud) {
+        _hud->update(delta, isStarted(), isPlaying(), _game.get());
     }
 
-    if (_game->isPlaying() && _game->getActivePlayerId() != 0 && (!_overlay || !_overlay->isOpen())) {
+    // S6: the pause menu is now Java (GamePauseDialog).
+    // The C++ _overlay is never created; skip the isOpen check.
+    if (_game->isPlaying() && _game->getActivePlayerId() != 0) {
         updateInput(delta);
     }
     _touch->m_update(*_movePad, *_aimPad);
@@ -605,7 +620,9 @@ void GameScene::updateInput(float dt) {
 }
 
 void GameScene::onTouchBegan(float x, float y, int id) {
-    if (!_inGame || !_notifiedStarted || (_overlay && _overlay->isOpen())) return;
+    // S6: _overlay is never created; the Java GamePauseDialog is the
+    // actual pause. Don't block touches because of a null overlay.
+    if (!_inGame || !_notifiedStarted) return;
     _touch->touches[id].active = true;
     _touch->touches[id].posDown = Vec2(x, y);
     _touch->touches[id].pos = Vec2(x, y);

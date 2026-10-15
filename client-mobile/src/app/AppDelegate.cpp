@@ -4,6 +4,7 @@
 #include "DevConfig.h"
 #include "UiHost.h"
 #include "../net/Api.h"
+#include "../net/SiteInfo.h"
 #include "../net/Net.h"
 #include "../ui/Files.h"
 #include "../ui/Ui.h"
@@ -62,12 +63,21 @@ bool AppDelegate::applicationDidFinishLaunching() {
     auto* menuScene = surv::MenuScene::createScene();
     auto* gameScene = surv::GameScene::createScene();
 
+    // S3: Java now owns the menu and matchmaking; the C++ menu scene is kept
+    // for the host tests and as the fallback until onNativeMatchStarted/Ended
+    // drive the Java menu lifecycle. The find_game HTTP request stays in C++
+    // for the host test path; the Java menu will call SurvApi.findGame() instead.
+    //
+    // When the Java menu calls SurvBridge.onJoinUrls(), it lands in
+    // UiBridge::joinUrls() → GameScene::enterWithJoin(), same as the team path.
     if (menuScene && gameScene) {
         menuScene->addChild(gameScene, 1);
         gameScene->setVisible(false);
         menuScene->bindGame(gameScene);
 
         // The menu owns the find_game HTTP call; the scene only schedules it.
+        // S3: the Java menu also calls find_game directly via SurvApi.findGame,
+        // so this C++ path is only used by the host tests and the desktop build.
         gameScene->setFindGameRequest(
             [](const std::string& region, int gameModeIdx,
                surv::GameScene::FindGameDone done) {
@@ -105,6 +115,9 @@ bool AppDelegate::applicationDidFinishLaunching() {
     _gameScene = gameScene;
     // M7/S1: hand the scenes to the platform UI seam. Android installs the JNI
     // bridge/host (src/app/UiBridge.cpp); every other build installs a no-op.
+    // S3: the bridge is now fully active — the Java menu renders the start
+    // screen and SurvApi handles matchmaking HTTP. The C++ MenuScene still
+    // exists for the host tests but is no longer the primary menu.
     surv::installUiBridge(menuScene, gameScene);
     return true;
 }

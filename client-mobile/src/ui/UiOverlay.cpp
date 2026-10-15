@@ -115,10 +115,16 @@ void UiOverlay::buildHud(ax::Scene* scene) {
     pause->onClick = [this] { toggle(); };
     _killFeedText = makeLabel("", 16);
     _killFeedText->setAnchorPoint(ax::Vec2(0, 1));
-    _killFeedText->setPosition(kit::fromCss(16, 70));
+    {
+        const ::ui::kit::Vec2 p = ::ui::kit::fromCss(16, 70);
+        _killFeedText->setPosition(p.x, p.y);
+    }
     _hudRoot->addChild(_killFeedText);
     _resultText = makeLabel("", 24);
-    _resultText->setPosition(kit::fromCss(640, 260));
+    {
+        const ::ui::kit::Vec2 p = ::ui::kit::fromCss(640, 260);
+        _resultText->setPosition(p.x, p.y);
+    }
     _hudRoot->addChild(_resultText);
     _resultQuit = Button::create(tr(_loc, "game-quit-game", "Quit Game"), 260, 52);
     _hudRoot->addChild(_resultQuit);
@@ -156,7 +162,7 @@ void UiOverlay::buildPauseMenu(ax::Scene* scene) {
     auto addLabel = [&](const std::string& text, float x, float y, float size) {
         auto* label = makeLabel(text, size);
         label->setAnchorPoint(ax::Vec2(0.0f, 1.0f));
-        label->setPosition(ax::Vec2(x, kit::fromCssY(y, panelH)));
+        label->setPosition(x, kit::fromCssY(y, panelH));
         label->setTextColor(ax::Color4B::WHITE);
         panel->addChild(label);
         return label;
@@ -196,7 +202,7 @@ void UiOverlay::buildPauseMenu(ax::Scene* scene) {
     // Error/status line (also used for matchmaking feedback).
     _errorText = makeLabel("", 15);
     _errorText->setAnchorPoint(ax::Vec2(0.5f, 0.5f));
-    _errorText->setPosition(ax::Vec2(panelW * 0.5f, kit::fromCssY(388.0f, panelH) - 8.0f));
+    _errorText->setPosition(panelW * 0.5f, kit::fromCssY(388.0f, panelH) - 8.0f);
     _errorText->setTextColor(ax::Color4B(255, 120, 120, 255));
     panel->addChild(_errorText);
 

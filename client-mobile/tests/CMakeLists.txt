@@ -52,8 +52,8 @@ add_executable(surv_tests
     ${SURV_SRC}/ui/SiteInfoJson.cpp
     ${SURV_SRC}/ui/TeamMenu.cpp
     ${SURV_SRC}/ui/Loadout.cpp
-    ${SURV_SRC}/ui/Layout.cpp
     ${SURV_SRC}/ui/News.cpp
+    ${SURV_SRC}/ui/CssColor.cpp
     ${SURV_SRC}/app/UiHost.cpp
 )
 target_include_directories(surv_tests PRIVATE
