@@ -10,7 +10,11 @@ This project is a native C++ conversion of the web client (`../client`) built wi
 - the APK is produced **without Gradle** (Gradle downloads Maven deps and cannot
   run here — see "Astrill / Gradle" below).
 
-See `plan.md` for the architecture and porting status.
+See `plan.md` for the architecture and porting status, and **`ARCHITECTURE.md`**
+for the current UI architecture: gameplay (world, touch pads, HUD) is rendered by
+**axmol + FairyGUI**, while every other screen (menu, settings, loadout, team,
+profile/pass) is **Android Java** over a single JNI bridge — one `Activity`, no
+WebView. Anything UI-shaped should follow `ARCHITECTURE.md` §5/§7.
 
 ## Prerequisites
 | Tool | Location (this machine) |
@@ -98,3 +102,7 @@ Gradle, stop the Astrill `ASProxy` service (admin) or whitelist `java.exe`.
   sprite atlas pipeline (web `client/atlas-builder`) is not yet wired into the
   native app, so obstacles/loot/player/particle sprites do not draw yet. See
   `plan.md` §M4 for the full list of remaining polish.
+- **Java UI (from 2026-10-14)**: the APK also packages `assets/fgui/**` once
+  FairyGUI packages exist, and `proj.android/app/libs/*.jar` are linked into
+  `javac`/`d8` by `build-apk.ps1`. See `ARCHITECTURE.md` §6 for the UI split,
+  the FairyGUI export step and the OkHttp vendoring rule.

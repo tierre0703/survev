@@ -131,6 +131,10 @@ androidComponents {
 }
 
 dependencies {
+    // Vendored jars. The Java UI (ARCHITECTURE.md) uses OkHttp for HTTP +
+    // /team_v2; the Gradle-free APK pipeline cannot resolve Maven coordinates,
+    // so tools/vendor-okhttp.ps1 drops the jars here and this fileTree links
+    // them. When Gradle is usable (Astrill off), swap for the coordinates.
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation project(':libaxmol')
 }

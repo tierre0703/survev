@@ -76,8 +76,12 @@ Key traits that matter for porting:
 - **Settings:** `ax::UserDefault` (SharedPreferences-backed) replacing `localStorage`.
 - **Assets:** bundled into APK `assets/`, loaded via `FileUtils`; existing `public/img`,
   `public/audio`, `public/fonts`, `public/l10n` reused as-is where formats match.
-- **UI:** two options, see Decision D1. Either a WebView overlay for menus (fastest,
-  reuses existing DOM UI) or a full axmol `ui::` widget port (largest effort).
+- **UI (revised 2026-10-14):** two worlds, see **`ARCHITECTURE.md`** (which
+  supersedes Decision D1 below). **Gameplay only lives in axmol + FairyGUI**
+  (world, touch pads, in-game HUD); **every other screen is Android Java**
+  (menu, settings, loadout, team, profile/pass) talking to C++ over one JNI
+  bridge (`SurvBridge` / `UiHost`). The earlier options (WebView overlay, full
+  axmol `ui::` widget port) are both rejected.
 
 ## 4. Toolchain & project scaffolding
 
@@ -163,14 +167,27 @@ the original TS and makes bugs easier to diff against the browser client.
   defs to files; implement the same volume tiers (master/sound/music), mute toggle,
   and ambient loop switching (`ambiance.ts`).
 
-### 5.6 UI (Decision D1)
-- **Option A (recommended first): WebView overlay.** Keep the existing jQuery/EJS menus
+### 5.6 UI (Decision D1 — superseded)
+
+> **Superseded 2026-10-14 by `ARCHITECTURE.md`.** The UI is split by surface:
+> axmol + **FairyGUI** renders gameplay (world + touch pads + HUD), and the
+> Android **Java** View layer renders every out-of-game screen (menu, settings,
+> loadout, team, profile/pass) over the axmol surface in the same `Activity`.
+> No WebView, and no general-purpose C++ widget toolkit is kept. The two halves
+> communicate only through the `SurvBridge` JNI facade. See `ARCHITECTURE.md`
+> §3–§5 for the module mapping and §7 for the migration order.
+
+- **Rejected option A: WebView overlay.** Keep the existing jQuery/EJS menus
   in a fullscreen `android.webkit.WebView` bridge, switch to the native axmol surface
   only for the in-game canvas. Pros: near-zero UI porting, reuses localization/DOM logic.
   Cons: two surfaces to keep in sync, WebView memory footprint.
-- **Option B: Native axmol UI.** Port `ui/menu.ts`, `loadoutMenu`, `teamMenu`,
+- **Rejected option B: Native axmol UI.** Port `ui/menu.ts`, `loadoutMenu`, `teamMenu`,
   `profileUi`, `pass`, HUD to `ax::ui::*`. Pros: single surface, best perf/consistency.
   Cons: very large effort; every modal/panel must be rebuilt and re-layouted for phones.
+- **Adopted: axmol + FairyGUI for gameplay, Android Java for everything else.**
+  The gameplay HUD is a FairyGUI package; the menus are Android Views; C++ keeps
+  only engine-independent data/logic modules (`Config`, `Loadout`, `Localization`,
+  `Touch`) which Java reaches through the bridge.
 
 Either way, `localization.ts` (JSON `l10n/*.json`) must be loaded (via `FileUtils` +
 a tiny JSON lib — axmol ships `rapidjson`).
@@ -212,7 +229,7 @@ a tiny JSON lib — axmol ships `rapidjson`).
 | M4 | Rendering port | Same scene as web client rendering through axmol (map, buildings, players, particles) |
 | M5 | Input + touch controls | Virtual joystick + aim/fire, camera follow, player moves/shoots correctly |
 | M6 | Audio + ambiance | SFX, gunshots, music, gas ambience correct |
-| M7 | UI layer (D1 chosen) | Menu → loadout → find game → game → death flow works end-to-end |
+| M7 | UI layer (D1 resolved) | Gameplay HUD in axmol + FairyGUI; menu/loadout/team in Android Java (bridge-verified). See `ARCHITECTURE.md` §7 steps S1–S7 |
 | M8 | Account/API (optional) | Login/profile/team if kept in scope |
 | M9 | Polish & release | Lifecycle, orientation, perf, crash-free soak test, store-ready APK/AAB |
 
@@ -229,17 +246,21 @@ a tiny JSON lib — axmol ships `rapidjson`).
 |---|---|
 | Net protocol bit-incompatibility | Unit tests from M2 with captured frames; server is source of truth |
 | PIXI `Graphics`/mask features without direct axmol equivalent | Adapter layer + `ClippingNode`; where impossible, fall back to `DrawNode` fill like the canvas path does |
-| DOM UI is huge; axmol UI can't replicate it cheaply | D1 Option A (WebView menus) to ship; Option B as long-term |
+| UI is huge; axmol UI can't replicate it cheaply | **Resolved 2026-10-14 (`ARCHITECTURE.md`):** gameplay UI = axmol + FairyGUI; all other screens = Android Java over one JNI bridge |
 | WebSocket reliability on mobile networks | Reconnect + backoff like `findGameImpl` retry; surface to UI |
 | Asset format mismatches (woff2, m4a) | Convert in M1 pipeline step; document in `assets/README` |
 | Shared defs TS→C++ drift | Codegen (D2) preferred to keep defs in sync with server |
 
 ## 10. Decisions to confirm before starting
-- **D1 — UI strategy:** WebView overlay (fast) vs native axmol UI (thorough)?
+- **D1 — UI strategy: RESOLVED (2026-10-14).** axmol + **FairyGUI** for gameplay
+  (world, touch pads, HUD) and **Android Java** for every other screen (menu,
+  settings, loadout, team, profile/pass). One `Activity`, one JNI bridge.
+  Rationale, module mapping and migration order: **`ARCHITECTURE.md`** (A1–A4).
 - **D2 — Defs porting:** hand-port `shared/defs` vs. write a TS→C++ codegen build step?
 - **D3 — Accounts/SDK:** is login, team link, pass, ads/SpellSync in scope for v1?
 - **D4 — Android scope only?** axmol is cross-platform; iOS build is near-free once
-  C++ exists. Is iOS also desired?
+  C++ exists. Is iOS also desired? (Note: the Java UI half would need a Kotlin/Swift
+  counterpart, which weakens the "near-free" argument — see `ARCHITECTURE.md` §8.)
 - **D5 — Orientation:** lock landscape (recommended) or support portrait?
 
 ## 11. Immediate next steps
@@ -495,4 +516,7 @@ client-mobile/build-tests/Release/surv_tests.exe
 3. **M5**: input → `InputMsg` is implemented and host-tested (`TouchInput.h` +
    `GameScene::updateInput`); remaining is on-device verification of
    move/aim/fire once M4 rendering lands.
-4. **M7**: UI (menu/loadout/team) — the DOM UI needs porting or a WebView overlay.
+4. **M7**: UI split per `ARCHITECTURE.md` — first the **S1 bridge** (`UiHost` +
+   `SurvBridge.java` + the Java UI container), then **S2** FairyGUI gameplay HUD,
+   then the Java menu/loadout/team screens (§7). The axmol-side UI toolkit is
+   deleted as each Java screen lands.

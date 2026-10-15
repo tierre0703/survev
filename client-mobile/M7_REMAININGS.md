@@ -1,10 +1,31 @@
 # M7 UI (menu / loadout / team / HUD) — remaining work (handoff)
 
+> ## ⚠️ SUPERSEDED (2026-10-14)
+>
+> **Do not implement the tasks below as written.** The UI architecture changed:
+> M7 is now split by surface — **gameplay UI (world, touch pads, HUD) is
+> axmol + FairyGUI**, and **every other screen (menu, settings, loadout, team,
+> profile/pass) is Android Java** over a single JNI bridge. One `Activity`,
+> no WebView, and no general-purpose C++ widget toolkit.
+>
+> The authoritative document is **`ARCHITECTURE.md`** (decisions A1–A4, module
+> mapping §5, migration order §7 — steps S1–S7). The native axmol menu,
+> loadout, team screen and pause overlay described below are scheduled for
+> deletion as each Java screen lands; the C++ work that survives is
+> `Config`/`Loadout`/`Localization`/`Touch` (engine-independent logic, still
+> host-tested) and the FairyGUI gameplay HUD.
+>
+> The sections below are kept only as the record of what already exists, the
+> build/test workflow, the widget-toolkit notes and the "do not regress" list —
+> all of which still apply while the transition is in progress.
+
 This is a self-contained work order for finishing **M7 (native UI port)**. It
 records what already exists, the parts that must not be regressed, the exact
 build/test workflow, and the remaining tasks with enough spec to implement them.
 Read `plan.md` §"M7 / UI layer" and §10 decision **D1** for the original plan;
-**D1 is resolved as Option B (native axmol UI) — do not introduce a WebView.**
+**D1 is resolved (2026-10-14) as the axmol+FairyGUI / Java split in
+`ARCHITECTURE.md` — do not introduce a WebView, and do not extend the C++
+widget toolkit.**
 
 > **Scope reminder.** The web client keeps *everything* outside the canvas in
 > HTML/CSS: `client/index.html` (menu + `#ui-game` overlay markup),

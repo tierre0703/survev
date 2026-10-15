@@ -6,11 +6,16 @@ This file is a **summary/index**; the detailed work orders live in:
 - `plan.md` — module map, milestones M0–M9, decisions D1–D5.
 - `M4_REMAINING.md` — rendering (sessions 1–6), verified object-render parity.
 - `M6_AUDIO.md` — audio port notes.
-- `M7_REMAININGS.md` — UI (menu/loadout/team/HUD) handoff, **D1 = native axmol UI (no WebView)**.
+- `M7_REMAININGS.md` — UI (menu/loadout/team/HUD) handoff, **superseded by the
+  UI split below** (kept as the record of what exists + the build/test workflow).
+- **`ARCHITECTURE.md`** — **the current UI architecture: gameplay = axmol +
+  FairyGUI, every other screen = Android Java, one JNI bridge (`SurvBridge`).**
+  Read §5 (move matrix) and §7 (migration steps S1–S7) before touching UI code.
 
 Latest recorded state: **88 host tests / 1746 assertions green** (after §6),
 x86_64 `libSurvevMobile.so` builds, APK packages and installs, `logcat -b crash`
-empty across the recorded flows.
+empty across the recorded flows. **No UI migration code has landed yet: S1 of
+`ARCHITECTURE.md` §7 is the next work item.**
 
 ---
 
@@ -25,7 +30,7 @@ empty across the recorded flows.
 | M4 | Rendering | **done, latest verified** | terrain/island hole, obstacles, buildings + ceilings, particles, decals, gas, skeletal player. |
 | M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; joystick gfx is a placeholder shape; aim-line dots missing. |
 | M6 | Audio | **partial** | engine + mixer + ambience done; only a handful of events are wired (see §3.4). |
-| M7 | UI layer | **done (native), unverified end-to-end on device** | menu/loadout/team/HUD/pause implemented; polish list in §3.5. |
+| M7 | UI layer | **architecture changed 2026-10-14** | native axmol menu/loadout/team/HUD/pause exist but are being **replaced** per `ARCHITECTURE.md`: gameplay HUD → axmol + **FairyGUI**, all other screens → **Android Java** over the `SurvBridge` JNI bridge. Migration steps S1–S7; nothing deleted until its Java/FairyGUI replacement lands. |
 | M8 | Accounts / API | **not started** | login/profile/team-link/quests/pass. |
 | M9 | Polish & release | **not started** | lifecycle, perf, soak, store-ready AAB. |
 
@@ -52,8 +57,8 @@ empty across the recorded flows.
 | `input.ts`, `inputBinds.ts` | `ui/Touch.h`, `game/TouchInput.h` | touch done; **mouse/keyboard/binds not ported** (BT keyboard/controller). |
 | `audioManager.ts`, `soundDefs.ts`, `ambiance.ts` | `audio/*` | engine done; **per-event wiring mostly missing** (§3.4). |
 | `config.ts`, `device.ts`, `ui/localization.ts` | `ui/Config.*`, `ui/Device.*`, `ui/Localization.*` | done. |
-| `ui/menu.ts`, `loadoutMenu.ts`, `teamMenu.ts`, `ui2.ts`, `pieTimer.ts`, `profileUi.ts`, `pass.ts`, `opponentDisplay.ts`, `menuModal.ts` | `ui/StartMenu.cpp`, `ui/LoadoutMenu.*`, `ui/TeamMenu.*`, `ui/UiOverlay.*` | core done; profile/pass/opponents/pie-timer **not ported** (§3.5). |
-| `api.ts`, `proxy.ts`, `siteInfo.ts`, `pingTest.ts` | `net/Api.*`, `net/SiteInfo.*` | site-info + find_game done; **proxy/login/region-ping-test not ported**. |
+| `ui/menu.ts`, `loadoutMenu.ts`, `teamMenu.ts`, `ui2.ts`, `pieTimer.ts`, `profileUi.ts`, `pass.ts`, `opponentDisplay.ts`, `menuModal.ts` | **→ Java** (`MenuFragment`, `LoadoutFragment`, `TeamFragment`, `GamePauseDialog`) + gameplay HUD → **FairyGUI** `HUD_pkg` | current C++ screens exist (`ui/StartMenu.cpp`, `ui/LoadoutMenu.*`, `ui/TeamMenu.*`, `ui/UiOverlay.*`) but are being replaced per `ARCHITECTURE.md`; profile/pass/opponents/pie-timer **not ported** (§3.5). |
+| `api.ts`, `proxy.ts`, `siteInfo.ts`, `pingTest.ts` | **→ Java** (`net/SurvApi.java`) | `net/Api.*`/`net/SiteInfo.*` currently do site-info + find_game (kept for host tests); **proxy/login/region-ping-test not ported**. |
 | `account.ts` | — | **not ported** (M8). |
 | `resources.ts` | `tools/build-atlas.mjs` + `SpriteFrameCache` | done. |
 | `errorLogs.ts` | — | **not ported**. |
@@ -135,20 +140,29 @@ barns (see §6). Still missing:
 
 ### 3.5 UI gaps (`M7_REMAININGS.md` §4)
 
-- **T1 on-device verification of the full loop** was still outstanding: menu →
+> **Superseded by the UI split** (`ARCHITECTURE.md`): most of this list stops
+> being C++ work. The gameplay HUD items move to the FairyGUI `HUD_pkg`; the
+> menu/loadout/team items become ordinary Android screens. Keep the list only as
+> a checklist of *features* the new screens must reach.
+
+- **On-device verification of the full loop** was still outstanding: menu →
   Play Solo → join → HUD → pause → Quit → menu, plus the team-room flow, with an
   empty `logcat -b crash`. Do this first.
 - **Loadout**: emote/crosshair icons have no atlas frames (text placeholders);
   the web crosshair pane (colour/size/stroke) and the drag-and-drop emote wheel
-  are not ported; no item-confirm modal.
+  are not ported; no item-confirm modal. *(→ `LoadoutFragment` + `HUD_pkg`
+  crosshair icon.)*
 - **Team screen**: invite-link copy button, per-player kick, in-game rename,
-  `#msg-wait-reason` for non-leaders (Play is just hidden).
+  `#msg-wait-reason` for non-leaders (Play is just hidden). *(→ `TeamFragment`.)*
 - **HUD**: team/faction colours on the alive counter, kill leader panel,
   spectate options, weapon-slot strip (4 slots), pause-menu keybind tab/tab strip.
+  *(→ `HUD_pkg`; the keybind tab is Java.)*
 - **Menu**: language list modal (currently a cycle button), persist loadout
   paging/category, left-column social/ads columns intentionally omitted.
+  *(→ `MenuFragment`/`LoadoutFragment`.)*
 - **`pieTimer.ts`, `opponentDisplay.ts`, `profileUi.ts`, `pass.ts`,
-  `menuModal.ts`** — not ported (profile/pass/opponents are M8 territory).
+  `menuModal.ts`** — not ported (profile/pass/opponents are M8 territory, and
+  they are Java screens under the new split).
 
 ### 3.6 Platform / release (M8 + M9)
 
@@ -187,14 +201,23 @@ Regenerate (never hand-edit) after touching `shared/defs` or web sources:
 **Do NOT regress** (carried through every status doc):
 adapter reparenting, wrapper node ownership, convex-fan fills, `axslc`
 packaging, `resources.arsc` uncompressed+aligned, layer-index clamping,
-quoted `-DANDROID_ABI`.
+quoted `-DANDROID_ABI`. During the UI migration also keep: the Java build
+pipeline Gradle-free (vendor OkHttp jars), `assets/fgui/**` packaged alongside
+`assets/axslc/**`, and `surv_tests` green with `src/app/UiBridge.cpp` excluded
+from the host build (see `ARCHITECTURE.md` §4.1, §6.2).
 
 ---
 
 ## 5. Suggested next queue
 
-1. **Touch aim-line dots + real pad sprites** — the most visible M5 parity gap.
-2. **On-device end-to-end UI pass (M7 T1)** — confirm menu → match → Quit.
+0. **S1 of the UI migration (`ARCHITECTURE.md` §7)** — the `UiHost` interface,
+   `src/app/UiBridge.cpp`, `SurvBridge.java`, the Java UI container in
+   `AppActivity`, and the config round-trip. Everything UI-shaped now depends
+   on this seam existing.
+1. **Touch aim-line dots + real pad sprites** — folds into S2 (FairyGUI
+   `Touch_pkg`), the most visible M5 parity gap.
+2. **On-device end-to-end pass** — menu → match → Quit, once Java drives the menu
+   (S3); until then the current C++ menu still works.
 3. **Minimap/big map + `mapIndicator`** — needed for team pings and airdrop markers.
 4. **Audio event wiring** (bullets, footsteps, pickup, UI) — biggest feel gap.
 5. **Emote/ping wheel + `emote` barn** — touch UX feature with existing defs.

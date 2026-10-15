@@ -68,6 +68,18 @@ if ($LASTEXITCODE -ne 0) { throw "aapt2 compile failed" }
 if ($LASTEXITCODE -ne 0) { throw "aapt2 link failed" }
 
 Write-Host "== 2/7 java (javac) =="
+# Vendored Java UI dependencies (OKHttp + Okio; see ARCHITECTURE.md §6.2 and
+# proj.android/app/libs/README.md). The Gradle-free path links them by
+# classpath instead of resolving Maven coordinates.
+$libsJar = Join-Path $root 'proj.android\app\libs'
+$libsClasspath = ''
+if (Test-Path $libsJar) {
+    $vendored = Get-ChildItem $libsJar -Filter *.jar | Select-Object -ExpandProperty FullName
+    if ($vendored.Count -gt 0) {
+        $libsClasspath = ($vendored -join ';')
+        Write-Host "   vendored jars: $($vendored.Count)"
+    }
+}
 # Stub the media engine (video only). The full media3/ExoPlayer implementation
 # is excluded from this Gradle-free build.
 $stub = Join-Path $stubDir 'dev\axmol\lib'
@@ -93,13 +105,19 @@ Write-Host "   $($srcs.Count) source files"
 $argsFile = Join-Path $work 'javac.args'
 $srcs | ForEach-Object { '"' + ($_ -replace '\\', '/') + '"' } | Set-Content $argsFile
 $expJar = Join-Path $axJava 'libs\com.android.vending.expansion.zipfile.jar'
-& $javac -source 8 -target 8 -nowarn -classpath "$androidJar;$expJar" -d $clsDir "@$argsFile"
+& $javac -source 8 -target 8 -nowarn -classpath "$androidJar;$expJar;$libsClasspath" -d $clsDir "@$argsFile"
 if ($LASTEXITCODE -ne 0) { throw "javac failed" }
 
 Write-Host "== 3/7 dex (d8) =="
 $clsJar = Join-Path $work 'classes.jar'
 & $jar cf $clsJar -C $clsDir .
-& $java -cp (Join-Path $bt 'lib\d8.jar') com.android.tools.r8.D8 --lib $androidJar --min-api 24 --output $dexDir $clsJar
+# Include the vendored Java UI jars in the dex so the OkHttp classes ship in
+# the APK (the Gradle-free pipeline does not resolve them from Maven).
+$d8Inputs = @($clsJar)
+if (Test-Path $libsJar) {
+    $d8Inputs += Get-ChildItem $libsJar -Filter *.jar | Select-Object -ExpandProperty FullName
+}
+& $java -cp (Join-Path $bt 'lib\d8.jar') com.android.tools.r8.D8 --lib $androidJar --min-api 24 --output $dexDir @d8Inputs
 if ($LASTEXITCODE -ne 0) { throw "d8 failed" }
 
 Write-Host "== 4/7 assemble apk =="
