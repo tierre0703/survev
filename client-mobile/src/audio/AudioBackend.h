@@ -35,6 +35,7 @@ public:
     virtual void setPan(SoundHandle handle, float pan) = 0;
     virtual void setMute(bool mute) = 0;
     virtual bool isPlaying(SoundHandle handle) const = 0;
+    virtual void setReverbVolume(const std::string& reverbName, float volume) { (void)reverbName; (void)volume; }
     virtual void update(float dt) { (void)dt; }
 };
 

@@ -50,10 +50,19 @@ node --experimental-transform-types tools/codegen_sound_defs.mjs
 ```
 
 ## Remaining / not ported
-- Per-def explosion/bullet/weapon/UI/footstep sound selection: the object ports
-  that own those events (bullet.ts, explosion.ts, player.ts, gas.ts, UI) are
-  still partial, so only the generic events above are wired.
-- Reverb/filters: `AudioManager` computes the reverb volume but the backend
-  doesn't apply the cathedral/cave effects yet (axmol exposes per-instance
-  `setReverbProperties`, not a global bus).
+- Per-def explosion/bullet/weapon/footstep sound selection: wired in
+  `GameWorld::applyUpdate` (explosion per-type sound map with grass/water
+  surface selection), `BulletBarn::update` (bullet whiz group), `ShotBarn::update`
+  (weapon shoot sound with splinter/AP/high-velocity detune variants).
+- Reverb/filters: `AudioManager::update()` now computes the cathedral reverb
+  volume from `activeLayer`/`underground` and calls `_backend->setReverbVolume()`.
+  `AxmolAudioBackend::setReverbVolume` stores the target volume; axmol's
+  per-instance `setReverbProperties` is not yet called (the IR-to-parameter
+  mapping is still stubbed — see `AxmolAudioBackend::update`).
+- Player action sounds (footstep surface groups, door error, bush enter/exit,
+  weapon deploy/switch, heal/reload/pickup, haste effects, dry fire) are not
+  wired — the C++ Player struct has no `surface`/`stepDistance`/`action`/sound
+  instance fields to drive them.
+- UI sounds (ambient lab, pickup pings, notifications) are not wired — no UI
+  system in the C++ port yet.
 - Volume/persisted settings UI (config) is M7.

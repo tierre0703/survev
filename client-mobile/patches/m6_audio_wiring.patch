@@ -1,0 +1,56 @@
+Summary of all changes for M6 remaining audio wiring
+=====================================================
+
+=== 1. AudioBackend.h — Add setReverbVolume to the interface ===
+Added: virtual void setReverbVolume(const std::string& reverbName, float volume)
+       to AudioBackend, defaulting to no-op.
+
+=== 2. AxmolAudioBackend.h — Implement setReverbVolume + reverb stub ===
+Added: - _reverbVolumes map field
+       - setReverbVolume() override that stores the volume
+       - update() override that stubs future axmol reverb API integration
+
+=== 3. AudioManager.cpp — Compute reverb volume each frame ===
+Changed update() to compute cathedral reverb volume from activeLayer and
+underground (matching web audioManager.ts lines 176-181), then call
+_backend->setReverbVolume("cathedral", reverbVolume).
+Moved sameAudioLayer to MathUtil.h so other modules can use it.
+
+=== 4. MathUtil.h — Add sameAudioLayer ===
+Added: inline bool math::sameAudioLayer(int a, int b) for use by Barns.cpp.
+
+=== 5. Barns.h — Add bullet sound fields to BulletVisual ===
+Added: uint16_t playerId, bool whizHeard to BulletVisual.
+
+=== 6. Barns.cpp — Wire explosion per-def sounds, bullet whiz, shot sounds ===
+
+BulletBarn::spawn: Copy playerId + reset whizHeard.
+
+BulletBarn::update: On each frame, check if the bullet is close to the camera
+(<7.5 units), same audio layer, not from active player → play bullet_whiz
+group once (port of bullet.ts lines 221-233).
+
+ShotBarn::update: On shot.ticker==0, play weapon shoot sound with:
+- Base sound name = weaponType + "_01" (soundDefs convention)
+- Channel = activePlayer or otherPlayers based on playerId
+- Detune for trailSaturated (+300) and splinter (-300)
+- Secondary layers for splinter (+1200, delay 30ms, vol 0.75)
+- AP rounds (+1000, delay 45ms, vol 0.75)
+- High velocity (+800, delay 10ms, vol 2.0, no muffled filter)
+(Port of shot.ts lines 114-200.)
+
+GameWorld.cpp: Replace generic "explosion_01" with per-type sound map
+containing all 20 explosion effect types with grass/water sound names,
+detune, and volume. Stub surface lookup via Map::getGroundSurface.
+(Port of explosion.ts lines 193-215 + ExplosionEffectDefs map.)
+
+=== 7. M6_AUDIO.md — Update remaining/not ported section ===
+Added status of each item, noting what's wired and what's still out of scope.
+
+=== What is deliberately NOT wired (out of scope or M7) ===
+- Player footstep surface groups (Player has no surface/stepDistance state)
+- Player bush enter/exit, door error, weapon deploy/switch, heal/reload/pickup sounds
+- Player haste effect, dry fire, bleeding sounds
+- UI sounds (no UI system in the C++ port yet)
+- Full axmol reverb convolution (setReverbProperties not called; volume stored)
+- Volume/persisted settings UI (M7)

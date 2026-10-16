@@ -9,8 +9,9 @@
 namespace surv {
 namespace audio {
 
+// Re-exported from MathUtil.h for conciseness.
 static bool sameAudioLayer(int a, int b) {
-    return a == b || (a & 0x2) != 0 || (b & 0x2) != 0;
+    return math::sameAudioLayer(a, b);
 }
 
 void AudioManager::loadSound(const std::string& name, const std::string& channel,
@@ -65,6 +66,14 @@ void AudioManager::update(float dt) {
                 _instances.erase(_instances.begin() + static_cast<long>(i));
             }
         }
+
+        // Reverb: match audioManager.ts update() — compute cathedral reverb
+        // volume from the active layer when underground.
+        const float layerVolumeMap[] = {0.0f, 1.0f, 1.0f / 3.0f, 2.0f / 3.0f};
+        const int clampedLayer = math::clamp(activeLayer, 0, 3);
+        const float reverbVolume = underground ? layerVolumeMap[clampedLayer] : 0.0f;
+        _backend->setReverbVolume("cathedral", reverbVolume);
+
         _backend->update(dt);
     }
 }

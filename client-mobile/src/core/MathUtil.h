@@ -132,6 +132,11 @@ inline float fract(float n) {
     return n - std::floor(n);
 }
 
+// Port of util.sameAudioLayer (shared/utils/util.ts).
+inline bool sameAudioLayer(int a, int b) {
+    return a == b || (a & 0x2) != 0 || (b & 0x2) != 0;
+}
+
 inline float sign(float n) {
     return n < 0.0f ? -1.0f : 1.0f;
 }

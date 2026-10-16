@@ -1345,6 +1345,8 @@ void BulletBarn::spawn(pix::Factory* factory, const Bullet& data) {
     b->clipDistance = data.clipDistance;
     b->speedMult = data.speedMult;
     b->distanceMult = data.distanceMult;
+    b->playerId = data.playerId;
+    b->whizHeard = false;
     b->t = 0.0f;
     if (!b->gfx) {
         b->gfx = factory->createGraphics();
@@ -1373,12 +1375,28 @@ void BulletBarn::clear() {
 }
 
 void BulletBarn::update(float dt, GameWorld& ctx) {
+    const Player* activePlayer = ctx.activePlayer();
     for (size_t i = 0; i < bullets.size(); i++) {
         BulletVisual* b = bullets[i];
         if (!b->active) {
             continue;
         }
         b->t += dt;
+
+        // M6: bullet whiz sound (bullet.ts — close bullets near the camera that
+        // are not from the active player produce a whiz group).
+        if (!b->whizHeard && activePlayer && b->playerId != activePlayer->__id &&
+            !activePlayer->dead && math::sameAudioLayer(activePlayer->layer, b->layer) &&
+            v2Length(v2Sub(ctx.camera().m_pos, b->pos)) < 7.5f && ctx.audio()) {
+            audio::PlaySoundOptions whizOpts;
+            whizOpts.channel = "sfx";
+            whizOpts.hasSoundPos = true;
+            whizOpts.soundPos = b->pos;
+            whizOpts.fallOff = 4.0f;
+            ctx.audio()->playGroup("bullet_whiz", whizOpts);
+            b->whizHeard = true;
+        }
+
         const float length = b->clipDistance && b->distance > 0.0f ? b->distance : 30.0f;
         const Vec2 end = v2Add(b->startPos, v2Mul(b->dir, length));
         b->gfx->clear();
@@ -1952,6 +1970,8 @@ void ShotBarn::addShot(const Bullet& data) {
 }
 
 void ShotBarn::update(float dt, GameWorld& ctx) {
+    const uint16_t activePlayerId = ctx.activePlayerId();
+    const Player* activePlayer = ctx.activePlayer();
     for (auto* shot : shots) {
         if (!shot->active) {
             continue;
@@ -1961,13 +1981,74 @@ void ShotBarn::update(float dt, GameWorld& ctx) {
         if (shot->ticker == 0.0f) {
             Player* player = ctx.playerBarn().getPlayerById(shot->playerId);
 
-            if (ctx.dt() >= 0.0f && shot->splinter) {
-                // Splinter shots reuse the same sound with a detune; the mixer
-                // handles the variants below.
+            // M6: per-shot weapon fire sound (port of shot.ts).
+            // Only play the shot sound if there's a weapon def to look up.
+            if (def && ctx.audio()) {
+                // shot.ts: start with weaponDef.sound.shoot, then apply
+                // team/last/alt overrides.
+                // Since the C++ port doesn't have direct access to the full
+                // GameObjectDef sound tables, we derive the sound name from
+                // the weapon type — the sound defs use the type as a prefix
+                // (e.g. "ak47_01.mp3" is registered as sound "ak47_01").
+                // For now, we play via the 'players' channel group; the
+                // channel is resolved from the player's identity.
+                const std::string& channel =
+                    shot->playerId == activePlayerId ? "activePlayer" : "otherPlayers";
+
+                // Compute detune (shot.ts splinter/trailSaturated/logic).
+                float detune = 0.0f;
+                if (shot->trailSaturated && def->category == "gun") {
+                    detune = 300.0f;
+                }
+                if (shot->splinter) {
+                    detune = -300.0f;
+                }
+
+                // Build the sound name from the weapon type + "_01" suffix
+                // (the soundDefs convention: each weapon has a _01 shoot sound).
+                const std::string shootSound = shot->weaponType + "_01";
+
+                audio::PlaySoundOptions opts;
+                opts.channel = channel;
+                opts.hasSoundPos = true;
+                opts.soundPos = shot->pos;
+                opts.hasLayer = true;
+                opts.layer = shot->layer;
+                opts.filter = "muffled";
+                opts.detune = detune;
+                ctx.audio()->playSound(shootSound, opts);
+
+                // Splinter second layer (shot.ts lines 152-167).
+                if (shot->splinter) {
+                    audio::PlaySoundOptions splinterOpts = opts;
+                    splinterOpts.detune = 1200.0f;
+                    splinterOpts.delay = 30.0f / 1000.0f;
+                    splinterOpts.volumeScale = 0.75f;
+                    ctx.audio()->playSound(shootSound, splinterOpts);
+                }
+
+                // AP rounds layer (shot.ts lines 169-184).
+                if (shot->apRounds) {
+                    audio::PlaySoundOptions apOpts = opts;
+                    apOpts.detune = 1000.0f;
+                    apOpts.delay = 45.0f / 1000.0f;
+                    apOpts.volumeScale = 0.75f;
+                    ctx.audio()->playSound(shootSound, apOpts);
+                }
+
+                // High-velocity layer (shot.ts lines 186-200).
+                if (shot->highVelocity) {
+                    audio::PlaySoundOptions hvOpts = opts;
+                    hvOpts.detune = 800.0f;
+                    hvOpts.delay = 10.0f / 1000.0f;
+                    hvOpts.volumeScale = 2.0f;
+                    hvOpts.filter = ""; // high-velocity has no muffled filter
+                    ctx.audio()->playSound(shootSound, hvOpts);
+                }
             }
+
             if (player) {
-                // Hand + gun recoil (the visual recoil is applied here; the
-                // per-shot weapon fire sound is wired per-def in §audio).
+                // Hand + gun recoil.
                 const bool leftHand = shot->offhand || !(def && def->isDual);
                 const bool rightHand = !shot->offhand || !(def && def->isDual);
                 if (def && def->category == "gun") {

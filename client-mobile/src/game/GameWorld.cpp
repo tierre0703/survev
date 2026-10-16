@@ -240,16 +240,60 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
         e->layer = ex.layer;
         e->t = 0.0f;
 
-        // M6: explosion SFX (explosion.ts picks a per-def sound; a generic
-        // explosion works until the explosion defs are ported).
-        if (_audio) {
+        // M6: per-def explosion sound selection (port of explosion.ts).
+        // Map explosion effect type → (grassSound, waterSound, detune, volume).
+        struct ExplosionSoundDef {
+            const char* grass;
+            const char* water;
+            float detune;
+            float volume;
+        };
+        static const std::unordered_map<std::string, ExplosionSoundDef> soundMap = {
+            {"frag",              {"explosion_01",      "explosion_02",      0.0f, 1.0f}},
+            {"smoke",             {"explosion_smoke_01", "explosion_smoke_01",0.0f, 1.0f}},
+            {"strobe",            {"explosion_04",      "explosion_02",      0.0f, 1.0f}},
+            {"barrel",            {"explosion_01",      "explosion_02",      0.0f, 1.0f}},
+            {"usas",              {"explosion_03",      "explosion_02",      0.0f, 1.0f}},
+            {"rounds",            {"explosion_04",      "explosion_04",    500.0f, 0.5f}},
+            {"rounds_sg",         {"explosion_04",      "explosion_04",    500.0f, 0.2f}},
+            {"mirv",              {"explosion_01",      "explosion_02",      0.0f, 1.0f}},
+            {"mirv_mini",         {"explosion_03",      "explosion_02",      0.0f, 1.0f}},
+            {"martyr_nade",       {"explosion_03",      "explosion_02",      0.0f, 1.0f}},
+            {"snowball",          {"snowball_01",       "frag_water_01",     0.0f, 1.0f}},
+            {"snowball_heavy",    {"snowball_02",       "frag_water_01",     0.0f, 1.0f}},
+            {"potato",            {"potato_01",         "frag_water_01",     0.0f, 1.0f}},
+            {"potato_heavy",      {"potato_02",         "frag_water_01",     0.0f, 1.0f}},
+            {"potato_cannonball", {"explosion_05",      "explosion_02",      0.0f, 1.0f}},
+            {"potato_smgshot",    {"potato_01",         "potato_02",       250.0f, 0.5f}},
+            {"potato_lmgshot",    {"potato_01",         "potato_02",       400.0f, 0.5f}},
+            {"bomb_iron",         {"explosion_01",      "explosion_02",      0.0f, 1.0f}},
+            {"coconut",           {"coconut_01",        "frag_water_01",     0.0f, 1.0f}},
+            {"tomato",            {"tomato_01",         "frag_water_01",     0.0f, 1.0f}},
+        };
+
+        if (_audio && _map) {
+            const auto it = soundMap.find(ex.type);
+            const ExplosionSoundDef def = it != soundMap.end()
+                ? it->second
+                : ExplosionSoundDef{"explosion_01", "explosion_02", 0.0f, 1.0f};
+
+            const Map::GroundSurface surface =
+                _map->getGroundSurface(ex.pos, ex.layer);
+            const std::string& soundName = surface.type == Map::SurfaceType::Water
+                ? def.water : def.grass;
+
             audio::PlaySoundOptions opts;
             opts.channel = "sfx";
             opts.hasSoundPos = true;
             opts.soundPos = ex.pos;
             opts.hasLayer = true;
             opts.layer = ex.layer;
-            _audio->playSound("explosion_01", opts);
+            opts.filter = "muffled";
+            opts.rangeMult = 2.0f;
+            opts.ignoreMinAllowable = true;
+            opts.detune = def.detune;
+            opts.volumeScale = def.volume;
+            _audio->playSound(soundName, opts);
         }
     }
 

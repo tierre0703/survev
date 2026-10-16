@@ -497,7 +497,9 @@ struct BulletVisual {
     bool clipDistance = false;
     float speedMult = 1.0f;
     float distanceMult = 1.0f;
+    uint16_t playerId = 0;
     float t = 0.0f;
+    bool whizHeard = false;
     pix::Graphics* gfx = nullptr;
 };
 

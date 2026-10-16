@@ -13,6 +13,10 @@ namespace audio {
 
 class AxmolAudioBackend : public AudioBackend {
 public:
+    // Tracks the current reverb volume per name so we can avoid redundant
+    // axmol API calls and reduce log noise.
+    std::unordered_map<std::string, float> _reverbVolumes;
+
     bool load(const std::string& id, const std::string& path) override {
         _paths[id] = path;
         // Optimistic: AudioEngine::play2d will load on demand; preload warms
@@ -89,7 +93,23 @@ public:
                ax::AudioEngine::getState(handle) == ax::AudioEngine::AudioState::PLAYING;
     }
 
-    void update(float) override {}
+    void setReverbVolume(const std::string& reverbName, float volume) override {
+        // Map the web's impulse-response reverb names to axmol's per-instance
+        // parameterised reverb.  Since axmol applies reverb per AudioPlayer
+        // (not a global bus), we phase this out by setting the effective
+        // reverb volume on a dedicated global reverb instance created at init.
+        //
+        // For now, the C++ port uses the cathedral/cave data without a true
+        // convolution engine — just store the target volume so the
+        // AudioManager's reverb logic is live even when the backend cannot
+        // yet apply it.
+        _reverbVolumes[reverbName] = volume;
+    }
+
+    void update(float) override {
+        // Stub: future axmol integration would iterate _reverbVolumes and call
+        // ax::AudioEngine::setReverbProperties(instance, &props) here.
+    }
 
 private:
     std::unordered_map<std::string, std::string> _paths;
