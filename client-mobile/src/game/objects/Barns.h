@@ -10,6 +10,7 @@
 #include "../../render/Camera.h"
 #include "../../render/Defs.h"
 #include "../../render/Renderer.h"
+#include "../../audio/AudioBackend.h"
 #include <array>
 #include <cstdint>
 #include <string>
@@ -668,7 +669,17 @@ public:
 // --- player.ts skeletal rendering -----------------------------------------
 class Player : public AbstractObject {
 public:
+    // Surface type enum (duplicated from Map::SurfaceType to avoid circular dep).
+    enum SurfaceType { Water, Sand, Grass };
+
+    struct GroundSurface {
+        SurfaceType type = SurfaceType::Grass;
+        uint32_t waterColor = 0;
+        uint32_t rippleColor = 0;
+    };
+
     Vec2 pos;
+    Vec2 posOld;
     Vec2 dir;
     int layer = 0;
     std::string name;
@@ -697,6 +708,19 @@ public:
     bool frozen = false;
     int frozenOri = 0;
     std::string frozenType;
+    std::string _prevActiveWeapon;
+    // Priority 1: player action sounds (footsteps, actions, deploy, bleed, etc.)
+    SurfaceType surfaceType = SurfaceType::Grass;
+    uint32_t surfaceWaterColor = 0;
+    uint32_t surfaceRippleColor = 0;
+    float stepDistance = 0.0f;
+    bool wasInWater = false;
+    audio::SoundHandle cycleSoundInstance = audio::kInvalidSound;
+    audio::SoundHandle actionSoundInstance = audio::kInvalidSound;
+    float lastInsideObstacleTime = 0.0f;
+    bool wasInsideObstacle = false;
+    std::string insideObstacleType;
+    float bleedTicker = 0.0f;
     // Active-player view bounds (player.ts activePlayer.viewAabb).
     float viewHalfWidth = 0.0f;
     float viewHalfHeight = 0.0f;
@@ -760,7 +784,7 @@ public:
     void playAnim(int type, int seq);
     void updateVisuals(Ctx& ctx);
     void updateAura(float dt, Ctx& ctx, bool isActivePlayer);
-    void updateActions(int actionType, const std::string& actionItem);
+    void updateActions(int actionType, const std::string& actionItem, Ctx& ctx);
     void updateSubmersion(float dt, Ctx& ctx);
     void updateFrozenState(float dt, Ctx& ctx);
     // player.ts getMeleeCollider (attack offset capsule).

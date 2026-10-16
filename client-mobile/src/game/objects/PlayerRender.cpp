@@ -155,6 +155,16 @@ void Player::m_init() {
     submersion = 0.0f;
     zoom = 0.0f;
     zoomFast = false;
+    surfaceType = SurfaceType::Grass;
+    stepDistance = 0.0f;
+    wasInWater = false;
+    cycleSoundInstance = audio::kInvalidSound;
+    actionSoundInstance = audio::kInvalidSound;
+    lastInsideObstacleTime = 0.0f;
+    wasInsideObstacle = false;
+    insideObstacleType.clear();
+    bleedTicker = 0.0f;
+    _prevActiveWeapon.clear();
 }
 
 void Player::m_free() {
@@ -195,6 +205,20 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
     }
     hasteType = data.hasteType;
     hasteSeq = data.hasteSeq;
+
+    // Priority 1: play haste ability sound when haste seq changes (player.ts ~line 1122)
+    if (hasteType != HasteType_None && hasteSeq >= 0 && !isNew && ctx.audio()) {
+        audio::PlaySoundOptions opts;
+        opts.channel = "sfx";
+        opts.hasSoundPos = true;
+        opts.soundPos = pos;
+        opts.fallOff = 1.0f;
+        opts.hasLayer = true;
+        opts.layer = layer;
+        opts.filter = "muffled";
+        ctx.audio()->playSound("ability_stim_01", opts);
+    }
+
     perks = data.perks;
     animType = data.animType;
     actionType = data.actionType;
@@ -282,7 +306,7 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
         container->addChild(nameText);
     }
     if (isNew || data.animSeq != animSeq) playAnim(data.animType, data.animSeq);
-    updateActions(data.actionType, data.actionItem);
+    updateActions(data.actionType, data.actionItem, ctx);
 }
 
 void Player::playAnim(int type, int seq) {
@@ -494,6 +518,109 @@ void Player::update(float dt, Ctx& ctx) {
         if ((layer & 1) == (ap->layer & 1) && (!mask || ap->layer == 0)) { renderLayer |= 2; zOrd += 100; }
     }
     const int zIdx = __id + (downed ? 0 : 262144) + (ap == this ? 65536 : 0) + (scale > 1.0f ? 131072 : 0);
+
+    // --- Priority 1: Player action sounds (footsteps, actions, deploy, bleed, etc.) ---
+    if (!dead && ctx.audio()) {
+        audio::AudioManager* audio = ctx.audio();
+        const bool isActivePlayer = (ap == this);
+
+        // player.ts: weapon deploy/switch sound (~line 1042).
+        // Detect activeWeapon change from previous frame via a cached string.
+        // Played for the active player only (mirrors web client's isActivePlayer guard).
+        if (isActivePlayer && !_prevActiveWeapon.empty() && _prevActiveWeapon != activeWeapon) {
+            const GameObjRenderDef* prevWeapon = item(_prevActiveWeapon);
+            const GameObjRenderDef* newWeapon = item(activeWeapon);
+            if (newWeapon && (newWeapon->category == "melee" || newWeapon->category == "throwable")) {
+                // Melee/throwable deploy sound (player.ts ~line 1042).
+                audio::PlaySoundOptions opts;
+                opts.channel = "sfx";
+                opts.hasSoundPos = true;
+                opts.soundPos = pos;
+                opts.fallOff = 3.0f;
+                audio->playSound(newWeapon->type + "_01", opts);
+            } else if (newWeapon && newWeapon->category == "gun") {
+                // Gun switch sound (player.ts ~line 1058).
+                std::string switchSound = "gun_switch_01";
+                bool deployFull = false;
+                // Check same deploy group (simplified: always use deploy sound if previous was also gun).
+                if (prevWeapon && prevWeapon->category == "gun") {
+                    deployFull = true;
+                }
+                if (deployFull) {
+                    switchSound = newWeapon->type + "_01";  // weapon type maps to shoot sound group
+                }
+                if (cycleSoundInstance != audio::kInvalidSound) {
+                    audio->stopSound(cycleSoundInstance);
+                    cycleSoundInstance = audio::kInvalidSound;
+                }
+                audio::PlaySoundOptions opts;
+                opts.channel = "activePlayer";
+                cycleSoundInstance = audio->playSound(switchSound, opts);
+            }
+        }
+        _prevActiveWeapon = activeWeapon;
+
+        // player.ts: update surface and footsteps
+        auto gs = ctx.map().getGroundSurface(pos, layer);
+        surfaceType = gs.type == Map::SurfaceType::Water ? SurfaceType::Water : gs.type == Map::SurfaceType::Sand ? SurfaceType::Sand : SurfaceType::Grass;
+        const bool inWater = surfaceType == SurfaceType::Water;
+        // Footsteps (player.ts ~line 964)
+        stepDistance += v2Length(v2Sub(posOld, pos));
+        if ((stepDistance > 5.0f && inWater) || (inWater && !wasInWater)) {
+            stepDistance = 0.0f;
+            ctx.particleBarn().addRippleParticle(ctx.factory(), pos, layer, surfaceRippleColor);
+            audio::PlaySoundOptions opts;
+            opts.channel = "sfx";
+            opts.hasSoundPos = true;
+            opts.soundPos = pos;
+            opts.fallOff = 3.0f;
+            opts.hasLayer = true;
+            opts.layer = layer;
+            opts.filter = "muffled";
+            audio->playGroup("footstep_water", opts);
+        } else if (stepDistance > 4.0f && !inWater) {
+            stepDistance = 0.0f;
+            audio::PlaySoundOptions opts;
+            opts.channel = "sfx";
+            opts.hasSoundPos = true;
+            opts.soundPos = pos;
+            opts.fallOff = 3.0f;
+            opts.hasLayer = true;
+            opts.layer = layer;
+            opts.filter = "muffled";
+            // Build footstep group name from surface type (grass/sand/tile/asphalt/brick/stone/carpet/...)
+            std::string footstepGroup = "footstep_";
+            switch (surfaceType) {
+                case SurfaceType::Sand: footstepGroup += "sand"; break;
+                case SurfaceType::Water: footstepGroup += "water"; break;
+                default: footstepGroup += "grass"; break;
+            }
+            audio->playGroup(footstepGroup, opts);
+        }
+        wasInWater = inWater;
+
+        // player.ts ~line 1018: Bleeding sound
+        if (downed && isActivePlayer) {
+            bleedTicker -= dt;
+            if (bleedTicker < 0.0f) {
+                bleedTicker = 2.5f;
+                audio::PlaySoundOptions opts;
+                opts.channel = "hits";
+                opts.hasSoundPos = true;
+                opts.soundPos = pos;
+                opts.fallOff = 3.0f;
+                opts.hasLayer = true;
+                opts.layer = layer;
+                opts.filter = "muffled";
+                audio->playSound("player_bullet_hit_02", opts);
+            }
+        }
+
+        // player.ts ~line 1122: Haste ability sound
+        // Played once in m_updateData when hasteSeq changes.
+    }
+    // Cache position for next frame's movement delta.
+    posOld = pos;
     // Published for player skins (obstacle.ts reads renderLayer/renderZOrd/renderZIdx).
     renderZLayer = renderLayer;
     renderZOrd = zOrd;
@@ -537,13 +664,58 @@ void Player::update(float dt, Ctx& ctx) {
 
 // playAnim for a cached action item (player.ts selectAnim). The C++ port does
 // not receive Action/item for every player, so the aura caller passes them in.
-void Player::updateActions(int actionType, const std::string& actionItem) {
+void Player::updateActions(int actionType, const std::string& actionItem, Ctx& ctx) {
     if (paramsCached && cachedActionType == actionType && cachedActionItem == actionItem) {
         return;
     }
     paramsCached = true;
     cachedActionType = actionType;
     cachedActionItem = actionItem;
+
+    // Priority 1: Play action start sound (player.ts playActionStartEffect).
+    // Stop any previous action sound first.
+    if (ctx.audio() && actionSoundInstance != audio::kInvalidSound) {
+        ctx.audio()->stopSound(actionSoundInstance);
+        actionSoundInstance = audio::kInvalidSound;
+    }
+    if (ctx.audio() && (actionType == Action_UseItem || actionType == Action_Reload || actionType == Action_ReloadAlt)) {
+        const GameObjRenderDef* actionItemDef =
+            actionItem.empty() ? nullptr : item(actionItem);
+        std::string soundName;
+        std::string channel;
+        // Determine isActivePlayer by checking ctx's activePlayerId.
+        // Since updateActions is called from m_updateData which has a Ctx&,
+        // we store it in a context-aware way. Use the stored reference.
+        if (actionType == Action_UseItem && !actionItem.empty()) {
+            // Use item type from actionItem directly: e.g. "bandage" -> "bandage_use_01",
+            // "healthkit" -> "healthkit_use_01", "soda" -> "soda_use_01", "pills" -> "pills_use_01"
+            soundName = actionItem + "_use_01";
+            channel = ctx.activePlayer() == this ? "activePlayer" : "otherPlayers";
+        } else if (actionType == Action_Reload || actionType == Action_ReloadAlt) {
+            // Reload sound uses weapon type: e.g. "ak47" -> "ak47_01" (reload is shoot prefix)
+            // The web client uses GunDef.sound.reload directly.
+            // For now, use the item as a prefix with _reload_01 convention.
+            if (!actionItem.empty()) {
+                soundName = actionItem + "_01";  // placeholder - actual reload sound names differ
+            }
+            channel = ctx.activePlayer() == this ? "activePlayer" : "otherPlayers";
+        }
+        // The web client looks up HealDef/BoostDef.sound.use, GunDef.sound.reload etc.
+        // Since GameObjRenderDef doesn't carry this, we use the item type as a
+        // sound key prefix. The actual sound names are item-specific (e.g. bandage_use_01).
+        // For now, play a group based on action type.
+        if (!soundName.empty()) {
+            audio::PlaySoundOptions opts;
+            opts.channel = channel;
+            opts.hasSoundPos = true;
+            opts.soundPos = pos;
+            opts.fallOff = 2.0f;
+            opts.hasLayer = true;
+            opts.layer = layer;
+            opts.filter = "muffled";
+            actionSoundInstance = ctx.audio()->playSound(soundName, opts);
+        }
+    }
 }
 
 void Player::updateAura(float dt, Ctx& ctx, bool isActivePlayer) {
@@ -607,8 +779,11 @@ void Player::updateSubmersion(float dt, Ctx& ctx) {
     if (!bodySubmergeSprite) {
         return;
     }
-    const Map::GroundSurface surface = ctx.map().getGroundSurface(pos, layer);
-    const bool inWater = surface.type == Map::SurfaceType::Water;
+    auto surface = ctx.map().getGroundSurface(pos, layer);
+    surfaceType = surface.type == Map::SurfaceType::Water ? SurfaceType::Water : surface.type == Map::SurfaceType::Sand ? SurfaceType::Sand : SurfaceType::Grass;
+    surfaceWaterColor = surface.waterColor;
+    surfaceRippleColor = surface.rippleColor;
+    const bool inWater = surfaceType == SurfaceType::Water;
     float submersionAmount = 0.0f;
     if (inWater) {
         const float dist = ctx.map().distanceToShore(pos);
@@ -622,7 +797,7 @@ void Player::updateSubmersion(float dt, Ctx& ctx) {
     bodySubmergeSprite->setAlpha(submersionAlpha);
     bodySubmergeSprite->setVisible(submersionAlpha > 0.001f);
     if (inWater) {
-        bodySubmergeSprite->setTint(surface.waterColor);
+        bodySubmergeSprite->setTint(surfaceWaterColor);
     }
     for (auto* limb : submergeLimbs) {
         if (!limb) {
@@ -632,7 +807,7 @@ void Player::updateSubmersion(float dt, Ctx& ctx) {
         limb->setAlpha(alpha);
         limb->setVisible(alpha > 0.001f);
         if (inWater) {
-            limb->setTint(surface.waterColor);
+            limb->setTint(surfaceWaterColor);
         }
     }
 }

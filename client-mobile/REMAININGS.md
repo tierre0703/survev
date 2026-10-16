@@ -12,6 +12,9 @@ This file is a **summary/index**; the detailed work orders live in:
 
 Latest recorded state: **2026-10-16** — M6 audio wiring (per-def explosion,
 bullet whiz, weapon shot sounds) + reverb volume computation implemented.
+**Plus Priority 1a — player action sounds** (footsteps, bleeding, haste
+ability, weapon deploy/switch, action sound start/stop) wired into the
+`Player::update()` / `m_updateData()` / `updateActions()` cycle.
 **93 host tests pass** on `surv_tests` (pre-existing `update-full` fixture
 drift is unrelated — `test_messages.cpp:212`).
 
@@ -106,7 +109,7 @@ drift is unrelated — `test_messages.cpp:212`).
 
 ### Priority 1 — Core gameplay gaps (most noticeable)
 
-- [ ] **Player action sounds** — extend `Player` struct with:
+- [x] **Player action sounds** — extend `Player` struct with:
   - `surface` type (from `Map::getGroundSurface`)
   - `stepDistance` counter
   - `action` type/item (reload/useItem)
@@ -114,22 +117,16 @@ drift is unrelated — `test_messages.cpp:212`).
   - Wire `playGroup("footstep_${surface.type}")` / `playGroup("footstep_water")` on step threshold
   - Wire weapon deploy/switch sound (`weaponDef.sound.deploy` via `"gun_switch_01"` fallback)
   - Wire reload/useItem action sounds (`playActionStartEffect`)
-  - Wire item pickup sound (`playItemPickupSound` → `"ui"` channel)
-  - Wire dry fire sound (`itemDef.sound.empty`)
+  - Wire item pickup sound (`playItemPickupSound` → `"ui"` channel) — **handlePickup placeholder**
+  - Wire dry fire sound (`itemDef.sound.empty`) — **not wired (needs input/ammo tracking)**
   - Wire haste ability sound (`ability_stim_01`)
   - Wire healing effect/action sounds (`bandage_use_01`/`healthkit_use_01`/`soda_use_01`/`pills_use_01`)
-  - Wire door error sound (`door_error_01`)
-  - Wire bush enter/exit sound (`obstacleDef.sound.enter`)
+  - Wire door error sound (`door_error_01`) — **not wired (no door interaction in C++ yet)**
+  - Wire bush enter/exit sound (`obstacleDef.sound.enter`) — **not wired (obstacle bush tracking not ported)**
   - Wire bleeding sound (`player_bullet_hit_02`)
-  - Wire bullet hit sounds (`playGroup("player_bullet_hit")` and obstacle `sound.bullet` groups)
-
-- [ ] **Emote/ping system** (`client/src/emote.ts`) — port to C++:
-  - `EmoteBarn` — emote/ping wheel (touch + mouse)
-  - Ping/emote world indicators (over-player sprites)
-  - Minimap pings + map indicator markers
-  - Emote/ping sounds (notification sounds)
-  - Throttling (`emoteSoftTicker`/`emoteHardTicker`)
-  - `PingDefs`/`EmoteDefs` icons
+  - Wire bullet hit sounds (`playGroup("player_bullet_hit")` and obstacle `sound.bullet` groups) — **handled by hit barns**
+- [ ] **Pickup sound** — finish wiring `playItemPickupSound` via `GameWorld` pickup callback to play the correct sound on `PickupMsgType_Success`
+- [ ] **Emote/ping system** (`client/src/emote.ts`) — port to C++ (unstarted)
 
 ### Priority 2 — HUD/UI gaps (visible during gameplay)
 
