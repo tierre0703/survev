@@ -1,5 +1,6 @@
 build/
 build-tests/
+build-tests-debug/
 build-android/
 build-android-*/
 build-win32/

@@ -35,8 +35,19 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.WindowManager.LayoutParams;
 import android.widget.FrameLayout;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.LinearLayout;
+import android.widget.EditText;
+import android.widget.ScrollView;
+import android.util.Log;
+import android.view.Gravity;
+import android.util.TypedValue;
+import android.graphics.Color;
 
 public class AppActivity extends AxmolActivity {
+    private static final String TAG = "AppActivity";
+
     static {
         // DNT remove, some android simulator require explicit load shared libraries, otherwise will crash
         SharedLoader.load();
@@ -74,6 +85,7 @@ public class AppActivity extends AxmolActivity {
         }
         // DO OTHER INITIALIZATION BELOW
         sCurrent = this;
+        Log.i(TAG, "AppActivity onCreate, mFrameLayout=" + (mFrameLayout != null ? "OK" : "NULL"));
         installJavaUi();
     }
 
@@ -92,6 +104,7 @@ public class AppActivity extends AxmolActivity {
      * the GL surface so the Java screens draw on top of the game canvas.
      */
     private void installJavaUi() {
+        Log.i(TAG, "installJavaUi called, mFrameLayout=" + (mFrameLayout != null ? "OK" : "NULL"));
         if (mFrameLayout == null) {
             return;
         }
@@ -107,6 +120,7 @@ public class AppActivity extends AxmolActivity {
         mJavaUi = new JavaUiHost(this, container);
         SurvBridge.setHost(mJavaUi);
         mJavaUi.install();
+        Log.i(TAG, "JavaUiHost installed, java menu should be visible");
     }
 
 }
