@@ -130,9 +130,35 @@ drift is unrelated — `test_messages.cpp:212`).
 
 ### Priority 2 — HUD/UI gaps (visible during gameplay)
 
-- [ ] **FairyGUI HUD** (`FguiHud.*`) — implement:
-  - Health/boost bars
-  - Ammo count + weapon name
+- [x] **FairyGUI HUD** (`FguiHud.*`) — **Health/boost bars**:
+  - Health bar with color interpolation (8-step grey→white→pink→red)
+  - Health numeric text alongside bar
+  - Boost bar with 4 colored segments (orange shades)
+  - Semi-transparent panel background
+  - Wired into `GameScene::update()` per frame
+- [x] **FguiHud — Weapon/ammo display**:
+  - Weapon name text (from `ActivePlayerData.weapons[curWeapIdx].type`)
+  - Ammo clip + reserve count (from weapon ammo + inventory lookup)
+  - Handles gun (clip/reserve), melee (no ammo), throwable categories
+- [x] **FguiHud — Alive counter**:
+  - Top-right alive count label from `Game::aliveCounts()`
+  - Faction/squad mode handling
+- [x] **FguiHud — Kill feed**:
+  - Kill feed text built from `Game::killFeed()` entries
+  - Kill messages: "killerName killed targetName (weapon)"
+  - Non-player kills: "targetName - died/gas"
+  - Knocked-out vs killed distinction
+- [x] **FguiHud — Game result overlay**:
+  - Centered semi-transparent panel
+  - Rank #N + local player kills + damage
+  - Toggled via `Game::gameOver()` presence
+- [ ] **Minimap** (render from `RenderTexture`)
+- [ ] **Squad health bars** (4 team member health bars with status indicators)
+- [ ] **FguiPadGraphics touch pads** — real pad sprites (`pad.img` with alpha/scaling)
+- [ ] **Aim-line dots** (`LineSprites`: dot sprite every 1.5 units, ray-cast against obstacles)
+- [ ] **Inventory UI v2** (`ui2.ts` features — weapon cards, perk icons, loot pickup feed, throwable arc preview, team inventory panel)
+- [ ] **Pie timer** (`pieTimer.ts` — action progress circle)
+- [ ] **Crosshair** (`crosshair.ts` — custom crosshair rendering)
   - Alive count + killfeed
   - Minimap (render from `RenderTexture`)
   - Compass

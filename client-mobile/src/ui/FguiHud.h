@@ -3,7 +3,7 @@
 // with programmatically-constructed FairyGUI components.
 //
 // This is an incremental step toward ARCHITECTURE.md §3.1:
-//   * The HUD is built from FairyGUI objects (GProgressBar, GTextField, etc.)
+//   * The HUD is built from FairyGUI objects (GGraph, GBasicTextField, etc.)
 //     that mirror the layout of the web client's HUD.
 //   * Later (when the FairyGUI Editor is available and HUD_pkg is authored),
 //     this file is replaced by a simple UIPackage::createObject("HUD_pkg", "Main").
@@ -25,8 +25,8 @@ class Scene;
 namespace fairygui {
 class GComponent;
 class GObject;
-class GProgressBar;
 class GGraph;
+class GBasicTextField;
 }
 
 namespace surv {
@@ -62,18 +62,35 @@ public:
 
 private:
     void buildHudPanel(fairygui::GComponent* root);
+    void buildResultOverlay(fairygui::GComponent* root);
+    void buildKillFeed(fairygui::GComponent* root);
+    void buildAliveCounter(fairygui::GComponent* root);
 
-    fairygui::GProgressBar* _healthBar = nullptr;
-    fairygui::GProgressBar* _boostBar = nullptr;
+    // Health bar: fill rect (redrawn each frame with varying width+color)
     fairygui::GObject* _healthText = nullptr;
+    fairygui::GGraph* _healthFill = nullptr;
+
+    // Boost bar: 4 segments (one GGraph each)
+    fairygui::GGraph* _boostSegments[4]{};
+
+    // Weapon + ammo display
     fairygui::GObject* _weaponText = nullptr;
     fairygui::GObject* _ammoText = nullptr;
+
+    // Alive counter
     fairygui::GObject* _aliveText = nullptr;
+
+    // Kill feed (6 lines)
     fairygui::GObject* _killFeedText = nullptr;
+
+    // Result overlay
     fairygui::GObject* _resultText = nullptr;
     fairygui::GObject* _resultPanel = nullptr;
-    fairygui::GComponent* _hudRoot = nullptr;
-    fairygui::GComponent* _hudPanel = nullptr;
+    bool _resultShown = false;
+
+    // Root panel containing all HUD elements.
+    fairygui::GObject* _hudPanel = nullptr;
+
     bool _visible = true;
 };
 
