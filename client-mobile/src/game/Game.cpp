@@ -333,6 +333,10 @@ void Game::handleUpdate(NetBitStream& s) {
             }
         }
     }
+    // Priority 2: store GroupStatus for squad health bars.
+    if (m.groupStatusDirty) {
+        _groupStatus = m.groupStatus;
+    }
     _lastUpdate = std::move(m);
     _hasUpdate = true;
     if (_updateCallback) {

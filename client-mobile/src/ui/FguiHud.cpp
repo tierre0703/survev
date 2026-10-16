@@ -4,6 +4,8 @@
 
 #include "FguiHud.h"
 #include "../game/Game.h"
+#include "../game/Map.h"
+#include "../game/Gas.h"
 #include "../render/Defs.h"
 #include "../ui/Localization.h"
 #include "../core/GameConfig.h"
@@ -110,6 +112,7 @@ void FguiHud::build(ax::Scene* scene) {
     buildKillFeed(root);
     buildAliveCounter(root);
     buildResultOverlay(root);
+    buildSquadBars(root);
 }
 
 void FguiHud::buildHudPanel(fairygui::GComponent* root) {
@@ -269,9 +272,148 @@ void FguiHud::buildResultOverlay(fairygui::GComponent* root) {
     _resultText = resultTf;
 }
 
-// ---- Refresh methods -----------------------------------------------------
+// ---- Squad health bars ---------------------------------------------------
+static constexpr float kSquadBarWidth = 160.0f;
+static constexpr float kSquadBarHeight = 10.0f;
+static constexpr float kSquadNameFontSize = 16.0f;
+static constexpr float kSquadSlotHeight = 36.0f;
+static constexpr float kSquadPanelWidth = kSquadBarWidth + 40.0f;
+static constexpr float kSquadPanelHeight = 4 * kSquadSlotHeight + 10.0f;
 
-void FguiHud::refreshHealth(float health) {
+void FguiHud::buildSquadBars(fairygui::GComponent* root) {
+    // Squad panel: top-left of screen
+    fairygui::GGraph* panel = fairygui::GGraph::create();
+    panel->drawRect(kSquadPanelWidth, kSquadPanelHeight, 0,
+                    Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                    Color4F(0.0f, 0.0f, 0.0f, 0.4f));
+    panel->setPosition(10.0f, 10.0f);
+    panel->setPivot(0.0f, 0.0f);
+    panel->setVisible(false);
+    root->addChild(panel);
+
+    for (int i = 0; i < 4; ++i) {
+        const float y = 4.0f + static_cast<float>(i) * kSquadSlotHeight;
+
+        fairygui::GComponent* slot = fairygui::GComponent::create();
+        slot->setPosition(0.0f, y);
+        slot->setPivot(0.0f, 0.0f);
+        panel->addChild(slot);
+
+        fairygui::GBasicTextField* nameTf = fairygui::GBasicTextField::create();
+        nameTf->setText("");
+        nameTf->setColor(Color3B(200, 200, 200));
+        nameTf->setFontSize(kSquadNameFontSize);
+        nameTf->setSingleLine(true);
+        nameTf->setPosition(4.0f, 0.0f);
+        nameTf->setPivot(0.0f, 0.0f);
+        slot->addChild(nameTf);
+
+        fairygui::GGraph* barBg = fairygui::GGraph::create();
+        barBg->drawRect(kSquadBarWidth, kSquadBarHeight, 0,
+                        Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                        Color4F(0.2f, 0.2f, 0.2f, 0.8f));
+        barBg->setPosition(4.0f, kSquadNameFontSize + 2.0f);
+        barBg->setPivot(0.0f, 0.0f);
+        slot->addChild(barBg);
+
+        fairygui::GGraph* healthFill = fairygui::GGraph::create();
+        healthFill->drawRect(kSquadBarWidth, kSquadBarHeight, 0,
+                             Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                             Color4F(0.3f, 0.8f, 0.3f, 1.0f));
+        healthFill->setPosition(4.0f, kSquadNameFontSize + 2.0f);
+        healthFill->setPivot(0.0f, 0.0f);
+        healthFill->setVisible(true);
+        slot->addChild(healthFill);
+
+        fairygui::GBasicTextField* statusTf = fairygui::GBasicTextField::create();
+        statusTf->setText("");
+        statusTf->setColor(Color3B(255, 80, 80));
+        statusTf->setFontSize(kSquadNameFontSize);
+        statusTf->setSingleLine(true);
+        statusTf->setPosition(4.0f + kSquadBarWidth + 4.0f, 0.0f);
+        statusTf->setPivot(0.0f, 0.0f);
+        slot->addChild(statusTf);
+
+        _squadMembers[i].container = slot;
+        _squadMembers[i].nameText = nameTf;
+        _squadMembers[i].healthBar = healthFill;
+        _squadMembers[i].statusText = statusTf;
+        _squadMembers[i].prevHealth = -1;
+        _squadMembers[i].prevDead = false;
+        _squadMembers[i].prevDowned = false;
+        _squadMembers[i].prevDisconnected = false;
+    }
+}
+
+void FguiHud::refreshSquad(const Game* game) {
+    if (!game) return;
+    const std::vector<uint16_t> teamIds = game->getTeamPlayerIds();
+    const auto& playerStatusMap = game->allPlayerStatus();
+    const auto& playerInfoMap = game->allPlayerInfo();
+    const auto& groupStatusVec = game->groupStatus();
+
+    const bool hasTeam = teamIds.size() > 1;
+    // Show/hide the panel via first squad member's parent.
+    if (!_squadMembers.empty() && _squadMembers[0].container) {
+        auto* parent = _squadMembers[0].container->getParent();
+        if (parent) parent->setVisible(hasTeam && game->isPlaying());
+    }
+
+    for (size_t i = 0; i < _squadMembers.size(); ++i) {
+        auto& m = _squadMembers[i];
+        if (!m.container) continue;
+
+        if (!hasTeam || i >= teamIds.size()) {
+            m.container->setVisible(false);
+            continue;
+        }
+
+        m.container->setVisible(true);
+        const uint16_t pid = teamIds[i];
+
+        // Name
+        const auto* info = playerInfoMap.count(pid) ? &playerInfoMap.at(pid) : nullptr;
+        const std::string& name = info ? info->name : "";
+        m.nameText->setText(name.empty() ? "Player" : name);
+
+        // Health + disconnected from GroupStatus (indexed by teamIds order)
+        float health = 100.0f;
+        bool disconnected = false;
+        if (i < groupStatusVec.size()) {
+            health = groupStatusVec[i].health;
+            disconnected = groupStatusVec[i].disconnected;
+        }
+        const auto* ps = playerStatusMap.count(pid) ? &playerStatusMap.at(pid) : nullptr;
+        const bool dead = ps ? ps->dead : false;
+        const bool downed = ps ? ps->downed : false;
+
+        // Health bar
+        const float fillWidth = kSquadBarWidth * std::clamp(health / 100.0f, 0.0f, 1.0f);
+        m.healthBar->clear();
+        const uint32_t barColor = dead    ? 0xff444444 :
+                                   downed ? 0xffffaa00 :
+                                           0xff4caf50;
+        m.healthBar->drawRect(std::max(fillWidth, 0.0f), kSquadBarHeight, 0,
+                              Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                              Color4F(((barColor >> 16) & 0xff) / 255.0f,
+                                      ((barColor >> 8) & 0xff) / 255.0f,
+                                      (barColor & 0xff) / 255.0f, 1.0f));
+        m.healthBar->setVisible(fillWidth > 0.0f);
+
+        // Status text
+        std::string status;
+        if (disconnected) status = "DC";
+        else if (dead) status = "Dead";
+        else if (downed) status = "Down";
+        m.statusText->setText(status);
+        m.statusText->setVisible(!status.empty());
+
+        m.prevHealth = static_cast<int>(health);
+        m.prevDead = dead;
+        m.prevDowned = downed;
+        m.prevDisconnected = disconnected;
+    }
+}
     if (!_healthFill || !_healthText || !_hudPanel) return;
 
     const bool downed = health < 0.0f;
@@ -437,6 +579,9 @@ void FguiHud::update(float dt, bool started, bool playing, const Game* game) {
         feedText += "\n";
     }
     refreshKillFeed(feedText);
+
+    // Priority 2: squad health bars
+    refreshSquad(game);
 
     // Game result
     const auto* over = game->gameOver();

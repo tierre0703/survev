@@ -15,6 +15,7 @@
 #include "../audio/AxmolAudioBackend.h"
 #include "../audio/GeneratedSoundDefs.h"
 #include "../ui/FguiHud.h"
+#include "../ui/FguiPieTimer.h"
 #include "../ui/FguiPadGraphics.h"
 
 #include "fairygui/GRoot.h"
@@ -253,6 +254,10 @@ bool GameScene::init() {
     // S2: build the FairyGUI HUD.
     _hud = std::make_unique<FguiHud>();
     _hud->build(this);
+
+    // Priority 2: build the pie timer.
+    _pieTimer = std::make_unique<PieTimer>();
+    _pieTimer->build();
 
     // M4: render world (terrain + z-sorted object layers) driven by the map /
     // update messages the game dispatches.
@@ -585,12 +590,58 @@ void GameScene::update(float delta) {
         _hud->update(delta, isStarted(), isPlaying(), _game.get());
     }
 
+    // Priority 2: pie timer — driven by active player action data each frame.
+    if (_pieTimer && _game && isStarted()) {
+        const auto& apd = _game->activePlayerData();
+        if (apd.actionDirty && apd.actionDuration > 0.0f) {
+            _pieTimer->start("", apd.actionTime, apd.actionDuration);
+        }
+        if (_pieTimer->isActive()) {
+            _pieTimer->update(delta, _world ? _world->camera() : Camera(), false, 0.0f);
+            // Stop when action completes.
+            if (apd.actionDuration > 0.0f && apd.actionTime >= apd.actionDuration) {
+                _pieTimer->stop();
+            }
+        }
+    }
+
+    // M7: crosshair sprite — rendered at screen center via the PIXI adapter
+    // at the highest z-order so it always sits on top of the game world.
+    // Crosshair defs are in GeneratedDefs.cpp and have texture names like
+    // "crosshair000.img". The sprite is created once and shown/hidden.
+    if (_world && _pixiFactory && isStarted() && _game->isPlaying() && _game->hasJoined()) {
+        static bool crossInit = false;
+        static pix::Sprite* crossSprite = nullptr;
+        if (!crossInit && _worldRoot) {
+            crossSprite = _pixiFactory->createSprite();
+            crossSprite->setAnchor(0.5f, 0.5f);
+            crossSprite->setFrame("crosshair000.img");
+            crossSprite->setTint(0xffffff);
+            crossSprite->setAlpha(0.8f);
+            crossSprite->setScale(1.0f, 1.0f);
+            _worldRoot->addChild(crossSprite);
+            crossInit = true;
+        }
+        if (crossSprite) {
+            // Position at screen center each frame (camera independent).
+            const auto size = ax::Director::getInstance()->getVisibleSize();
+            crossSprite->setPosition(size.width * 0.5f, size.height * 0.5f);
+            crossSprite->setVisible(true);
+        }
+    }
+
     // S6: the pause menu is now Java (GamePauseDialog).
     // The C++ _overlay is never created; skip the isOpen check.
     if (_game->isPlaying() && _game->getActivePlayerId() != 0) {
         updateInput(delta);
     }
     _touch->m_update(*_movePad, *_aimPad);
+
+    // M5: pass touchingAim + touchAimLine state from Touch to GameWorld
+    // for the LineSprites aim-line rendering in the world update.
+    if (_world) {
+        _world->setAimLineState(_touch->touchingAim, _touch->touchAimLine);
+    }
 }
 
 void GameScene::updateInput(float dt) {

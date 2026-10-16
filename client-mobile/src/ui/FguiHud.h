@@ -65,6 +65,15 @@ private:
     void buildResultOverlay(fairygui::GComponent* root);
     void buildKillFeed(fairygui::GComponent* root);
     void buildAliveCounter(fairygui::GComponent* root);
+    void buildSquadBars(fairygui::GComponent* root);
+    void buildMinimap(fairygui::GComponent* root);
+
+    // Minimap: FGUI sprite + overlay
+    fairygui::GObject* _minimapContainer = nullptr;
+    fairygui::GGraph* _minimapFrame = nullptr;
+    fairygui::GGraph* _minimapGasRing = nullptr;
+    fairygui::GGraph* _minimapSafeZone = nullptr;
+    std::vector<fairygui::GGraph*> _minimapDots;
 
     // Health bar: fill rect (redrawn each frame with varying width+color)
     fairygui::GObject* _healthText = nullptr;
@@ -87,6 +96,20 @@ private:
     fairygui::GObject* _resultText = nullptr;
     fairygui::GObject* _resultPanel = nullptr;
     bool _resultShown = false;
+
+    // Squad health bars (4 team members)
+    struct SquadMember {
+        fairygui::GObject* container = nullptr;
+        fairygui::GObject* nameText = nullptr;
+        fairygui::GGraph* healthBar = nullptr;
+        fairygui::GObject* statusText = nullptr;
+        // Cached state
+        int prevHealth = -1;
+        bool prevDead = false;
+        bool prevDowned = false;
+        bool prevDisconnected = false;
+    };
+    std::array<SquadMember, 4> _squadMembers{};
 
     // Root panel containing all HUD elements.
     fairygui::GObject* _hudPanel = nullptr;

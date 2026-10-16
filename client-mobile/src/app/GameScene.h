@@ -34,6 +34,7 @@ class GameWorld;
 fairygui::GRoot* fguiRoot();
 
 class FguiHud;
+class PieTimer;
 
 class FguiPadGraphics;
 
@@ -176,6 +177,7 @@ private:
     bool _inGame = false;
 
     std::unique_ptr<FguiHud> _hud;
+    std::unique_ptr<PieTimer> _pieTimer;
     FindGameRequest _findGameRequest;
     uikit::UiOverlay* _overlay = nullptr;
     ax::Node* _uiRoot = nullptr;

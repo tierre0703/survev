@@ -136,6 +136,26 @@ public:
     const std::vector<KillFeedEntry>& killFeed() const { return _killFeed; }
     std::vector<int> aliveCounts() const;
     const GameOverMsg* gameOver() const { return _hasGameOver ? &_gameOver : nullptr; }
+    // Priority 2: squad health bar data.
+    const std::unordered_map<uint16_t, PlayerInfo>& allPlayerInfo() const { return _playersById; }
+    const std::unordered_map<uint16_t, PlayerStatus>& allPlayerStatus() const { return _playerStatus; }
+    const std::vector<GroupStatus>& groupStatus() const { return _groupStatus; }
+    uint16_t teamIdForPlayer(uint16_t playerId) const {
+        auto it = _playersById.find(playerId);
+        return it != _playersById.end() ? it->second.teamId : 0;
+    }
+    std::vector<uint16_t> getTeamPlayerIds() const {
+        const auto active = _playersById.find(_activePlayerId);
+        if (active == _playersById.end()) return {};
+        std::vector<uint16_t> ids;
+        for (auto id : _playerIds) {
+            auto it = _playersById.find(id);
+            if (it != _playersById.end() && it->second.teamId == active->second.teamId) {
+                ids.push_back(id);
+            }
+        }
+        return ids;
+    }
 
 private:
     void handleJoined(NetBitStream& s);
@@ -187,6 +207,8 @@ private:
     GameOverMsg _gameOver;
     bool _hasGameOver = false;
     std::unordered_map<uint16_t, ObjectSnapshot> _objectsById;
+    // GroupStatus from latest UpdateMsg (health + disconnected per group member).
+    std::vector<GroupStatus> _groupStatus;
 
     // Full last update (bullets/explosions/gas/... for M4+ rendering).
     UpdateMsg _lastUpdate;

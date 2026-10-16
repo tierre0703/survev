@@ -58,8 +58,16 @@ public:
     DecalBarn* decalBarn = nullptr;
     void setDecalBarn(DecalBarn* barn) { decalBarn = barn; }
 
-    // biome camera particle emitter (map.ts cameraEmitter), driven per frame.
-    Emitter* cameraEmitter = nullptr;
+    // minimap texture methods.
+    void generateMinimapTexture(pix::Factory* factory, const Camera& camera);
+    pix::RenderTexture* getMinimapTexture() const { return _mapTexture; }
+    float getMinimapScale() const;
+    void onFactoryReset();
+
+    // Minimap texture (generated once on loadMap).
+    RenderTexture* _mapTexture = nullptr;
+    // Scratch graphics for minimap rendering.
+    pix::Graphics* _mapGfx = nullptr;
 
     Pool<Obstacle> obstaclePool;
     Pool<Building> buildingPool;

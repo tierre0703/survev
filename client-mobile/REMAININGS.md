@@ -159,18 +159,29 @@ drift is unrelated — `test_messages.cpp:212`).
   - Touch dot (GGraph drawEllipse solid fill, white/light orange)
   - Position/scale set reactively from Touch.m_update()
   - Wired into GameScene init as the active pad renderer
-- [ ] **Aim-line dots** (`LineSprites`: dot sprite every 1.5 units, ray-cast against obstacles)
+- [x] **Aim-line dots** (`LineSprites`: dot sprite every 1.5 units, ray-cast against obstacles)
+  - Already fully ported in AimLine.h; wired into GameWorld::update()
+  - Was dormant — now enabled: GameScene passes Touch.touchingAim + .touchAimLine
+    to GameWorld::setAimLineState() each frame
+- [x] **Pie timer** (`pieTimer.ts` — action progress circle):
+  - FguiPieTimer class with FGUI GGraph circle + countdown + label
+  - Driven by ActivePlayerData.actionTime/actionDuration
+  - Wired into GameScene::update() per frame
+  - Stops when action completes
+- [x] **Squad health bars** (4 team member health bars with status indicators):
+  - FguiHud.buildSquadBars() builds 4 slots with name, health bar, status text
+  - Driven by Game::getTeamPlayerIds() + groupStatus() + playerStatus
+  - Shows green/amber/grey bar based on health, "Dead"/"Down"/"DC" status labels
+  - Panel hidden in solo mode, shown top-left in team/squad modes
+  - Wired into FguiHud::update() per frame
+- [x] **Crosshair** (`crosshair.ts` — custom crosshair rendering):
+  - PIXI Sprite rendered at screen center above the game world
+  - Uses "crosshair000.img" atlas frame from GeneratedDefs
+  - Created once in GameScene::update(), shown during gameplay
+  - Future: read the crosshair type/color/size from Config loadout
+- [ ] **Minimap** (render from `RenderTexture`)
+- [ ] **Squad health bars** (4 team member health bars with status indicators)
 - [ ] **Inventory UI v2** (`ui2.ts` features — weapon cards, perk icons, loot pickup feed, throwable arc preview, team inventory panel)
-- [ ] **Pie timer** (`pieTimer.ts` — action progress circle)
-- [ ] **Crosshair** (`crosshair.ts` — custom crosshair rendering)
-  - Alive count + killfeed
-  - Minimap (render from `RenderTexture`)
-  - Compass
-  - Squad health bars
-  - Spectate overlay / options
-  - Gas zone announcements/status
-  - Interaction prompts / action pie timer
-  - Player stats page
 
 - [ ] **FairyGUI touch pads** (`FguiPadGraphics.*`) — implement:
   - Real pad sprites (`pad.img` with alpha/scaling)

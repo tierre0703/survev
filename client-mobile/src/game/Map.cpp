@@ -10,6 +10,7 @@
 #include "../core/Collider.h"
 #include "../render/Camera.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace surv {
@@ -432,22 +433,181 @@ bool Map::insideBuildingCeiling(const Collider& c, bool checkVisible) const {
     return false;
 }
 
-bool Map::isUnderground(const Vec2& pos, int layer) const {
-    if (layer != 1) {
-        return false;
+void Map::onFactoryReset() {
+    if (_mapTexture) {
+        _mapTexture = nullptr;  // adapter-owned, released by factory
     }
-    const Collider c = Collider::createCircle(pos, 1.0f);
-    for (auto* structure : structurePool.m_getPool()) {
-        if (!structure->active) {
-            continue;
-        }
-        for (const auto& l : structure->layers) {
-            if (l.underground && colliderIntersect(l.collision, c)) {
-                return true;
+    if (_mapGfx) {
+        _mapGfx = nullptr;
+    }
+}
+
+void Map::generateMinimapTexture(pix::Factory* factory, const Camera& camera) {
+    if (!factory || _mapTexture) return;  // already generated
+
+    // Compute minimap texture size: square, matching device pixel ratio.
+    const float screenScale = camera.m_screenHeight;
+    const float minDim = std::min(camera.m_screenWidth, camera.m_screenHeight);
+    const float texSize = std::round(minDim * 0.3f);  // ~30% of smaller screen dimension
+
+    _mapTexture = factory->createRenderTexture();
+    _mapTexture->resize(texSize, texSize);
+
+    // Create a scratch graphics node to render the minimap into.
+    // We reuse the terrain renderer: renderTerrain with mapRender=true
+    // draws only map-relevant patches (useAsMapShape flag).
+    _mapGfx = factory->createGraphics();
+    _mapGfx->clear();
+
+    // Scale: map coordinates (0..width, 0..height) to texture (0..texSize).
+    const float mapScale = texSize / std::max(width, height);
+
+    // Render terrain background (same as world, but with mapRender flag).
+    renderTerrain(_mapGfx, 0.0f, false, true);
+
+    // Render obstacles and buildings as filled shapes.
+    // Build a list of renderable minimap objects sorted by zIdx.
+    struct MinimapObj {
+        float zIdx = 0.0f;
+        const MapObjectDef* def = nullptr;
+        Collider col;
+        float colScale = 1.0f;
+        uint32_t colColor = 0;
+    };
+    std::vector<MinimapObj> renderList;
+
+    // Collect obstacles.
+    for (auto* obstacle : obstaclePool.m_getPool()) {
+        if (!obstacle->active || obstacle->dead || !obstacle->collidable) continue;
+        const DefProvider* provider = getDefProvider();
+        const MapObjectDef* def = provider ? provider->mapObject(obstacle->type) : nullptr;
+        if (!def) continue;
+        uint32_t color = 0;
+        float scale = 1.0f;
+        Collider col;
+        // Prefer authored map shapes, fallback to collision collider.
+        if (!def->mapShapes.empty()) {
+            for (const auto& shape : def->mapShapes) {
+                MinimapObj mo;
+                mo.zIdx = 700.0f;
+                mo.def = def;
+                mo.col = shape.collider;
+                // Transform collider by obstacle world position.
+                if (shape.collider.type == Collider::Circle) {
+                    mo.col.pos = v2Add(obstacle->pos, shape.collider.pos);
+                    mo.col.rad = shape.collider.rad * shape.scale;
+                } else if (shape.collider.type == Collider::Aabb) {
+                    mo.col.min = v2Add(obstacle->pos, v2Mul(shape.collider.min, shape.scale));
+                    mo.col.max = v2Add(obstacle->pos, v2Mul(shape.collider.max, shape.scale));
+                }
+                mo.colScale = shape.scale;
+                mo.colColor = shape.color;
+                renderList.push_back(mo);
             }
+        } else if (def->hasCollision) {
+            col = def->collision;
+            if (col.type == Collider::Circle) {
+                col.pos = v2Add(obstacle->pos, col.pos);
+                col.rad *= def->map.scale;
+            } else if (col.type == Collider::Aabb) {
+                col.min = v2Add(obstacle->pos, v2Mul(col.min, def->map.scale));
+                col.max = v2Add(obstacle->pos, v2Mul(col.max, def->map.scale));
+            }
+            MinimapObj mo;
+            mo.zIdx = 700.0f;
+            mo.def = def;
+            mo.col = col;
+            mo.colScale = def->map.scale;
+            mo.colColor = def->map.hasColor ? def->map.color : 0x808080;
+            renderList.push_back(mo);
         }
     }
-    return false;
+
+    // Collect buildings.
+    for (auto* building : buildingPool.m_getPool()) {
+        if (!building->active) continue;
+        const DefProvider* provider = getDefProvider();
+        const MapObjectDef* def = provider ? provider->mapObject(building->type) : nullptr;
+        if (!def) continue;
+        if (!def->mapShapes.empty()) {
+            for (const auto& shape : def->mapShapes) {
+                MinimapObj mo;
+                mo.zIdx = 750.0f + static_cast<float>(def->zIdx);
+                mo.def = def;
+                mo.col = shape.collider;
+                if (shape.collider.type == Collider::Circle) {
+                    mo.col.pos = v2Add(building->pos, shape.collider.pos);
+                    mo.col.rad = shape.collider.rad * shape.scale;
+                } else if (shape.collider.type == Collider::Aabb) {
+                    mo.col.min = v2Add(building->pos, v2Mul(shape.collider.min, shape.scale));
+                    mo.col.max = v2Add(building->pos, v2Mul(shape.collider.max, shape.scale));
+                }
+                mo.colColor = shape.color;
+                renderList.push_back(mo);
+            }
+        } else if (def->hasBounding) {
+            Col bounding = def->boundingCollider;
+            if (bounding.type == Collider::Circle) {
+                bounding.pos = v2Add(building->pos, bounding.pos);
+            } else if (bounding.type == Collider::Aabb) {
+                bounding.min = v2Add(building->pos, bounding.min);
+                bounding.max = v2Add(building->pos, bounding.max);
+            }
+            MinimapObj mo;
+            mo.zIdx = 750.0f + static_cast<float>(def->zIdx);
+            mo.def = def;
+            mo.col = bounding;
+            mo.colScale = def->map.scale;
+            mo.colColor = def->map.hasColor ? def->map.color : 0x808080;
+            renderList.push_back(mo);
+        }
+    }
+
+    // Sort by zIdx ascending.
+    std::sort(renderList.begin(), renderList.end(),
+              [](const MinimapObj& a, const MinimapObj& b) { return a.zIdx < b.zIdx; });
+
+    // Draw each minimap object into the texture.
+    _mapGfx->lineStyle(0, 0, 0.0f);
+    for (const auto& mo : renderList) {
+        const float r = ((mo.colColor >> 16) & 0xff) / 255.0f;
+        const float g = ((mo.colColor >> 8) & 0xff) / 255.0f;
+        const float b = (mo.colColor & 0xff) / 255.0f;
+        _mapGfx->beginFill(0xff000000 | (static_cast<uint32_t>(r * 255.0f) << 16)
+                           | (static_cast<uint32_t>(g * 255.0f) << 8)
+                           | static_cast<uint32_t>(b * 255.0f));
+        if (mo.col.type == Collider::Circle) {
+            const float cx = mo.col.pos.x * mapScale;
+            const float cy = texSize - mo.col.pos.y * mapScale;  // Y-flip
+            const float rad = mo.col.rad * mapScale * mo.colScale;
+            _mapGfx->drawCircle(cx, cy, rad);
+        } else if (mo.col.type == Collider::Aabb) {
+            const float x1 = mo.col.min.x * mapScale;
+            const float y1 = texSize - mo.col.max.y * mapScale;  // Y-flip
+            const float x2 = mo.col.max.x * mapScale;
+            const float y2 = texSize - mo.col.min.y * mapScale;
+            _mapGfx->drawRect(x1, y1, x2 - x1, y2 - y1);
+        }
+        _mapGfx->endFill();
+    }
+
+    // Render the graphics into the render texture.
+    // (The adapter handles this via a pix::Container holding the graphics node.)
+    // Create a temporary container to hold the graphics for rendering.
+    _mapGfx->setPosition(0.0f, 0.0f);
+    _mapGfx->setScale(1.0f, 1.0f);
+
+    // The render is done by the GameWorld after loadMap completes.
+}
+
+RenderTexture* Map::getMinimapTexture() const {
+    return _mapTexture;
+}
+
+float Map::getMinimapScale() const {
+    if (!_mapTexture) return 0.0f;
+    const float texSize = _mapTexture ? 256.0f : 0.0f;  // actual size from factory
+    return texSize / std::max(width, height);
 }
 
 } // namespace surv
