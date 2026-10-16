@@ -1,0 +1,169 @@
+/****************************************************************************
+ * SurvevMobile - the single JNI bridge between the Android Java UI and the
+ * axmol/C++ game (ARCHITECTURE.md section 4).
+ *
+ * Two directions, one class:
+ *   * `native` methods below are implemented in client-mobile/src/app/UiBridge.cpp
+ *     (Java -> C++). Every one of them must be called from the UI thread; the
+ *     engine marshals anything thread-sensitive itself.
+ *   * the `static void onNative*` handlers are called FROM C++ on the GL thread
+ *     (C++ -> Java). They only post a Runnable to the UI thread, because the
+ *     Java UI host owns every View.
+ *
+ * The class is deliberately dumb: no gameplay pointers, no network, no state
+ * beyond the UI host reference. See ARCHITECTURE.md section 4.2 for the
+ * threading rules - do not add a method that breaks them.
+ ****************************************************************************/
+package dev.axmol.app;
+
+import android.util.Log;
+
+public final class SurvBridge {
+    private static final String TAG = "SurvBridge";
+
+    /** Installed by AppActivity.onCreate once the Java UI container exists. */
+    private static JavaUiHost sHost;
+
+    /** The Java UI host (menu/loadout/team/game overlays). May be null early. */
+    public static void setHost(JavaUiHost host) {
+        sHost = host;
+    }
+
+    public static JavaUiHost getHost() {
+        return sHost;
+    }
+
+    private SurvBridge() {}
+
+    // --- C++ entry points (Java -> C++) ------------------------------------
+
+    /** The Java UI is built and visible. */
+    public static native void onMenuReady();
+
+    /** "Play Solo/Duo/Squad": teamMode is 1, 2 or 4. */
+    public static native void onQuickStart(int teamMode);
+
+    /** Start a match the Java HTTP layer discovered (SurvApi/TeamSocket). */
+    public static native void onJoinUrls(String[] urls, String joinToken);
+
+    /** "Back to main menu" while a matchmaking request is pending. */
+    public static native void onCancelPending();
+
+    /** Leave the running match and return to the menu. */
+    public static native void onQuitGame();
+
+    /** The pause dialog opened (engine pauses the sim + mutes audio). */
+    public static native void onPauseGame();
+
+    /** The pause dialog closed. */
+    public static native void onResumeGame();
+
+    public static native void setPlayerName(String name);
+
+    public static native void setRegion(String region);
+
+    /** Re-validates the loadout through the C++ validator; false when malformed. */
+    public static native boolean setLoadout(String loadoutJson);
+
+    /** key is one of "master", "sound", "music", "mute". */
+    public static native void setAudio(String key, float value);
+
+    public static native void setLanguage(String locale);
+
+    public static native void saveConfig();
+
+    // --- read-only queries, answered synchronously from a C++ snapshot ------
+
+    /** The whole config blob ({"playerName": ..., "loadout": {...}, ...}). */
+    public static native String getConfigJson();
+
+    /** Flattened {"key": "text"} table for the current locale. */
+    public static native String getL10nJson();
+
+    /** The validated loadout selection. */
+    public static native String getLoadoutJson();
+
+    /** Cached /api/site_info response ("" until the first fetch responds). */
+    public static native String getSiteInfoJson();
+
+    /** The bundled news entries as a JSON array (main menu news column). */
+    public static native String getNewsJson();
+
+    public static native boolean isInGame();
+
+    // --- called from C++ (GL thread) ---------------------------------------
+    // Each handler hops to the UI thread before touching a View. The Java UI
+    // host is not required to exist yet (an early match start is dropped).
+
+    static void onNativeMatchStarted(final int activePlayerId) {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.enterGame(activePlayerId);
+                } else {
+                    Log.w(TAG, "onNativeMatchStarted before the UI host existed");
+                }
+            }
+        });
+    }
+
+    static void onNativeMatchEnded(final String errorL10nKey) {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.returnToMenu(errorL10nKey);
+                }
+            }
+        });
+    }
+
+    static void onNativePlayerDead() {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.showResult();
+                }
+            }
+        });
+    }
+
+    static void onNativeShowMenu() {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.showMenu();
+                }
+            }
+        });
+    }
+
+    /** Cheap round-trip used by the S1 gate (see JavaUiHost). */
+    static void onNativeConfigChanged(final String key) {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.onConfigChanged(key);
+                }
+            }
+        });
+    }
+
+    private static void post(Runnable runnable) {
+        AppActivity activity = AppActivity.current();
+        if (activity == null) {
+            Log.w(TAG, "no AppActivity; dropping a native UI callback");
+            return;
+        }
+        activity.runOnUiThread(runnable);
+    }
+}

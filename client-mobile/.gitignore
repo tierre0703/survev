@@ -11,7 +11,7 @@ build-apk/
 *.aab
 *.idsig
 # Vendored axmol engine (~590 MB, populated by tools/vendor-axmol.ps1)
-axmol/
+/axmol/
 # Asset staging: copy of ../client/public (populated by tools/sync-content.ps1)
 Content/
 proj.android/local.properties
