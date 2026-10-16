@@ -154,7 +154,11 @@ drift is unrelated — `test_messages.cpp:212`).
   - Toggled via `Game::gameOver()` presence
 - [ ] **Minimap** (render from `RenderTexture`)
 - [ ] **Squad health bars** (4 team member health bars with status indicators)
-- [ ] **FguiPadGraphics touch pads** — real pad sprites (`pad.img` with alpha/scaling)
+- [x] **FguiPadGraphics touch pads** — real pad sprites (FGUI GGraph circles):
+  - Center ring (GGraph drawEllipse, blue for move, orange for aim, semi-transparent)
+  - Touch dot (GGraph drawEllipse solid fill, white/light orange)
+  - Position/scale set reactively from Touch.m_update()
+  - Wired into GameScene init as the active pad renderer
 - [ ] **Aim-line dots** (`LineSprites`: dot sprite every 1.5 units, ray-cast against obstacles)
 - [ ] **Inventory UI v2** (`ui2.ts` features — weapon cards, perk icons, loot pickup feed, throwable arc preview, team inventory panel)
 - [ ] **Pie timer** (`pieTimer.ts` — action progress circle)
