@@ -14,9 +14,12 @@
 #ifndef SURV_FGUI_HUD_H
 #define SURV_FGUI_HUD_H
 
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "../net/Messages.h"
 
 namespace ax {
 class Scene;
@@ -33,8 +36,10 @@ namespace surv {
 class Touch;
 class Game;
 
-// In-game HUD rendered with FairyGUI objects (health/boost bars, ammo,
-// weapon name, alive count, kill feed).
+// Inventory UI v2 — in-game HUD rendered with FairyGUI objects.
+// Mirrors the web client's ui2.ts: weapon cards, gear slots, perk slots,
+// scope inventory, loot counts (ammo/heals/throwables), pickup/kill messages,
+// multi-line kill feed, interaction prompt, and the existing health/boost bars.
 class FguiHud {
 public:
     FguiHud();
@@ -60,6 +65,17 @@ public:
     void refreshResult(const std::string& text);
     void showResult(bool show);
 
+    // Inventory v2 methods
+    void refreshWeaponSlots(const std::vector<surv::WeaponData>& weapons, int curWeapIdx);
+    void refreshLootCounts(const std::vector<uint16_t>& inventory);
+    void refreshGear(const std::string& chest, const std::string& helmet, const std::string& backpack);
+    void refreshPerks(const std::vector<surv::PerkData>& perks);
+    void refreshScopes(const std::string& scope, const std::vector<uint16_t>& inventory);
+    void refreshKillMessage(const std::string& text, const std::string& count);
+    void refreshPickupMessage(const std::string& text);
+    void displayPickupMessage(uint8_t type);
+    void displayKillMessage(const std::string& text, const std::string& count);
+
 private:
     void buildHudPanel(fairygui::GComponent* root);
     void buildResultOverlay(fairygui::GComponent* root);
@@ -67,6 +83,77 @@ private:
     void buildAliveCounter(fairygui::GComponent* root);
     void buildSquadBars(fairygui::GComponent* root);
     void buildMinimap(fairygui::GComponent* root);
+    void buildWeaponSlots(fairygui::GComponent* root);
+    void buildGearSlots(fairygui::GComponent* root);
+    void buildPerkSlots(fairygui::GComponent* root);
+    void buildScopeSlots(fairygui::GComponent* root);
+    void buildLootGrid(fairygui::GComponent* root);
+    void buildKillMessage(fairygui::GComponent* root);
+    void buildPickupMessage(fairygui::GComponent* root);
+    void buildInteractionPrompt(fairygui::GComponent* root);
+
+    // ---- Weapon slots (4: Primary, Secondary, Melee, Throwable) ----
+    static constexpr int kWeaponSlotCount = 4;
+    struct WeaponSlotWidgets {
+        fairygui::GGraph* bg = nullptr;
+        fairygui::GBasicTextField* nameText = nullptr;
+        fairygui::GBasicTextField* ammoText = nullptr;
+        fairygui::GBasicTextField* keybindText = nullptr;
+        fairygui::GGraph* equippedHighlight = nullptr;
+    };
+    std::array<WeaponSlotWidgets, kWeaponSlotCount> _weaponSlots{};
+
+    // ---- Gear slots (helmet, chest, backpack) ----
+    static constexpr int kGearSlotCount = 3;
+    static constexpr std::array<const char*, kGearSlotCount> kGearTypeNames = {"helmet", "chest", "backpack"};
+    struct GearSlotWidgets {
+        fairygui::GGraph* bg = nullptr;
+        fairygui::GBasicTextField* levelText = nullptr;
+        fairygui::GBasicTextField* nameText = nullptr;
+    };
+    std::array<GearSlotWidgets, kGearSlotCount> _gearSlots{};
+
+    // ---- Perk slots (up to 4) ----
+    static constexpr int kPerkSlotCount = 4;
+    struct PerkSlotWidgets {
+        fairygui::GGraph* bg = nullptr;
+        fairygui::GBasicTextField* nameText = nullptr;
+    };
+    std::array<PerkSlotWidgets, kPerkSlotCount> _perkSlots{};
+
+    // ---- Scope slots (5: 1x–15x) ----
+    static constexpr int kScopeSlotCount = 5;
+    static constexpr std::array<const char*, kScopeSlotCount> kScopeTypeNames = {
+        "1xscope", "2xscope", "4xscope", "8xscope", "15xscope"
+    };
+    struct ScopeSlotWidgets {
+        fairygui::GGraph* bg = nullptr;
+        fairygui::GBasicTextField* labelText = nullptr;
+    };
+    std::array<ScopeSlotWidgets, kScopeSlotCount> _scopeSlots{};
+
+    // ---- Loot grid (ammo/heals/throwables) ----
+    // Indices into kBagSizeKeys order: ammo[0-7], throwables[8-15], heals[16-19], scopes[20-24]
+    static constexpr int kLootGridCount = 25; // matches kBagSizeKeys size
+    struct LootSlotWidgets {
+        fairygui::GGraph* bg = nullptr;
+        fairygui::GBasicTextField* nameText = nullptr;
+        fairygui::GBasicTextField* countText = nullptr;
+    };
+    std::array<LootSlotWidgets, kLootGridCount> _lootSlots{};
+
+    // ---- Kill message (center screen) ----
+    fairygui::GGraph* _killMessageBg = nullptr;
+    fairygui::GBasicTextField* _killMessageText = nullptr;
+    fairygui::GBasicTextField* _killMessageCount = nullptr;
+
+    // ---- Pickup message (below center) ----
+    fairygui::GBasicTextField* _pickupMessageText = nullptr;
+
+    // ---- Interaction prompt ----
+    fairygui::GGraph* _interactionBg = nullptr;
+    fairygui::GBasicTextField* _interactionKeyText = nullptr;
+    fairygui::GBasicTextField* _interactionDescText = nullptr;
 
     // Minimap: FGUI sprite + overlay
     fairygui::GObject* _minimapContainer = nullptr;
@@ -82,14 +169,14 @@ private:
     // Boost bar: 4 segments (one GGraph each)
     fairygui::GGraph* _boostSegments[4]{};
 
-    // Weapon + ammo display
+    // Weapon + ammo display (compact top-right of HUD panel)
     fairygui::GObject* _weaponText = nullptr;
     fairygui::GObject* _ammoText = nullptr;
 
     // Alive counter
     fairygui::GObject* _aliveText = nullptr;
 
-    // Kill feed (6 lines)
+    // Kill feed (multi-line via multi-line text field)
     fairygui::GObject* _killFeedText = nullptr;
 
     // Result overlay
@@ -111,8 +198,17 @@ private:
     };
     std::array<SquadMember, 4> _squadMembers{};
 
-    // Root panel containing all HUD elements.
+    // Root panel containing all HUD elements
     fairygui::GObject* _hudPanel = nullptr;
+
+    // Message ticker state (mirrors ui2.ts pickupMessage/killMessage)
+    float _pickupTicker = 0.0f;
+    float _pickupDuration = 0.0f;
+    std::string _pickupMessage;
+    float _killMsgTicker = 0.0f;
+    float _killMsgDuration = 0.0f;
+    std::string _killMsgText;
+    std::string _killMsgCount;
 
     bool _visible = true;
 };

@@ -179,8 +179,12 @@ drift is unrelated — `test_messages.cpp:212`).
   - Uses "crosshair000.img" atlas frame from GeneratedDefs
   - Created once in GameScene::update(), shown during gameplay
   - Future: read the crosshair type/color/size from Config loadout
-- [ ] **Minimap** (render from `RenderTexture`)
-- [ ] **Squad health bars** (4 team member health bars with status indicators)
+- [x] **Minimap** (baked RenderTexture + FGUI overlay):
+  - Map::generateMinimapTexture() renders terrain + obstacles + buildings
+    into a pix::RenderTexture using the PIXI adapter
+  - Map::getMinimapTexture() / getMinimapScale() for runtime access
+  - FguiHud::buildMinimap() FGUI frame + gas ring + player dot overlays
+  - onFactoryReset() clears minimap texture on map reload
 - [ ] **Inventory UI v2** (`ui2.ts` features — weapon cards, perk icons, loot pickup feed, throwable arc preview, team inventory panel)
 
 - [ ] **FairyGUI touch pads** (`FguiPadGraphics.*`) — implement:

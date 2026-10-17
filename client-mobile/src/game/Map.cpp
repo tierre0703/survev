@@ -546,7 +546,7 @@ void Map::generateMinimapTexture(pix::Factory* factory, const Camera& camera) {
                 renderList.push_back(mo);
             }
         } else if (def->hasBounding) {
-            Col bounding = def->boundingCollider;
+            Collider bounding = def->boundingCollider;
             if (bounding.type == Collider::Circle) {
                 bounding.pos = v2Add(building->pos, bounding.pos);
             } else if (bounding.type == Collider::Aabb) {
@@ -600,14 +600,27 @@ void Map::generateMinimapTexture(pix::Factory* factory, const Camera& camera) {
     // The render is done by the GameWorld after loadMap completes.
 }
 
-RenderTexture* Map::getMinimapTexture() const {
-    return _mapTexture;
-}
-
 float Map::getMinimapScale() const {
     if (!_mapTexture) return 0.0f;
-    const float texSize = _mapTexture ? 256.0f : 0.0f;  // actual size from factory
-    return texSize / std::max(width, height);
+    return 256.0f / std::max(width, height);
+}
+
+bool Map::isUnderground(const Vec2& pos, int layer) const {
+    if (layer != 1) {
+        return false;
+    }
+    const Collider c = Collider::createCircle(pos, 1.0f);
+    for (auto* structure : structurePool.m_getPool()) {
+        if (!structure->active) {
+            continue;
+        }
+        for (const auto& l : structure->layers) {
+            if (l.underground && colliderIntersect(l.collision, c)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 } // namespace surv

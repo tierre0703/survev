@@ -792,6 +792,11 @@ struct WeaponData {
     uint8_t ammo = 0;
 };
 
+struct PerkData {
+    std::string type;
+    bool droppable = false;
+};
+
 struct ActivePlayerData {
     bool healthDirty = false;
     float health = 0.0f;
@@ -812,6 +817,10 @@ struct ActivePlayerData {
     std::vector<WeaponData> weapons;
     bool spectatorCountDirty = false;
     uint8_t spectatorCount = 0;
+    // Gear/role/perks — populated by Game::handleUpdate from ObjectData
+    std::string chest, helmet, backpack;
+    std::string role;
+    std::vector<PerkData> perks;
 };
 
 struct FullObjectData {

@@ -317,6 +317,46 @@ void Game::handleUpdate(NetBitStream& s) {
         _activePlayer.weapons = data.weapons;
     }
     if (data.spectatorCountDirty) _activePlayer.spectatorCount = data.spectatorCount;
+
+    // Extract gear/role/perks from the active player's ObjectData in full/part objects
+    // (mirrors player.ts m_updateData where chest/helmet/backpack/role/perks come from ObjectData)
+    {
+        auto extractPlayerData = [this](const ObjectData& od, bool isPart) {
+            if (od.__id != _activePlayerId) return;
+            if (od.__type != ObjectType_Player) return;
+            if (isPart) {
+                // Part updates may have empty fields if not dirty
+                if (!od.chest.empty()) _activePlayer.chest = od.chest;
+                if (!od.helmet.empty()) _activePlayer.helmet = od.helmet;
+                if (!od.backpack.empty()) _activePlayer.backpack = od.backpack;
+                if (!od.role.empty()) _activePlayer.role = od.role;
+                if (!od.perks.empty()) {
+                    _activePlayer.perks.clear();
+                    _activePlayer.perks.reserve(od.perks.size());
+                    for (const auto& p : od.perks) {
+                        _activePlayer.perks.push_back({p.type, p.droppable});
+                    }
+                }
+            } else {
+                _activePlayer.chest = od.chest;
+                _activePlayer.helmet = od.helmet;
+                _activePlayer.backpack = od.backpack;
+                _activePlayer.role = od.role;
+                _activePlayer.perks.clear();
+                _activePlayer.perks.reserve(od.perks.size());
+                for (const auto& p : od.perks) {
+                    _activePlayer.perks.push_back({p.type, p.droppable});
+                }
+            }
+        };
+        for (const auto& obj : m.fullObjects) {
+            extractPlayerData(obj.data, false);
+        }
+        for (const auto& obj : m.partObjects) {
+            extractPlayerData(obj.data, true);
+        }
+    }
+
     if (m.playerStatusDirty) {
         const auto* provider = getDefProvider();
         const auto* map = provider ? provider->mapRender(_map.mapName) : nullptr;

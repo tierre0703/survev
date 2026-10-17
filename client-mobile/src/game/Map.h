@@ -15,6 +15,7 @@ class Graphics;
 class Container;
 class Text;
 class Factory;
+class RenderTexture;
 } // namespace pix
 
 #include "objects/Barns.h"
@@ -65,9 +66,12 @@ public:
     void onFactoryReset();
 
     // Minimap texture (generated once on loadMap).
-    RenderTexture* _mapTexture = nullptr;
+    pix::RenderTexture* _mapTexture = nullptr;
     // Scratch graphics for minimap rendering.
     pix::Graphics* _mapGfx = nullptr;
+
+    // biome camera particle emitter (map.ts cameraEmitter), driven per frame.
+    Emitter* cameraEmitter = nullptr;
 
     Pool<Obstacle> obstaclePool;
     Pool<Building> buildingPool;
