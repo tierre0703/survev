@@ -37,6 +37,7 @@ add_executable(surv_tests
     ${SURV_SRC}/game/Map.cpp
     ${SURV_SRC}/game/GameWorld.cpp
     ${SURV_SRC}/game/Gas.cpp
+    ${SURV_SRC}/game/EmoteManager.cpp
     ${SURV_SRC}/game/objects/Structure.cpp
     ${SURV_SRC}/game/objects/Barns.cpp
     ${SURV_SRC}/game/objects/PlayerRender.cpp

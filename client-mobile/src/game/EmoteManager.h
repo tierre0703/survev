@@ -2,10 +2,10 @@
 // Emote/ping system for the C++ mobile port.
 // Port of client/src/emote.ts: world-space floating emotes, team ping indicators,
 // map pings, send/receive from server.
-#include "../../net/Messages.h"
-#include "../../render/Defs.h"
-#include "../../render/Camera.h"
-#include "../../render/PixiLike.h"
+#include "../net/Messages.h"
+#include "../render/Defs.h"
+#include "../render/Camera.h"
+#include "../render/PixiLike.h"
 #include <cstdint>
 #include <memory>
 #include <string>

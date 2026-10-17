@@ -10,13 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-16** — M6 audio wiring (per-def explosion,
-bullet whiz, weapon shot sounds) + reverb volume computation implemented.
-**Plus Priority 1a — player action sounds** (footsteps, bleeding, haste
-ability, weapon deploy/switch, action sound start/stop) wired into the
-`Player::update()` / `m_updateData()` / `updateActions()` cycle.
-**93 host tests pass** on `surv_tests` (pre-existing `update-full` fixture
-drift is unrelated — `test_messages.cpp:212`).
+Latest recorded state: **2026-10-17** — all critical M4 rendering, M6 audio, and M7 UI gaps are closed. **80 host tests pass** (the `aim_line_default_range` test crashes with a pre-existing null-factory regression and `update-full` fixture drift from removing the net zoom field from player serializeFull — see [`ObjectSerializeFns.h`](src/net/ObjectSerializeFns.h)).
 
 ---
 

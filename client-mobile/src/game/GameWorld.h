@@ -3,6 +3,7 @@
 // renderer, map and object barns, applies UpdateMsg object deltas, and drives
 // the per-frame object updates that position scene nodes.
 #include "Gas.h"
+#include "EmoteManager.h"
 #include "../net/Messages.h"
 #include "../render/Defs.h"
 #include "../render/Camera.h"

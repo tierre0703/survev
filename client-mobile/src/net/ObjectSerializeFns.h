@@ -243,17 +243,6 @@ inline void deserializeFull(ObjectType ot, NetBitStream& s, ObjectData& d) {
                 ? s.readFloat(Constants::PlayerMinScale, Constants::PlayerMaxScale, 8)
                 : 1.0f;
             d.role = s.readBoolean() ? s.readGameType() : "";
-            {
-                // The web build this port mirrors has no zoom field, and the
-                // player fixtures are produced by it. When the four dirty flags
-                // that follow run past the end of the buffer the zoom field
-                // isn't there: rewind and restore the bytes the speculative read
-                // overwrote.
-                const ZoomTail zoomTail = readActivePlayerZoom(s, d);
-                if (!zoomTail.present) {
-                    s.restoreBits(zoomTail.savedBit, zoomTail.savedValue);
-                }
-            }
             d.perks.clear();
             if (s.readBoolean()) {
                 const uint32_t n = s.readBits(BitSizes::Perks);
@@ -443,10 +432,6 @@ inline void serializeFull(ObjectType ot, NetBitStream& s, const ObjectData& d) {
             s.writeBoolean(hasRole);
             if (hasRole) {
                 s.writeGameType(d.role);
-            }
-            s.writeBoolean(d.zoomDirty);
-            if (d.zoomDirty) {
-                s.writeUint8(d.zoom);
             }
             const bool hasPerks = !d.perks.empty();            s.writeBoolean(hasPerks);
             if (hasPerks) {
