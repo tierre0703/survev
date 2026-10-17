@@ -32,6 +32,7 @@ class AirdropBarn;
 class FlareBarn;
 class PlaneBarn;
 class ShotBarn;
+class EmoteManager;
 class Gas;
 
 namespace audio {
@@ -63,6 +64,8 @@ public:
     // game.ts update(): lerp the camera zoom toward the active player's view
     // radius (player.ts m_getZoom). No-op before the first map is loaded.
     void updateCameraZoom(float dt);
+
+    EmoteManager& emoteManager() { return _emoteManager; }
 
     pix::Factory* factory() { return _factory; }
     Camera& camera() { return _camera; }
@@ -123,6 +126,8 @@ public:
 
 private:
     void registerPools();
+
+    EmoteManager _emoteManager;
 
     pix::Factory* _factory = nullptr;
     Camera _camera;

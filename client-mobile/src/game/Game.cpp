@@ -415,6 +415,14 @@ void Game::handlePickup(NetBitStream& s) {
     }
 }
 
+void Game::sendEmote(const std::string& type, const Vec2& pos, bool isPing) {
+    EmoteMsg msg;
+    msg.type = type;
+    msg.pos = pos;
+    msg.isPing = isPing;
+    sendMessage(MsgType_Emote, msg, 128);
+}
+
 void Game::handleMap(NetBitStream& s) {
     MapMsg m;
     m.deserialize(s);

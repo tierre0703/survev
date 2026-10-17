@@ -1,0 +1,367 @@
+#include "EmoteManager.h"
+#include "GameWorld.h"
+#include "../net/Messages.h"
+#include "../render/Defs.h"
+#include "../render/PixiLike.h"
+#include "objects/Barns.h"
+
+namespace surv {
+
+// Pull in the DefProvider for game object lookups at runtime.
+#ifndef SURV_DEFS_CHECK
+// Pull in the DefProvider for game object lookups at runtime.
+#endif
+
+EmoteManager::EmoteManager() = default;
+EmoteManager::~EmoteManager() = default;
+
+void EmoteManager::reset() {
+    _outgoing.clear();
+    _emotePool.clear();
+    _zIdxNext = 0;
+    for (auto& ind : _indicators) {
+        ind.displayed = false;
+        ind.fadeIn = 0.0f;
+        ind.life = 0.0f;
+        ind.fadeOut = 0.0f;
+    }
+}
+
+// ---- Emote pool (simple growable vector) ------------------------------------
+EmoteSprite* EmoteManager::allocEmote() {
+    for (auto& e : _emotePool) {
+        if (!e.alive) {
+            e.alive = true;
+            e.isNew = true;
+            return &e;
+        }
+    }
+    _emotePool.push_back({});
+    auto* e = &_emotePool.back();
+    e->alive = true;
+    e->isNew = true;
+    return e;
+}
+
+void EmoteManager::freeEmote(EmoteSprite* e) {
+    if (e) e->alive = false;
+}
+
+// ---- Add emote from server (UpdateMsg.emotes) --------------------------------
+void EmoteManager::addEmote(const Emote& msg, GameWorld& ctx) {
+    (void)ctx;
+    // Find or create an emote slot
+    EmoteSprite* existing = nullptr;
+    for (auto& e : _emotePool) {
+        if (e.alive && e.playerId == msg.playerId) {
+            existing = &e;
+            break;
+        }
+    }
+    EmoteSprite* e = existing ? existing : allocEmote();
+    if (!e) return;
+
+    // Reset timers
+    e->isNew = true;
+    e->type = msg.type;
+    e->playerId = msg.playerId;
+    e->pos = Vec2(0, 0);
+    e->lifeIn = kEmoteLifeIn;
+    e->life = kEmoteLife;
+    e->lifeOut = kEmoteLifeOut;
+    e->zIdx = _zIdxNext++;
+
+    // Create PIXI sprites lazily
+    if (!e->container) {
+        e->container = ctx.factory()->createContainer();
+        e->circleOuter = ctx.factory()->createSprite("emote-circle-outer.img");
+        e->circleOuter->setAnchor(0.5f, 0.5f);
+        e->circleOuter->setScale(0.55f * 0.8f, 0.55f * 0.8f);
+        e->circleOuter->setTint(0); // black tint makes white circle
+        e->container->addChild(e->circleOuter);
+
+        e->sprite = ctx.factory()->createSprite();
+        e->sprite->setAnchor(0.5f, 0.5f);
+        e->sprite->setScale(0.55f, 0.55f);
+        e->container->addChild(e->sprite);
+        e->container->setVisible(false);
+    }
+
+    // Set texture from emote def
+    const auto* provider = getDefProvider();
+    (void)provider; // future: look up emote def from provider
+
+    // For now, use a simple fallback frame naming convention
+    e->sprite->setFrame("emote-circle-outer.img");
+
+    // Handle emote_loot type (special weapon image display)
+    if (msg.type == "emote_loot" && !msg.itemType.empty()) {
+        const auto* goDef = provider ? provider->gameObject(msg.itemType) : nullptr;
+        if (goDef) {
+            e->sprite->setFrame(goDef->img.sprite);
+            e->sprite->setTint(goDef->img.tint);
+        }
+    }
+
+    // Play sound
+    if (ctx.audio()) {
+        // Emote sound will be played from the update loop when isNew
+    }
+}
+
+// ---- Add ping from server (UpdateMsg.emotes with isPing=true) ---------------
+void EmoteManager::addPing(const Emote& msg, bool factionMode, GameWorld& ctx) {
+    (void)factionMode;
+    const auto* provider = getDefProvider();
+    (void)provider;
+
+    // Find indicator slot: airdrop/airstrike map events, or team ping
+    int indicatorIdx = -1;
+    if (msg.type == "ping_airdrop") {
+        indicatorIdx = 4;
+    } else if (msg.type == "ping_airstrike") {
+        indicatorIdx = 5;
+    } else {
+        // Team pings: find matching group member slot
+        const auto activeId = ctx.activePlayerId();
+        for (int i = 0; i < 4; ++i) {
+            // Simplification: assign round-robin or by player index
+            // Full implementation would look up player group info
+            indicatorIdx = 0; // placeholder - assign to first slot
+        }
+    }
+
+    PingIndicator* ind = nullptr;
+    if (indicatorIdx >= 0 && indicatorIdx < kPingIndicatorCount) {
+        ind = &_indicators[indicatorIdx];
+    }
+
+    if (!ind) return;
+
+    // Create indicator sprites lazily
+    if (!ind->pingContainer) {
+        // All 6 indicators share the same ping container parent in the world
+        ind->pingContainer = ctx.factory()->createContainer();
+        ind->indContainer = ctx.factory()->createContainer();
+
+        ind->borderSprite = ctx.factory()->createSprite("ping-border.img");
+        ind->borderSprite->setAnchor(0.5f, 0.5f);
+        ind->borderSprite->setScale(0.4f, 0.4f);
+        ind->borderSprite->setTint(0xffffff);
+        ind->pingContainer->addChild(ind->borderSprite);
+
+        ind->pingSprite = ctx.factory()->createSprite("ping-team-danger.img");
+        ind->pingSprite->setAnchor(0.5f, 0.5f);
+        ind->pingSprite->setScale(0.4f, 0.4f);
+        ind->pingSprite->setTint(0xffffff);
+        ind->pingContainer->addChild(ind->pingSprite);
+
+        ind->indSpriteInner = ctx.factory()->createSprite("ping-team-danger.img");
+        ind->indSpriteInner->setAnchor(0.5f, 0.5f);
+        ind->indSpriteInner->setScale(0.5f, 0.5f);
+        ind->indSpriteInner->setTint(0xffffff);
+        ind->indContainer->addChild(ind->indSpriteInner);
+
+        ind->indSpriteOuter = ctx.factory()->createSprite("ping-indicator.img");
+        ind->indSpriteOuter->setAnchor(0.5f, 0.0f);
+        ind->indSpriteOuter->setScale(0.5f, 0.5f);
+        ind->indSpriteOuter->setTint(0xffffff);
+        ind->indContainer->addChild(ind->indSpriteOuter);
+    }
+
+    ind->pos = msg.hasPos ? msg.pos : Vec2(0, 0);
+    ind->fadeIn = kPingFadeIn;
+    ind->life = kPingLife;
+    ind->fadeOut = kPingFadeOut;
+    ind->worldDisplay = true; // could look up ping def
+    ind->displayed = false;
+
+    // Play ping sound
+    if (ctx.audio()) {
+        // TODO: play appropriate ping sound
+    }
+}
+
+// ---- Outgoing queue ---------------------------------------------------------
+void EmoteManager::queueEmote(const std::string& type, const Vec2& pos) {
+    _outgoing.push_back({type, pos, false});
+}
+
+void EmoteManager::queuePing(const std::string& type, const Vec2& pos) {
+    _outgoing.push_back({type, pos, true});
+}
+
+std::vector<EmoteManager::OutgoingEmote> EmoteManager::consumeOutgoing() {
+    std::vector<OutgoingEmote> result = std::move(_outgoing);
+    _outgoing.clear();
+    return result;
+}
+
+// ---- Per-frame update -------------------------------------------------------
+void EmoteManager::update(float dt, GameWorld& ctx) {
+    const Camera& camera = ctx.camera();
+
+    // Update emotes
+    for (auto& e : _emotePool) {
+        if (!e.alive) continue;
+
+        // Track target position
+        bool hasTarget = false;
+        Vec2 targetPos(0, 0);
+        int targetLayer = 0;
+
+        // Look up the player who sent this emote
+        Player* targetPlayer = ctx.playerBarn().getPlayerById(e.playerId);
+        if (targetPlayer && !targetPlayer->dead) {
+            targetPos = targetPlayer->pos;
+            targetLayer = targetPlayer->layer;
+            hasTarget = true;
+        }
+
+        if (!hasTarget) {
+            DeadBody* body = ctx.deadBodyBarn().getDeadBodyById(e.playerId);
+            if (body) {
+                targetPos = body->pos;
+                targetLayer = body->layer;
+                hasTarget = true;
+            }
+        }
+
+        if (!hasTarget) {
+            e.alive = false;
+            if (e.container) e.container->setVisible(false);
+            continue;
+        }
+
+        // Play sound on first frame
+        if (e.isNew) {
+            e.isNew = false;
+            // Sound will be played here once audio wiring is complete
+        }
+
+        e.pos = targetPos;
+
+        if (e.lifeIn > 0) e.lifeIn -= dt;
+        else if (e.life > 0) e.life -= dt;
+        else if (e.lifeOut > 0) e.lifeOut -= dt;
+        else { e.alive = false; if (e.container) e.container->setVisible(false); continue; }
+
+        // Add to renderer on layer 3 (top overlay) with high z-ord
+        int zOrd = 50000 + e.zIdx;
+        const bool sameLayer = targetPlayer ? (targetLayer == ctx.activePlayer()->layer) : true;
+        int layer = sameLayer ? 3 : targetLayer;
+        ctx.renderer().addPIXIObj(e.container, layer, zOrd, e.zIdx);
+
+        // Scale animation: ease-out-elastic on lifeIn, hold at 1, fade out on lifeOut
+        float scale = 0.0f;
+        if (e.lifeIn > 0) {
+            float normLifeIn = 1.0f - e.lifeIn / kEmoteLifeIn;
+            // Simple ease-out
+            scale = normLifeIn < 0.5f ? 2.0f * normLifeIn * normLifeIn : -1.0f + (4.0f - 2.0f * normLifeIn) * normLifeIn;
+            scale *= scale; // more aggressive elastic feel
+        } else if (e.life > 0) {
+            scale = 1.0f;
+        } else if (e.lifeOut > 0) {
+            scale = e.lifeOut / kEmoteLifeOut;
+        }
+
+        // Position with offset above player
+        Vec2 offsetPos = targetPos;
+        // Offset rises with camera zoom (similar to web's posOffset)
+        float zoomClamp = camera.m_zoom < 0.75f ? 0.75f : (camera.m_zoom > 1.0f ? 1.0f : camera.m_zoom);
+        offsetPos.y += 4.0f / zoomClamp;
+
+        Vec2 screenPos = camera.m_pointToScreen(offsetPos);
+        float screenScale = scale * 0.55f * (camera.m_zoom < 0.9f ? 0.9f : (camera.m_zoom > 1.75f ? 1.75f : camera.m_zoom));
+        e.container->setPosition(screenPos.x, screenPos.y);
+        e.container->setScale(screenScale, screenScale);
+        e.container->setVisible(true);
+    }
+
+    // Update indicators
+    for (int ti = 0; ti < kPingIndicatorCount; ++ti) {
+        auto& ind = _indicators[ti];
+        if (ind.fadeOut <= 0) {
+            if (ind.displayed) {
+                if (ind.pingContainer) ind.pingContainer->setVisible(false);
+                if (ind.indContainer) ind.indContainer->setVisible(false);
+                ind.displayed = false;
+            }
+            continue;
+        }
+
+        ind.fadeIn -= dt;
+        ind.life -= dt;
+        ind.fadeOut -= ind.life > 0 ? 0 : dt;
+
+        if (ind.fadeOut > 0 && ind.pingContainer && ind.indContainer) {
+            Vec2 dir = v2NormalizeSafe(v2Sub(ind.pos, camera.m_pos), Vec2(1.0f, 0.0f));
+
+            Vec2 screenPos = camera.m_pointToScreen(ind.pos);
+            float borderScale = camera.m_pixels(0.4f);
+            float pingScale = camera.m_pixels(0.4f);
+
+            ind.borderSprite->setScale(borderScale, borderScale);
+            ind.pingSprite->setScale(pingScale, pingScale);
+            ind.borderSprite->setAlpha(1.0f);
+            ind.pingSprite->setAlpha(1.0f);
+            ind.indSpriteInner->setAlpha(ind.fadeIn > 0 ? 0.0f : 1.0f);
+            ind.indSpriteOuter->setAlpha(ind.fadeIn > 0 ? 0.0f : 1.0f);
+
+            ind.pingSprite->setPosition(screenPos.x, screenPos.y);
+            ind.borderSprite->setPosition(screenPos.x, screenPos.y);
+
+            // On-screen vs edge-of-screen positioning
+            const float off = 64.0f;
+            float leftConstrain = screenPos.x;
+            float topConstrain = screenPos.y;
+            if (screenPos.x < off) leftConstrain = off;
+            else if (screenPos.x > camera.m_screenWidth - off) leftConstrain = camera.m_screenWidth - off;
+            if (screenPos.y < off) topConstrain = off;
+            else if (screenPos.y > camera.m_screenHeight - off) topConstrain = camera.m_screenHeight - off;
+
+            float rot = std::atan2(dir.y, -dir.x) + 3.14159f * 0.5f;
+            ind.indSpriteOuter->setPosition(leftConstrain, topConstrain);
+            ind.indSpriteOuter->setRotation(rot);
+            ind.indSpriteInner->setPosition(leftConstrain, topConstrain);
+
+            // Pulse effect on border
+            float pulseAlpha = ind.borderSprite->getAlpha() <= 0 ? 1 : ind.borderSprite->getAlpha() - dt;
+            ind.borderSprite->setAlpha(pulseAlpha);
+            float pulseScale = camera.m_pixels(0.4f * (2 - pulseAlpha));
+            ind.borderSprite->setScale(pulseScale, pulseScale);
+
+            // Fade in/out
+            if (ind.fadeIn > 0) {
+                float elemOpacity = 1 - ind.fadeIn / kPingFadeIn;
+                ind.indSpriteOuter->setAlpha(elemOpacity);
+            }
+            if (ind.life < 0) {
+                float elemOpacity = ind.fadeOut / kPingFadeOut;
+                ind.pingContainer->setAlpha(elemOpacity);
+                ind.indContainer->setAlpha(elemOpacity);
+            }
+
+            if (!ind.displayed) {
+                ind.pingContainer->setVisible(ind.worldDisplay);
+                ind.indContainer->setVisible(true);
+                ind.displayed = true;
+            }
+
+            // Add to world overlay
+            ctx.renderer().addPIXIObj(ind.pingContainer, 3, 40000 + ti, ti);
+            ctx.renderer().addPIXIObj(ind.indContainer, 3, 40000 + ti, ti + 100);
+        }
+    }
+
+    // Clear indicators that timeout
+    for (auto& ind : _indicators) {
+        if (ind.fadeOut <= 0 && ind.displayed) {
+            if (ind.pingContainer) ind.pingContainer->setVisible(false);
+            if (ind.indContainer) ind.indContainer->setVisible(false);
+            ind.displayed = false;
+        }
+    }
+}
+
+} // namespace surv

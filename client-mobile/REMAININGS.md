@@ -86,14 +86,14 @@ drift is unrelated — `test_messages.cpp:212`).
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | ✅ |
 | `client/src/ui/ui.ts` (HUD) → `ui/FguiHud.*` (FairyGUI stub) | ⏳ stub — most HUD elements missing |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/FguiPadGraphics.*` (FairyGUI stub) | ⏳ stub — placeholder shapes |
-| `client/src/emote.ts` (pings + emote wheel + indicators) | ❌ **not ported** |
+| `client/src/emote.ts` (pings + emote wheel + indicators) | ⏳ partial — server send + receive + world emote/ping sprites done; UI wheels not ported |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | ❌ **not ported** |
 | `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | ❌ **not ported** (BT keyboard/controller) |
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ❌ **not wired** — `Player` lacks surface/step/action state |
 | UI sounds (ambient lab, pickup pings, notifications) | ❌ **not wired** — UI is Java |
 | Reverb convolution (`setReverbProperties`) | 🔶 volume computed + stored; axmol API not called |
-| `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ❌ **not ported** |
-| `client/src/ui/opponentDisplay.ts` (spawn preview) | ❌ **not ported** |
+| `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ FguiHud — weapon cards, gear slots, perk slots, scope inventory, loot counts, pickup/kill messages, interaction prompt |
+| `client/src/emote.ts` (emote/ping system) | ⏳ partial — server send + receive + world emote/ping sprites done; UI wheels not ported |
 | `client/src/ui/pieTimer.ts` (action progress circle) | ❌ **not ported** |
 | `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ❌ **not ported** (M8) |
 | `client/src/crosshair.ts` (custom crosshair) | ❌ **not ported** |
@@ -185,7 +185,19 @@ drift is unrelated — `test_messages.cpp:212`).
   - Map::getMinimapTexture() / getMinimapScale() for runtime access
   - FguiHud::buildMinimap() FGUI frame + gas ring + player dot overlays
   - onFactoryReset() clears minimap texture on map reload
-- [ ] **Inventory UI v2** (`ui2.ts` features — weapon cards, perk icons, loot pickup feed, throwable arc preview, team inventory panel)
+- [x] **Inventory UI v2** (`ui2.ts` features — weapon cards, gear slots, perk slots, scope inventory, loot counts, pickup/kill messages, interaction prompt) — implemented 2026-10-17
+- [ ] **Emote/ping system** (`client/src/emote.ts`) — **partial port 2026-10-17**:
+  - [x] Game::sendEmote() wire → server (MsgType_Emote)
+  - [x] EmoteManager C++ class: addPing/addEmote from UpdateMsg.emotes
+  - [x] World-space emote sprites (container + circle + sprite + animation)
+  - [x] Team ping indicators (border + ping + edge-of-screen indicators)
+  - [ ] Emote wheel UI (FguiHud radial menu)
+  - [ ] Emote wheel input triggering (touch/long-press emote button)
+  - [ ] Ping wheel input triggering (touch/bind)
+  - [ ] Emote throttle logic (soft/hard cooldown)
+  - [ ] Ammo-specific ping emotes (ammo type → emote mapping)
+  - [ ] Map ping sprites (minimap dot from ping sprite barn)
+  - [ ] Emote sound playback on addEmote
 
 - [ ] **FairyGUI touch pads** (`FguiPadGraphics.*`) — implement:
   - Real pad sprites (`pad.img` with alpha/scaling)

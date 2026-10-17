@@ -20,8 +20,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <memory>
 #include <numeric>
 #include <sstream>
+#include <string>
+#include <vector>
 
 USING_NS_AX;
 

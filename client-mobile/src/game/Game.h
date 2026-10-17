@@ -165,6 +165,9 @@ private:
     void handlePickup(NetBitStream& s);
     void handleMap(NetBitStream& s);
 
+    // Emote/ping support
+    void sendEmote(const std::string& type, const Vec2& pos, bool isPing);
+
     void onOpen();
     void onFrame(std::vector<uint8_t>&& frame);
     void onClose(uint16_t code, const std::string& reason);

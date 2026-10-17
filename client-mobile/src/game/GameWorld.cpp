@@ -1,5 +1,6 @@
 #include "GameWorld.h"
 
+#include "EmoteManager.h"
 #include "Gas.h"
 #include "Map.h"
 #include "objects/Barns.h"
@@ -154,6 +155,10 @@ void GameWorld::loadMap(const MapMsg& msg) {
     _map->resetObjectPools();
     _gas.m_initFree();
     _lineSprites.m_free();
+
+    // Emote/ping cleanup on new map
+    _emoteManager.reset();
+
     _renderer->reset();
     _activePlayer = nullptr;
     _activePlayerId = 0;
@@ -215,6 +220,19 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
         _playerNames[info.playerId] = info.name;
         _playerBarn->names[info.playerId] = info.name;
         _playerBarn->teams[info.playerId] = info.teamId;
+    }
+
+    // Process emotes and pings from ServerUpdateMsg (port of game.ts line 1197-1204)
+    for (const auto& emote : msg.emotes) {
+        // Determine factionMode from map render def
+        const auto* provider = getDefProvider();
+        const auto* mapDef = provider ? provider->mapRender(_map->mapName) : nullptr;
+        const bool factionMode = mapDef && mapDef->factionMode;
+        if (emote.isPing) {
+            _emoteManager.addPing(emote, factionMode, *this);
+        } else {
+            _emoteManager.addEmote(emote, *this);
+        }
     }
 
     for (const auto& bullet : msg.bullets) {
@@ -349,6 +367,9 @@ void GameWorld::update(float dt) {
     _airdropBarn->update(dt, *this);
     _particleBarn->update(dt, *this);
     _decalBarn->update(dt, *this);
+
+    // Emote/ping manager update (positioned after all other objects)
+    _emoteManager.update(dt, *this);
 
     _renderer->m_update(dt, _camera, *_map, false);
     _map->m_render(_camera);
