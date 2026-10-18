@@ -76,6 +76,9 @@ public:
     void displayPickupMessage(uint8_t type);
     void displayKillMessage(const std::string& text, const std::string& count);
 
+    // Minimap update — called each frame from update().
+    void refreshMinimap(const Game* game);
+
 private:
     void buildHudPanel(fairygui::GComponent* root);
     void buildResultOverlay(fairygui::GComponent* root);

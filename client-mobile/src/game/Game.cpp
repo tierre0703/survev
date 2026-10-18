@@ -408,10 +408,12 @@ void Game::handleGameOver(NetBitStream& s) {
 void Game::handlePickup(NetBitStream& s) {
     PickupMsg m;
     m.deserialize(s);
-    // Priority 1: play item pickup sound for the active player (player.ts ~line 2095).
+    // Priority 1: play item pickup sound for the active player (player.ts ~line 2095),
+    // routed through the app's audio callback so host tests stay silent.
     if (m.type == PickupMsgType_Success && !m.item.empty()) {
-        // The GameWorld holds the AudioManager and PlayerBarn; we forward
-        // the pickup event to the GameScene via the _scene callback.
+        if (_pickupSoundCb) {
+            _pickupSoundCb(m.item);
+        }
     }
 }
 

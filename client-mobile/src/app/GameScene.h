@@ -142,6 +142,9 @@ public:
     void pauseGame();
     void resumeGame();
 
+    // Called from Game::handlePickup to play the item pickup sound.
+    void onPickupSound(const std::string& item);
+
     // Aborts any join in progress and notifies the menu that the match should
     // re-open. Used by the matchmaking overlay's "Back to Main Menu".
     void returnToMenu();

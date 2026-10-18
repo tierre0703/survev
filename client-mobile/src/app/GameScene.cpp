@@ -285,6 +285,8 @@ bool GameScene::init() {
         _world->loadMap(msg);
     });
     _game->setUpdateCallback([this](const UpdateMsg& msg) { _world->applyUpdate(msg); });
+    _game->setPickupSoundCallback(
+        [this](const std::string& item) { onPickupSound(item); });
 
     // M7: the menu starts a game via enterWithJoin()/enterWithFindGame().
     _gameRoot->setVisible(false);
@@ -460,6 +462,17 @@ void GameScene::pauseGame() {
     }
     if (_audio) {
         _audio->stopAll();
+    }
+}
+
+void GameScene::onPickupSound(const std::string& item) {
+    if (_audio) {
+        // The item id maps to a ui-channel pickup sound like "gun_pickup_01".
+        const std::string soundKey = item + "_pickup_01";
+        audio::PlaySoundOptions opts;
+        opts.channel = "ui";
+        opts.range = 48.0f;
+        _audio->playSound(soundKey, opts);
     }
 }
 

@@ -3,7 +3,6 @@
 // and ground fade used by the web client.
 #include "Camera.h"
 #include "PixiLike.h"
-#include <cstdint>
 #include <unordered_map>
 #include <vector>
 

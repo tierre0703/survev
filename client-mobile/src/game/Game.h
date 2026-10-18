@@ -118,6 +118,12 @@ public:
     void setUpdateCallback(UpdateCallback cb) { _updateCallback = std::move(cb); }
     void setAtlasCallback(AtlasCallback cb) { _atlasCallback = std::move(cb); }
 
+    // Played when the server confirms a successful item pickup (PickupMsg
+    // type == Success). The app (GameScene) installs this to play the item's
+    // ui-channel pickup sound; the headless host tests leave it unset.
+    using PickupSoundCallback = std::function<void(const std::string& item)>;
+    void setPickupSoundCallback(PickupSoundCallback cb) { _pickupSoundCb = std::move(cb); }
+
     // Headless state snapshot for replay verification.
     GameStateSnapshot snapshot() const;
     // Deterministic text form of snapshot(), suitable for diffing a native
@@ -174,6 +180,7 @@ private:
     void sendJoinMessage();
 
     GameScene* _scene = nullptr;
+    PickupSoundCallback _pickupSoundCb;
     ConnectionFactory _factory;
 
     std::unique_ptr<Connection> _connection;

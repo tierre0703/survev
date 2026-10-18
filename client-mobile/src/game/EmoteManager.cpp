@@ -1,5 +1,6 @@
 #include "EmoteManager.h"
 #include "GameWorld.h"
+#include "../audio/AudioManager.h"
 #include "../net/Messages.h"
 #include "../render/Defs.h"
 #include "../render/PixiLike.h"
@@ -105,7 +106,8 @@ void EmoteManager::addEmote(const Emote& msg, GameWorld& ctx) {
 
     // Play sound
     if (ctx.audio()) {
-        // Emote sound will be played from the update loop when isNew
+        const audio::PlaySoundOptions opts = {"ui", 48.0f};
+        ctx.audio()->playSound("emote_01", opts);
     }
 }
 
@@ -178,7 +180,16 @@ void EmoteManager::addPing(const Emote& msg, bool factionMode, GameWorld& ctx) {
 
     // Play ping sound
     if (ctx.audio()) {
-        // TODO: play appropriate ping sound
+        // Map common ping types to their sound keys
+        const char* pingSound = "ping_danger_01";
+        if (msg.type == "ping_airdrop")     pingSound = "ping_airdrop_01";
+        else if (msg.type == "ping_airstrike") pingSound = "ping_airstrike_01";
+        else if (msg.type == "ping_help")   pingSound = "ping_help_01";
+        else if (msg.type == "ping_coming") pingSound = "ping_coming_01";
+        else if (msg.type == "ping_leader") pingSound = "ping_leader_01";
+        else if (msg.type == "ping_unlock") pingSound = "ping_unlock_01";
+        const audio::PlaySoundOptions opts = {"ui", 48.0f};
+        ctx.audio()->playSound(pingSound, opts);
     }
 }
 
@@ -236,7 +247,6 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
         // Play sound on first frame
         if (e.isNew) {
             e.isNew = false;
-            // Sound will be played here once audio wiring is complete
         }
 
         e.pos = targetPos;

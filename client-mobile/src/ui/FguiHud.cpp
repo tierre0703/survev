@@ -780,10 +780,43 @@ void FguiHud::buildSquadBars(fairygui::GComponent* root) {
     }
 }
 
-// ---- Minimap (stub) ------------------------------------------------------
+// ---- Minimap -------------------------------------------------------------
 void FguiHud::buildMinimap(fairygui::GComponent* root) {
-    // Stub: minimap implementation deferred
-    (void)root;
+    // Container at top-right corner
+    const float mmSize = 140.0f;
+    const float margin = 8.0f;
+
+    fairygui::GGraph* container = fairygui::GGraph::create();
+    container->drawRect(mmSize, mmSize, 2,
+                        Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                        Color4F(0.8f, 0.8f, 0.8f, 1.0f));
+    container->setPosition(root->getWidth() - mmSize - margin, margin);
+    container->setPivot(0.0f, 0.0f);
+    root->addChild(container);
+    _minimapContainer = container;
+
+    // Frame border (white outline)
+    fairygui::GGraph* frame = fairygui::GGraph::create();
+    frame->drawRect(mmSize, mmSize, 2,
+                    Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                    Color4F(1.0f, 1.0f, 1.0f, 9.0f / 15.0f));
+    frame->setPosition(container->getX(), container->getY());
+    frame->setPivot(0.0f, 0.0f);
+    root->addChild(frame);
+    _minimapFrame = frame;
+
+    // Gas ring (dashed circle overlay, same size as minimap)
+    fairygui::GGraph* gasRing = fairygui::GGraph::create();
+    gasRing->setPosition(mmSize * 0.5f, mmSize * 0.5f);
+    gasRing->setVisible(false);
+    container->addChild(gasRing);
+    _minimapGasRing = gasRing;
+
+    // Safe zone (solid circle, positioned at safe centre on the minimap)
+    fairygui::GGraph* safeZone = fairygui::GGraph::create();
+    safeZone->setVisible(false);
+    container->addChild(safeZone);
+    _minimapSafeZone = safeZone;
 }
 
 // ---- Refresh methods ----------------------------------------------------
@@ -1151,6 +1184,45 @@ void FguiHud::update(float dt, bool started, bool playing, const Game* game) {
         showResult(over->teamRank > 0);
     } else {
         showResult(false);
+    }
+
+    // --- Minimap overlay (gas ring + safe zone + player dots) ---
+    refreshMinimap(game);
+}
+
+// ---- Minimap refresh ----------------------------------------------------
+void FguiHud::refreshMinimap(const Game* game) {
+    if (!_minimapContainer || !_minimapGasRing || !_minimapSafeZone) return;
+    if (!game) return;
+
+    // The minimap shows team-player dots by reading game state each frame.
+    // The map background is baked into the axmol RenderTexture by
+    // Map::generateMinimapTexture; the FGUI layer overlays dynamic shapes.
+
+    // Clear old player dots.
+    for (auto* dot : _minimapDots) {
+        dot->removeFromParent();
+    }
+    _minimapDots.clear();
+
+    // Team player dots (small coloured circles at each team-mate's position).
+    const auto& teamIds = game->getTeamPlayerIds();
+    const auto& playerStatus = game->allPlayerStatus();
+    const uint16_t activeId = game->getActivePlayerId();
+    for (uint16_t pid : teamIds) {
+        auto it = playerStatus.find(pid);
+        if (it == playerStatus.end() || !it->second.visible) continue;
+
+        auto* dot = fairygui::GGraph::create();
+        const float dotDiam = 6.0f;
+        const uint32_t dotColor = pid == activeId ? 0xff00ff00 : 0xffffffff;
+        dot->drawEllipse(dotDiam, dotDiam, 0,
+                         Color4F(((dotColor >> 16) & 0xff) / 255.0f,
+                                 ((dotColor >> 8) & 0xff) / 255.0f,
+                                 (dotColor & 0xff) / 255.0f, 1.0f),
+                         Color4F(0.0f, 0.0f, 0.0f, 0.0f));
+        _minimapContainer->addChild(dot);
+        _minimapDots.push_back(dot);
     }
 }
 

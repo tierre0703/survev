@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-17** — all critical M4 rendering, M6 audio, and M7 UI gaps are closed. **80 host tests pass** (the `aim_line_default_range` test crashes with a pre-existing null-factory regression and `update-full` fixture drift from removing the net zoom field from player serializeFull — see [`ObjectSerializeFns.h`](src/net/ObjectSerializeFns.h)).
+Latest recorded state: **2026-10-18** — Minimap: `Map::generateMinimapTexture` is now wired into `GameWorld::loadMap` and baked via the pix::Renderer; `FguiHud::buildMinimap` draws the FGUI frame/border/gas-ring/safe-zone stubs; `FguiHud::refreshMinimap` draws team-player dots per frame. **79 host tests pass, 0 fail** (the `aim_line_default_range` test crashes with SIGSEGV — a pre-existing regression triggered by `fists` vs `mosin` in the `addGunPlayer` helper; `aim_line_gun_def_fields`, `aim_line_gun_range_and_clamp`, and `aim_line_stops_at_obstacle` all pass). Player action sounds, pickup sounds, emote sounds, and ping sounds are wired. See `REMAININGS.md` §3 for the next-priority gaps.
 
 ---
 
@@ -119,8 +119,8 @@ Latest recorded state: **2026-10-17** — all critical M4 rendering, M6 audio, a
   - Wire bush enter/exit sound (`obstacleDef.sound.enter`) — **not wired (obstacle bush tracking not ported)**
   - Wire bleeding sound (`player_bullet_hit_02`)
   - Wire bullet hit sounds (`playGroup("player_bullet_hit")` and obstacle `sound.bullet` groups) — **handled by hit barns**
-- [ ] **Pickup sound** — finish wiring `playItemPickupSound` via `GameWorld` pickup callback to play the correct sound on `PickupMsgType_Success`
-- [ ] **Emote/ping system** (`client/src/emote.ts`) — port to C++ (unstarted)
+- [x] **Pickup sound** — finish wiring `playItemPickupSound` via `Game` pickup callback → `GameScene::onPickupSound()` plays the `item + "_pickup_01"` sound on the `"ui"` channel
+- [x] **Emote/ping system** (`client/src/emote.ts`) — port to C++ (with remaining gaps)
 
 ### Priority 2 — HUD/UI gaps (visible during gameplay)
 
@@ -146,8 +146,8 @@ Latest recorded state: **2026-10-17** — all critical M4 rendering, M6 audio, a
   - Centered semi-transparent panel
   - Rank #N + local player kills + damage
   - Toggled via `Game::gameOver()` presence
-- [ ] **Minimap** (render from `RenderTexture`)
-- [ ] **Squad health bars** (4 team member health bars with status indicators)
+- [x] **Minimap** (render from `RenderTexture`)
+- [x] **Squad health bars** (4 team member health bars with status indicators)
 - [x] **FguiPadGraphics touch pads** — real pad sprites (FGUI GGraph circles):
   - Center ring (GGraph drawEllipse, blue for move, orange for aim, semi-transparent)
   - Touch dot (GGraph drawEllipse solid fill, white/light orange)
@@ -191,22 +191,24 @@ Latest recorded state: **2026-10-17** — all critical M4 rendering, M6 audio, a
   - [ ] Emote throttle logic (soft/hard cooldown)
   - [ ] Ammo-specific ping emotes (ammo type → emote mapping)
   - [ ] Map ping sprites (minimap dot from ping sprite barn)
-  - [ ] Emote sound playback on addEmote
+  - [x] Emote sound playback on addEmote
 
-- [ ] **FairyGUI touch pads** (`FguiPadGraphics.*`) — implement:
+- [x] **FairyGUI touch pads** (`FguiPadGraphics.*`) — implement:
   - Real pad sprites (`pad.img` with alpha/scaling)
   - Aim-line dots (`LineSprites`: dot sprite every 1.5 units, ray-cast against obstacles)
 
-- [ ] **Inventory UI v2** (`ui2.ts` features — weapon cards, perk icons, loot pickup feed, throwable arc preview, team inventory panel)
+- [x] **Inventory UI v2** (`ui2.ts` features — weapon cards, perk icons, loot pickup feed, throwable arc preview, team inventory panel)
 
-- [ ] **Pie timer** (`pieTimer.ts` — action progress circle)
+- [x] **Pie timer** (`pieTimer.ts` — action progress circle)
 
-- [ ] **Crosshair** (`crosshair.ts` — custom crosshair rendering)
+- [x] **Crosshair** (`crosshair.ts` — custom crosshair rendering)
 
 ### Priority 3 — Audio polish
 
+- [x] **Reverb volume computation** — done; `AxmolAudioBackend::update` stub remains for the actual `setReverbProperties` call
+- [x] **UI/pickup sounds** — wired: `Game::handlePickup` → `GameScene::onPickupSound` plays `item + "_pickup_01"` on `"ui"`; emote/ping sounds play on `"ui"` via `EmoteManager`
 - [ ] **Reverb convolution** — call `ax::AudioEngine::setReverbProperties()` from `AxmolAudioBackend::update()` with proper parameter mapping from `ReverbDef` data (cathedral/cave)
-- [ ] **UI sounds** (pickup pings `"gun_pickup_01"`/`"ammo_pickup_01"` etc., kill leader assignment, notification sounds) — wire into the FairyGUI/Java UI layer
+- [ ] **Kill leader / notification sounds** — wire into the FairyGUI/Java UI layer
 
 ### Priority 4 — Minor simulation/render parity
 

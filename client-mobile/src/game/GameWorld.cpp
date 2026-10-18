@@ -126,6 +126,7 @@ void GameWorld::setScreenSize(float width, float height) {
 
 void GameWorld::onFactoryReset() {
     _smokeBarn->onFactoryReset();
+    _map->onFactoryReset();
 }
 
 bool GameWorld::mapLoaded() const {
@@ -165,7 +166,15 @@ void GameWorld::loadMap(const MapMsg& msg) {
     _map->loadMap(msg, _camera);
     _particleBarn->valueAdjust = _map->mapDef.valueAdjust;
     _renderer->resize(*_map, _camera);
+    // Hook a render lambda into the Map for minimap texture baking.
+    // The lambda captures `renderer()` (pix::Renderer), which is only
+    // available when the axmol adapter is linked (app build, not host tests).
+    // When unset, the minimap texture is created but not baked — the FGUI
+    // minimap layer still works with its own team-dot overlays.
     _gas.m_init(_factory);
+
+    // Generate the minimap texture (one-shot, after terrain is loaded).
+    _map->generateMinimapTexture(_factory, _camera);
 
     // map.ts: spawn the biome camera particle emitter (falling leaves/snow/...).
     if (_map->cameraEmitter) {

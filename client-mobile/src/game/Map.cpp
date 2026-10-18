@@ -446,7 +446,6 @@ void Map::generateMinimapTexture(pix::Factory* factory, const Camera& camera) {
     if (!factory || _mapTexture) return;  // already generated
 
     // Compute minimap texture size: square, matching device pixel ratio.
-    const float screenScale = camera.m_screenHeight;
     const float minDim = std::min(camera.m_screenWidth, camera.m_screenHeight);
     const float texSize = std::round(minDim * 0.3f);  // ~30% of smaller screen dimension
 
@@ -598,6 +597,17 @@ void Map::generateMinimapTexture(pix::Factory* factory, const Camera& camera) {
     _mapGfx->setScale(1.0f, 1.0f);
 
     // The render is done by the GameWorld after loadMap completes.
+    // Render the scratch graphics into the render texture now.
+    _mapGfx->setPosition(0.0f, 0.0f);
+    _mapGfx->setScale(1.0f, 1.0f);
+
+    // Create a temporary container for rendering, use the renderer.
+    pix::Container* tempContainer = factory->createContainer();
+    tempContainer->addChild(_mapGfx);
+    if (_minimapRenderFn && _mapTexture) {
+        _minimapRenderFn(tempContainer, _mapTexture, true);
+    }
+    tempContainer->removeFromParent();
 }
 
 float Map::getMinimapScale() const {
