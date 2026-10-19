@@ -87,12 +87,14 @@ function sameLayer(a: number, b: number) {
 
 /** The drawn sprite box of `type` in world units, or null when it has none. */
 function imageBox(type: string, scale: number): { w: number; h: number } | null {
-    const imgScale = MapObjectDefs.typeToDefSafe(type)?.img?.scale;
-    if (!imgScale || imgScale <= 0) return null;
-    const w = MapObjectDefs.getImgWidth(type);
-    const h = MapObjectDefs.getImgHeight(type);
-    if (w <= 0 || h <= 0) return null;
-    return { w: (w / imgScale) * scale, h: (h / imgScale) * scale };
+    const def = MapObjectDefs.typeToDefSafe(type);
+    if (!def?.img?.scale || def.img.scale <= 0) return null;
+    const imgScale = def.img.scale;
+    // The def stores the sprite filename (e.g. "map-crate-01-res-01.img")
+    // but the texture dimensions are only known at runtime from the sprite
+    // resource in the PIXI asset manager. There is no precomputed width/height
+    // on the def. Fall back to collider-based picking for now.
+    return null;
 }
 
 interface CandidateArgs {
@@ -110,26 +112,27 @@ interface CandidateArgs {
 
 function baseCandidate(
     display: EditorDisplay,
-    pos: Vec2,
+    cursorPos: Vec2,
     args: CandidateArgs,
 ): HitCandidate | null {
     const { obj, layer, rot, scale, type, depth, colliderOnly } = args;
+    const objPos = args.pos;
 
     // For sprites, `rot` is negated to match `obstacle.rot`: both sprite and rot
     // are then in the same frame the renderer draws (about the object position).
-    const local = v2.rotate(pos, -rot);
+    const local = v2.rotate(cursorPos, -rot);
     const box = colliderOnly ? null : imageBox(type, scale);
     let score: number;
 
     if (!box) {
         // Nothing is drawn for the object itself (structures, buildings), so its
         // bounds are the only thing the author can aim at.
-        score = pointInCollider(worldBounds(type, pos, rot, scale), pos) ? 0 : Infinity;
+        score = pointInCollider(worldBounds(type, objPos, rot, scale), cursorPos) ? 0 : Infinity;
     } else {
         const overflow = imageOverflow(box, local);
         if (overflow <= 0) {
             score = 0;
-        } else if (insideCircle(worldBounds(type, pos, rot, scale), pos) >= 0) {
+        } else if (insideCircle(worldBounds(type, objPos, rot, scale), cursorPos) >= 0) {
             // Circle-collision obstacles (trees, bushes, stones, barrels) are hit
             // anywhere in their collider: the sprite overhangs it, so a click on
             // the visible foliage that is outside the box is still a hit.
@@ -143,8 +146,8 @@ function baseCandidate(
     return {
         objId: obj.__id,
         docIndex: display.m_objIdToDocIndex.get(obj.__id) ?? -1,
-        collider: worldBounds(type, pos, rot, scale),
-        pos,
+        collider: worldBounds(type, objPos, rot, scale),
+        pos: objPos,
         layer,
         type,
         objectType: obj.__type,

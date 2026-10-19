@@ -17,7 +17,7 @@ import { debugLines } from "../../src/debug/debugLines.ts";
 import { device } from "../../src/device.ts";
 import type { Game } from "../../src/game.ts";
 import type { InputBinds } from "../../src/inputBinds.ts";
-import { Map } from "../../src/map.ts";
+import { Map as GameMap } from "../../src/map.ts";
 import type { Building } from "../../src/objects/building.ts";
 import { DecalBarn } from "../../src/objects/decal.ts";
 import { LootBarn } from "../../src/objects/loot.ts";
@@ -52,7 +52,7 @@ export class EditorDisplay {
     renderer!: Renderer;
     particleBarn!: ParticleBarn;
     decalBarn!: DecalBarn;
-    map!: Map;
+    map!: GameMap;
     playerBarn!: PlayerBarn;
     smokeBarn!: SmokeBarn;
     lootBarn!: LootBarn;
@@ -99,7 +99,7 @@ export class EditorDisplay {
         this.renderer = new Renderer(this as unknown as Game, this.canvasMode);
         this.particleBarn = new ParticleBarn(this.renderer);
         this.decalBarn = new DecalBarn();
-        this.map = new Map(this.decalBarn);
+        this.map = new GameMap(this.decalBarn);
         this.playerBarn = new PlayerBarn();
         this.smokeBarn = new SmokeBarn();
         this.lootBarn = new LootBarn();
@@ -340,7 +340,7 @@ export class EditorDisplay {
 
         for (let i = 0; i < def.layers.length; i++) {
             const layerDef = def.layers[i];
-            this.genBuilding(
+            this.addBuilding(
                 layerDef.type,
                 math.addAdjust(pos, layerDef.pos, ori),
                 (layerDef.ori + ori) % 4,
@@ -715,44 +715,32 @@ export class EditorDisplay {
         const dy = y - obj.pos.y;
         if (dx === 0 && dy === 0) return;
 
-        const visited = new Set<number>();
-        const move = (o: { __id: number; pos: Vec2; rot: number; __type: ObjectType }) => {
-            if (visited.has(o.__id)) return;
-            visited.add(o.__id);
-            o.pos = v2.create(o.pos.x + dx, o.pos.y + dy);
+        // Direct position update for live drag feedback.
+        // Using m_updateObjPart would reset posInterpTicker every frame,
+        // causing the object to never visually move (stuck in interpolation).
+        obj.pos = v2.create(obj.pos.x + dx, obj.pos.y + dy);
 
-            switch (o.__type) {
-                case ObjectType.Building: {
-                    const building = o as unknown as Building;
-                    move(building.ceiling as unknown as typeof o);
-                    for (const childId of building.childObjects ?? []) {
-                        const child = this.objectCreator.m_getObjById(childId);
-                        if (child) move(child as unknown as typeof o);
-                    }
-                    break;
-                }
-                case ObjectType.Structure: {
-                    const structure = o as unknown as Structure;
-                    for (const layerId of structure.layers ?? []) {
-                        const building = this.objectCreator.m_getObjById(layerId.objId);
-                        if (building) move(building as unknown as typeof o);
-                    }
-                    break;
-                }
-                case ObjectType.Decal: {
-                    const decal = o as unknown as { decalRender?: { pos: Vec2 } | null };
-                    if (decal.decalRender) {
-                        decal.decalRender.pos = v2.create(
-                            decal.decalRender.pos.x + dx,
-                            decal.decalRender.pos.y + dy,
-                        );
-                    }
-                    break;
+        // For decals, also move the decalRender so the sprite follows.
+        if (obj.__type === ObjectType.Decal) {
+            const decal = obj as unknown as { decalRender?: { pos: Vec2 } | null };
+            if (decal.decalRender) {
+                decal.decalRender.pos = v2.create(
+                    decal.decalRender.pos.x + dx,
+                    decal.decalRender.pos.y + dy,
+                );
+            }
+        }
+
+        // For structures, update child buildings too.
+        if (obj.__type === ObjectType.Structure) {
+            const structure = obj as unknown as Structure;
+            for (const layerId of structure.layers ?? []) {
+                const child = this.objectCreator.m_getObjById(layerId.objId);
+                if (child) {
+                    child.pos = v2.create(child.pos.x + dx, child.pos.y + dy);
                 }
             }
-        };
-
-        move(obj as unknown as { __id: number; pos: Vec2; rot: number; __type: ObjectType });
+        }
     }
 
     update(dt: number) {

@@ -129,7 +129,7 @@ export function atlasBuilderPlugin(isProduction: boolean): Plugin[] {
                         for (const res of Object.keys(data) as AtlasRes[]) {
                             for (const sheet of data[res]) {
                                 sheet.meta.image = Path.relative(
-                                    import.meta.dirname,
+                                    Path.join(import.meta.dirname, ".."),
                                     Path.join(
                                         atlasManager.getAtlasFolderPath(atlas, hash),
                                         sheet.meta.image!,
