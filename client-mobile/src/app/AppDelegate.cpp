@@ -60,24 +60,15 @@ bool AppDelegate::applicationDidFinishLaunching() {
     ::surv::ui::registerGuiFonts("fonts");
     // One persistent scene keeps the team socket and matchmaking ticking even
     // while their UI is hidden. Node ownership avoids dangling replaceScene pointers.
-    auto* menuScene = surv::MenuScene::createScene();
     auto* gameScene = surv::GameScene::createScene();
 
-    // S3: Java now owns the menu and matchmaking; the C++ menu scene is kept
-    // for the host tests and as the fallback until onNativeMatchStarted/Ended
-    // drive the Java menu lifecycle. The find_game HTTP request stays in C++
-    // for the host test path; the Java menu will call SurvApi.findGame() instead.
+    // S3: Java now owns the menu and matchmaking; the C++ menu scene is removed
+    // from the Android build — the Java UI renders everything. The game scene
+    // handles the game canvas and receives matchmaking commands via SurvBridge.
     //
     // When the Java menu calls SurvBridge.onJoinUrls(), it lands in
     // UiBridge::joinUrls() → GameScene::enterWithJoin(), same as the team path.
-    if (menuScene && gameScene) {
-        menuScene->addChild(gameScene, 1);
-        gameScene->setVisible(false);
-        menuScene->bindGame(gameScene);
-
-        // The menu owns the find_game HTTP call; the scene only schedules it.
-        // S3: the Java menu also calls find_game directly via SurvApi.findGame,
-        // so this C++ path is only used by the host tests and the desktop build.
+    if (gameScene) {
         gameScene->setFindGameRequest(
             [](const std::string& region, int gameModeIdx,
                surv::GameScene::FindGameDone done) {
@@ -87,9 +78,6 @@ bool AppDelegate::applicationDidFinishLaunching() {
                 body.playerCount = 1;
                 body.autoFill = true;
                 body.gameModeIdx = gameModeIdx;
-                // Same guard as MenuScene: android.os.Build returns "unknown"
-                // for a missing property (the manifest does not declare
-                // surv_apiUrl), which must fall back to the built-in default.
                 std::string apiUrl(ax::UserDefault::getInstance()->getStringForKey(
                     surv::dev::kKeyApiUrl, ""));
                 if (apiUrl.rfind("http://", 0) != 0 && apiUrl.rfind("https://", 0) != 0) {
@@ -106,41 +94,26 @@ bool AppDelegate::applicationDidFinishLaunching() {
                     }
                 });
             });
-
     }
 
-    director->runWithScene(menuScene ? static_cast<ax::Scene*>(menuScene)
-                                     : static_cast<ax::Scene*>(gameScene));
-    _menuScene = menuScene;
+    director->runWithScene(gameScene ? static_cast<ax::Scene*>(gameScene)
+                                     : static_cast<ax::Scene*>(surv::GameScene::createScene()));
     _gameScene = gameScene;
-    // M7/S1: hand the scenes to the platform UI seam. Android installs the JNI
-    // bridge/host (src/app/UiBridge.cpp); every other build installs a no-op.
-    // S3: the bridge is now fully active — the Java menu renders the start
-    // screen and SurvApi handles matchmaking HTTP. The C++ MenuScene still
-    // exists for the host tests but is no longer the primary menu.
-    surv::installUiBridge(menuScene, gameScene);
+    surv::installUiBridge(nullptr, gameScene);
     return true;
 }
 
 void AppDelegate::applicationDidEnterBackground() {
     Director::getInstance()->stopAnimation();
-    // Pause the game ticker + close the WebSocket gracefully (plan.md 5.8).
     if (_gameScene) {
         _gameScene->pauseGame();
-    }
-    if (_menuScene) {
-        _menuScene->pauseMenu();
     }
 }
 
 void AppDelegate::applicationWillEnterForeground() {
     Director::getInstance()->startAnimation();
-    // Resume the ticker; the game rejoins and re-syncs from the server snapshot.
     if (_gameScene) {
         _gameScene->resumeGame();
-    }
-    if (_menuScene) {
-        _menuScene->resumeMenu();
     }
 }
 

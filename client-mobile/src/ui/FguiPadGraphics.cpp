@@ -38,7 +38,12 @@ const Color4F kAimDotColor(1.0f, 0.8f, 0.4f, 0.8f);       // light orange dot
 
 FguiPadGraphics::FguiPadGraphics(ax::Scene* scene, bool isMovePad)
     : _isMovePad(isMovePad)
+    , _scene(scene)
 {
+}
+
+void FguiPadGraphics::ensureFx() {
+    if (_centerRing) return;
     fairygui::GRoot* root = fairygui::GRoot::getInstance();
     if (!root) {
         return;
@@ -77,23 +82,27 @@ FguiPadGraphics::~FguiPadGraphics() {
 }
 
 void FguiPadGraphics::setVisible(bool visible) {
+    ensureFx();
     if (_centerRing) _centerRing->setVisible(visible);
     if (_touchDot) _touchDot->setVisible(visible);
 }
 
 void FguiPadGraphics::setCenterPos(float x, float y) {
+    ensureFx();
     if (_centerRing) {
         _centerRing->setPosition(x, y);
     }
 }
 
 void FguiPadGraphics::setTouchPos(float x, float y) {
+    ensureFx();
     if (_touchDot) {
         _touchDot->setPosition(x, y);
     }
 }
 
 void FguiPadGraphics::setCenterScale(float s) {
+    ensureFx();
     _centerScale = s;
     if (_centerRing) {
         _centerRing->setScale(_centerScale, _centerScale);
@@ -101,6 +110,7 @@ void FguiPadGraphics::setCenterScale(float s) {
 }
 
 void FguiPadGraphics::setTouchScale(float s) {
+    ensureFx();
     _touchScale = s;
     if (_touchDot) {
         _touchDot->setScale(_touchScale, _touchScale);
@@ -108,6 +118,7 @@ void FguiPadGraphics::setTouchScale(float s) {
 }
 
 void FguiPadGraphics::update() {
+    ensureFx();
     // No per-frame work needed — positions/scales are set reactively.
 }
 

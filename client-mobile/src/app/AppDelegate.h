@@ -4,7 +4,6 @@
 #include "axmol.h"
 
 namespace surv {
-class MenuScene;
 class GameScene;
 } // namespace surv
 
@@ -20,7 +19,6 @@ public:
     void applicationWillQuit() override;
 
 private:
-    // M7: the menu and the game are sibling scenes created once at launch.
-    surv::MenuScene* _menuScene = nullptr;
+    // The game scene renders the game canvas; the Java UI handles all menus.
     surv::GameScene* _gameScene = nullptr;
 };

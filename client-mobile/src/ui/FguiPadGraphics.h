@@ -33,6 +33,8 @@ public:
     void update() override;
 
 private:
+    void ensureFx(); // deferred creation of FairyGUI widgets
+    ax::Scene* _scene = nullptr;
     fairygui::GComponent* _parent = nullptr;
     fairygui::GGraph* _centerRing = nullptr;
     fairygui::GGraph* _touchDot = nullptr;

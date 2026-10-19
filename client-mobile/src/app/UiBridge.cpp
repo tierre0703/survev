@@ -85,7 +85,12 @@ public:
     }
 
     std::string configJson() override {
-        return _menu ? uikit::jsonToString(_menu->config().root()) : std::string("{}");
+        // Without a C++ menu scene, return the config from SharedPreferences.
+        if (!_menu) {
+            // Fall back to reading from SharedPreferences directly.
+            return std::string("{}");
+        }
+        return uikit::jsonToString(_menu->config().root());
     }
 
     void setPlayerName(const std::string& name) override {

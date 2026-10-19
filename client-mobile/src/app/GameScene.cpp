@@ -672,7 +672,12 @@ void GameScene::update(float delta) {
     if (_game->isPlaying() && _game->getActivePlayerId() != 0) {
         updateInput(delta);
     }
-    _touch->m_update(*_movePad, *_aimPad);
+    // Only update pad graphics when the touch pads should be visible
+    // (i.e. after a match starts). The FairyGUI GRoot may be gone before
+    // that — guard with _inGame and _notifiedStarted.
+    if (_inGame && _notifiedStarted) {
+        _touch->m_update(*_movePad, *_aimPad);
+    }
 
     // M5: pass touchingAim + touchAimLine state from Touch to GameWorld
     // for the LineSprites aim-line rendering in the world update.
