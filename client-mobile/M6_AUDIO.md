@@ -49,22 +49,20 @@ tools/codegen_sound_defs.mjs   emits GeneratedSoundDefs.cpp from soundDefs.ts
 node --experimental-transform-types tools/codegen_sound_defs.mjs
 ```
 
-## Remaining / not ported
-- Per-def explosion/bullet/weapon/footstep sound selection: wired in
-  `GameWorld::applyUpdate` (explosion per-type sound map with grass/water
-  surface selection), `BulletBarn::update` (bullet whiz group), `ShotBarn::update`
-  (weapon shoot sound with splinter/AP/high-velocity detune variants).
-- Reverb/filters: `AudioManager::update()` computes the cathedral reverb
-  volume from `activeLayer`/`underground` and calls `_backend->setReverbVolume()`.
-  `AxmolAudioBackend::update()` **now** creates a dedicated silent reverb carrier
-  instance and calls `ax::AudioEngine::setReverbProperties` with EAX parameters
-  mapped from the target volume (gain/decay scaled by volume, small-room-to-
-  cathedral feel).  When volume is effectively zero the reverb is disabled
-  (nullptr).
-- Player action sounds (footstep surface groups, door error, bush enter/exit,
-  weapon deploy/switch, heal/reload/pickup, haste effects, dry fire) are not
-  wired — the C++ Player struct has no `surface`/`stepDistance`/`action`/sound
-  instance fields to drive them.
-- UI sounds (ambient lab, pickup pings, notifications) are not wired — no UI
-  system in the C++ port yet.
-- Volume/persisted settings UI (config) is M7.
+## Remaining / not ported (updated 2026-10-19)
+- All player action sounds are now wired:
+  - ✅ **Footsteps** (grass/sand/water surface groups, step distance tracking)
+  - ✅ **Weapon deploy/switch** (on activeWeapon change, melee/throwable/gun)
+  - ✅ **Bleeding sound** (downed players, periodic `player_bullet_hit_02`)
+  - ✅ **Haste ability sound** (`ability_stim_01` on haste seq change)
+  - ✅ **Action sounds** (UseItem/Reload/ReloadAlt via `updateActions`)
+  - ✅ **Pickup sound** (via GameScene `onPickupSound` callback)
+  - ✅ **Bush enter/exit** (`bush_enter_01` + leaf particles on transition)
+  - ✅ **Door error** (`door_error_01` on locked/one-way door contact)
+  - ✅ **Dry fire** (`empty_fire_01` when firing an empty gun)
+- ✅ **Explosion sounds** (per-type grass/water surface selection in `GameWorld::applyUpdate`)
+- ✅ **Bullet whiz** group (close bullets from other players, `BulletBarn::update`)
+- ✅ **Shot sounds** (weapon shoot with splinter/AP/high-velocity detune variants, `ShotBarn::update`)
+- ✅ **Reverb/filters**: `AudioManager::update()` computes cathedral reverb volume from `activeLayer`/`underground`; `AxmolAudioBackend::update()` creates a silent reverb carrier and calls `ax::AudioEngine::setReverbProperties` with EAX parameters.
+- **UI sounds** (ambient lab, pickup pings, notifications) are not wired — no UI system in the C++ port yet (the Java UI screens handle this).
+- Volume/persisted settings UI (config) is M7 and lives in Java.

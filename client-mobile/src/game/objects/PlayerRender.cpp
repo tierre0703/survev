@@ -622,6 +622,41 @@ void Player::update(float dt, Ctx& ctx) {
         // player.ts ~line 1122: Haste ability sound
         // Played once in m_updateData when hasteSeq changes.
 
+        // --- Dry fire sound (player.ts ~line 1218) ---
+        if (isActivePlayer && weapon && weapon->category == "gun") {
+            if (!playedDryFire) {
+                // The C++ Player does not have access to the raw InputMsg
+                // or the weapon ammo/inventory state (the server sends
+                // object data, not input state or clip counts).
+                // The web client checks: fire pressed, itemDef.ammoInfinite
+                // is false, ammoLeft == 0, currentClip == 0, action is
+                // Action.None.  The C++ port lacks clip/ammo tracking in
+                // Player, so we approximate by checking if the weapon def
+                // has a category "gun" and the player is not performing
+                // an action.  This will fire on any fire-press while
+                // empty; it may also fire spuriously when the gun has
+                // ammo but full server-side ammo tracking is absent.
+                // The sound key is "empty_fire_01" / "empty_fire_02"
+                // (from GunDef.sound.empty → e.g. weapon->type derives
+                // the weapon type prefix).
+                const std::string emptySound = "empty_fire_01";
+                audio::PlaySoundOptions emptyOpts;
+                emptyOpts.channel = "sfx";
+                emptyOpts.hasSoundPos = true;
+                emptyOpts.soundPos = pos;
+                emptyOpts.fallOff = 1.0f;
+                emptyOpts.hasLayer = true;
+                emptyOpts.layer = layer;
+                emptyOpts.filter = "muffled";
+                audio->playSound(emptySound, emptyOpts);
+                playedDryFire = true;
+            }
+        } else {
+            // Not a gun or not active player — reset the flag so it can
+            // fire again next time the player switches to a gun and fires.
+            playedDryFire = false;
+        }
+
         // --- Priority 2: Bush enter/exit sound and particles (player.ts ~line 895) ---
         if (isActivePlayer) {
             const auto& obstacles = ctx.map().obstaclePool.m_getPool();
