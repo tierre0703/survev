@@ -721,6 +721,11 @@ public:
     bool wasInsideObstacle = false;
     std::string insideObstacleType;
     float bleedTicker = 0.0f;
+    // player.ts isNearDoorError/doorErrorTicker: debounced door error sound.
+    bool isNearDoorError = false;
+    float doorErrorTicker = 0.0f;
+    // player.ts playedDryFire: one-shot dry-fire sound per fire-press.
+    bool playedDryFire = false;
     // Active-player view bounds (player.ts activePlayer.viewAabb).
     float viewHalfWidth = 0.0f;
     float viewHalfHeight = 0.0f;

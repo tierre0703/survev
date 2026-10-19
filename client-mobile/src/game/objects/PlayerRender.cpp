@@ -164,6 +164,9 @@ void Player::m_init() {
     wasInsideObstacle = false;
     insideObstacleType.clear();
     bleedTicker = 0.0f;
+    isNearDoorError = false;
+    doorErrorTicker = 0.0f;
+    playedDryFire = false;
     _prevActiveWeapon.clear();
 }
 
@@ -618,7 +621,89 @@ void Player::update(float dt, Ctx& ctx) {
 
         // player.ts ~line 1122: Haste ability sound
         // Played once in m_updateData when hasteSeq changes.
+
+        // --- Priority 2: Bush enter/exit sound and particles (player.ts ~line 895) ---
+        if (isActivePlayer) {
+            const auto& obstacles = ctx.map().obstaclePool.m_getPool();
+            bool isInBush = false;
+            std::string bushType;
+            for (auto* obstacle : obstacles) {
+                if (!obstacle || !obstacle->active || obstacle->dead ||
+                    obstacle->layer != layer) continue;
+                const MapObjectDef* od = getDefProvider() ? getDefProvider()->mapObject(obstacle->type) : nullptr;
+                if (od && od->isTree) {
+                    const float bushRad = rad * 0.25f;
+                    if (colliderIntersectCircle(obstacle->collider, pos, bushRad)) {
+                        isInBush = true;
+                        bushType = obstacle->type;
+                        break;
+                    }
+                }
+            }
+            lastInsideObstacleTime -= dt;
+            const bool wasInside = wasInsideObstacle;
+            wasInsideObstacle = isInBush;
+            if (isInBush) insideObstacleType = bushType;
+            if (wasInside != isInBush && lastInsideObstacleTime < 0) {
+                lastInsideObstacleTime = 0.2f;
+                const std::string bushSound = "bush_enter_01";
+                audio::PlaySoundOptions bushOpts;
+                bushOpts.channel = "sfx";
+                bushOpts.hasSoundPos = true;
+                bushOpts.soundPos = pos;
+                bushOpts.fallOff = 1.0f;
+                bushOpts.hasLayer = true;
+                bushOpts.layer = layer;
+                bushOpts.filter = "muffled";
+                audio->playSound(bushSound, bushOpts);
+                const Vec2 moveDir = v2NormalizeSafe(v2Sub(posOld, pos), Vec2(1.0f, 0.0f));
+                const float partDir = isInBush ? 1.0f : -1.0f;
+                const int numParts = 3 + (std::rand() % 3);
+                for (int i = 0; i < numParts; i++) {
+                    const Vec2 vel = v2Mul(
+                        v2Rotate(v2Mul(moveDir, partDir),
+                                 ((randf() - 0.5f) * pi) / 1.5f),
+                        6.0f + randf() * 2.0f);
+                    ctx.particleBarn().addParticle(ctx.factory(), "leaf", layer, pos, vel);
+                }
+            }
+        }
+
+        // --- Priority 3: Door error sound (player.ts ~line 940) ---
+        if (isActivePlayer) {
+            const auto& obstacles = ctx.map().obstaclePool.m_getPool();
+            Obstacle* doorErrorObstacle = nullptr;
+            for (auto* obstacle : obstacles) {
+                if (!obstacle || !obstacle->active || obstacle->dead ||
+                    obstacle->layer != layer || !obstacle->isDoor) continue;
+                const float doorRad = rad + 0.25f;
+                const Vec2 toDoor = v2Sub(obstacle->pos, pos);
+                const Vec2 doorDir = v2Rotate(Vec2(1.0f, 0.0f), obstacle->rot);
+                if (colliderIntersectCircle(obstacle->collider, pos, doorRad) &&
+                    !obstacle->doorOpen &&
+                    (obstacle->doorLocked || obstacle->doorCanUse && v2Dot(toDoor, doorDir) < 0)) {
+                    doorErrorObstacle = obstacle;
+                    break;
+                }
+            }
+            const bool wasNearDoorError = isNearDoorError;
+            isNearDoorError = doorErrorObstacle != nullptr;
+            doorErrorTicker -= dt;
+            if (isNearDoorError && !wasNearDoorError && doorErrorTicker <= 0) {
+                doorErrorTicker = 0.5f;
+                audio::PlaySoundOptions doorErrOpts;
+                doorErrOpts.channel = "sfx";
+                doorErrOpts.hasSoundPos = true;
+                doorErrOpts.soundPos = pos;
+                doorErrOpts.fallOff = 1.0f;
+                doorErrOpts.hasLayer = true;
+                doorErrOpts.layer = layer;
+                doorErrOpts.filter = "muffled";
+                audio->playSound("door_error_01", doorErrOpts);
+            }
+        }
     }
+
     // Cache position for next frame's movement delta.
     posOld = pos;
     // Published for player skins (obstacle.ts reads renderLayer/renderZOrd/renderZIdx).
