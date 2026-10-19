@@ -58,8 +58,10 @@ public:
             }
 
             // Clamp the range to the camera radius (sqrt(zoom * 1.414 * zoom)).
+            // When the player has no scope (zoom == 0), the line is not clamped
+            // to a camera-visible radius.
             const float cameraZoom = activePlayer.getZoom(mobile);
-            const float cameraRad = std::sqrt(cameraZoom * 1.414f * cameraZoom);
+            const float cameraRad = cameraZoom > 0.0f ? std::sqrt(cameraZoom * 1.414f * cameraZoom) : 1e6f;
             maxRange = math::min(maxRange, cameraRad);
 
             const Vec2 start = activePlayer.pos;

@@ -601,6 +601,11 @@ void GameScene::update(float delta) {
     // S2: route the HUD update through FguiHud instead of UiOverlay.
     if (_hud) {
         _hud->update(delta, isStarted(), isPlaying(), _game.get());
+        // Emote wheel: when a touch is active on the emote button area,
+        // feed the position to the wheel.
+        if (_emoteButtonActive) {
+            _hud->feedEmoteWheel(_emoteScreenX, _emoteScreenY, true);
+        }
     }
 
     // Priority 2: pie timer — driven by active player action data each frame.

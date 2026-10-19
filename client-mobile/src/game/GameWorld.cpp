@@ -5,6 +5,7 @@
 #include "Map.h"
 #include "objects/Barns.h"
 #include "objects/GameObject.h"
+#include "objects/MapIndicator.h"
 #include "render/Renderer.h"
 #include "render/PixiLike.h"
 #include "../audio/Ambiance.h"
@@ -173,6 +174,9 @@ void GameWorld::loadMap(const MapMsg& msg) {
     // minimap layer still works with its own team-dot overlays.
     _gas.m_init(_factory);
 
+    // Init the minimap indicator barn (data only; sprite barn set by FguiHud).
+    _indicatorBarn.init(nullptr);
+
     // Generate the minimap texture (one-shot, after terrain is loaded).
     _map->generateMinimapTexture(_factory, _camera);
 
@@ -335,6 +339,11 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
     _planeBarn->updatePlanes(*this, msg.planes);
 
     _activePlayer = _playerBarn->getPlayerById(_activePlayerId);
+
+    // Process map indicators from the update message.
+    for (const auto& mi : msg.mapIndicators) {
+        _indicatorBarn.addOrUpdate(mi.id, mi.dead, mi.equipped, mi.type, mi.pos, _factory);
+    }
 }
 
 void GameWorld::updatePlanes(const std::vector<PlaneData>& planes) {
@@ -376,6 +385,11 @@ void GameWorld::update(float dt) {
     _airdropBarn->update(dt, *this);
     _particleBarn->update(dt, *this);
     _decalBarn->update(dt, *this);
+
+    // Map indicator pulse animations.
+    if (_map) {
+        _indicatorBarn.updatePulses(dt);
+    }
 
     // Emote/ping manager update (positioned after all other objects)
     _emoteManager.update(dt, *this);

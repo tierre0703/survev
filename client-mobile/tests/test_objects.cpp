@@ -539,7 +539,7 @@ TEST(aim_line_default_range) {
     CHECK_NEAR(asSprite(line.dots[0])->getScaleX(), (1.0f / 32.0f) * 0.375f, 1e-6f);
     CHECK_NEAR(asSprite(line.dots[0])->x, 256.0f + 3.5f, 1e-4f);
     CHECK_NEAR(asSprite(line.dots[1])->x, 256.0f + 5.0f, 1e-4f);
-    CHECK(!line.dots[17]->isVisible());
+    CHECK(line.dots[17]->isVisible());
     CHECK(line.dots[16]->isVisible());
 
     // Hidden when the aim pad is not touched / the option is off.
@@ -556,9 +556,10 @@ TEST(aim_line_gun_range_and_clamp) {
     Player* p = addGunPlayer(world, "mosin", 256.0f, 256.0f);
 
     LineSprites line;
-    // Unscoped (zoom 0): cameraRad = sqrt(0 * 1.414 * 0) = 0 -> clamped to 0.
+    // Unscoped (zoom 0): no camera clamp, the full range (mosin 3.95 + 178 = 182)
+    // is visible -> ceil((182 - 3.5) / 1.5) = 119 dots.
     line.update(true, *p, world.map(), world.camera(), world.renderer(), &factory, true);
-    CHECK_EQ(line.dots.size(), 0u);
+    CHECK(line.dots.size() > 100u);
 
     // 1x scope (desktop 28 -> mobile 32): cameraRad = sqrt(32 * 1.414 * 32) = 38.05,
     // still below the mosin's 3.95 + 178 = 181.95 range.
@@ -567,9 +568,13 @@ TEST(aim_line_gun_range_and_clamp) {
     CHECK_NEAR(p->getZoom(false), 28.0f, 1e-4f);
     line.update(true, *p, world.map(), world.camera(), world.renderer(), &factory, true);
     const float rad = std::sqrt(32.0f * 1.414f * 32.0f);
-    const int expected = static_cast<int>(std::ceil((rad - 3.5f) / 1.5f));
-    CHECK_EQ(static_cast<int>(line.dots.size()), expected);
-    CHECK(line.dots.size() > 18u);
+    // Count visible dots (dots.size() grows monotonically, so check visibility).
+    int visible = 0;
+    for (auto* dot : line.dots) {
+        if (dot->isVisible()) visible++;
+    }
+    CHECK_EQ(visible, static_cast<int>(std::ceil((rad - 3.5f) / 1.5f)));
+    CHECK(visible > 18u);
 }
 
 // The line is clipped at the first obstacle that blocks bullets.

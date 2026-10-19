@@ -9,6 +9,7 @@
 #include "../render/Camera.h"
 #include "../render/PixiLike.h"
 #include "AimLine.h"
+#include "objects/MapIndicator.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -92,6 +93,8 @@ public:
     // touch.ts LineSprites: the dotted aim line for the active player.
     LineSprites& lineSprites() { return _lineSprites; }
 
+    MapIndicatorBarn& indicatorBarn() { return _indicatorBarn; }
+
     Player* activePlayer() { return _activePlayer; }
     void setActivePlayer(Player* p) { _activePlayer = p; }
     uint16_t activePlayerId() const { return _activePlayerId; }
@@ -125,7 +128,7 @@ public:
     void setMobilePlatform(bool mobile) { _mobile = mobile; }
     bool mobile() const { return _mobile; }
 
-private:
+    private:
     void registerPools();
 
     EmoteManager _emoteManager;
@@ -151,6 +154,7 @@ private:
     std::unique_ptr<ShotBarn> _shotBarn;
     Gas _gas;
     LineSprites _lineSprites;
+    MapIndicatorBarn _indicatorBarn;
     std::unique_ptr<ObjectCreator> _creator;
 
     Player* _activePlayer = nullptr;

@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-#include "../net/Messages.h"
+#include "FguiEmoteWheel.h"
 
 namespace ax {
 class Scene;
@@ -52,6 +52,17 @@ public:
     // Per-frame update from the game state.
     void update(float dt, bool started, bool playing, const Game* game);
 
+    // Emote wheel: access for GameScene to feed touch input.
+    // Returns true if the emote wheel consumed the touch event.
+    bool feedEmoteWheel(float screenX, float screenY, bool touched);
+    // Set the emote loadout (4 emote type names from JoinedMsg).
+    void setEmoteLoadout(const std::array<std::string, 4>& emotes);
+    // Check if the emote wheel is currently visible.
+    bool emoteWheelActive() const;
+    // Consume any pending emote/ping to send to the server.
+    // Stores the result in outType ("emote"/"ping") and outId.
+    bool consumeEmoteOutput(std::string& outType, std::string& outId, Vec2* worldPos);
+
     // Show/hide the whole HUD.
     void setVisible(bool visible);
     bool isVisible() const;
@@ -78,6 +89,10 @@ public:
 
     // Minimap update — called each frame from update().
     void refreshMinimap(const Game* game);
+
+// Inter-process: the emote wheel's input/output state lives here so the
+    // GameScene can feed raw touch data into it each frame.
+    surv::FguiEmoteWheel* emoteWheel() { return _emoteWheel.get(); }
 
 private:
     void buildHudPanel(fairygui::GComponent* root);
@@ -200,6 +215,10 @@ private:
         bool prevDisconnected = false;
     };
     std::array<SquadMember, 4> _squadMembers{};
+
+    // Emote wheel
+    std::unique_ptr<surv::FguiEmoteWheel> _emoteWheel;
+    surv::EmoteWheelInput _emoteWheelInput{};
 
     // Root panel containing all HUD elements
     fairygui::GObject* _hudPanel = nullptr;

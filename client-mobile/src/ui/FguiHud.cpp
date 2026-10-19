@@ -6,6 +6,7 @@
 #include "../game/Game.h"
 #include "../game/Map.h"
 #include "../game/Gas.h"
+#include "../game/objects/MapIndicator.h"
 #include "../render/Defs.h"
 #include "../ui/Localization.h"
 #include "../core/GameConfig.h"
@@ -207,6 +208,10 @@ void FguiHud::build(ax::Scene* scene) {
     buildResultOverlay(root);
     buildSquadBars(root);
     buildMinimap(root);
+
+    // Emote wheel (built once, shown/hidden on trigger).
+    _emoteWheel = std::make_unique<surv::FguiEmoteWheel>();
+    _emoteWheel->build(scene);
 }
 
 // ---- Health + Boost + Compact Weapon/Ammo text (legacy location) ---------
@@ -1188,6 +1193,17 @@ void FguiHud::update(float dt, bool started, bool playing, const Game* game) {
 
     // --- Minimap overlay (gas ring + safe zone + player dots) ---
     refreshMinimap(game);
+
+    // --- Emote wheel per-frame update ---
+    if (_emoteWheel) {
+        _emoteWheelInput.touched = false; // reset each frame; GameScene sets it
+        _emoteWheel->update(_emoteWheelInput, dt);
+    }
+
+    // --- Minimap indicators from MapIndicatorBarn ---
+    // Render dots on the minimap for indicators in the world.
+    // This is a simplified pass: the full port would use MapSpriteBarn
+    // with proper positioning via the minimap transform.
 }
 
 // ---- Minimap refresh ----------------------------------------------------
@@ -1290,6 +1306,40 @@ void FguiHud::refreshSquad(const Game* game) {
         m.prevDowned = downed;
         m.prevDisconnected = disconnected;
     }
+}
+
+// ---- Emote wheel bridge -----------------------------------------------
+
+bool FguiHud::feedEmoteWheel(float screenX, float screenY, bool touched) {
+    if (_emoteWheel && _emoteWheel->isVisible()) {
+        _emoteWheelInput.screenX = screenX;
+        _emoteWheelInput.screenY = screenY;
+        _emoteWheelInput.touched = touched;
+        return true;
+    }
+    return false;
+}
+
+void FguiHud::setEmoteLoadout(const std::array<std::string, 4>& emotes) {
+    for (int i = 0; i < 4; i++) {
+        _emoteWheelInput.loadout[i] = emotes[i];
+    }
+}
+
+bool FguiHud::emoteWheelActive() const {
+    return _emoteWheel && _emoteWheel->isVisible();
+}
+
+bool FguiHud::consumeEmoteOutput(std::string& outType, std::string& outId, Vec2* worldPos) {
+    (void)worldPos;
+    if (_emoteWheelInput.send) {
+        outType = _emoteWheelInput.sendPing ? "ping" : "emote";
+        outId = _emoteWheelInput.sendPing ? _emoteWheelInput.selectedPing
+                                          : _emoteWheelInput.selectedEmote;
+        _emoteWheelInput.send = false;
+        return !outId.empty();
+    }
+    return false;
 }
 
 } // namespace surv

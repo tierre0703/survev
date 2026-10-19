@@ -416,7 +416,11 @@ for (const type of gameTypes) {
         n(atk?.offset?.x, 0)
     },${n(atk?.offset?.y, 0)},${n(atk?.rad, 0)},${def.cleave ? 1 : 0},${str(def.sound?.playerHit)},${
         str(def.sound?.punch)
-    },${def.useThrowParticles ? 1 : 0},${str(def.bulletType)},${fp(def.barrelLength)}},\n`;
+    },${def.useThrowParticles ? 1 : 0},${str(def.bulletType)},${fp(def.barrelLength)},${
+        str(def.mapIndicator?.sprite || "")
+    },${n(def.mapIndicator?.tint, 0xffffff)},${def.mapIndicator?.pulse ? 1 : 0},${
+        n(def.mapIndicator?.pulseTint, 0xffffff)
+    }},\n`;
     if (
         !def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack"
         && !def.frozenSprites
@@ -784,7 +788,8 @@ struct RawMapRender {
 struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura;
     int hasAttack; float attackOffX, attackOffY, attackRad; int cleave;
     const char* playerHit; const char* punchSound; int useThrowParticles;
-    const char* bulletType; float barrelLength; };
+    const char* bulletType; float barrelLength;
+    const char* mapIndicatorSprite; unsigned mapIndicatorTint; int mapIndicatorPulse; unsigned mapIndicatorPulseTint; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -1042,6 +1047,10 @@ public:
             d.useThrowParticles = r.useThrowParticles != 0;
             d.bulletType = r.bulletType ? r.bulletType : "";
             d.barrelLength = r.barrelLength;
+            d.mapIndicatorSprite = r.mapIndicatorSprite ? r.mapIndicatorSprite : "";
+            d.mapIndicatorTint = r.mapIndicatorTint;
+            d.mapIndicatorPulse = r.mapIndicatorPulse != 0;
+            d.mapIndicatorPulseTint = r.mapIndicatorPulseTint;
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}

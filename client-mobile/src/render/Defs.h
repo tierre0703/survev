@@ -301,6 +301,12 @@ struct GameObjRenderDef {
     std::vector<std::string> frozenSprites;
     std::vector<std::string> unlocks; // unlock_default and future account unlocks
     std::string ammoType; // gun reserve-ammo inventory key
+
+    // Map indicator (item/role minimap marker) fields.
+    std::string mapIndicatorSprite;
+    uint32_t mapIndicatorTint = 0xffffff;
+    bool mapIndicatorPulse = false;
+    uint32_t mapIndicatorPulseTint = 0xffffff;
 };
 
 struct PlaneDef {
