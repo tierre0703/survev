@@ -17,6 +17,9 @@ public:
     // axmol API calls and reduce log noise.
     std::unordered_map<std::string, float> _reverbVolumes;
 
+    // The dedicated global reverb instance (created at init, nullptr until then).
+    SoundHandle _reverbHandle = kInvalidSound;
+
     bool load(const std::string& id, const std::string& path) override {
         _paths[id] = path;
         // Optimistic: AudioEngine::play2d will load on demand; preload warms
@@ -94,21 +97,96 @@ public:
     }
 
     void setReverbVolume(const std::string& reverbName, float volume) override {
-        // Map the web's impulse-response reverb names to axmol's per-instance
-        // parameterised reverb.  Since axmol applies reverb per AudioPlayer
-        // (not a global bus), we phase this out by setting the effective
-        // reverb volume on a dedicated global reverb instance created at init.
-        //
-        // For now, the C++ port uses the cathedral/cave data without a true
-        // convolution engine — just store the target volume so the
-        // AudioManager's reverb logic is live even when the backend cannot
-        // yet apply it.
         _reverbVolumes[reverbName] = volume;
     }
 
-    void update(float) override {
-        // Stub: future axmol integration would iterate _reverbVolumes and call
-        // ax::AudioEngine::setReverbProperties(instance, &props) here.
+    void initReverbInstance() {
+        if (_reverbHandle == kInvalidSound) {
+            // Create a silent looping reverb instance.  We use the first loaded
+            // path as a carrier; axmol's reverb is applied per-AudioPlayer and
+            // cannot exist without a playing track.  A near-silent loop at
+            // volume 0 lets us toggle reverb properties on it without audible
+            // side effects.
+            for (const auto& kv : _paths) {
+                ax::AudioPlayerSettings settings;
+                settings.loop = true;
+                settings.volume = 0.0f;
+                const int h = ax::AudioEngine::play2d(kv.second, settings);
+                if (h != ax::AudioEngine::INVALID_AUDIO_ID) {
+                    _reverbHandle = h;
+                    break;
+                }
+            }
+        }
+    }
+
+    void update(float dt) override {
+        // Apply reverb properties on the dedicated reverb instance when the
+        // target volume changes (the AudioManager calls setReverbVolume once
+        // per frame, so we don't need per-instance tracking here).
+
+        // Ensure the reverb carrier exists.  If we don't have any loaded paths
+        // yet, skip — there is nothing to attach reverb to.
+        if (_reverbHandle == kInvalidSound) {
+            if (!_paths.empty()) {
+                initReverbInstance();
+            }
+            if (_reverbHandle == kInvalidSound) {
+                return;
+            }
+        }
+
+        // Pick the largest non-zero reverb volume (typically "cathedral").
+        float targetVolume = 0.0f;
+        for (const auto& kv : _reverbVolumes) {
+            if (kv.second > targetVolume) {
+                targetVolume = kv.second;
+            }
+        }
+
+        // The ReverbDef for "cathedral" provides the source-path impulse
+        // response, but axmol's setReverbProperties uses a parameterised EAX
+        // model, not a convolution IR.  We map the web's volume-only signal
+        // to a generic small-room/underground cathedral reverb by adjusting
+        // the core EAX gain/decay from the target volume.
+
+        // Build a ReverbProperties struct that mirrors the web's "cathedral"
+        // feel scaled by the target volume.
+        ax::ReverbProperties props{};
+        props.flDensity = 1.0f;                 // dense
+        props.flDiffusion = 0.8f;               // moderately diffused
+        props.flGain = 0.3f * targetVolume;     // master reverb gain
+        props.flGainHF = 0.5f;                  // high-frequency damping
+        props.flGainLF = 1.0f;                  // low-frequency pass
+        props.flDecayTime = 1.5f * targetVolume + 0.2f;  // 0.2–1.7 s
+        props.flDecayHFRatio = 0.3f;
+        props.flDecayLFRatio = 1.0f;
+        props.flReflectionsGain = 0.2f * targetVolume;
+        props.flReflectionsDelay = 0.02f;
+        props.flReflectionsPan[0] = 0.0f;
+        props.flReflectionsPan[1] = 0.0f;
+        props.flReflectionsPan[2] = 0.0f;
+        props.flLateReverbGain = 0.5f * targetVolume;
+        props.flLateReverbDelay = 0.03f;
+        props.flLateReverbPan[0] = 0.0f;
+        props.flLateReverbPan[1] = 0.0f;
+        props.flLateReverbPan[2] = 0.0f;
+        props.flEchoTime = 0.1f;
+        props.flEchoDepth = 0.0f;
+        props.flModulationTime = 0.0f;
+        props.flModulationDepth = 0.0f;
+        props.flAirAbsorptionGainHF = 0.9f;
+        props.flHFReference = 5000.0f;
+        props.flLFReference = 250.0f;
+        props.flRoomRolloffFactor = 0.0f;
+        props.iDecayHFLimit = 1;
+
+        if (targetVolume > 0.001f) {
+            ax::AudioEngine::setReverbProperties(_reverbHandle, &props);
+        } else {
+            // Disable reverb (pass nullptr).
+            ax::AudioEngine::setReverbProperties(_reverbHandle, nullptr);
+        }
     }
 
 private:

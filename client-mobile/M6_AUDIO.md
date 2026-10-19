@@ -54,11 +54,13 @@ node --experimental-transform-types tools/codegen_sound_defs.mjs
   `GameWorld::applyUpdate` (explosion per-type sound map with grass/water
   surface selection), `BulletBarn::update` (bullet whiz group), `ShotBarn::update`
   (weapon shoot sound with splinter/AP/high-velocity detune variants).
-- Reverb/filters: `AudioManager::update()` now computes the cathedral reverb
+- Reverb/filters: `AudioManager::update()` computes the cathedral reverb
   volume from `activeLayer`/`underground` and calls `_backend->setReverbVolume()`.
-  `AxmolAudioBackend::setReverbVolume` stores the target volume; axmol's
-  per-instance `setReverbProperties` is not yet called (the IR-to-parameter
-  mapping is still stubbed — see `AxmolAudioBackend::update`).
+  `AxmolAudioBackend::update()` **now** creates a dedicated silent reverb carrier
+  instance and calls `ax::AudioEngine::setReverbProperties` with EAX parameters
+  mapped from the target volume (gain/decay scaled by volume, small-room-to-
+  cathedral feel).  When volume is effectively zero the reverb is disabled
+  (nullptr).
 - Player action sounds (footstep surface groups, door error, bush enter/exit,
   weapon deploy/switch, heal/reload/pickup, haste effects, dry fire) are not
   wired — the C++ Player struct has no `surface`/`stepDistance`/`action`/sound
