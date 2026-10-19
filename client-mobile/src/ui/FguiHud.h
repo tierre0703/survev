@@ -19,6 +19,8 @@
 #include <string>
 #include <vector>
 
+#include "../core/Vec2.h"
+#include "../net/Messages.h"         // WeaponData, PerkData
 #include "FguiEmoteWheel.h"
 
 namespace ax {
@@ -26,10 +28,11 @@ class Scene;
 }
 
 namespace fairygui {
-class GComponent;
-class GObject;
-class GGraph;
 class GBasicTextField;
+class GComponent;
+class GGraph;
+class GObject;
+class GRichTextField;
 }
 
 namespace surv {
@@ -77,10 +80,10 @@ public:
     void showResult(bool show);
 
     // Inventory v2 methods
-    void refreshWeaponSlots(const std::vector<surv::WeaponData>& weapons, int curWeapIdx);
+    void refreshWeaponSlots(const std::vector<WeaponData>& weapons, int curWeapIdx);
     void refreshLootCounts(const std::vector<uint16_t>& inventory);
     void refreshGear(const std::string& chest, const std::string& helmet, const std::string& backpack);
-    void refreshPerks(const std::vector<surv::PerkData>& perks);
+    void refreshPerks(const std::vector<PerkData>& perks);
     void refreshScopes(const std::string& scope, const std::vector<uint16_t>& inventory);
     void refreshKillMessage(const std::string& text, const std::string& count);
     void refreshPickupMessage(const std::string& text);
@@ -89,6 +92,9 @@ public:
 
     // Minimap update — called each frame from update().
     void refreshMinimap(const Game* game);
+
+    // Squad health bars — called each frame from update().
+    void refreshSquad(const Game* game);
 
 // Inter-process: the emote wheel's input/output state lives here so the
     // GameScene can feed raw touch data into it each frame.
@@ -161,7 +167,7 @@ private:
     std::array<LootSlotWidgets, kLootGridCount> _lootSlots{};
 
     // ---- Kill message (center screen) ----
-    fairygui::GGraph* _killMessageBg = nullptr;
+    fairygui::GComponent* _killMessageBg = nullptr;
     fairygui::GBasicTextField* _killMessageText = nullptr;
     fairygui::GBasicTextField* _killMessageCount = nullptr;
 
@@ -169,45 +175,45 @@ private:
     fairygui::GBasicTextField* _pickupMessageText = nullptr;
 
     // ---- Interaction prompt ----
-    fairygui::GGraph* _interactionBg = nullptr;
+    fairygui::GComponent* _interactionBg = nullptr;
     fairygui::GBasicTextField* _interactionKeyText = nullptr;
     fairygui::GBasicTextField* _interactionDescText = nullptr;
 
     // Minimap: FGUI sprite + overlay
-    fairygui::GObject* _minimapContainer = nullptr;
+    fairygui::GComponent* _minimapContainer = nullptr;
     fairygui::GGraph* _minimapFrame = nullptr;
     fairygui::GGraph* _minimapGasRing = nullptr;
     fairygui::GGraph* _minimapSafeZone = nullptr;
     std::vector<fairygui::GGraph*> _minimapDots;
 
     // Health bar: fill rect (redrawn each frame with varying width+color)
-    fairygui::GObject* _healthText = nullptr;
+    fairygui::GBasicTextField* _healthText = nullptr;
     fairygui::GGraph* _healthFill = nullptr;
 
     // Boost bar: 4 segments (one GGraph each)
     fairygui::GGraph* _boostSegments[4]{};
 
     // Weapon + ammo display (compact top-right of HUD panel)
-    fairygui::GObject* _weaponText = nullptr;
-    fairygui::GObject* _ammoText = nullptr;
+    fairygui::GBasicTextField* _weaponText = nullptr;
+    fairygui::GBasicTextField* _ammoText = nullptr;
 
     // Alive counter
-    fairygui::GObject* _aliveText = nullptr;
+    fairygui::GBasicTextField* _aliveText = nullptr;
 
     // Kill feed (multi-line via multi-line text field)
-    fairygui::GObject* _killFeedText = nullptr;
+    fairygui::GBasicTextField* _killFeedText = nullptr;
 
     // Result overlay
-    fairygui::GObject* _resultText = nullptr;
-    fairygui::GObject* _resultPanel = nullptr;
+    fairygui::GBasicTextField* _resultText = nullptr;
+    fairygui::GComponent* _resultPanel = nullptr;
     bool _resultShown = false;
 
     // Squad health bars (4 team members)
     struct SquadMember {
-        fairygui::GObject* container = nullptr;
-        fairygui::GObject* nameText = nullptr;
+        fairygui::GComponent* container = nullptr;
+        fairygui::GBasicTextField* nameText = nullptr;
         fairygui::GGraph* healthBar = nullptr;
-        fairygui::GObject* statusText = nullptr;
+        fairygui::GBasicTextField* statusText = nullptr;
         // Cached state
         int prevHealth = -1;
         bool prevDead = false;
@@ -221,7 +227,7 @@ private:
     surv::EmoteWheelInput _emoteWheelInput{};
 
     // Root panel containing all HUD elements
-    fairygui::GObject* _hudPanel = nullptr;
+    fairygui::GComponent* _hudPanel = nullptr;
 
     // Message ticker state (mirrors ui2.ts pickupMessage/killMessage)
     float _pickupTicker = 0.0f;
@@ -237,4 +243,4 @@ private:
 
 } // namespace surv
 
-#endif // SURV_FGUI_HUD_H
+#endif // SURF_FGUI_HUD_H

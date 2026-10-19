@@ -12,9 +12,9 @@ class Scene;
 }
 
 namespace fairygui {
+class GBasicTextField;
 class GComponent;
 class GGraph;
-class GObject;
 }
 
 namespace surv {
@@ -34,7 +34,7 @@ struct EmoteWedge {
     // FGUI widgets (built lazily)
     fairygui::GGraph* bgPolygon = nullptr;
     fairygui::GGraph* highlight = nullptr;
-    fairygui::GObject* labelText = nullptr;
+    fairygui::GBasicTextField* labelText = nullptr;
     bool highlighted = false;
 };
 
@@ -85,7 +85,7 @@ private:
     int hitTestWedge(float dx, float dy) const;
     void highlightWedge(int index);
 
-    fairygui::GObject* _container = nullptr;
+    fairygui::GComponent* _container = nullptr;
     std::array<EmoteWedge, 5> _wedges{}; // indices 0-3 = T/R/B/L, 4 = center close
 
     // Internal state

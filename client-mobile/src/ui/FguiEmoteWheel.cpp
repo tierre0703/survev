@@ -9,9 +9,8 @@
 
 #include "fairygui/GRoot.h"
 #include "fairygui/GGraph.h"
-#include "fairygui/GObject.h"
 #include "fairygui/GComponent.h"
-#include "fairygui/GBasicTextField.h"
+#include "fairygui/GTextField.h"
 
 #include "cocos2d.h"
 
@@ -40,7 +39,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
     fairygui::GRoot* root = fairygui::GRoot::getInstance();
     if (!root) return;
 
-    _container = fairygui::GObject::create();
+    _container = fairygui::GComponent::create();
     _container->setVisible(false);
     _container->setPivot(0.5f, 0.5f);
     root->addChild(_container);
@@ -156,8 +155,7 @@ bool FguiEmoteWheel::update(EmoteWheelInput& io, float dt) {
             if (label.size() > 10) label = label.substr(0, 10);
             _wedges[i].label = label;
             if (_wedges[i].labelText) {
-                auto* text = dynamic_cast<fairygui::GBasicTextField*>(_wedges[i].labelText);
-                if (text) text->setText(label);
+                _wedges[i].labelText->setText(label);
             }
         }
     }

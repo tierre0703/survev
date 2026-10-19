@@ -209,6 +209,13 @@ private:
     TouchInput _touchInput;
     float _inputMsgTimeout = 0.0f;
     bool _shootStartPending = false;
+
+    // Emote wheel state (FguiHud feeds its own wheel; these fields are
+    // declared but unused in the app build — the emote button lives in
+    // FguiHud and drives the wheel directly).
+    bool _emoteButtonActive = false;
+    float _emoteScreenX = 0.0f;
+    float _emoteScreenY = 0.0f;
 };
 
 } // namespace surv

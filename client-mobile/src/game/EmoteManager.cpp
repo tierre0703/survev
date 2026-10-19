@@ -106,7 +106,9 @@ void EmoteManager::addEmote(const Emote& msg, GameWorld& ctx) {
 
     // Play sound
     if (ctx.audio()) {
-        const audio::PlaySoundOptions opts = {"ui", 48.0f};
+        audio::PlaySoundOptions opts;
+        opts.channel = "ui";
+        opts.rangeMult = 48.0f;
         ctx.audio()->playSound("emote_01", opts);
     }
 }
@@ -188,7 +190,9 @@ void EmoteManager::addPing(const Emote& msg, bool factionMode, GameWorld& ctx) {
         else if (msg.type == "ping_coming") pingSound = "ping_coming_01";
         else if (msg.type == "ping_leader") pingSound = "ping_leader_01";
         else if (msg.type == "ping_unlock") pingSound = "ping_unlock_01";
-        const audio::PlaySoundOptions opts = {"ui", 48.0f};
+        audio::PlaySoundOptions opts;
+        opts.channel = "ui";
+        opts.rangeMult = 48.0f;
         ctx.audio()->playSound(pingSound, opts);
     }
 }

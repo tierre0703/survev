@@ -6,14 +6,16 @@
 
 #include <string>
 
+#include "core/Vec2.h"
+
 namespace ax {
 class Scene;
 }
 
 namespace fairygui {
-class GGraph;
 class GBasicTextField;
 class GComponent;
+class GGraph;
 }
 
 namespace surv {
@@ -48,10 +50,10 @@ private:
     fairygui::GGraph* _arc = nullptr;
 
     // Countdown text (e.g. "2.5")
-    fairygui::GObject* _counterText = nullptr;
+    fairygui::GBasicTextField* _counterText = nullptr;
 
     // Label text (e.g. "Reviving")
-    fairygui::GObject* _labelText = nullptr;
+    fairygui::GBasicTextField* _labelText = nullptr;
 
     bool _active = false;
     std::string _label;

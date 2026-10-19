@@ -471,7 +471,7 @@ void GameScene::onPickupSound(const std::string& item) {
         const std::string soundKey = item + "_pickup_01";
         audio::PlaySoundOptions opts;
         opts.channel = "ui";
-        opts.range = 48.0f;
+        opts.rangeMult = 48.0f;
         _audio->playSound(soundKey, opts);
     }
 }

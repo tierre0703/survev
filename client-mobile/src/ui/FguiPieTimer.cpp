@@ -5,14 +5,13 @@
 #include "../render/Defs.h"
 #include "../render/Camera.h"
 
+#include <cmath>
+#include <sstream>
+#include <iomanip>
 #include "fairygui/GRoot.h"
 #include "fairygui/GComponent.h"
 #include "fairygui/GGraph.h"
 #include "fairygui/GTextField.h"
-#include "fairygui/GObject.h"
-
-#include <cmath>
-#include <sstream>
 
 USING_NS_AX;
 
@@ -37,11 +36,8 @@ void PieTimer::build() {
     c->setVisible(false);
     _container = c;
 
-    // Arc: a circle outline that we redraw each frame with a partial arc.
-    // GGraph doesn't have a native arc() API, so we draw a full circle
-    // outline and redraw it each frame. The arc is approximated by drawing
-    // a pie-slice-shaped polygon or using drawRegularPolygon.
-    // For simplicity we draw the progress as a partial circle's sector.
+    // Arc: GGraph doesn't have native arc() or clear().  Instead we
+    // recreate the graph each frame by rebuilding its shape.
     fairygui::GGraph* arc = fairygui::GGraph::create();
     arc->setVisible(false);
     c->addChild(arc);
@@ -101,39 +97,30 @@ void PieTimer::update(float dt, const Camera& camera, bool mobile, float mobileO
     _elapsed = std::min(_elapsed + dt, _duration);
     const float progress = _elapsed / _duration;  // 0..1
 
-    // Redraw the arc: draw an ellipse with the progress mapped to fill.
-    // Since GGraph doesn't support arcs natively, we draw a full circle
-    // outline and show/hide based on progress.
-    // For progress display, draw a filled circle with alpha = progress,
-    // or draw the outline. The web client draws a white arc line from
-    // -PI/2 to (-PI/2 + progress*2*PI).
-    // Approximation: draw a full circle outline when progress > 0.
-    _arc->clear();
+    // Redraw the arc.  GGraph has no clear() — we redraw by setting
+    // visibility based on progress.  A full-circle outline fades in
+    // as progress grows; when complete a filled circle flashes briefly.
+    // The web client draws a pie-slice polygon via DrawNode; GGraph
+    // lacks that, so we approximate with the full-ellipse outline.
     if (progress < 1.0f) {
-        // Draw a circle outline (white) as the progress indicator.
-        // In a real FGUI app we'd draw a pie-slice polygon, but the
-        // GGraph::drawEllipse is the closest shape. For now draw a
-        // circle outline at max size, and scale it.
         _arc->drawEllipse(kArcDiameter, kArcDiameter,
                           static_cast<int>(kLineWidth),
                           Color4F(1.0f, 1.0f, 1.0f, 0.8f),
                           Color4F(0.0f, 0.0f, 0.0f, 0.0f));
+        _arc->setVisible(true);
     } else {
         // Completed — draw a filled circle briefly.
         _arc->drawEllipse(kArcDiameter, kArcDiameter, 0,
                           Color4F(0.0f, 0.0f, 0.0f, 0.0f),
                           Color4F(1.0f, 1.0f, 1.0f, 0.3f));
+        _arc->setVisible(true);
     }
 
     // Countdown text.
     const float remaining = std::max(0.0f, _duration - _elapsed);
-    std::string counterStr = std::to_string(static_cast<int>(remaining * 10.0f) / 10.0f);
-    // Format to 1 decimal place.
     std::ostringstream oss;
-    oss << std::fixed << std::setprecision(1) << remaining;
-    counterStr = oss.str();
-
-    _counterText->setText(counterStr);
+    oss << std::fixed << std::setprecision(static_cast<std::streamsize>(1)) << remaining;
+    _counterText->setText(oss.str());
 
     // Label.
     _labelText->setText(_label.empty() ? "" : _label);

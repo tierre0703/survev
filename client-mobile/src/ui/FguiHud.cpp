@@ -16,8 +16,7 @@
 #include "fairygui/GComponent.h"
 #include "fairygui/GGraph.h"
 #include "fairygui/GTextField.h"
-#include "fairygui/GObject.h"
-#include "fairygui/GButton.h"
+#include "fairygui/GRichTextField.h"
 
 #include <algorithm>
 #include <cmath>
@@ -219,10 +218,15 @@ void FguiHud::buildHudPanel(fairygui::GComponent* root) {
     // Panel background: semi-transparent black rect behind the HUD
     const float hudW = kBarWidth + 180.0f;
     const float hudH = 90.0f;
-    fairygui::GGraph* panelBg = fairygui::GGraph::create();
-    panelBg->drawRect(hudW, hudH, 0,
-                      Color4F(0.0f, 0.0f, 0.0f, 0.0f),
-                      Color4F(0.0f, 0.0f, 0.0f, 0.30f));
+    fairygui::GComponent* panelBg = fairygui::GComponent::create();
+    // Draw the panel background rect using a temp GGraph child owned by panelBg
+    fairygui::GGraph* panelBgGraph = fairygui::GGraph::create();
+    panelBgGraph->drawRect(hudW, hudH, 0,
+                           Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                           Color4F(0.0f, 0.0f, 0.0f, 0.30f));
+    panelBgGraph->setPosition(0.0f, 0.0f);
+    panelBgGraph->setPivot(0.0f, 0.0f);
+    panelBg->addChild(panelBgGraph);
     panelBg->setPosition(0.0f, 0.0f);
     panelBg->setPivot(0.0f, 0.0f);
     _hudPanel = panelBg;
@@ -319,10 +323,14 @@ void FguiHud::buildWeaponSlots(fairygui::GComponent* root) {
     const float panelW = kWeaponSlotW + kPanelPadding * 2;
     const float panelH = kWeaponSlotCount * (kWeaponSlotH + kWeaponSlotGap) + kPanelPadding * 2;
 
-    fairygui::GGraph* panel = fairygui::GGraph::create();
-    panel->drawRect(panelW, panelH, 0,
-                    Color4F(0.0f, 0.0f, 0.0f, 0.0f),
-                    Color4F(0.0f, 0.0f, 0.0f, 0.30f));
+    fairygui::GComponent* panel = fairygui::GComponent::create();
+    fairygui::GGraph* panelBg = fairygui::GGraph::create();
+    panelBg->drawRect(panelW, panelH, 0,
+                      Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                      Color4F(0.0f, 0.0f, 0.0f, 0.30f));
+    panelBg->setPivot(0.0f, 0.0f);
+    panelBg->setPosition(0.0f, 0.0f);
+    panel->addChild(panelBg);
     panel->setPivot(1.0f, 1.0f); // bottom-right anchored
     panel->setPosition(-4.0f, -4.0f);
 
@@ -394,10 +402,14 @@ void FguiHud::buildGearSlots(fairygui::GComponent* root) {
     const float panelW = kGearSlotW + kPanelPadding * 2 + 10.0f;
     const float panelH = kGearSlotCount * (kGearSlotH + 2) + kPanelPadding * 2;
 
-    fairygui::GGraph* panel = fairygui::GGraph::create();
-    panel->drawRect(panelW, panelH, 0,
-                    Color4F(0.0f, 0.0f, 0.0f, 0.0f),
-                    Color4F(0.0f, 0.0f, 0.0f, 0.25f));
+    fairygui::GComponent* panel = fairygui::GComponent::create();
+    fairygui::GGraph* panelBg = fairygui::GGraph::create();
+    panelBg->drawRect(panelW, panelH, 0,
+                      Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                      Color4F(0.0f, 0.0f, 0.0f, 0.25f));
+    panelBg->setPivot(0.0f, 0.0f);
+    panelBg->setPosition(0.0f, 0.0f);
+    panel->addChild(panelBg);
     panel->setPivot(1.0f, 1.0f);
 
     for (int i = 0; i < kGearSlotCount; ++i) {
@@ -446,10 +458,14 @@ void FguiHud::buildPerkSlots(fairygui::GComponent* root) {
     const float panelW = kPerkSlotW + kPanelPadding * 2;
     const float panelH = kPerkSlotCount * (kPerkSlotH + 2) + kPanelPadding * 2;
 
-    fairygui::GGraph* panel = fairygui::GGraph::create();
-    panel->drawRect(panelW, panelH, 0,
-                    Color4F(0.0f, 0.0f, 0.0f, 0.0f),
-                    Color4F(0.0f, 0.0f, 0.0f, 0.25f));
+    fairygui::GComponent* panel = fairygui::GComponent::create();
+    fairygui::GGraph* panelBg = fairygui::GGraph::create();
+    panelBg->drawRect(panelW, panelH, 0,
+                      Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                      Color4F(0.0f, 0.0f, 0.0f, 0.25f));
+    panelBg->setPivot(0.0f, 0.0f);
+    panelBg->setPosition(0.0f, 0.0f);
+    panel->addChild(panelBg);
     panel->setPivot(1.0f, 1.0f);
 
     for (int i = 0; i < kPerkSlotCount; ++i) {
@@ -488,10 +504,14 @@ void FguiHud::buildScopeSlots(fairygui::GComponent* root) {
     const float totalW = kScopeSlotCount * (kScopeSlotW + 2.0f) + kPanelPadding * 2;
     const float panelH = kScopeSlotH + kPanelPadding * 2;
 
-    fairygui::GGraph* panel = fairygui::GGraph::create();
-    panel->drawRect(totalW, panelH, 0,
-                    Color4F(0.0f, 0.0f, 0.0f, 0.0f),
-                    Color4F(0.0f, 0.0f, 0.0f, 0.20f));
+    fairygui::GComponent* panel = fairygui::GComponent::create();
+    fairygui::GGraph* panelBg = fairygui::GGraph::create();
+    panelBg->drawRect(totalW, panelH, 0,
+                      Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                      Color4F(0.0f, 0.0f, 0.0f, 0.20f));
+    panelBg->setPivot(0.0f, 0.0f);
+    panelBg->setPosition(0.0f, 0.0f);
+    panel->addChild(panelBg);
     panel->setPivot(0.5f, 1.0f);
     panel->setPosition(0.0f, 0.0f);
 
@@ -533,10 +553,14 @@ void FguiHud::buildLootGrid(fairygui::GComponent* root) {
     const float panelW = static_cast<float>(cols) * (kLootCellW + 2.0f) + kPanelPadding * 2;
     const float panelH = static_cast<float>(rows) * (kLootCellH + 1.0f) + kPanelPadding * 2;
 
-    fairygui::GGraph* panel = fairygui::GGraph::create();
-    panel->drawRect(panelW, panelH, 0,
-                    Color4F(0.0f, 0.0f, 0.0f, 0.0f),
-                    Color4F(0.0f, 0.0f, 0.0f, 0.20f));
+    fairygui::GComponent* panel = fairygui::GComponent::create();
+    fairygui::GGraph* panelBg = fairygui::GGraph::create();
+    panelBg->drawRect(panelW, panelH, 0,
+                      Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                      Color4F(0.0f, 0.0f, 0.0f, 0.20f));
+    panelBg->setPivot(0.0f, 0.0f);
+    panelBg->setPosition(0.0f, 0.0f);
+    panel->addChild(panelBg);
     panel->setPivot(1.0f, 0.0f);
 
     for (int i = 0; i < kLootGridCount; ++i) {
@@ -586,10 +610,14 @@ void FguiHud::buildLootGrid(fairygui::GComponent* root) {
 
 // ---- Kill message (center screen) ----------------------------------------
 void FguiHud::buildKillMessage(fairygui::GComponent* root) {
-    fairygui::GGraph* bg = fairygui::GGraph::create();
-    bg->drawRect(kKillMsgW, kKillMsgH, 0,
-                 Color4F(0.0f, 0.0f, 0.0f, 0.0f),
-                 Color4F(0.0f, 0.0f, 0.0f, 0.0f)); // fully transparent, just a container
+    fairygui::GComponent* bg = fairygui::GComponent::create();
+    fairygui::GGraph* bgGraph = fairygui::GGraph::create();
+    bgGraph->drawRect(kKillMsgW, kKillMsgH, 0,
+                      Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                      Color4F(0.0f, 0.0f, 0.0f, 0.0f)); // fully transparent, just a container
+    bgGraph->setPivot(0.0f, 0.0f);
+    bgGraph->setPosition(0.0f, 0.0f);
+    bg->addChild(bgGraph);
     bg->setPivot(0.5f, 0.5f);
     bg->setPosition(0.0f, 0.0f);
     bg->setVisible(false);
@@ -638,10 +666,14 @@ void FguiHud::buildInteractionPrompt(fairygui::GComponent* root) {
     const float promptW = 200.0f;
     const float promptH = 26.0f;
 
-    fairygui::GGraph* bg = fairygui::GGraph::create();
-    bg->drawRect(promptW, promptH, 0,
-                 Color4F(0.0f, 0.0f, 0.0f, 0.0f),
-                 Color4F(0.0f, 0.0f, 0.0f, 0.0f));
+    fairygui::GComponent* bg = fairygui::GComponent::create();
+    fairygui::GGraph* bgGraph = fairygui::GGraph::create();
+    bgGraph->drawRect(promptW, promptH, 0,
+                      Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                      Color4F(0.0f, 0.0f, 0.0f, 0.0f));
+    bgGraph->setPivot(0.0f, 0.0f);
+    bgGraph->setPosition(0.0f, 0.0f);
+    bg->addChild(bgGraph);
     bg->setPivot(0.5f, 1.0f);
     bg->setPosition(0.0f, -100.0f);
     bg->setVisible(false);
@@ -699,10 +731,14 @@ void FguiHud::buildKillFeed(fairygui::GComponent* root) {
 
 // ---- Result overlay ------------------------------------------------------
 void FguiHud::buildResultOverlay(fairygui::GComponent* root) {
-    fairygui::GGraph* panel = fairygui::GGraph::create();
-    panel->drawRect(kResultWidth, kResultHeight, 2,
-                    Color4F(1.0f, 1.0f, 1.0f, 1.0f),
-                    Color4F(0.0f, 0.0f, 0.0f, 0.85f));
+    fairygui::GComponent* panel = fairygui::GComponent::create();
+    fairygui::GGraph* panelBg = fairygui::GGraph::create();
+    panelBg->drawRect(kResultWidth, kResultHeight, 2,
+                      Color4F(1.0f, 1.0f, 1.0f, 1.0f),
+                      Color4F(0.0f, 0.0f, 0.0f, 0.85f));
+    panelBg->setPivot(0.0f, 0.0f);
+    panelBg->setPosition(0.0f, 0.0f);
+    panel->addChild(panelBg);
     panel->setPivot(0.5f, 0.5f);
     panel->setPosition(0.0f, 0.0f);
     panel->setVisible(false);
@@ -723,10 +759,14 @@ void FguiHud::buildResultOverlay(fairygui::GComponent* root) {
 
 // ---- Squad health bars ---------------------------------------------------
 void FguiHud::buildSquadBars(fairygui::GComponent* root) {
-    fairygui::GGraph* panel = fairygui::GGraph::create();
-    panel->drawRect(kSquadPanelWidth, kSquadPanelHeight, 0,
-                    Color4F(0.0f, 0.0f, 0.0f, 0.0f),
-                    Color4F(0.0f, 0.0f, 0.0f, 0.4f));
+    fairygui::GComponent* panel = fairygui::GComponent::create();
+    fairygui::GGraph* panelBg = fairygui::GGraph::create();
+    panelBg->drawRect(kSquadPanelWidth, kSquadPanelHeight, 0,
+                      Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                      Color4F(0.0f, 0.0f, 0.0f, 0.4f));
+    panelBg->setPivot(0.0f, 0.0f);
+    panelBg->setPosition(0.0f, 0.0f);
+    panel->addChild(panelBg);
     panel->setPosition(6.0f, 6.0f);
     panel->setPivot(0.0f, 0.0f);
     panel->setVisible(false);
@@ -791,10 +831,14 @@ void FguiHud::buildMinimap(fairygui::GComponent* root) {
     const float mmSize = 140.0f;
     const float margin = 8.0f;
 
-    fairygui::GGraph* container = fairygui::GGraph::create();
-    container->drawRect(mmSize, mmSize, 2,
-                        Color4F(0.0f, 0.0f, 0.0f, 0.0f),
-                        Color4F(0.8f, 0.8f, 0.8f, 1.0f));
+    fairygui::GComponent* container = fairygui::GComponent::create();
+    fairygui::GGraph* containerBg = fairygui::GGraph::create();
+    containerBg->drawRect(mmSize, mmSize, 2,
+                          Color4F(0.0f, 0.0f, 0.0f, 0.0f),
+                          Color4F(0.8f, 0.8f, 0.8f, 1.0f));
+    containerBg->setPivot(0.0f, 0.0f);
+    containerBg->setPosition(0.0f, 0.0f);
+    container->addChild(containerBg);
     container->setPosition(root->getWidth() - mmSize - margin, margin);
     container->setPivot(0.0f, 0.0f);
     root->addChild(container);
@@ -836,7 +880,8 @@ void FguiHud::refreshHealth(float health) {
     const float fillWidth = kBarWidth * fraction;
 
     uint32_t color = healthColor(health, downed);
-    _healthFill->clear();
+    // GGraph has no clear(); redraw replaces the internal shape.
+    _healthFill->setVisible(false);
     _healthFill->drawRect(std::max(fillWidth, 0.0f), kBarHeight, 0,
                           Color4F(0.0f, 0.0f, 0.0f, 0.0f),
                           Color4F(((color >> 16) & 0xff) / 255.0f,
@@ -1268,7 +1313,14 @@ void FguiHud::refreshSquad(const Game* game) {
         m.container->setVisible(true);
         const uint16_t pid = teamIds[i];
 
-        const auto* info = playerInfoMap.count(pid) ? &playerInfoMap.at(pid) : nullptr;
+        // playerInfoMap containment check
+        const surv::PlayerInfo* info = nullptr;
+        {
+            auto it = playerInfoMap.find(pid);
+            if (it != playerInfoMap.end()) {
+                info = &it->second;
+            }
+        }
         const std::string& name = info ? info->name : "";
         m.nameText->setText(name.empty() ? "Player" : name);
 
@@ -1278,12 +1330,19 @@ void FguiHud::refreshSquad(const Game* game) {
             health = groupStatusVec[i].health;
             disconnected = groupStatusVec[i].disconnected;
         }
-        const auto* ps = playerStatusMap.count(pid) ? &playerStatusMap.at(pid) : nullptr;
+        const surv::PlayerStatus* ps = nullptr;
+        {
+            auto it = playerStatusMap.find(pid);
+            if (it != playerStatusMap.end()) {
+                ps = &it->second;
+            }
+        }
         const bool dead = ps ? ps->dead : false;
         const bool downed = ps ? ps->downed : false;
 
         const float fillWidth = kSquadBarWidth * std::clamp(health / 100.0f, 0.0f, 1.0f);
-        m.healthBar->clear();
+        // GGraph has no clear(); redraw replaces the internal shape.
+        m.healthBar->setVisible(false);
         const uint32_t barColor = dead    ? 0xff444444 :
                                    downed ? 0xffffaa00 :
                                             0xff4caf50;
@@ -1333,9 +1392,9 @@ bool FguiHud::emoteWheelActive() const {
 bool FguiHud::consumeEmoteOutput(std::string& outType, std::string& outId, Vec2* worldPos) {
     (void)worldPos;
     if (_emoteWheelInput.send) {
-        outType = _emoteWheelInput.sendPing ? "ping" : "emote";
-        outId = _emoteWheelInput.sendPing ? _emoteWheelInput.selectedPing
-                                          : _emoteWheelInput.selectedEmote;
+        outType = _emoteWheelInput.selectedEmote.empty() ? "ping" : "emote";
+        outId = _emoteWheelInput.selectedEmote.empty() ? _emoteWheelInput.selectedPing
+                                                       : _emoteWheelInput.selectedEmote;
         _emoteWheelInput.send = false;
         return !outId.empty();
     }
