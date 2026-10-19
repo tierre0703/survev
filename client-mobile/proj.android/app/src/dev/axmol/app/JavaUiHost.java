@@ -11,10 +11,13 @@ package dev.axmol.app;
 
 import android.app.Activity;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.graphics.Color;
+import android.util.TypedValue;
 
 public class JavaUiHost {
     private static final String TAG = "JavaUiHost";
@@ -31,6 +34,10 @@ public class JavaUiHost {
     private boolean mInGame = false;
     private boolean mInTeam = false;
 
+    // Back arrow button: always-on-top, top-left corner. Visible when a sub-screen
+    // (loadout, team, settings, help, leaderboard, pause) is open.
+    private Button mBackBtn;
+
     public JavaUiHost(Activity activity, FrameLayout container) {
         mActivity = activity;
         mContainer = container;
@@ -40,7 +47,34 @@ public class JavaUiHost {
     public void install() {
         Log.i(TAG, "install() called");
         mContainer.setVisibility(View.VISIBLE);
+
+        // Back arrow button: added directly to the container (which is the Java
+        // overlay layer). The container is setClickable(false) so touches pass
+        // through to the game canvas, but by default Buttons are clickable
+        // regardless of parent clickability.
+        createBackBtn();
+
         showMenu();
+    }
+
+    private void createBackBtn() {
+        mBackBtn = new Button(mActivity);
+        mBackBtn.setText("\u2190"); // leftwards arrow
+        mBackBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        mBackBtn.setTextColor(Color.WHITE);
+        mBackBtn.setBackgroundColor(0xAA000000); // semi-transparent black
+        mBackBtn.setVisibility(View.GONE);
+        mBackBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                handleBackPressed();
+            }
+        });
+        int backSize = dp(48);
+        FrameLayout.LayoutParams backParams = new FrameLayout.LayoutParams(backSize, backSize);
+        backParams.gravity = Gravity.TOP | Gravity.LEFT;
+        backParams.setMargins(dp(8), dp(8), 0, 0);
+        mContainer.addView(mBackBtn, backParams);
     }
 
     /** Back to the menu (match ended, quit, or first launch). */
@@ -54,6 +88,7 @@ public class JavaUiHost {
         hideSettings();
         hideHelp();
         hideLeaderboard();
+        hideBackBtn();
         ensureMenu();
         mMenu.show();
         SurvBridge.onMenuReady();
@@ -69,6 +104,7 @@ public class JavaUiHost {
         hideSettings();
         hideHelp();
         hideLeaderboard();
+        hideBackBtn();
         if (mMenu != null) {
             mMenu.hide();
         }
@@ -89,6 +125,67 @@ public class JavaUiHost {
         Log.i(TAG, "showResult");
     }
 
+    // Back arrow button helpers
+    private void showBackBtn() {
+        if (mBackBtn != null) mBackBtn.setVisibility(View.VISIBLE);
+    }
+
+    private void hideBackBtn() {
+        if (mBackBtn != null) mBackBtn.setVisibility(View.GONE);
+    }
+
+    // Android hardware back button: close any open modal dialog.
+    // Returns true if the back was handled (modal was open and was closed).
+    public boolean handleBackPressed() {
+        if (mPause != null && mPause.isOpen()) {
+            hidePause();
+            updateBackBtn();
+            return true;
+        }
+        if (mSettings != null && mSettings.isOpen()) {
+            hideSettings();
+            updateBackBtn();
+            return true;
+        }
+        if (mHelp != null && mHelp.isOpen()) {
+            hideHelp();
+            updateBackBtn();
+            return true;
+        }
+        if (mLeaderboard != null && mLeaderboard.isOpen()) {
+            hideLeaderboard();
+            updateBackBtn();
+            return true;
+        }
+        if (mLoadout != null && mLoadout.isOpen()) {
+            hideLoadout();
+            updateBackBtn();
+            return true;
+        }
+        if (mTeam != null && mTeam.isActive()) {
+            hideTeam();
+            updateBackBtn();
+            if (mMenu != null) mMenu.show();
+            return true;
+        }
+        return false;
+    }
+
+    // Show/hide the back arrow based on whether any sub-screen is open.
+    private void updateBackBtn() {
+        boolean anyOpen = (mPause != null && mPause.isOpen())
+                       || (mSettings != null && mSettings.isOpen())
+                       || (mHelp != null && mHelp.isOpen())
+                       || (mLeaderboard != null && mLeaderboard.isOpen())
+                       || (mLoadout != null && mLoadout.isOpen())
+                       || (mTeam != null && mTeam.isActive());
+        if (anyOpen) {
+            showBackBtn();
+        } else {
+            hideBackBtn();
+        }
+    }
+
     /** A C++ side config edit; the Java screens re-read their values. */
     public void onConfigChanged(String key) {
         if (mMenu != null) mMenu.refresh();
@@ -105,10 +202,12 @@ public class JavaUiHost {
     public void showSettings() {
         ensureSettings();
         mSettings.show();
+        updateBackBtn();
     }
 
     public void hideSettings() {
         if (mSettings != null) mSettings.hide();
+        updateBackBtn();
     }
 
     // --- Help ---
@@ -116,10 +215,12 @@ public class JavaUiHost {
     public void showHelp() {
         ensureHelp();
         mHelp.show();
+        updateBackBtn();
     }
 
     public void hideHelp() {
         if (mHelp != null) mHelp.hide();
+        updateBackBtn();
     }
 
     // --- Leaderboard ---
@@ -127,10 +228,12 @@ public class JavaUiHost {
     public void showLeaderboard() {
         ensureLeaderboard();
         mLeaderboard.show();
+        updateBackBtn();
     }
 
     public void hideLeaderboard() {
         if (mLeaderboard != null) mLeaderboard.hide();
+        updateBackBtn();
     }
 
     // --- Loadout ---
@@ -138,10 +241,12 @@ public class JavaUiHost {
     public void showLoadout() {
         ensureLoadout();
         mLoadout.show();
+        updateBackBtn();
     }
 
     public void hideLoadout() {
         if (mLoadout != null) mLoadout.hide();
+        updateBackBtn();
     }
 
     // --- Team ---
@@ -153,6 +258,7 @@ public class JavaUiHost {
         mTeam.setApiBaseUrl(lookupApiBaseUrl());
         mTeam.seedFromConfig();
         mTeam.show();
+        updateBackBtn();
         if (create) {
             mTeam.createTeam();
         } else {
@@ -166,6 +272,7 @@ public class JavaUiHost {
             mTeam.leaveTeam();
             mTeam.hide();
         }
+        updateBackBtn();
     }
 
     public void leaveTeam() {
@@ -186,11 +293,13 @@ public class JavaUiHost {
         ensurePause();
         SurvBridge.onPauseGame();
         mPause.show();
+        updateBackBtn();
     }
 
     public void hidePause() {
         if (mPause != null) {
             mPause.hide();
+            updateBackBtn();
             SurvBridge.onResumeGame();
         }
     }
@@ -293,6 +402,10 @@ public class JavaUiHost {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             mContainer.addView(mPause.root(), params);
         }
+    }
+
+    private int dp(int value) {
+        return (int) (value * mActivity.getResources().getDisplayMetrics().density + 0.5f);
     }
 
     private String lookupPlayerName() {

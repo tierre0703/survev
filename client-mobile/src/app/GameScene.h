@@ -95,6 +95,9 @@ public:
     void onTouchMoved(float x, float y, int id);
     void onTouchEnded(int id);
 
+    // Android hardware back button / desktop Escape: navigate back.
+    bool handleBackPressed();
+
     ax::Node* getGameRoot() const { return _gameRoot; }
     Game* getGame() const { return _game.get(); }
 

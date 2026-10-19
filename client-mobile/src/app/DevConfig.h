@@ -10,9 +10,10 @@
 //   adb shell setprop debug.surv_apiUrl http://10.0.2.2:8000
 //   adb shell setprop debug.surv_region local
 //
-// Android emulator host loopback is 10.0.2.2; a physical device needs the
-// dev machine's LAN IP (and the server must listen on 0.0.0.0, which it does).
-// The loopback URL below works with `adb reverse tcp:8000 tcp:8000`.
+// With `adb reverse tcp:8000 tcp:8000` the emulator reaches the host on
+// 127.0.0.1, so the loopback URL below works through the reverse tunnel.
+// A physical device needs the dev machine's LAN IP (and the server must
+// listen on 0.0.0.0, which it does).
 namespace surv {
 namespace dev {
 

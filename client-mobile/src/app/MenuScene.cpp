@@ -169,6 +169,15 @@ bool MenuScene::init() {
     _config->addListener([this](const std::string& key) { onConfigChanged(key); });
     refreshUi();
 
+    // Android hardware back button / desktop Escape: handle back navigation.
+    auto* keyListener = ax::EventListenerKeyboard::create();
+    keyListener->onKeyPressed = [this](ax::EventKeyboard::KeyCode code, ax::Event*) {
+        if (code == ax::EventKeyboard::KeyCode::KEY_ESCAPE) {
+            handleBackPressed();
+        }
+    };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(keyListener, this);
+
     this->scheduleUpdate();
     return true;
 }
@@ -577,5 +586,18 @@ void MenuScene::pauseMenu() {
 }
 
 void MenuScene::resumeMenu() {}
+
+bool MenuScene::handleBackPressed() {
+    if (_inGame) {
+        return false; // GameScene handles it
+    }
+    if (_inTeam) {
+        leaveTeam();
+        return true;
+    }
+    // Loadout, settings, help, etc. are Java modals — the back key
+    // should close them if open. JavaUiHost handles this on the Java side.
+    return false;
+}
 
 } // namespace surv

@@ -293,6 +293,15 @@ bool GameScene::init() {
     _movePad->setVisible(false);
     _aimPad->setVisible(false);
 
+    // Android hardware back button / desktop Escape: pause/leave the game.
+    auto* keyListener = ax::EventListenerKeyboard::create();
+    keyListener->onKeyPressed = [this](ax::EventKeyboard::KeyCode code, ax::Event*) {
+        if (code == ax::EventKeyboard::KeyCode::KEY_ESCAPE) {
+            handleBackPressed();
+        }
+    };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(keyListener, this);
+
     this->scheduleUpdate();
     return true;
 }
@@ -485,6 +494,16 @@ void GameScene::returnToMenu() {
     if (onMatchEnded) {
         onMatchEnded("");
     }
+}
+
+bool GameScene::handleBackPressed() {
+    AXLOGI("[dev] GameScene::handleBackPressed _inGame={} _pendingFind={} _notifiedStarted={}",
+           _inGame, _pendingFind, _notifiedStarted);
+    if (_inGame || _pendingFind || _findInFlight) {
+        returnToMenu();
+        return true;
+    }
+    return false;
 }
 
 void GameScene::resumeGame() {

@@ -184,6 +184,9 @@ private:
     bool _pending = false;
     bool _inTeam = false;
     float _pendingTicker = 0.0f;
+
+    // Android hardware back button / desktop Escape. Returns true if handled.
+    bool handleBackPressed();
 };
 
 } // namespace surv
