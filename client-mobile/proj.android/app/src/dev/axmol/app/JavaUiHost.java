@@ -31,6 +31,7 @@ public class JavaUiHost {
     private SettingsModal mSettings;
     private HelpModal mHelp;
     private LeaderboardModal mLeaderboard;
+    private PassFragment mPass;
     private boolean mInGame = false;
     private boolean mInTeam = false;
 
@@ -88,6 +89,7 @@ public class JavaUiHost {
         hideSettings();
         hideHelp();
         hideLeaderboard();
+        hidePass();
         hideBackBtn();
         ensureMenu();
         mMenu.show();
@@ -104,6 +106,7 @@ public class JavaUiHost {
         hideSettings();
         hideHelp();
         hideLeaderboard();
+        hidePass();
         hideBackBtn();
         if (mMenu != null) {
             mMenu.hide();
@@ -157,12 +160,17 @@ public class JavaUiHost {
             updateBackBtn();
             return true;
         }
+        if (mPass != null && mPass.isOpen()) {
+            hidePass();
+            updateBackBtn();
+            return true;
+        }
         if (mLoadout != null && mLoadout.isOpen()) {
             hideLoadout();
             updateBackBtn();
             return true;
         }
-        if (mTeam != null && mTeam.isActive()) {
+        if (mTeam != null && mTeam.isOpen()) {
             hideTeam();
             updateBackBtn();
             if (mMenu != null) mMenu.show();
@@ -177,8 +185,9 @@ public class JavaUiHost {
                        || (mSettings != null && mSettings.isOpen())
                        || (mHelp != null && mHelp.isOpen())
                        || (mLeaderboard != null && mLeaderboard.isOpen())
+                       || (mPass != null && mPass.isOpen())
                        || (mLoadout != null && mLoadout.isOpen())
-                       || (mTeam != null && mTeam.isActive());
+                       || (mTeam != null && mTeam.isOpen());
         if (anyOpen) {
             showBackBtn();
         } else {
@@ -191,6 +200,7 @@ public class JavaUiHost {
         if (mMenu != null) mMenu.refresh();
         if (mLoadout != null && mLoadout.isOpen()) mLoadout.refresh();
         if (mSettings != null && mSettings.isOpen()) mSettings.syncFromConfig();
+        if (mPass != null && mPass.isOpen()) mPass.refresh();
         Log.i(TAG, "onConfigChanged " + key);
     }
 
@@ -236,6 +246,19 @@ public class JavaUiHost {
         updateBackBtn();
     }
 
+    // --- Pass (Battle Pass) ---
+
+    public void showPass() {
+        ensurePass();
+        mPass.show();
+        updateBackBtn();
+    }
+
+    public void hidePass() {
+        if (mPass != null) mPass.hide();
+        updateBackBtn();
+    }
+
     // --- Loadout ---
 
     public void showLoadout() {
@@ -254,22 +277,18 @@ public class JavaUiHost {
     public void showTeam(boolean create, String roomCode) {
         mInTeam = true;
         ensureTeam();
-        mTeam.setPlayerName(lookupPlayerName());
-        mTeam.setApiBaseUrl(lookupApiBaseUrl());
-        mTeam.seedFromConfig();
         mTeam.show();
         updateBackBtn();
         if (create) {
             mTeam.createTeam();
         } else {
-            mTeam.joinTeam(roomCode);
+            mTeam.setInviteCode(roomCode);
         }
     }
 
     public void hideTeam() {
         mInTeam = false;
         if (mTeam != null) {
-            mTeam.leaveTeam();
             mTeam.hide();
         }
         updateBackBtn();
@@ -282,8 +301,12 @@ public class JavaUiHost {
     }
 
     public void updateTeam(float dt) {
-        if (mTeam != null && mTeam.isActive()) {
-            mTeam.update(dt);
+        // TeamFragment handles its own updates via WebSocket callbacks
+    }
+
+    public void updatePass(float dt) {
+        if (mPass != null && mPass.isOpen()) {
+            mPass.refresh();
         }
     }
 
@@ -315,7 +338,7 @@ public class JavaUiHost {
 
     public void setPauseError(String l10nKey, String fallback) {
         ensurePause();
-        mPause.setError(l10nKey, fallback);
+        mPause.setStatus(fallback);
     }
 
     // --- internals ---
@@ -358,6 +381,22 @@ public class JavaUiHost {
         }
     }
 
+    private void ensurePass() {
+        if (mPass == null) {
+            mPass = new PassFragment(mActivity);
+            mPass.setOnClose(new PassFragment.OnCloseListener() {
+                @Override
+                public void onClose() {
+                    hidePass();
+                    if (mMenu != null) mMenu.show();
+                }
+            });
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            mContainer.addView(mPass.root(), params);
+        }
+    }
+
     private void ensureLoadout() {
         if (mLoadout == null) {
             mLoadout = new LoadoutFragment(mActivity);
@@ -369,14 +408,7 @@ public class JavaUiHost {
 
     private void ensureTeam() {
         if (mTeam == null) {
-            mTeam = new TeamFragment(mActivity);
-            mTeam.setOnPlay(new TeamFragment.OnPlayListener() {
-                @Override
-                public void onPlay(String[] urls, String joinToken) {
-                    mInGame = true;
-                    hideTeam();
-                }
-            });
+            mTeam = new TeamFragment(mActivity, this, false);
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             mContainer.addView(mTeam.root(), params);
@@ -385,19 +417,7 @@ public class JavaUiHost {
 
     private void ensurePause() {
         if (mPause == null) {
-            mPause = new GamePauseDialog(mActivity);
-            mPause.setOnQuit(new GamePauseDialog.OnQuit() {
-                @Override
-                public void onQuit() {
-                    SurvBridge.onQuitGame();
-                }
-            });
-            mPause.setOnResume(new GamePauseDialog.OnResume() {
-                @Override
-                public void onResume() {
-                    SurvBridge.onResumeGame();
-                }
-            });
+            mPause = new GamePauseDialog(mActivity, this);
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             mContainer.addView(mPause.root(), params);
@@ -414,7 +434,10 @@ public class JavaUiHost {
         return name != null ? name : "Player";
     }
 
-    private String lookupApiBaseUrl() {
-        return "http://127.0.0.1:8000";
+    public void quitToMenu() {
+        mInGame = false;
+        hidePause();
+        SurvBridge.onQuitGame();
+        showMenu();
     }
 }

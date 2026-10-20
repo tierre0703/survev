@@ -91,6 +91,9 @@ public final class SurvBridge {
 
     public static native boolean isInGame();
 
+    /** Set a config key-value pair (for sensitivity, HUD scale, etc.). */
+    public static native void setConfigValue(String key, String value);
+
     // --- called from C++ (GL thread) ---------------------------------------
     // Each handler hops to the UI thread before touching a View. The Java UI
     // host is not required to exist yet (an early match start is dropped).

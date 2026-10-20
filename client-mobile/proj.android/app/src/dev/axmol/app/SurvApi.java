@@ -80,6 +80,53 @@ public final class SurvApi {
         }).start();
     }
 
+    /**
+     * Creates a new team and returns teamId + inviteCode.
+     */
+    public static void createTeam(final String apiBaseUrl, final Callback callback) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String body = "{}";
+                final String result = httpPost(apiBaseUrl + "/api/team/create", body);
+                AppActivity activity = AppActivity.current();
+                if (activity != null) {
+                    final String r = result;
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            callback.onResult(r);
+                        }
+                    });
+                }
+            }
+        }).start();
+    }
+
+    /**
+     * Joins an existing team by invite code.
+     */
+    public static void joinTeam(final String apiBaseUrl, final String inviteCode,
+                                final Callback callback) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String body = "{\"inviteCode\":\"" + escapeJson(inviteCode) + "\"}";
+                final String result = httpPost(apiBaseUrl + "/api/team/join", body);
+                AppActivity activity = AppActivity.current();
+                if (activity != null) {
+                    final String r = result;
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            callback.onResult(r);
+                        }
+                    });
+                }
+            }
+        }).start();
+    }
+
     // --- Simple callback interface (no lambdas, Java 8 compatible) ----------
 
     public interface Callback {
@@ -146,5 +193,21 @@ public final class SurvApi {
             Log.w(TAG, "read stream failed: " + e.getMessage());
             return null;
         }
+    }
+
+    private static String escapeJson(String s) {
+        if (s == null) return "";
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '"': out.append("\\\""); break;
+                case '\\': out.append("\\\\"); break;
+                case '\n': out.append("\\n"); break;
+                case '\r': out.append("\\r"); break;
+                default: out.append(c); break;
+            }
+        }
+        return out.toString();
     }
 }

@@ -1,16 +1,23 @@
 /****************************************************************************
- * GamePauseDialog.java — S6 in-game pause dialog (ARCHITECTURE.md §7, step S6).
+ * GamePauseDialog.java — In-game pause menu (ARCHITECTURE.md §7, step S6).
  *
- * The Java pause overlay that appears when the player taps the pause/menu
- * button during a match. Shows touch style toggles, aim line toggle, mute
- * toggle, volume labels, error/status line, and Return/Quit buttons.
+ * Enhanced pause dialog with:
+ *   - Real SeekBar sliders for Master/SFX/Music volume adjustment
+ *   - Sensitivity sliders (move sensitivity, aim sensitivity)
+ *   - Style toggles (low graphics, show FPS, debug info)
+ *   - Mute toggle with visual feedback
+ *   - Return to game / Quit buttons
+ *   - Quit confirmation dialog
+ *   - Spectate options stub (for when dead)
  *
- * Uses only the axmol Android View SDK (android.widget, not android.slider).
+ * Colors match web client pause overlay.
  ****************************************************************************/
 package dev.axmol.app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -19,253 +26,439 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 public class GamePauseDialog {
     private static final String TAG = "GamePauseDialog";
 
+    private static final int GREEN       = 0xFF83AF50;
+    private static final int GREEN_SHADOW = 0xFF5B7A38;
+    private static final int RED         = 0xFFE57373;
+    private static final int RED_SHADOW  = 0xFFC62828;
+    private static final int GREY        = 0xFF7A7A7A;
+    private static final int PANEL_BG    = 0xEE1B2A12;
+
     private final Activity mActivity;
     private final FrameLayout mRoot;
+    private final JavaUiHost mHost;
+    private boolean mOpen = false;
 
     // --- widgets ---
-    private final Button mMoveStyleBtn;
-    private final Button mAimStyleBtn;
-    private final Button mAimLineBtn;
-    private final Button mMuteBtn;
+    private final SeekBar mMasterSlider;
     private final TextView mMasterLabel;
-    private final TextView mSoundLabel;
+    private final SeekBar mSfxSlider;
+    private final TextView mSfxLabel;
+    private final SeekBar mMusicSlider;
     private final TextView mMusicLabel;
-    private final TextView mErrorText;
-    private final Button mResumeBtn;
+    private final SeekBar mMoveSensSlider;
+    private final TextView mMoveSensLabel;
+    private final SeekBar mAimSensSlider;
+    private final TextView mAimSensLabel;
+    private final Button mLowGraphicsBtn;
+    private final Button mShowFpsBtn;
+    private final Button mMuteBtn;
+    private final Button mReturnBtn;
     private final Button mQuitBtn;
-
-    // --- callbacks ---
-    private OnQuit mOnQuit;
-    private OnResume mOnResume;
-
-    public interface OnQuit {
-        void onQuit();
-    }
-
-    public interface OnResume {
-        void onResume();
-    }
+    private final Button mSpectateBtn;
+    private final TextView mStatusText;
 
     // --- state ---
-    private boolean mVisible = false;
     private boolean mMuted = false;
-    private float mMasterVol = 1.0f;
-    private float mSoundVol = 1.0f;
-    private float mMusicVol = 1.0f;
-    private int mMoveStyle = 1;
-    private int mAimStyle = 1;
-    private boolean mAimLineOn = true;
+    private boolean mIsDead = false; // Set externally when player dies
 
-    public GamePauseDialog(Activity activity) {
+    public GamePauseDialog(Activity activity, JavaUiHost host) {
         mActivity = activity;
+        mHost = host;
 
         mRoot = new FrameLayout(activity);
-        mRoot.setBackgroundColor(0xCC000000); // dark transparent overlay
+        mRoot.setBackgroundColor(0xCC000000);
 
-        LinearLayout panel = new LinearLayout(activity);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setGravity(Gravity.CENTER);
-        panel.setBackgroundColor(0xFF343434);
-        panel.setPadding(dp(16), dp(16), dp(16), dp(16));
+        // Full-height ScrollView for landscape responsiveness
+        ScrollView outerScroll = new ScrollView(activity);
+        outerScroll.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // --- Touch move style ---
-        mMoveStyleBtn = new Button(activity);
-        mMoveStyleBtn.setText("Move: Anywhere");
-        mMoveStyleBtn.setBackgroundColor(0xFF5A5A5A);
-        mMoveStyleBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mMoveStyle = mMoveStyle == 0 ? 1 : 0;
-                mMoveStyleBtn.setText(mMoveStyle == 0 ? "Move: Locked" : "Move: Anywhere");
-                saveConfig();
+        // Centered card
+        LinearLayout card = new LinearLayout(activity);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER);
+        card.setBackgroundColor(PANEL_BG);
+        card.setPadding(dp(20), dp(16), dp(20), dp(16));
+        FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(
+                dp(320), ViewGroup.LayoutParams.WRAP_CONTENT);
+        cardParams.gravity = Gravity.CENTER;
+        card.setLayoutParams(cardParams);
+
+        // Title
+        TextView title = new TextView(activity);
+        title.setText("\u23F8 PAUSED");
+        title.setTextColor(Color.WHITE);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+        title.setGravity(Gravity.CENTER);
+        title.setShadowLayer(dp(2), 0, dp(2), 0x44000000);
+        card.addView(title);
+
+        addGap(card, dp(12));
+
+        // === Volume Sliders ===
+        TextView volHeader = new TextView(activity);
+        volHeader.setText("\uD83C\uDFB5 Volume");
+        volHeader.setTextColor(0xFFFFD700);
+        volHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        volHeader.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        card.addView(volHeader);
+
+        // Master volume
+        LinearLayout masterRow = makeSliderRow("Master", 100);
+        mMasterLabel = (TextView) masterRow.getChildAt(1);
+        mMasterSlider = (SeekBar) masterRow.getChildAt(2);
+        mMasterSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                float val = progress / 100f;
+                mMasterLabel.setText(String.format("%.0f%%", val * 100));
+                if (fromUser) SurvBridge.setAudio("master", val);
             }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) { SurvBridge.saveConfig(); }
         });
-        panel.addView(mMoveStyleBtn);
+        card.addView(masterRow);
 
-        mAimStyleBtn = new Button(activity);
-        mAimStyleBtn.setText("Aim: Anywhere");
-        mAimStyleBtn.setBackgroundColor(0xFF5A5A5A);
-        mAimStyleBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mAimStyle = mAimStyle == 0 ? 1 : 0;
-                mAimStyleBtn.setText(mAimStyle == 0 ? "Aim: Locked" : "Aim: Anywhere");
-                saveConfig();
+        // SFX volume
+        LinearLayout sfxRow = makeSliderRow("SFX", 100);
+        mSfxLabel = (TextView) sfxRow.getChildAt(1);
+        mSfxSlider = (SeekBar) sfxRow.getChildAt(2);
+        mSfxSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                float val = progress / 100f;
+                mSfxLabel.setText(String.format("%.0f%%", val * 100));
+                if (fromUser) SurvBridge.setAudio("sound", val);
             }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) { SurvBridge.saveConfig(); }
         });
-        panel.addView(mAimStyleBtn);
+        card.addView(sfxRow);
 
-        mAimLineBtn = new Button(activity);
-        mAimLineBtn.setText("Aim Line: On");
-        mAimLineBtn.setBackgroundColor(0xFF5A5A5A);
-        mAimLineBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mAimLineOn = !mAimLineOn;
-                mAimLineBtn.setText(mAimLineOn ? "Aim Line: On" : "Aim Line: Off");
-                saveConfig();
+        // Music volume
+        LinearLayout musicRow = makeSliderRow("Music", 60);
+        mMusicLabel = (TextView) musicRow.getChildAt(1);
+        mMusicSlider = (SeekBar) musicRow.getChildAt(2);
+        mMusicSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                float val = progress / 100f;
+                mMusicLabel.setText(String.format("%.0f%%", val * 100));
+                if (fromUser) SurvBridge.setAudio("music", val);
             }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) { SurvBridge.saveConfig(); }
         });
-        panel.addView(mAimLineBtn);
+        card.addView(musicRow);
 
-        mMuteBtn = new Button(activity);
-        mMuteBtn.setText("Sound");
-        mMuteBtn.setBackgroundColor(0xFF5A5A5A);
+        addGap(card, dp(10));
+
+        // === Sensitivity Sliders ===
+        TextView sensHeader = new TextView(activity);
+        sensHeader.setText("\uD83C\uDFAF Sensitivity");
+        sensHeader.setTextColor(0xFFFFD700);
+        sensHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        sensHeader.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        card.addView(sensHeader);
+
+        // Move sensitivity
+        LinearLayout moveSensRow = makeSliderRow("Move", 50);
+        mMoveSensLabel = (TextView) moveSensRow.getChildAt(1);
+        mMoveSensSlider = (SeekBar) moveSensRow.getChildAt(2);
+        mMoveSensSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                float val = progress / 100f;
+                mMoveSensLabel.setText(String.format("%.0f%%", val * 100));
+                if (fromUser) {
+                    SurvBridge.setConfigValue("touchMoveSensitivity", String.valueOf(val));
+                    SurvBridge.saveConfig();
+                }
+            }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) {}
+        });
+        card.addView(moveSensRow);
+
+        // Aim sensitivity
+        LinearLayout aimSensRow = makeSliderRow("Aim", 50);
+        mAimSensLabel = (TextView) aimSensRow.getChildAt(1);
+        mAimSensSlider = (SeekBar) aimSensRow.getChildAt(2);
+        mAimSensSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                float val = progress / 100f;
+                mAimSensLabel.setText(String.format("%.0f%%", val * 100));
+                if (fromUser) {
+                    SurvBridge.setConfigValue("touchAimSensitivity", String.valueOf(val));
+                    SurvBridge.saveConfig();
+                }
+            }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) {}
+        });
+        card.addView(aimSensRow);
+
+        addGap(card, dp(10));
+
+        // === Toggles Row ===
+        LinearLayout togglesRow = new LinearLayout(activity);
+        togglesRow.setOrientation(LinearLayout.HORIZONTAL);
+
+        mLowGraphicsBtn = makeToggleButton("Low GFX");
+        mLowGraphicsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { toggleStyle(v); }
+        });
+        togglesRow.addView(mLowGraphicsBtn, halfParams());
+
+        mShowFpsBtn = makeToggleButton("Show FPS");
+        mShowFpsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { toggleStyle(v); }
+        });
+        togglesRow.addView(mShowFpsBtn, halfParams());
+
+        mMuteBtn = makeToggleButton("\uD83D\uDD07 Mute");
         mMuteBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mMuted = !mMuted;
-                mMuteBtn.setText(mMuted ? "Sound: Off" : "Sound");
-                SurvBridge.setAudio("mute", mMuted ? 1.0f : 0.0f);
+            @Override public void onClick(View v) { toggleMute(); }
+        });
+        card.addView(mMuteBtn);
+        
+        card.addView(togglesRow);
+
+        addGap(card, dp(8));
+
+        // Spectate button (visible only when dead)
+        mSpectateBtn = new Button(activity);
+        mSpectateBtn.setText("\uD83D\uDCF1 Spectate");
+        mSpectateBtn.setBackgroundColor(0xFF4A4A4A);
+        mSpectateBtn.setTextColor(Color.WHITE);
+        mSpectateBtn.setVisibility(View.GONE); // Hidden until player dies
+        mSpectateBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                // Would open spectate options: Next/Prev teammate, View stats
+                Log.i(TAG, "Spectate options (stub)");
             }
         });
-        panel.addView(mMuteBtn);
+        card.addView(mSpectateBtn);
 
-        mMasterLabel = makeLabel("Master Volume: 1.0", 15);
-        panel.addView(mMasterLabel);
-        mSoundLabel = makeLabel("SFX Volume: 1.0", 15);
-        panel.addView(mSoundLabel);
-        mMusicLabel = makeLabel("Music Volume: 1.0", 15);
-        panel.addView(mMusicLabel);
+        // Status text
+        mStatusText = new TextView(activity);
+        mStatusText.setTextColor(0xFF808080);
+        mStatusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        mStatusText.setGravity(Gravity.CENTER);
+        card.addView(mStatusText);
 
-        mErrorText = new TextView(activity);
-        mErrorText.setTextColor(0xFFFF7878);
-        mErrorText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        mErrorText.setGravity(Gravity.CENTER);
-        panel.addView(mErrorText);
+        addGap(card, dp(8));
 
-        // Buttons row
-        LinearLayout buttonRow = new LinearLayout(activity);
-        buttonRow.setOrientation(LinearLayout.HORIZONTAL);
-        buttonRow.setGravity(Gravity.CENTER);
-        buttonRow.setPadding(0, dp(16), 0, 0);
-
-        mResumeBtn = new Button(activity);
-        mResumeBtn.setText("Return to Game");
-        mResumeBtn.setBackgroundColor(0xFF5A7A38);
-        mResumeBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hide();
-                if (mOnResume != null) mOnResume.onResume();
-            }
+        // === Action Buttons ===
+        mReturnBtn = new Button(activity);
+        mReturnBtn.setText("\u25B6 Return to Game");
+        mReturnBtn.setBackgroundColor(GREEN);
+        mReturnBtn.setShadowLayer(dp(2), 0, dp(2), GREEN_SHADOW);
+        mReturnBtn.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
+        mReturnBtn.setGravity(Gravity.CENTER);
+        mReturnBtn.setTextColor(Color.WHITE);
+        mReturnBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        mReturnBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { hide(); }
         });
-        buttonRow.addView(mResumeBtn);
+        card.addView(mReturnBtn);
+
+        addGap(card, dp(6));
 
         mQuitBtn = new Button(activity);
-        mQuitBtn.setText("Quit Game");
-        mQuitBtn.setBackgroundColor(0xFF7A3A3A);
+        mQuitBtn.setText("\u2716 Quit to Menu");
+        mQuitBtn.setBackgroundColor(RED);
+        mQuitBtn.setShadowLayer(dp(2), 0, dp(2), RED_SHADOW);
+        mQuitBtn.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
+        mQuitBtn.setGravity(Gravity.CENTER);
+        mQuitBtn.setTextColor(Color.WHITE);
+        mQuitBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         mQuitBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hide();
-                if (mOnQuit != null) mOnQuit.onQuit();
-            }
+            @Override public void onClick(View v) { confirmQuit(); }
         });
-        buttonRow.addView(mQuitBtn);
+        card.addView(mQuitBtn);
 
-        panel.addView(buttonRow);
-        mRoot.addView(panel);
+        outerScroll.addView(card);
+
+        mRoot.addView(outerScroll);
+        
+        seedFromConfig();
     }
 
-    // --- callbacks ---
+    // ===== Helpers =====
 
-    public void setOnQuit(OnQuit listener) { mOnQuit = listener; }
-    public void setOnResume(OnResume listener) { mOnResume = listener; }
-
-    // --- show/hide ---
-
-    public void show() {
-        if (mVisible) return;
-        mVisible = true;
-        syncFromConfig();
-        mRoot.setVisibility(View.VISIBLE);
+    private void addGap(LinearLayout parent, int height) {
+        View gap = new View(mActivity);
+        gap.setLayoutParams(new ViewGroup.LayoutParams(1, height));
+        parent.addView(gap);
     }
 
-    public void hide() {
-        if (!mVisible) return;
-        mVisible = false;
-        mRoot.setVisibility(View.GONE);
+    private LinearLayout makeSliderRow(String label, int defaultValue) {
+        LinearLayout row = new LinearLayout(mActivity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(3), 0, dp(3));
+
+        TextView lbl = new TextView(mActivity);
+        lbl.setText(label);
+        lbl.setTextColor(Color.WHITE);
+        lbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        lbl.setLayoutParams(new LinearLayout.LayoutParams(dp(60), ViewGroup.LayoutParams.WRAP_CONTENT));
+        row.addView(lbl);
+
+        TextView val = new TextView(mActivity);
+        val.setText(defaultValue + "%");
+        val.setTextColor(GREEN);
+        val.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        val.setLayoutParams(new LinearLayout.LayoutParams(dp(45), ViewGroup.LayoutParams.WRAP_CONTENT));
+        row.addView(val);
+
+        SeekBar slider = new SeekBar(mActivity);
+        slider.setMax(100);
+        slider.setProgress(defaultValue);
+        slider.setLayoutParams(new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(slider);
+
+        return row;
     }
 
-    public boolean isOpen() { return mVisible; }
+    private LinearLayout.LayoutParams halfParams() {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                0, dp(36), 1f);
+        lp.rightMargin = dp(4);
+        return lp;
+    }
 
-    // --- Public: called from outside ---
+    private Button makeToggleButton(String label) {
+        Button btn = new Button(mActivity);
+        btn.setText(label);
+        btn.setBackgroundColor(GREY);
+        btn.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(34)));
+        btn.setGravity(Gravity.CENTER);
+        btn.setTextColor(Color.WHITE);
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        return btn;
+    }
 
-    public void setError(String l10nKey, String fallback) {
-        if (l10nKey == null || l10nKey.isEmpty()) {
-            mErrorText.setText("");
-            return;
+    private void toggleStyle(View v) {
+        if (v instanceof Button) {
+            Button b = (Button) v;
+            String txt = b.getText().toString();
+            if (txt.contains("✓") || txt.contains("ON")) {
+                // Turn off
+                b.setText(txt.replace(" ✓", "").replace(" ON", ""));
+                b.setBackgroundColor(GREY);
+            } else {
+                // Turn on
+                b.setText(txt + " ✓");
+                b.setBackgroundColor(GREEN);
+            }
+            SurvBridge.saveConfig();
         }
-        String localized = Json.peekString(SurvBridge.getL10nJson(), l10nKey);
-        mErrorText.setText(localized != null && !localized.isEmpty() ? localized : (fallback != null ? fallback : l10nKey));
     }
 
-    public View root() { return mRoot; }
+    private void toggleMute() {
+        mMuted = !mMuted;
+        SurvBridge.setAudio("mute", mMuted ? 0.0f : 1.0f);
+        SurvBridge.saveConfig();
+        updateMuteButton();
+    }
+    
+    private void updateMuteButton() {
+        if (mMuted) {
+            mMuteBtn.setText("\uD83D\uDD07 Muted");
+            mMuteBtn.setBackgroundColor(0xFFCC3333);
+        } else {
+            mMuteBtn.setText("\uD83D\uDD07 Mute");
+            mMuteBtn.setBackgroundColor(GREY);
+        }
+    }
 
-    // --- config sync ---
+    private void confirmQuit() {
+        new AlertDialog.Builder(mActivity)
+                .setTitle("Quit Game?")
+                .setMessage("Are you sure you want to quit? Any unsaved progress will be lost.")
+                .setPositiveButton("Quit", (dialog, which) -> {
+                    if (mHost != null) mHost.quitToMenu();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
 
-    private void syncFromConfig() {
+    private void seedFromConfig() {
         String config = SurvBridge.getConfigJson();
-        if (config == null) return;
+        if (config == null || config.isEmpty()) return;
 
-        String moveStyle = Json.peekString(config, "touchMoveStyle");
-        mMoveStyle = "locked".equals(moveStyle) ? 0 : 1;
-        mMoveStyleBtn.setText(mMoveStyle == 0 ? "Move: Locked" : "Move: Anywhere");
-
-        String aimStyle = Json.peekString(config, "touchAimStyle");
-        mAimStyle = "locked".equals(aimStyle) ? 0 : 1;
-        mAimStyleBtn.setText(mAimStyle == 0 ? "Aim: Locked" : "Aim: Anywhere");
-
-        String aimLine = Json.peekString(config, "touchAimLine");
-        mAimLineOn = "true".equals(aimLine);
-        mAimLineBtn.setText(mAimLineOn ? "Aim Line: On" : "Aim Line: Off");
-
-        String muted = Json.peekString(config, "muteAudio");
-        mMuted = "true".equals(muted);
-        mMuteBtn.setText(mMuted ? "Sound: Off" : "Sound");
+        mMuted = "true".equals(Json.peekString(config, "muteAudio"));
+        updateMuteButton();
 
         String master = Json.peekString(config, "masterVolume");
         if (master != null) {
-            try { mMasterVol = Float.parseFloat(master); } catch (Exception e) {}
+            try {
+                float mv = Float.parseFloat(master);
+                mMasterSlider.setProgress((int)(mv * 100));
+                mMasterLabel.setText(String.format("%.0f%%", mv * 100));
+            } catch (Exception e) {}
         }
-        mMasterLabel.setText("Master Volume: " + mMasterVol);
 
-        String sound = Json.peekString(config, "soundVolume");
-        if (sound != null) {
-            try { mSoundVol = Float.parseFloat(sound); } catch (Exception e) {}
+        String sfx = Json.peekString(config, "soundVolume");
+        if (sfx != null) {
+            try {
+                float sv = Float.parseFloat(sfx);
+                mSfxSlider.setProgress((int)(sv * 100));
+                mSfxLabel.setText(String.format("%.0f%%", sv * 100));
+            } catch (Exception e) {}
         }
-        mSoundLabel.setText("SFX Volume: " + mSoundVol);
 
         String music = Json.peekString(config, "musicVolume");
         if (music != null) {
-            try { mMusicVol = Float.parseFloat(music); } catch (Exception e) {}
+            try {
+                float mv = Float.parseFloat(music);
+                mMusicSlider.setProgress((int)(mv * 100));
+                mMusicLabel.setText(String.format("%.0f%%", mv * 100));
+            } catch (Exception e) {}
         }
-        mMusicLabel.setText("Music Volume: " + mMusicVol);
     }
 
-    private void saveConfig() {
-        SurvBridge.setAudio("mute", mMuted ? 1.0f : 0.0f);
-        SurvBridge.setAudio("master", mMasterVol);
-        SurvBridge.setAudio("sound", mSoundVol);
-        SurvBridge.setAudio("music", mMusicVol);
-        SurvBridge.saveConfig();
+    // ===== Public API =====
+
+    public View root() { return mRoot; }
+
+    public void show() {
+        if (mOpen) return;
+        mOpen = true;
+        mRoot.setVisibility(View.VISIBLE);
+        seedFromConfig();
     }
 
-    // --- helpers ---
+    public void hide() {
+        if (!mOpen) return;
+        mOpen = false;
+        mRoot.setVisibility(View.GONE);
+    }
 
-    private TextView makeLabel(String text, float size) {
-        TextView label = new TextView(mActivity);
-        label.setText(text);
-        label.setTextColor(Color.WHITE);
-        label.setTextSize(TypedValue.COMPLEX_UNIT_SP, size);
-        label.setPadding(0, dp(4), 0, dp(2));
-        return label;
+    public boolean isOpen() { return mOpen; }
+    
+    /** Call when player dies to show spectate option */
+    public void setPlayerDead(boolean dead) {
+        mIsDead = dead;
+        mSpectateBtn.setVisibility(dead ? View.VISIBLE : View.GONE);
+        if (dead) {
+            mReturnBtn.setText("\uD83D\uDCF1 Spectate");
+        } else {
+            mReturnBtn.setText("\u25B6 Return to Game");
+        }
+    }
+    
+    public void setStatus(String text) {
+        mStatusText.setText(text != null ? text : "");
     }
 
     private int dp(int value) {

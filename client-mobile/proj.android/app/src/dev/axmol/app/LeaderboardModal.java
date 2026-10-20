@@ -55,6 +55,11 @@ public class LeaderboardModal {
         mRoot = new FrameLayout(activity);
         mRoot.setBackgroundColor(0xCC000000);
 
+        // Full-height ScrollView for landscape responsiveness
+        ScrollView outerScroll = new ScrollView(activity);
+        outerScroll.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
         LinearLayout panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setGravity(Gravity.CENTER);
@@ -110,10 +115,10 @@ public class LeaderboardModal {
         });
         panel.addView(mCloseBtn);
 
-        mRoot.addView(panel);
-    }
+        outerScroll.addView(panel);
 
-    // ===== Public API =====
+        mRoot.addView(outerScroll);
+    }
 
     public View root() { return mRoot; }
 

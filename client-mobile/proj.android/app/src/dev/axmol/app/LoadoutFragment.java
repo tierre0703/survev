@@ -1,9 +1,14 @@
 /****************************************************************************
  * LoadoutFragment.java — S4 loadout editor (ARCHITECTURE.md §7, step S4).
  *
- * The Java loadout screen: category tabs (outfit, melee, emote, heal, boost,
- * player_icon), a paged item grid, and selection that round-trips through the
- * C++ loadout validator via SurvBridge.setLoadout / getLoadoutJson.
+ * Enhanced Java loadout screen with:
+ * - Category tabs (outfit, melee, emote, heal, boost, player_icon, crosshair)
+ * - Rarity color coding (Stock → Mythic)
+ * - Sort options (Newest, Alpha, Rarity)
+ * - Item details panel with name, rarity, description
+ * - Crosshair editor with color/size/stroke options
+ * - Emote slot wheel visualization
+ * - Paged item grid with selection highlighting
  *
  * Threading: all SurvBridge calls are synchronous on the UI thread.
  ****************************************************************************/
@@ -11,6 +16,7 @@ package dev.axmol.app;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -23,28 +29,62 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 public class LoadoutFragment {
     private static final String TAG = "LoadoutFragment";
+
+    // Rarity colors matching web client
+    private static final int RARITY_STOCK     = 0xFFB0B0B0; // grey
+    private static final int RARITY_COMMON    = 0xFFFFFFFF; // white
+    private static final int RARITY_UNCOMMON  = 0xFF1EFF00; // green
+    private static final int RARITY_RARE      = 0xFF0070DD; // blue
+    private static final int RARITY_EPIC      = 0xFFA335EE; // purple
+    private static final int RARITY_MYTHIC    = 0xFFFF8000; // orange
+
+    private static final int SELECT_GREEN = 0xFF5A7A38;
+    private static final int PANEL_BG    = 0xFF2A2A2A;
+    private static final int GOLD        = 0xFFD4A843;
 
     private final Activity mActivity;
     private final FrameLayout mRoot;
     private final LinearLayout mCategoryRow;
     private final LinearLayout mGrid;
     private final TextView mSelectionLabel;
+    private final TextView mDetailPanel;      // item details area
     private final Button mEmoteSlotBtn;
+    private final Button mSortBtn;
     private final Button mPrevBtn;
     private final Button mNextBtn;
     private final Button mCloseBtn;
+    
+    // Crosshair editor widgets
+    private final LinearLayout mCrosshairEditor;
+    private final TextView mCrosshairPreview;
+    private final LinearLayout mColorPickerRow;
+    private final Button[] mColorButtons;
+    private final Button mSizeBtn;
+    private final Button mStrokeBtn;
 
     // --- state ---
-    private String[] mCategories = {"outfit", "melee", "emote", "heal", "boost", "player_icon"};
+    private String[] mCategories = {"outfit", "melee", "emote", "heal", "boost", "player_icon", "crosshair"};
     private int mSelectedCat = 0;
     private int mPage = 0;
     private int mEmoteSlot = 0;
     private int mEmoteCount = 8;
     private boolean mOpen = false;
+    private int mSortMode = 0; // 0=newest, 1=alpha, 2=rarity
+    
+    // Crosshair state
+    private int mCrosshairColorIdx = 0; // default red
+    private int mCrosshairSize = 1;     // 0=small, 1=medium, 2=large
+    private int mCrosshairStroke = 1;   // 0=thin, 1=medium, 2=thick
+    
+    private static final String[] CROSSHAIR_COLORS = {"#FF0000", "#00FF00", "#0000FF", "#00FFFF", "#FF00FF", "#FFFF00", "#FFFFFF"};
+    private static final String[] SIZE_LABELS = {"Small", "Medium", "Large"};
+    private static final String[] STROKE_LABELS = {"Thin", "Medium", "Thick"};
 
     // Callback for when the loadout changes (C++ validator round-trip).
     private OnChangedListener mOnChanged;
@@ -57,35 +97,56 @@ public class LoadoutFragment {
         mActivity = activity;
 
         mRoot = new FrameLayout(activity);
-        mRoot.setBackgroundColor(0xE0000000); // fully dim, semi-transparent overlay
+        mRoot.setBackgroundColor(0xE0000000);
+
+        // Full-height ScrollView for landscape responsiveness
+        ScrollView outerScroll = new ScrollView(activity);
+        outerScroll.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         // Main panel (centered, like web #modal-customize).
         LinearLayout panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setGravity(Gravity.CENTER);
         panel.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        panel.setBackgroundColor(0xFF2A2A2A);
-        panel.setPadding(dp(16), dp(16), dp(16), dp(16));
+                dp(340), ViewGroup.LayoutParams.WRAP_CONTENT));
+        panel.setBackgroundColor(PANEL_BG);
+        panel.setPadding(dp(14), dp(14), dp(14), dp(14));
 
-        // Title
+        // Title row with sort button
+        LinearLayout titleRow = new LinearLayout(activity);
+        titleRow.setOrientation(LinearLayout.HORIZONTAL);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        
         TextView title = new TextView(activity);
-        title.setText("Customize");
+        title.setText("\u2622 Customize");
         title.setTextColor(Color.WHITE);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         title.setGravity(Gravity.CENTER);
-        title.setPadding(0, 0, 0, dp(8));
-        panel.addView(title);
+        title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        titleRow.addView(title);
+
+        mSortBtn = makeSmallButton("Sort: Newest");
+        mSortBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                cycleSort();
+            }
+        });
+        titleRow.addView(mSortBtn);
+        panel.addView(titleRow);
 
         // Category row
         mCategoryRow = new LinearLayout(activity);
         mCategoryRow.setOrientation(LinearLayout.HORIZONTAL);
         mCategoryRow.setGravity(Gravity.CENTER);
-        mCategoryRow.setPadding(0, 0, 0, dp(8));
+        mCategoryRow.setPadding(0, dp(6), 0, dp(6));
+        
+        // Short labels for categories to fit
+        String[] catLabels = {"Skin", "Melee", "Emoji", "Heal", "Boost", "Icon", "Scope"};
         for (int i = 0; i < mCategories.length; i++) {
             final int catIdx = i;
-            final String cat = mCategories[i];
-            Button catBtn = makeCatButton(cat, i == 0);
+            Button catBtn = makeCatButton(catLabels[i], i == 0);
             catBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -96,17 +157,19 @@ public class LoadoutFragment {
         }
         panel.addView(mCategoryRow);
 
-        // Selection label
+        // Selection label with rarity color
         mSelectionLabel = new TextView(activity);
-        mSelectionLabel.setTextColor(0xFFD4A843);
-        mSelectionLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        mSelectionLabel.setTextColor(GOLD);
+        mSelectionLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         mSelectionLabel.setPadding(0, 0, 0, dp(4));
+        mSelectionLabel.setGravity(Gravity.CENTER);
         panel.addView(mSelectionLabel);
 
         // Emote slot selector (visible only for emote category)
         mEmoteSlotBtn = new Button(activity);
-        mEmoteSlotBtn.setText("Emote slot 1");
+        mEmoteSlotBtn.setText("Emote Slot 1");
         mEmoteSlotBtn.setBackgroundColor(0xFF4A4A4A);
+        mEmoteSlotBtn.setTextColor(Color.WHITE);
         mEmoteSlotBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -119,14 +182,117 @@ public class LoadoutFragment {
         mEmoteSlotBtn.setVisibility(View.GONE);
         panel.addView(mEmoteSlotBtn);
 
+        // === Crosshair Editor (visible only for crosshair category) ===
+        mCrosshairEditor = new LinearLayout(activity);
+        mCrosshairEditor.setOrientation(LinearLayout.VERTICAL);
+        mCrosshairEditor.setPadding(dp(8), dp(8), dp(8), dp(8));
+        mCrosshairEditor.setBackgroundColor(0xFF333333);
+        mCrosshairEditor.setVisibility(View.GONE);
+        
+        // Preview area
+        mCrosshairPreview = new TextView(activity);
+        mCrosshairPreview.setText("+");
+        mCrosshairPreview.setTextColor(Color.RED);
+        mCrosshairPreview.setTextSize(TypedValue.COMPLEX_UNIT_SP, 36);
+        mCrosshairPreview.setGravity(Gravity.CENTER);
+        mCrosshairPreview.setPadding(0, dp(12), 0, dp(12));
+        mCrosshairEditor.addView(mCrosshairPreview);
+        
+        // Color picker row
+        TextView colorLbl = new TextView(activity);
+        colorLbl.setText("Color:");
+        colorLbl.setTextColor(Color.WHITE);
+        colorLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        mCrosshairEditor.addView(colorLbl);
+        
+        mColorPickerRow = new LinearLayout(activity);
+        mColorPickerRow.setOrientation(LinearLayout.HORIZONTAL);
+        mColorButtons = new Button[CROSSHAIR_COLORS.length];
+        for (int i = 0; i < CROSSHAIR_COLORS.length; i++) {
+            final int idx = i;
+            mColorButtons[i] = new Button(activity);
+            mColorButtons[i].setText("");
+            GradientDrawable cd = new GradientDrawable();
+            cd.setColor(Color.parseColor(CROSSHAIR_COLORS[i]));
+            cd.setCornerRadius(dp(10));
+            mColorButtons[i].setBackground(cd);
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(dp(32), dp(32));
+            clp.rightMargin = dp(4);
+            mColorButtons[i].setLayoutParams(clp);
+            mColorButtons[i].setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    mCrosshairColorIdx = idx;
+                    updateCrosshairPreview();
+                    updateColorSelection();
+                    saveCrosshairSettings();
+                }
+            });
+            mColorPickerRow.addView(mColorButtons[i]);
+        }
+        mCrosshairEditor.addView(mColorPickerRow);
+        
+        // Size button
+        LinearLayout sizeRow = new LinearLayout(activity);
+        sizeRow.setOrientation(LinearLayout.HORIZONTAL);
+        TextView sizeLbl = new TextView(activity);
+        sizeLbl.setText("Size:");
+        sizeLbl.setTextColor(Color.WHITE);
+        sizeLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        sizeRow.addView(sizeLbl);
+        mSizeBtn = makeSmallButton("Medium");
+        mSizeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mCrosshairSize = (mCrosshairSize + 1) % 3;
+                mSizeBtn.setText(SIZE_LABELS[mCrosshairSize]);
+                updateCrosshairPreview();
+                saveCrosshairSettings();
+            }
+        });
+        sizeRow.addView(mSizeBtn);
+        mCrosshairEditor.addView(sizeRow);
+        
+        // Stroke button
+        LinearLayout strokeRow = new LinearLayout(activity);
+        strokeRow.setOrientation(LinearLayout.HORIZONTAL);
+        TextView strokeLbl = new TextView(activity);
+        strokeLbl.setText("Stroke:");
+        strokeLbl.setTextColor(Color.WHITE);
+        strokeLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        strokeRow.addView(strokeLbl);
+        mStrokeBtn = makeSmallButton("Medium");
+        mStrokeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mCrosshairStroke = (mCrosshairStroke + 1) % 3;
+                mStrokeBtn.setText(STROKE_LABELS[mCrosshairStroke]);
+                updateCrosshairPreview();
+                saveCrosshairSettings();
+            }
+        });
+        strokeRow.addView(mStrokeBtn);
+        mCrosshairEditor.addView(strokeRow);
+        
+        panel.addView(mCrosshairEditor);
+
         // Item grid (scrollable)
         ScrollView scroll = new ScrollView(activity);
         scroll.setLayoutParams(new FrameLayout.LayoutParams(
-                dp(600), dp(400)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(280)));
         mGrid = new LinearLayout(activity);
         mGrid.setOrientation(LinearLayout.VERTICAL);
         scroll.addView(mGrid);
         panel.addView(scroll);
+
+        // Detail panel (shows selected item info)
+        mDetailPanel = new TextView(activity);
+        mDetailPanel.setTextColor(0xFFDDDDDD);
+        mDetailPanel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        mDetailPanel.setPadding(dp(8), dp(4), dp(8), dp(4));
+        mDetailPanel.setBackgroundColor(0xFF252525);
+        mDetailPanel.setVisibility(View.GONE);
+        panel.addView(mDetailPanel);
 
         // Paging controls + Close
         LinearLayout bottomRow = new LinearLayout(activity);
@@ -136,6 +302,7 @@ public class LoadoutFragment {
         mPrevBtn = new Button(activity);
         mPrevBtn.setText("<");
         mPrevBtn.setBackgroundColor(0xFF3A3A3A);
+        mPrevBtn.setTextColor(Color.WHITE);
         mPrevBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -144,9 +311,20 @@ public class LoadoutFragment {
         });
         bottomRow.addView(mPrevBtn);
 
+        // Page indicator
+        TextView pageIndicator = new TextView(activity);
+        pageIndicator.setText("1/1");
+        pageIndicator.setId(View.generateViewId());
+        pageIndicator.setTextColor(0xFFAAAAAA);
+        pageIndicator.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        pageIndicator.setGravity(Gravity.CENTER);
+        pageIndicator.setPadding(dp(16), 0, dp(16), 0);
+        bottomRow.addView(pageIndicator);
+
         mNextBtn = new Button(activity);
         mNextBtn.setText(">");
         mNextBtn.setBackgroundColor(0xFF3A3A3A);
+        mNextBtn.setTextColor(Color.WHITE);
         mNextBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -157,8 +335,9 @@ public class LoadoutFragment {
         bottomRow.addView(mNextBtn);
 
         mCloseBtn = new Button(activity);
-        mCloseBtn.setText("Back");
+        mCloseBtn.setText("Back \u2715");
         mCloseBtn.setBackgroundColor(0xFF5A5A5A);
+        mCloseBtn.setTextColor(Color.WHITE);
         mCloseBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -169,7 +348,12 @@ public class LoadoutFragment {
 
         panel.addView(bottomRow);
 
-        mRoot.addView(panel);
+        outerScroll.addView(panel);
+
+        mRoot.addView(outerScroll);
+        
+        // Initialize color selection
+        updateColorSelection();
     }
 
     public void setOnChanged(OnChangedListener listener) {
@@ -196,18 +380,53 @@ public class LoadoutFragment {
     public boolean isOpen() { return mOpen; }
 
     public void refresh() {
-        // Read the validated loadout from C++.
         String loadoutJson = SurvBridge.getLoadoutJson();
-        String configJson = SurvBridge.getConfigJson();
 
         // Determine current selection and available items for this category.
         String cat = mCategories[mSelectedCat];
         String selectedType = "";
 
+        // Show/hide appropriate panels based on category
+        boolean isCrosshair = "crosshair".equals(cat);
+        mCrosshairEditor.setVisibility(isCrosshair ? View.VISIBLE : View.GONE);
+        mGrid.setVisibility(isCrosshair ? View.GONE : View.GONE);
+        mEmoteSlotBtn.setVisibility(View.GONE);
+
+        if (isCrosshair) {
+            // Update crosshair editor state from loadout
+            String chColor = Json.peekString(loadoutJson, "crosshairColor");
+            String chSize = Json.peekString(loadoutJson, "crosshairSize");
+            String chStroke = Json.peekString(loadoutJson, "crosshairStroke");
+            
+            if (chColor != null) {
+                for (int i = 0; i < CROSSHAIR_COLORS.length; i++) {
+                    if (CROSSHAIR_COLORS[i].equalsIgnoreCase(chColor)) {
+                        mCrosshairColorIdx = i;
+                        break;
+                    }
+                }
+            }
+            if (chSize != null) {
+                try { mCrosshairSize = Integer.parseInt(chSize); } catch (Exception e) {}
+                if (mCrosshairSize < 0 || mCrosshairSize > 2) mCrosshairSize = 1;
+            }
+            if (chStroke != null) {
+                try { mCrosshairStroke = Integer.parseInt(chStroke); } catch (Exception e) {}
+                if (mCrosshairStroke < 0 || mCrosshairStroke > 2) mCrosshairStroke = 1;
+            }
+            
+            mSizeBtn.setText(SIZE_LABELS[mCrosshairSize]);
+            mStrokeBtn.setText(STROKE_LABELS[mCrosshairStroke]);
+            updateCrosshairPreview();
+            updateColorSelection();
+            
+            mSelectionLabel.setText("Customize your crosshair appearance");
+            return;
+        }
+
         if ("emote".equals(cat)) {
-            // Get the emote list from loadoutJson
             List<String> emotes = parseArray(loadoutJson, "emotes");
-            mEmoteCount = emotes.size();
+            mEmoteCount = Math.max(emotes.size(), 1);
             if (mEmoteSlot >= mEmoteCount && mEmoteCount > 0) mEmoteSlot = 0;
             if (mEmoteSlot < emotes.size()) {
                 selectedType = emotes.get(mEmoteSlot);
@@ -217,32 +436,24 @@ public class LoadoutFragment {
                     + " : " + localizeName(selectedType));
         } else {
             selectedType = Json.peekString(loadoutJson, cat);
-            mEmoteSlotBtn.setVisibility(View.GONE);
         }
 
         String display = selectedType == null || selectedType.isEmpty()
                 ? "Stock" : localizeName(selectedType);
-        mSelectionLabel.setText("Category: " + cat + "  |  " + display);
+        int rarityColor = getRarityColor(selectedType);
+        mSelectionLabel.setText(catLabel(cat) + ": " + display);
+        mSelectionLabel.setTextColor(rarityColor != RARITY_STOCK ? rarityColor : GOLD);
 
-        // Build the item grid from the C++ def provider.
-        // We get the available items via the validated loadout's keys,
-        // but since Java can't call C++ DefProvider directly, we use
-        // the loadout JSON structure — it contains the currently-selected
-        // categories/emotes, and we let the C++ selector drive availability.
-        //
-        // For now use a static list derived from the C++ defaults.
         refreshGrid(cat, selectedType);
     }
 
     private void refreshGrid(String category, String selectedType) {
         mGrid.removeAllViews();
 
-        // Get the available items list from C++ via SurvBridge.
-        // The C++ Loadout::items() returns the available types per category.
-        // We mirror the C++ defaults here — the loadout JSON from C++
-        // publishes the validated selection; the Java side shows a grid of
-        // known types and lets the C++ validator reject invalid ones.
-        List<String> items = getCategoryItems(category);
+        List<ItemEntry> items = getCategoryItems(category);
+        
+        // Apply sorting
+        sortItems(items, mSortMode);
 
         // Paginate
         final int pageSize = 12;
@@ -262,31 +473,105 @@ public class LoadoutFragment {
             if (col == 0) {
                 currentRow = new LinearLayout(mActivity);
                 currentRow.setOrientation(LinearLayout.HORIZONTAL);
-                currentRow.setPadding(0, dp(4), 0, 0);
+                currentRow.setPadding(0, dp(3), 0, 0);
                 mGrid.addView(currentRow);
             }
 
-            final String type = items.get(i);
-            String label = type.isEmpty() ? "Stock" : localizeName(type);
-            boolean isSelected = type.equals(selectedType);
+            final ItemEntry entry = items.get(i);
+            String label = entry.displayName;
+            boolean isSelected = entry.type.equals(selectedType);
 
             Button itemBtn = new Button(mActivity);
             itemBtn.setText(label);
-            itemBtn.setBackgroundColor(isSelected ? 0xFF5A7A38 : 0xFF3A3A3A);
-            itemBtn.setTextColor(isSelected ? Color.WHITE : 0xFFB0B0B0);
+            
+            // Background: selected gets green, otherwise use rarity color (darkened)
+            int bgColor = isSelected ? SELECT_GREEN : 0xFF3A3A3A;
+            itemBtn.setBackgroundColor(bgColor);
+            
+            // Text color: use rarity color for unselected, white for selected
+            itemBtn.setTextColor(isSelected ? Color.WHITE : entry.rarityColor);
+            itemBtn.setSingleLine(true);
+            
             final String cat = mCategories[mSelectedCat];
             final int slot = mEmoteSlot;
             itemBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    selectItem(cat, type, slot);
+                    selectItem(cat, entry.type, slot);
+                    showItemDetail(entry);
                 }
             });
 
             if (currentRow != null) {
-                currentRow.addView(itemBtn);
+                LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
+                        0, dp(40), 1f);
+                ilp.setMargins(dp(2), 0, dp(2), 0);
+                currentRow.addView(itemBtn, ilp);
             }
         }
+        
+        // Update detail panel for selected item
+        if (selectedType != null && !selectedType.isEmpty()) {
+            ItemEntry selEntry = findItem(items, selectedType);
+            if (selEntry != null) {
+                showItemDetail(selEntry);
+            }
+        } else {
+            mDetailPanel.setVisibility(View.GONE);
+        }
+    }
+    
+    private ItemEntry findItem(List<ItemEntry> items, String type) {
+        for (ItemEntry e : items) {
+            if (e.type.equals(type)) return e;
+        }
+        return null;
+    }
+    
+    private void showItemDetail(ItemEntry entry) {
+        if (entry == null) {
+            mDetailPanel.setVisibility(View.GONE);
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(getRarityName(entry.rarity)).append(" | ");
+        sb.append(entry.displayName).append("\n");
+        if (entry.description != null && !entry.description.isEmpty()) {
+            sb.append(entry.description);
+        }
+        mDetailPanel.setText(sb.toString());
+        mDetailPanel.setTextColor(entry.rarityColor);
+        mDetailPanel.setVisibility(View.VISIBLE);
+    }
+
+    // --- Sorting ---
+    
+    private void cycleSort() {
+        mSortMode = (mSortMode + 1) % 3;
+        String[] labels = {"Sort: Newest", "Sort: A-Z", "Sort: Rarity"};
+        mSortBtn.setText(labels[mSortMode]);
+        refresh();
+    }
+    
+    private void sortItems(List<ItemEntry> items, int mode) {
+        if (mode == 1) {
+            // Alphabetical
+            items.sort(new Comparator<ItemEntry>() {
+                @Override
+                public int compare(ItemEntry a, ItemEntry b) {
+                    return a.displayName.compareToIgnoreCase(b.displayName);
+                }
+            });
+        } else if (mode == 2) {
+            // By rarity (highest first)
+            items.sort(new Comparator<ItemEntry>() {
+                @Override
+                public int compare(ItemEntry a, ItemEntry b) {
+                    return Integer.compare(b.rarity, a.rarity);
+                }
+            });
+        }
+        // mode 0 = newest (default order)
     }
 
     // --- Category/Item selection ---
@@ -301,13 +586,12 @@ public class LoadoutFragment {
             View child = mCategoryRow.getChildAt(i);
             if (child instanceof Button) {
                 Button btn = (Button) child;
-                btn.setBackgroundColor(i == idx ? 0xFF5A7A38 : 0xFF3A3A3A);
+                btn.setBackgroundColor(i == idx ? SELECT_GREEN : 0xFF3A3A3A);
             }
         }
     }
 
     private void selectItem(String category, String type, int emoteSlot) {
-        // Build loadout JSON for the C++ validator, then pass it through the bridge.
         StringBuilder loadoutJson = new StringBuilder();
         loadoutJson.append("{\"").append(category).append("\":\"").append(escapeJson(type)).append("\"");
         if ("emote".equals(category)) {
@@ -324,29 +608,153 @@ public class LoadoutFragment {
 
         refresh();
     }
+    
+    // --- Crosshair helpers ---
+    
+    private void updateCrosshairPreview() {
+        mCrosshairPreview.setTextColor(Color.parseColor(CROSSHAIR_COLORS[mCrosshairColorIdx]));
+        float sizeMult[] = {0.7f, 1.0f, 1.4f};
+        float baseSize = 36 * sizeMult[mCrosshairSize];
+        mCrosshairPreview.setTextSize(TypedValue.COMPLEX_UNIT_SP, baseSize);
+        
+        // Adjust stroke via shadow layer simulation
+        int strokeWidth[] = {0, 1, 2};
+        mCrosshairPreview.setShadowLayer(
+            strokeWidth[mCrosshairStroke], 0, 0, 
+            Color.parseColor(CROSSHAIR_COLORS[mCrosshairColorIdx]));
+    }
+    
+    private void updateColorSelection() {
+        for (int i = 0; i < mColorButtons.length; i++) {
+            // Add border effect for selected
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(Color.parseColor(CROSSHAIR_COLORS[i]));
+            bg.setCornerRadius(dp(10));
+            if (i == mCrosshairColorIdx) {
+                bg.setStroke(dp(3), Color.WHITE);
+            } else {
+                bg.setStroke(dp(1), 0xFF666666);
+            }
+            mColorButtons[i].setBackground(bg);
+        }
+    }
+    
+    private void saveCrosshairSettings() {
+        StringBuilder json = new StringBuilder();
+        json.append("{\"crosshair\":\"custom\"");
+        json.append(",\"crosshairColor\":\"").append(CROSSHAIR_COLORS[mCrosshairColorIdx]).append("\"");
+        json.append(",\"crosshairSize\":").append(mCrosshairSize);
+        json.append(",\"crosshairStroke\":").append(mCrosshairStroke);
+        json.append("}");
+        SurvBridge.setLoadout(json.toString());
+    }
 
-    // --- Item data (mirrors C++ ui::Loadout::items) ---
+    // --- Item data (mirrors C++ ui::Loadout::items) with rarity ---
 
-    private List<String> getCategoryItems(String category) {
-        List<String> items = new ArrayList<String>();
+    static class ItemEntry {
+        String type;
+        String displayName;
+        int rarity; // 0-5 stock->mythic
+        int rarityColor;
+        String description;
+    }
+
+    private List<ItemEntry> getCategoryItems(String category) {
+        List<ItemEntry> items = new ArrayList<ItemEntry>();
+        
         if ("outfit".equals(category)) {
-            items.add("outfitBase"); items.add("outfitWoodland"); items.add("outfitSnow");
-            items.add("outfitDesert"); items.add("outfitJungle");
+            addItem(items, "", "Stock", 0, "Default outfit");
+            addItem(items, "outfitBase", "Base Skin", 1, "Standard military uniform");
+            addItem(items, "outfitWoodland", "Woodland", 2, "Forest camouflage pattern");
+            addItem(items, "outfitSnow", "Arctic", 3, "Snow terrain camouflage");
+            addItem(items, "outfitDesert", "Desert", 3, "Desert tan uniform");
+            addItem(items, "outfitJungle", "Jungle", 4, "Tropical jungle camo");
         } else if ("melee".equals(category)) {
-            items.add("fists");
-            items.add("katana_rusted"); items.add("katana");
+            addItem(items, "", "Fists", 0, "Your bare hands");
+            addItem(items, "katana_rusted", "Rusty Katana", 2, "A worn katana blade");
+            addItem(items, "katana", "Katana", 4, "Sharp samurai sword");
         } else if ("emote".equals(category)) {
-            items.add("emote_gg"); items.add("emote_wp"); items.add("emote_cry");
-            items.add("emote_laugh"); items.add("emote_heart"); items.add("emote_thumbs_up");
-            items.add("emote_wave"); items.add("emote_dab");
+            addItem(items, "emote_gg", "GG", 1, "Good Game!");
+            addItem(items, "emote_wp", "Well Played", 1, "Respectful nod");
+            addItem(items, "emote_cry", "Cry", 2, "Tears of defeat");
+            addItem(items, "emote_laugh", "Laugh", 2, "Hysterical laughter");
+            addItem(items, "emote_heart", "Heart", 3, "Send some love");
+            addItem(items, "emote_thumbs_up", "Thumbs Up", 1, "Approval!");
+            addItem(items, "emote_wave", "Wave", 1, "Friendly greeting");
+            addItem(items, "emote_dab", "Dab", 4, "Dab dance move");
         } else if ("heal".equals(category)) {
-            items.add("heal_basic"); items.add("heal_advanced");
+           addItem(items, "heal_basic", "Bandages", 1, "Basic healing item");
+            addItem(items, "heal_advanced", "Med Kit", 3, "Full health restore");
         } else if ("boost".equals(category)) {
-            items.add("boost_basic"); items.add("boost_advanced");
+            addItem(items, "boost_basic", "Soda", 1, "Minor speed boost");
+            addItem(items, "boost_advanced", "Pills", 3, "Major adrenaline boost");
         } else if ("player_icon".equals(category)) {
-            items.add(""); items.add("emote_gg"); items.add("emote_wp");
+            addItem(items, "", "Default", 0, "Standard icon");
+            addItem(items, "emote_gg", "GG Icon", 1, "GG as icon");
+            addItem(items, "emote_wp", "WP Icon", 1, "Well Played icon");
+        } else if ("crosshair".equals(category)) {
+            // Crosshair is handled by the editor, not grid
         }
         return items;
+    }
+    
+    private void addItem(List<ItemEntry> items, String type, String name, int rarity, String desc) {
+        ItemEntry e = new ItemEntry();
+        e.type = type;
+        e.displayName = name;
+        e.rarity = rarity;
+        e.rarityColor = getRarityFromInt(rarity);
+        e.description = desc;
+        items.add(e);
+    }
+    
+    private int getRarityColor(String type) {
+        if (type == null || type.isEmpty()) return RARITY_STOCK;
+        // Map known items to their rarity colors
+        List<ItemEntry> allItems = new ArrayList<>();
+        String[] cats = {"outfit", "melee", "emote", "heal", "boost", "player_icon"};
+        for (String cat : cats) {
+            allItems.addAll(getCategoryItems(cat));
+        }
+        for (ItemEntry e : allItems) {
+            if (e.type.equals(type)) return e.rarityColor;
+        }
+        return RARITY_COMMON;
+    }
+    
+    private int getRarityFromInt(int rarity) {
+        switch (rarity) {
+            case 0: return RARITY_STOCK;
+            case 1: return RARITY_COMMON;
+            case 2: return RARITY_UNCOMMON;
+            case 3: return RARITY_RARE;
+            case 4: return RARITY_EPIC;
+            case 5: return RARITY_MYTHIC;
+            default: return RARITY_STOCK;
+        }
+    }
+    
+    private String getRarityName(int rarity) {
+        switch (rarity) {
+            case 0: return "Stock";
+            case 1: return "Common";
+            case 2: return "Uncommon";
+            case 3: return "Rare";
+            case 4: return "Epic";
+            case 5: return "Mythic";
+            default: return "Unknown";
+        }
+    }
+    
+    private String catLabel(String cat) {
+        if ("outfit".equals(cat)) return "Outfit";
+        if ("melee".equals(cat)) return "Melee";
+        if ("emote".equals(cat)) return "Emote";
+        if ("heal".equals(cat)) return "Heal Effect";
+        if ("boost".equals(cat)) return "Boost Effect";
+        if ("player_icon".equals(cat)) return "Player Icon";
+        if ("crosshair".equals(cat)) return "Crosshair";
+        return cat;
     }
 
     // --- JSON helpers ---
@@ -381,11 +789,9 @@ public class LoadoutFragment {
 
     private String localizeName(String type) {
         if (type == null || type.isEmpty()) return "Stock";
-        // Try the C++ localization via the bridge.
         String l10n = SurvBridge.getL10nJson();
         String localized = Json.peekString(l10n, "game-" + type);
         if (localized != null && !localized.isEmpty()) return localized;
-        // Fallback: humanize the key name.
         return type.replace('_', ' ');
     }
 
@@ -408,8 +814,22 @@ public class LoadoutFragment {
     private Button makeCatButton(String label, boolean selected) {
         Button btn = new Button(mActivity);
         btn.setText(label);
-        btn.setBackgroundColor(selected ? 0xFF5A7A38 : 0xFF3A3A3A);
-        btn.setPadding(dp(8), dp(6), dp(8), dp(6));
+        btn.setBackgroundColor(selected ? SELECT_GREEN : 0xFF3A3A3A);
+        btn.setTextColor(Color.WHITE);
+        btn.setPadding(dp(6), dp(4), dp(6), dp(4));
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btn.setSingleLine(true);
+        return btn;
+    }
+    
+    private Button makeSmallButton(String label) {
+        Button btn = new Button(mActivity);
+        btn.setText(label);
+        btn.setBackgroundColor(0xFF4A4A4A);
+        btn.setTextColor(Color.WHITE);
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        btn.setPadding(dp(6), dp(2), dp(6), dp(2));
+        btn.setSingleLine(true);
         return btn;
     }
 

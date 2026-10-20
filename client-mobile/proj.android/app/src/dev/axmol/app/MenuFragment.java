@@ -1,41 +1,49 @@
 /****************************************************************************
- * MenuFragment.java â€” main-menu overlay (ARCHITECTURE.md Â§7, step S3).
+ * MenuFragment.java — main-menu overlay (ARCHITECTURE.md §7, step S3).
  *
- * Layout matches the web client's start menu card:
+ * Enhanced main menu matching web client's start menu card with:
  *   +--------------------------------------------+
- *   |  [ player name           ] [ customize ]   |
- *   |  [ Local [0 players]                  v ]  |  green outline select
+ *   |  [☢]              [player name    ] [⚙] [♪]|  
+ *   |  [ Local [0 players]                  v ]  |
  *   |  [            Play Solo               ]    |
  *   |  [ Play Duo ] [ Play Squad ]               |
  *   |  [ Join Team ] [ Create Team ]             |
- *   |  [          How to Play           ]        |
+ *   |  [       📖 How to Play            ]       |
+ *   |  [ 🏆 Survev Pass  ]  [ 📰 News  ]        |
  *   +--------------------------------------------+
  *
- * A single centered rounded dark card over the splash background. Every
- * button has the web CSS "inset 0 -Npx" darker bottom edge (3D look).
+ * RESPONSIVE: wraps content in a full-height ScrollView for landscape fit.
  *
- * Threading rules (ARCHITECTURE.md Â§4.2):
+ * Threading rules (ARCHITECTURE.md §4.2):
  *   * SurvApi runs network on a background thread and delivers on the UI thread.
  *   * SurvBridge native calls are made from the UI thread.
  ****************************************************************************/
 package dev.axmol.app;
 
 import android.app.Activity;
+import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.ScaleAnimation;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,20 +54,22 @@ public class MenuFragment {
     // ===================== Web Client Color Palette ==========================
     private static final int GREEN         = 0xFF83AF50; // .btn-green
     private static final int GREEN_SHADOW  = 0xFF5B7A38;
-    private static final int TEAL          = 0xFF4FADA9; // team buttons
+    private static final int TEAL          = 0xFF4FADA9;
     private static final int TEAL_SHADOW   = 0xFF37817E;
-    private static final int GREY          = 0xFF7A7A7A; // how to play
+    private static final int GREY          = 0xFF7A7A7A;
     private static final int GREY_SHADOW   = 0xFF3E3E3E;
-    private static final int BLUE          = 0xFF1E90FF; // customize
+    private static final int BLUE          = 0xFF1E90FF;
     private static final int BLUE_SHADOW   = 0xFF1871C8;
-    private static final int LIME          = 0xFF00FF00; // region select outline
-    private static final int CARD_BG       = 0xCC1B2A12; // dark translucent card
+    private static final int PURPLE        = 0xFF9B59B6;
+    private static final int PURPLE_SHADOW = 0xFF6E3D7F;
+    private static final int LIME          = 0xFF00FF00;
+    private static final int CARD_BG       = 0xCC1B2A12;
     private static final int SELECT_BG     = 0x66000000;
-    private static final int SCRIM         = 0x4C000000; // 0.3 alpha
+    private static final int SCRIM         = 0x4C000000;
+    private static final int GOLD          = 0xFFFFD700;
 
     private final Activity mActivity;
     private final FrameLayout mRoot;
-    private final JavaUiHost mHost;
 
     // --- widgets ---
     private final EditText mName;
@@ -72,7 +82,16 @@ public class MenuFragment {
     private final TextView mCreateTeamBtn;
     private final TextView mHelpBtn;
     private final TextView mStatus;
-    private final TextView mNewsText;       // kept for fetch/update logic; not shown
+    private final TextView mNewsText;
+    private final TextView mSettingsBtn;
+    private final TextView mMuteBtn;
+    private final TextView mPassBtn;
+    private final TextView mNewsBtn;
+    private final ScrollView mNewsScrollView;
+    private final LinearLayout mTopBarRow;
+    private final LinearLayout mBottomRow;
+    private final TextView mPlayerCountLbl;
+    private final JavaUiHost mHost;
 
     // --- state ---
     private List<PopEntry> mPops = new ArrayList<PopEntry>();
@@ -80,76 +99,111 @@ public class MenuFragment {
     private boolean mMuted = false;
     private boolean mFindingGame = false;
     private String mApiBaseUrl = "http://127.0.0.1:8000";
+    private boolean mNewsExpanded = false;
 
     public MenuFragment(Activity activity, JavaUiHost host) {
         mActivity = activity;
         mHost = host;
 
-        // Root: light scrim over the C++ splash; the card is centered on it.
         mRoot = new FrameLayout(activity);
         mRoot.setBackgroundColor(SCRIM);
 
-        // ===== Card =====
+        // Full-height ScrollView for landscape responsiveness
+        ScrollView scrollView = new ScrollView(activity);
+        scrollView.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        // ===== Card (wrapped inside scroll) =====
         LinearLayout card = new LinearLayout(activity);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(16), dp(16), dp(16), dp(12));
+        card.setPadding(dp(14), dp(14), dp(14), dp(12));
         GradientDrawable cardBg = new GradientDrawable();
         cardBg.setColor(CARD_BG);
-        cardBg.setCornerRadius(dp(8));
+        cardBg.setCornerRadius(dp(10));
         card.setBackground(cardBg);
         FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(
-                dp(260), ViewGroup.LayoutParams.WRAP_CONTENT);
+                dp(280), ViewGroup.LayoutParams.WRAP_CONTENT);
         cardParams.gravity = Gravity.CENTER;
         card.setLayoutParams(cardParams);
 
-        // ===== Row 1: name input + customize =====
-        LinearLayout nameRow = row(activity);
+        // ===== Row 0: Top bar =====
+        mTopBarRow = row(activity);
+        
+        mCustomizeBtn = makeIconButton("\u2622", BLUE, BLUE_SHADOW, 22);
+        mCustomizeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                animatePress(v);
+                if (mHost != null) mHost.showLoadout();
+            }
+        });
+        mTopBarRow.addView(mCustomizeBtn, new LinearLayout.LayoutParams(dp(36), dp(36)));
 
+        View spacer = new View(activity);
+        spacer.setLayoutParams(new LinearLayout.LayoutParams(0, dp(36), 1f));
+        mTopBarRow.addView(spacer);
+
+        mPlayerCountLbl = new TextView(activity);
+        mPlayerCountLbl.setText("\uD83D\uDC65 0");
+        mPlayerCountLbl.setTextColor(0xFFAAAAAA);
+        mPlayerCountLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        mPlayerCountLbl.setGravity(Gravity.CENTER);
+        mTopBarRow.addView(mPlayerCountLbl, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        mSettingsBtn = makeIconButton("\u2699", 0xFF666666, 0xFF444444, 20);
+        mSettingsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                animatePress(v);
+                if (mHost != null) mHost.showSettings();
+            }
+        });
+        LinearLayout.LayoutParams setLp = new LinearLayout.LayoutParams(dp(32), dp(32));
+        setLp.leftMargin = dp(8);
+        mTopBarRow.addView(mSettingsBtn, setLp);
+
+        mMuteBtn = makeIconButton("\u266A", 0xFF666666, 0xFF444444, 18);
+        mMuteBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                animatePress(v);
+                toggleMute();
+            }
+        });
+        LinearLayout.LayoutParams muteLp = new LinearLayout.LayoutParams(dp(32), dp(32));
+        muteLp.leftMargin = dp(4);
+        mTopBarRow.addView(mMuteBtn, muteLp);
+        
+        card.addView(mTopBarRow, rowParams(0));
+
+        // ===== Row 1: name input =====
+        LinearLayout nameRow = row(activity);
         mName = new EditText(activity);
         mName.setSingleLine(true);
-        mName.setHint("Enter your name here");
+        mName.setHint("Enter your name");
         mName.setTextColor(Color.BLACK);
         mName.setHintTextColor(0xFF808080);
-        mName.setTypeface(condensed(true));
-        mName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        mName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         mName.setGravity(Gravity.CENTER);
-        mName.setPadding(dp(6), 0, dp(6), 0);
+        mName.setPadding(dp(10), 0, dp(10), 0);
         GradientDrawable nameBg = new GradientDrawable();
         nameBg.setColor(Color.WHITE);
         nameBg.setCornerRadius(dp(6));
         mName.setBackground(nameBg);
         mName.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
+            @Override public void onFocusChange(View v, boolean hasFocus) {
                 if (!hasFocus) {
                     SurvBridge.setPlayerName(mName.getText().toString().trim());
                 }
             }
         });
-        LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(0, dp(36), 1f);
-        nameRow.addView(mName, nameLp);
-
-        // Customize: blue square with a radiation-style icon glyph.
-        mCustomizeBtn = makeButton("\u2622", BLUE, BLUE_SHADOW, 20);
-        mCustomizeBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (mHost != null) mHost.showLoadout();
-            }
-        });
-        LinearLayout.LayoutParams custLp = new LinearLayout.LayoutParams(dp(36), dp(36));
-        custLp.leftMargin = dp(4);
-        nameRow.addView(mCustomizeBtn, custLp);
+        nameRow.addView(mName, new LinearLayout.LayoutParams(0, dp(38), 1f));
         card.addView(nameRow, rowParams(0));
 
-        // ===== Row 2: region select (lime outline + chevron) =====
+        // ===== Row 2: region select =====
         mRegionLabel = new TextView(activity);
         mRegionLabel.setText("Local [0 players]");
         mRegionLabel.setTextColor(Color.WHITE);
-        mRegionLabel.setTypeface(condensed(false));
-        mRegionLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        mRegionLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         mRegionLabel.setGravity(Gravity.CENTER);
-        mRegionLabel.setCompoundDrawablePadding(0);
         GradientDrawable selBg = new GradientDrawable();
         selBg.setColor(SELECT_BG);
         selBg.setCornerRadius(dp(5));
@@ -157,86 +211,142 @@ public class MenuFragment {
         mRegionLabel.setBackground(selBg);
         mRegionLabel.setClickable(true);
         mRegionLabel.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            @Override public void onClick(View v) {
                 cycleRegion();
+                animatePress(v);
             }
         });
         FrameLayout selectBox = new FrameLayout(activity);
         selectBox.addView(mRegionLabel, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         TextView chevron = new TextView(activity);
-        chevron.setText("\u2228"); // reads as a down chevron
-        chevron.setTextColor(Color.WHITE);
-        chevron.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        chevron.setText("\u25BC");
+        chevron.setTextColor(LIME);
+        chevron.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         FrameLayout.LayoutParams chevLp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         chevLp.gravity = Gravity.CENTER_VERTICAL | Gravity.RIGHT;
-        chevLp.rightMargin = dp(8);
+        chevLp.rightMargin = dp(10);
         selectBox.addView(chevron, chevLp);
-        card.addView(selectBox, rowParams(dp(38)));
+        card.addView(selectBox, rowParams(dp(40)));
 
         // ===== Row 3: Play Solo =====
-        mPlaySolo = makeButton("Play Solo", GREEN, GREEN_SHADOW, 17);
+        mPlaySolo = makeButton("\u25B6 Play Solo", GREEN, GREEN_SHADOW, 18);
         mPlaySolo.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { onPlay(1); }
+            @Override public void onClick(View v) { 
+                animatePress(v);
+                onPlay(1); 
+            }
         });
-        card.addView(mPlaySolo, rowParams(dp(36)));
+        card.addView(mPlaySolo, rowParams(dp(42)));
 
         // ===== Row 4: Duo | Squad =====
         LinearLayout modeRow = row(activity);
-        mPlayDuo = makeButton("Play Duo", GREEN, GREEN_SHADOW, 17);
+        mPlayDuo = makeButton("Duo", GREEN, GREEN_SHADOW, 16);
         mPlayDuo.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { onPlay(2); }
+            @Override public void onClick(View v) { 
+                animatePress(v);
+                onPlay(2); 
+            }
         });
-        mPlaySquad = makeButton("Play Squad", GREEN, GREEN_SHADOW, 17);
+        mPlaySquad = makeButton("Squad", GREEN, GREEN_SHADOW, 16);
         mPlaySquad.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { onPlay(4); }
+            @Override public void onClick(View v) { 
+                animatePress(v);
+                onPlay(4); 
+            }
         });
         addHalfPair(modeRow, mPlayDuo, mPlaySquad);
-        card.addView(modeRow, rowParams(dp(36)));
+        card.addView(modeRow, rowParams(dp(38)));
 
         // ===== Row 5: Join Team | Create Team =====
         LinearLayout teamRow = row(activity);
-        mJoinTeamBtn = makeButton("Join Team", TEAL, TEAL_SHADOW, 17);
+        mJoinTeamBtn = makeButton("Join Team", TEAL, TEAL_SHADOW, 15);
         mJoinTeamBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
+                animatePress(v);
                 if (mHost != null) mHost.showTeam(false, "");
             }
         });
-        mCreateTeamBtn = makeButton("Create Team", TEAL, TEAL_SHADOW, 17);
+        mCreateTeamBtn = makeButton("Create Team", TEAL, TEAL_SHADOW, 15);
         mCreateTeamBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
+                animatePress(v);
                 if (mHost != null) mHost.showTeam(true, "");
             }
         });
         addHalfPair(teamRow, mJoinTeamBtn, mCreateTeamBtn);
-        card.addView(teamRow, rowParams(dp(36)));
+        card.addView(teamRow, rowParams(dp(38)));
 
         // ===== Row 6: How to Play =====
-        mHelpBtn = makeButton("How to Play", GREY, GREY_SHADOW, 17);
+        mHelpBtn = makeButton("\uD83D\uDCD6 How to Play", GREY, GREY_SHADOW, 15);
         mHelpBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
+                animatePress(v);
                 if (mHost != null) mHost.showHelp();
             }
         });
         card.addView(mHelpBtn, rowParams(dp(36)));
 
-        // Status / error line (hidden until there is something to say)
+        // ===== Separator =====
+        View sep = new View(activity);
+        sep.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
+        sep.setBackgroundColor(0x33FFFFFF);
+        card.addView(sep, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1)));
+
+        // ===== Row 7: Pass + News =====
+        mBottomRow = row(activity);
+        
+        mPassBtn = makeButton("\uD83C\uDFC6 Pass", PURPLE, PURPLE_SHADOW, 14);
+        mPassBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                animatePress(v);
+                if (mHost != null) mHost.showPass();
+            }
+        });
+        LinearLayout.LayoutParams passLp = new LinearLayout.LayoutParams(0, dp(32), 1f);
+        passLp.rightMargin = dp(4);
+        mBottomRow.addView(mPassBtn, passLp);
+
+        mNewsBtn = makeButton("\uD83D\uDCF0 News", 0xFF555555, 0xFF333333, 14);
+        mNewsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                animatePress(v);
+                toggleNews();
+            }
+        });
+        LinearLayout.LayoutParams newsLp = new LinearLayout.LayoutParams(0, dp(32), 1f);
+        newsLp.leftMargin = dp(4);
+        mBottomRow.addView(mNewsBtn, newsLp);
+        
+        card.addView(mBottomRow, rowParams(dp(34)));
+
+        // ===== News Panel =====
+        mNewsScrollView = new ScrollView(activity);
+        mNewsScrollView.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(120)));
+        mNewsScrollView.setVisibility(View.GONE);
+        
+        mNewsText = new TextView(activity);
+        mNewsText.setTextColor(0xFFCCCCCC);
+        mNewsText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        mNewsText.setPadding(dp(8), dp(8), dp(8), dp(8));
+        mNewsScrollView.addView(mNewsText);
+        card.addView(mNewsScrollView);
+
+        // Status / error line
         mStatus = new TextView(activity);
         mStatus.setTextColor(0xFFFF7878);
-        mStatus.setTypeface(condensed(false));
-        mStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        mStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         mStatus.setGravity(Gravity.CENTER);
         mStatus.setVisibility(View.GONE);
         card.addView(mStatus, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // News is not part of this design; keep an off-screen holder so the
-        // existing fetch logic keeps working.
-        mNewsText = new TextView(activity);
-
-        mRoot.addView(card);
+        scrollView.addView(card);
+        mRoot.addView(scrollView);
 
         seedFromConfig();
         fetchSiteInfo();
@@ -250,54 +360,57 @@ public class MenuFragment {
         return l;
     }
 
-    /** Vertical spacing between rows: 6dp, with explicit height (0 = wrap). */
     private LinearLayout.LayoutParams rowParams(int heightPx) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 heightPx > 0 ? heightPx : ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = dp(6);
+        lp.topMargin = dp(5);
         return lp;
     }
 
     private void addHalfPair(LinearLayout row, View left, View right) {
         LinearLayout.LayoutParams l = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
-        l.rightMargin = dp(3);
+        l.rightMargin = dp(4);
         LinearLayout.LayoutParams r = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
-        r.leftMargin = dp(3);
+        r.leftMargin = dp(4);
         row.addView(left, l);
         row.addView(right, r);
     }
 
-    private Typeface condensed(boolean bold) {
-        return Typeface.create("sans-serif-condensed", bold ? Typeface.BOLD : Typeface.NORMAL);
-    }
-
-    /**
-     * Web `.btn-*`: rounded rectangle with a darker 4px bottom edge
-     * (`box-shadow: inset 0 -4px`) and `filter: brightness(80%)` while pressed.
-     */
     private TextView makeButton(String label, final int body, final int shadow, int sp) {
         TextView btn = new TextView(mActivity);
         btn.setText(label);
         btn.setTextColor(Color.WHITE);
-        btn.setTypeface(condensed(false));
         btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
         btn.setGravity(Gravity.CENTER);
         btn.setShadowLayer(dp(1), 0, dp(1), 0x44000000);
         btn.setClickable(true);
         btn.setBackground(buttonBg(body, shadow));
         btn.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent e) {
+            @Override public boolean onTouch(View v, MotionEvent e) {
                 int a = e.getActionMasked();
                 if (a == MotionEvent.ACTION_DOWN) {
                     v.setBackground(buttonBg(dim(body), dim(shadow)));
                 } else if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) {
                     v.setBackground(buttonBg(body, shadow));
                 }
-                return false; // let the click listener fire
+                return false;
             }
         });
+        return btn;
+    }
+
+    private TextView makeIconButton(String label, final int body, final int shadow, int sp) {
+        TextView btn = new TextView(mActivity);
+        btn.setText(label);
+        btn.setTextColor(Color.WHITE);
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
+        btn.setGravity(Gravity.CENTER);
+        btn.setClickable(true);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(body);
+        bg.setCornerRadius(dp(6));
+        btn.setBackground(bg);
         return btn;
     }
 
@@ -309,13 +422,24 @@ public class MenuFragment {
         top.setColor(body);
         top.setCornerRadius(dp(6));
         LayerDrawable ld = new LayerDrawable(new android.graphics.drawable.Drawable[] { bottom, top });
-        ld.setLayerInset(1, 0, 0, 0, dp(3)); // body sits above a 3dp shadow edge
+        ld.setLayerInset(1, 0, 0, 0, dp(3));
         return ld;
     }
 
     private int dim(int c) {
-        float f = 0.8f;
+        float f = 0.80f;
         return Color.rgb((int) (Color.red(c) * f), (int) (Color.green(c) * f), (int) (Color.blue(c) * f));
+    }
+
+    private void animatePress(View v) {
+        ScaleAnimation scaleDown = new ScaleAnimation(1.0f, 0.95f, 1.0f, 0.95f, 0.5f, 100);
+        v.startAnimation(scaleDown);
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override public void run() {
+                ScaleAnimation scaleUp = new ScaleAnimation(0.95f, 1.0f, 0.95f, 1.0f, 0.5f, 100);
+                v.startAnimation(scaleUp);
+            }
+        }, 100);
     }
 
     // ===================== State ============================================
@@ -331,32 +455,55 @@ public class MenuFragment {
             mRegionLabel.setText(regionText(region, 0));
         }
         mMuted = "true".equals(Json.peekString(config, "muteAudio"));
+        updateMuteButton();
     }
 
-    /** "Local [0 players]" — the web region select's option text. */
     private String regionText(String region, int players) {
         String name = region.length() > 0
                 ? Character.toUpperCase(region.charAt(0)) + region.substring(1)
                 : region;
-        return name + " [" + players + (players == 1 ? " player]" : " players]");
+        return name + " [" + players + (players == 1 ? " player]" : " players]") + "";
     }
 
     private void showRegion() {
         if (mSelectedRegionIdx >= 0 && mSelectedRegionIdx < mPops.size()) {
             PopEntry p = mPops.get(mSelectedRegionIdx);
             mRegionLabel.setText(regionText(p.region, p.playerCount));
+            mPlayerCountLbl.setText("\uD83D\uDC65 " + p.playerCount);
         }
     }
 
     private void setStatus(String text) {
         mStatus.setText(text != null ? text : "");
         mStatus.setVisibility(text != null && !text.isEmpty() ? View.VISIBLE : View.GONE);
+        if (text != null && !text.isEmpty()) {
+            AlphaAnimation flash = new AlphaAnimation(1.0f, 0.5f);
+            flash.setDuration(300);
+            mStatus.startAnimation(flash);
+        }
+    }
+
+    private void toggleMute() {
+        mMuted = !mMuted;
+        SurvBridge.setAudio("mute", mMuted ? 1.0f : 0.0f);
+        SurvBridge.saveConfig();
+        updateMuteButton();
+    }
+    
+    private void updateMuteButton() {
+        mMuteBtn.setText(mMuted ? "\uD83D\uDD07" : "\u266A");
+        mMuteBtn.setTextColor(mMuted ? 0xFFFF6666 : Color.WHITE);
+    }
+
+    private void toggleNews() {
+        mNewsExpanded = !mNewsExpanded;
+        mNewsScrollView.setVisibility(mNewsExpanded ? View.VISIBLE : View.GONE);
+        mNewsBtn.setText(mNewsExpanded ? "\u25B2 Hide News" : "\uD83D\uDCF0 News");
     }
 
     private void fetchSiteInfo() {
         SurvApi.siteInfo(mApiBaseUrl, new SurvApi.Callback() {
-            @Override
-            public void onResult(String json) {
+            @Override public void onResult(String json) {
                 if (json == null) {
                     setStatus("Cannot reach server");
                     return;
@@ -370,6 +517,8 @@ public class MenuFragment {
                 String newsText = parseNewsText(newsJson);
                 if (newsText != null) {
                     mNewsText.setText(newsText);
+                } else {
+                    mNewsText.setText("\uD83D\uDCE4 No news available.\nCheck back later for updates!");
                 }
             }
         });
@@ -381,7 +530,6 @@ public class MenuFragment {
         if (mFindingGame) return;
         mFindingGame = true;
         setStatus("Finding game...");
-
         String region = "na";
         if (mSelectedRegionIdx >= 0 && mSelectedRegionIdx < mPops.size()) {
             region = mPops.get(mSelectedRegionIdx).region;
@@ -396,12 +544,10 @@ public class MenuFragment {
         body.append(",\"autoFill\":true");
         body.append(",\"gameModeIdx\":").append(teamMode == 1 ? 0 : teamMode == 2 ? 1 : 2);
         body.append("}");
-
         final String bodyStr = body.toString();
 
         SurvApi.findGame(mApiBaseUrl, bodyStr, new SurvApi.Callback() {
-            @Override
-            public void onResult(String json) {
+            @Override public void onResult(String json) {
                 mFindingGame = false;
                 if (json == null) {
                     setStatus("Failed to find game");
@@ -453,6 +599,8 @@ public class MenuFragment {
         if (name != null && !name.isEmpty() && !mName.hasFocus()) {
             mName.setText(name);
         }
+        mMuted = "true".equals(Json.peekString(config, "muteAudio"));
+        updateMuteButton();
     }
 
     public void showMessage(String text) {
@@ -462,9 +610,7 @@ public class MenuFragment {
     // ===================== Types ===========================================
 
     static class PopEntry {
-        String region;
-        int playerCount;
-        String l10n;
+        String region; int playerCount; String l10n;
     }
 
     // ===================== JSON Parsing ====================================
@@ -478,14 +624,11 @@ public class MenuFragment {
         if (colon < 0) return pops;
         int arrayStart = json.indexOf('[', colon);
         if (arrayStart < 0) return pops;
-        int depth = 0;
-        int objStart = -1;
+        int depth = 0, objStart = -1;
         for (int i = arrayStart; i < json.length(); i++) {
             char c = json.charAt(i);
-            if (c == '{') {
-                if (depth == 0) objStart = i;
-                depth++;
-            } else if (c == '}') {
+            if (c == '{') { if (depth == 0) objStart = i; depth++; }
+            else if (c == '}') {
                 depth--;
                 if (depth == 0 && objStart >= 0) {
                     String obj = json.substring(objStart, i + 1);
@@ -511,21 +654,22 @@ public class MenuFragment {
         StringBuilder out = new StringBuilder();
         int at = json.indexOf('[');
         if (at < 0) return null;
-        int depth = 0;
-        int objStart = -1;
+        int depth = 0, objStart = -1;
         for (int i = at; i < json.length(); i++) {
             char c = json.charAt(i);
-            if (c == '{') {
-                if (depth == 0) objStart = i;
-                depth++;
-            } else if (c == '}') {
+            if (c == '{') { if (depth == 0) objStart = i; depth++; }
+            else if (c == '}') {
                 depth--;
                 if (depth == 0 && objStart >= 0) {
                     String obj = json.substring(objStart, i + 1);
                     String title = Json.peekString(obj, "title");
                     if (title != null) {
                         if (out.length() > 0) out.append('\n');
-                        out.append("\u2B50 ").append(title);
+                        out.append("\u2726 ").append(title);
+                        String desc = Json.peekString(obj, "body");
+                        if (desc != null && !desc.isEmpty()) {
+                            out.append("\n   ").append(desc.length() > 100 ? desc.substring(0, 100) + "..." : desc);
+                        }
                     }
                     objStart = -1;
                 }
@@ -550,11 +694,8 @@ public class MenuFragment {
             char c = json.charAt(i);
             if (inString) {
                 if (c == '\\') { seg.append(c); i++; if (i < json.length()) seg.append(json.charAt(i)); }
-                else if (c == '"') {
-                    urls.add(seg.toString());
-                    seg = new StringBuilder();
-                    inString = false;
-                } else { seg.append(c); }
+                else if (c == '"') { urls.add(seg.toString()); seg = new StringBuilder(); inString = false; }
+                else { seg.append(c); }
             } else {
                 if (c == '"') inString = true;
                 else if (c == '[') depth++;
@@ -571,8 +712,7 @@ public class MenuFragment {
         if (colon < 0) return null;
         int objStart = json.indexOf('{', colon);
         if (objStart < 0) return null;
-        String res = json.substring(objStart);
-        return Json.peekString(res, "joinToken");
+        return Json.peekString(json.substring(objStart), "joinToken");
     }
 
     private String escapeJson(String s) {
