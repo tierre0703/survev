@@ -98,6 +98,19 @@ public class AppActivity extends AxmolActivity {
         super.onDestroy();
     }
 
+    @Override
+    public boolean onKeyDown(final int pKeyCode, final KeyEvent pKeyEvent) {
+        if (pKeyCode == KeyEvent.KEYCODE_BACK) {
+            if (mJavaUi != null && mJavaUi.handleBackPressed()) {
+                return true;
+            }
+            // If the Java UI didn't handle it, pass to the GL surface (game control
+            // e.g. pause menu).
+            return false;
+        }
+        return super.onKeyDown(pKeyCode, pKeyEvent);
+    }
+
     /**
      * Adds the Java UI layer above the axmol GLSurfaceView (ARCHITECTURE.md
      * section 3.2 rule 1). `mFrameLayout` already exists here because

@@ -60,21 +60,22 @@ public class JavaUiHost {
 
     private void createBackBtn() {
         mBackBtn = new Button(mActivity);
-        mBackBtn.setText("\u2190"); // leftwards arrow
-        mBackBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        mBackBtn.setText("\u25C0"); // left-pointing triangle (bigger glyph)
+        mBackBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
         mBackBtn.setTextColor(Color.WHITE);
-        mBackBtn.setBackgroundColor(0xAA000000); // semi-transparent black
+        mBackBtn.setBackgroundColor(0xBB000000); // more opaque, semi-transparent black
         mBackBtn.setVisibility(View.GONE);
+        mBackBtn.setGravity(Gravity.CENTER);
         mBackBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 handleBackPressed();
             }
         });
-        int backSize = dp(48);
+        int backSize = dp(56);
         FrameLayout.LayoutParams backParams = new FrameLayout.LayoutParams(backSize, backSize);
         backParams.gravity = Gravity.TOP | Gravity.LEFT;
-        backParams.setMargins(dp(8), dp(8), 0, 0);
+        backParams.setMargins(dp(12), dp(12), 0, 0);
         mContainer.addView(mBackBtn, backParams);
     }
 
