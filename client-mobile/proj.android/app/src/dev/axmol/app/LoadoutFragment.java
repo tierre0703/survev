@@ -113,7 +113,7 @@ public class LoadoutFragment {
         panel.setBackgroundColor(PANEL_BG);
         panel.setPadding(dp(14), dp(14), dp(14), dp(14));
 
-        // Title row with sort button
+        // Title row with sort and close buttons
         LinearLayout titleRow = new LinearLayout(activity);
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -134,6 +134,23 @@ public class LoadoutFragment {
             }
         });
         titleRow.addView(mSortBtn);
+        
+        // Close button in title row (always visible at top)
+        Button titleCloseBtn = new Button(activity);
+        titleCloseBtn.setText("<");
+        titleCloseBtn.setBackgroundColor(0xFF5A5A5A);
+        titleCloseBtn.setTextColor(Color.WHITE);
+        titleCloseBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(dp(36), dp(36));
+        tclp.leftMargin = dp(4);
+        titleCloseBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hide();
+            }
+        });
+        titleRow.addView(titleCloseBtn);
+        
         panel.addView(titleRow);
 
         // Category row

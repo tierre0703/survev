@@ -1,18 +1,17 @@
-/****************************************************************************
- * Minimal JSON reader for the Java UI (ARCHITECTURE.md section 4.1: the bridge
- * only marshals JSON strings, no structs).
- *
- * The Java screens need to read a *few* keys out of the documents C++ produces
- * (the config blob, the flattened l10n table, the news array). A full parser
- * would be dead weight here, so this class only knows how to find the top-level
- * value of a key and how to count the keys of a flat object - enough for
- * "playerName", "index-play-solo" and the news column. When the real screens
- * land (S3+) and need nested documents, replace this with one shared parser
- * rather than growing it method by method.
- ****************************************************************************/
 package dev.axmol.app;
 
+import android.util.Log;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonPrimitive;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 public final class Json {
+    private static final String TAG = "Json";
     private Json() {}
 
     /**
@@ -20,153 +19,123 @@ public final class Json {
      * null when the document, the key or the value type does not match.
      */
     public static String peekString(String json, String key) {
-        if (json == null || key == null) {
-            return null;
-        }
-        int at = findKey(json, key);
-        if (at < 0) {
-            return null;
-        }
-        at = skipWhitespace(json, at);
-        if (at >= json.length() || json.charAt(at) != '"') {
-            return null;
-        }
-        StringBuilder out = new StringBuilder();
-        for (int i = at + 1; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (c == '\\' && i + 1 < json.length()) {
-                char escaped = json.charAt(++i);
-                switch (escaped) {
-                    case 'n': out.append('\n'); break;
-                    case 'r': out.append('\r'); break;
-                    case 't': out.append('\t'); break;
-                    case 'b': out.append('\b'); break;
-                    case 'f': out.append('\f'); break;
-                    default: out.append(escaped); break;
-                }
-                continue;
+        if (json == null || key == null) return null;
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                JsonPrimitive p = el.getAsJsonPrimitive();
+                if (p.isString()) return p.getAsString();
             }
-            if (c == '"') {
-                return out.toString();
-            }
-            out.append(c);
+        } catch (Exception e) {
+            Log.w(TAG, "peekString failed for key=" + key + ": " + e.getMessage());
         }
         return null;
     }
 
+    /** Returns the integer value of a top-level key, or 0 on error. */
+    public static int peekInt(String json, String key) {
+        if (json == null || key == null) return 0;
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                return el.getAsInt();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "peekInt failed for key=" + key + ": " + e.getMessage());
+        }
+        return 0;
+    }
+
+    /** Returns the double value of a top-level key, or 0.0 on error. */
+    public static double peekDouble(String json, String key) {
+        if (json == null || key == null) return 0.0;
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                return el.getAsDouble();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "peekDouble failed for key=" + key + ": " + e.getMessage());
+        }
+        return 0.0;
+    }
+
     /** Number of keys in a flat JSON object (0 when the text is not an object). */
     public static int countKeys(String json) {
-        if (json == null) {
+        if (json == null) return 0;
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            return obj.size();
+        } catch (Exception e) {
             return 0;
         }
-        int at = skipWhitespace(json, 0);
-        if (at >= json.length() || json.charAt(at) != '{') {
-            return 0;
-        }
-        int depth = 0;
-        int keys = 0;
-        boolean inString = false;
-        for (int i = at; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (inString) {
-                if (c == '\\') {
-                    i++;
-                } else if (c == '"') {
-                    inString = false;
-                }
-                continue;
-            }
-            switch (c) {
-                case '"':
-                    inString = true;
-                    if (depth == 1) {
-                        keys++;
-                    }
-                    break;
-                case '{':
-                case '[':
-                    depth++;
-                    break;
-                case '}':
-                    if (depth == 1) {
-                        return keys;
-                    }
-                    depth--;
-                    break;
-                case ']':
-                    depth--;
-                    break;
-                default:
-                    break;
-            }
-        }
-        return keys;
     }
 
-    private static int findKey(String json, String key) {
-        int at = skipWhitespace(json, 0);
-        if (at >= json.length() || json.charAt(at) != '{') {
-            return -1;
-        }
-        int depth = 0;
-        boolean inString = false;
-        for (int i = at; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (inString) {
-                if (c == '\\') {
-                    i++;
-                } else if (c == '"') {
-                    inString = false;
-                    if (depth == 1) {
-                        int end = i + 1;
-                        int colon = skipWhitespace(json, end);
-                        if (colon < json.length() && json.charAt(colon) == ':') {
-                            String found = unescape(json, i);
-                            if (key.equals(found)) {
-                                return colon + 1;
-                            }
-                        }
+    /**
+     * Parses a JSON object value by key and returns a list of string values from
+     * a nested array, e.g. {"key": ["a", "b"]}
+     */
+    public static List<String> parseStringArray(String json, String key) {
+        List<String> result = new ArrayList<>();
+        if (json == null || key == null) return result;
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonArray()) {
+                JsonArray arr = el.getAsJsonArray();
+                for (int i = 0; i < arr.size(); i++) {
+                    JsonElement item = arr.get(i);
+                    if (item.isJsonPrimitive()) {
+                        result.add(item.getAsString());
                     }
                 }
-                continue;
             }
-            if (c == '"') {
-                inString = true;
-                continue;
+        } catch (Exception e) {
+            Log.w(TAG, "parseStringArray failed for key=" + key + ": " + e.getMessage());
+        }
+        return result;
+    }
+
+    /**
+     * Parses the "pops" object: {"na": {"playerCount": 42, "l10n": "..."}, ...}
+     * Returns a list of PopEntry for each region key.
+     */
+    public static List<PopEntry> parsePops(String json) {
+        List<PopEntry> pops = new ArrayList<>();
+        if (json == null) return pops;
+        try {
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            JsonObject popsObj = root.getAsJsonObject("pops");
+            if (popsObj == null) {
+                Log.w(TAG, "parsePops: no pops object found");
+                return pops;
             }
-            if (c == '{' || c == '[') {
-                depth++;
-            } else if (c == '}' || c == ']') {
-                if (depth == 0) {
-                    return -1;
+            for (Map.Entry<String, JsonElement> entry : popsObj.entrySet()) {
+                String region = entry.getKey();
+                JsonElement val = entry.getValue();
+                if (val != null && val.isJsonObject()) {
+                    JsonObject regionObj = val.getAsJsonObject();
+                    PopEntry p = new PopEntry();
+                    p.region = region;
+                    p.l10n = regionObj.has("l10n") && !regionObj.get("l10n").isJsonNull()
+                            ? regionObj.get("l10n").getAsString() : region;
+                    p.playerCount = regionObj.has("playerCount") && !regionObj.get("playerCount").isJsonNull()
+                            ? regionObj.get("playerCount").getAsInt() : 0;
+                    pops.add(p);
                 }
-                depth--;
             }
+        } catch (Exception e) {
+            Log.w(TAG, "parsePops failed: " + e.getMessage());
         }
-        return -1;
+        return pops;
     }
 
-    /** Re-reads the string literal that ends at `closeQuote` (exclusive). */
-    private static String unescape(String json, int closeQuote) {
-        int start = closeQuote;
-        for (int i = closeQuote - 1; i >= 0; i--) {
-            if (json.charAt(i) == '"' && (i == 0 || json.charAt(i - 1) != '\\')) {
-                start = i + 1;
-                break;
-            }
-        }
-        return json.substring(start, closeQuote);
-    }
-
-    private static int skipWhitespace(String json, int at) {
-        while (at < json.length()) {
-            char c = json.charAt(at);
-            if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
-                at++;
-            } else {
-                break;
-            }
-        }
-        return at;
+    public static class PopEntry {
+        public String region;
+        public int playerCount;
+        public String l10n;
     }
 }

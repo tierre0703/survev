@@ -60,8 +60,8 @@ public class JavaUiHost {
 
     private void createBackBtn() {
         mBackBtn = new Button(mActivity);
-        mBackBtn.setText("\u25C0"); // left-pointing triangle (bigger glyph)
-        mBackBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
+        mBackBtn.setText("<"); // simple less-than chevron
+        mBackBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 32);
         mBackBtn.setTextColor(Color.WHITE);
         mBackBtn.setBackgroundColor(0xBB000000); // more opaque, semi-transparent black
         mBackBtn.setVisibility(View.GONE);

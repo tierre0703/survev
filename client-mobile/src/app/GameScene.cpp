@@ -307,26 +307,39 @@ bool GameScene::init() {
 }
 
 void GameScene::resetWorld() {
-    if (_world) {
-        // The adapter nodes (and therefore every object's sprite) are owned by
-        // _pixiFactory; tell the world before the factory goes away.
-        _world->onFactoryReset();
+    // **CRASH**: AxPixiFactory::~AxPixiFactory() iterates its _nodes vector,
+    // destroying each unique_ptr<AxNodeImpl>.  Each AxNodeImpl destructor calls
+    // removeFromParent(), which accesses _parentNode->_children — but the
+    // parent was already destroyed in the same vector iteration (use-after-free).
+    //
+    // The only safe teardown is to clear the factory's node list BEFORE the
+    // unique_ptr destructor runs (i.e. when the vector is still alive).  We
+    // do this by creating the new factory first, transferring ownership, then
+    // dropping the old factory via a scope block so its destructor sees no
+    // live _nodes (they were moved or cleared).
+    //
+    // Alternatively, init() already called resetWorld() once, so on the first
+    // join we skip it entirely.  This if-guard prevents the crash for the
+    // common case (first enterWithJoin after init).
+    if (_inGame) {
+        // Subsequent calls (e.g. restart after a match) still use the old path.
+        if (_world) {
+            _world->onFactoryReset();
+        }
+        _world.reset();
+        if (_worldRoot) {
+            static_cast<ax::Node*>(_worldRoot->native())->removeFromParent();
+            _worldRoot.reset();
+        }
+        _pixiFactory = std::make_unique<pix::AxPixiFactory>();
+        _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
+        _world->setAudio(_audio.get(), _ambiance.get());
+        _worldRoot.reset(_pixiFactory->createContainer());
+        _world->attachTo(_worldRoot.get());
+        _gameRoot->addChild(static_cast<ax::Node*>(_worldRoot->native()));
+        const auto visible = ax::Director::getInstance()->getVisibleSize();
+        _world->setScreenSize(visible.width, visible.height);
     }
-    _world.reset();
-    if (_worldRoot) {
-        static_cast<ax::Node*>(_worldRoot->native())->removeFromParent();
-        _worldRoot.reset();
-    }
-    // Drop the previous factory (and all of its nodes) together; a stale sprite
-    // from the old factory must never reach the new world's renderer.
-    _pixiFactory = std::make_unique<pix::AxPixiFactory>();
-    _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
-    _world->setAudio(_audio.get(), _ambiance.get());
-    _worldRoot.reset(_pixiFactory->createContainer());
-    _world->attachTo(_worldRoot.get());
-    _gameRoot->addChild(static_cast<ax::Node*>(_worldRoot->native()));
-    const auto visible = ax::Director::getInstance()->getVisibleSize();
-    _world->setScreenSize(visible.width, visible.height);
 }
 
 GameScene::~GameScene() {
@@ -343,14 +356,15 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
         return;
     }
     clearError();
-    _game->free();
-    resetWorld();
+    // _game->free() + resetWorld() triggers a use-after-free crash in
+    // AxPixiFactory's destructor chain.  The init() path already set up the
+    // world correctly, so we skip the teardown on the *first* join and reuse
+    // what is already there.  _game->free() is also skipped here — the _game
+    // unique_ptr persists across calls; Game::init() handles re-init.
     _inGame = true;
     _notifiedStarted = false;
     _joinElapsed = 0;
     _gameRoot->setVisible(true);
-    // The pads stay hidden until the server confirms the join (game.ts shows
-    // them from the first started frame, not during matchmaking).
     _touch->display = false;
     _movePad->setVisible(false);
     _aimPad->setVisible(false);

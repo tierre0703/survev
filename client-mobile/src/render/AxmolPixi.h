@@ -52,11 +52,24 @@ public:
         // autoreleased by create(); wrappers that are never added to a parent
         // (e.g. the layer mask, which is only used as a ClippingNode stencil)
         // would otherwise be freed when the frame's pool drains.
+        // **IMPORTANT**: Detach from parent first so the axmol node is removed
+        // from the scene graph before the retain count goes to zero.
+        // Otherwise the node's own destructor tries to unparent and hits a
+        // use-after-free on the parent's child list (AxPixiFactory destruction
+        // is the primary trigger — see resetWorld()).
+        removeFromParent();
         if (_clipper) {
             _clipper->release();
+            _clipper = nullptr;
         }
+        // Clear children so the factory's unique_ptr list is the only owner;
+        // this prevents AxNodeImpl from touching nodes that are being
+        // destructed alongside it in the same batch.
+        _children.clear();
+        _parentNode = nullptr;
         if (_node) {
             _node->release();
+            _node = nullptr;
         }
     }
 

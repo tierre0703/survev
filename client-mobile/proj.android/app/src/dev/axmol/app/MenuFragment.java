@@ -47,6 +47,7 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class MenuFragment {
     private static final String TAG = "MenuFragment";
@@ -100,6 +101,9 @@ public class MenuFragment {
     private boolean mFindingGame = false;
     private String mApiBaseUrl = "http://127.0.0.1:8000";
     private boolean mNewsExpanded = false;
+    private boolean mRegionDropdownOpen = false;
+    private final LinearLayout mRegionDropdown;
+    private final FrameLayout mRegionRowContainer;
 
     public MenuFragment(Activity activity, JavaUiHost host) {
         mActivity = activity;
@@ -198,7 +202,7 @@ public class MenuFragment {
         nameRow.addView(mName, new LinearLayout.LayoutParams(0, dp(38), 1f));
         card.addView(nameRow, rowParams(0));
 
-        // ===== Row 2: region select =====
+        // ===== Row 2: region select (click opens dropdown) =====
         mRegionLabel = new TextView(activity);
         mRegionLabel.setText("Local [0 players]");
         mRegionLabel.setTextColor(Color.WHITE);
@@ -212,12 +216,12 @@ public class MenuFragment {
         mRegionLabel.setClickable(true);
         mRegionLabel.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                cycleRegion();
+                toggleRegionDropdown();
                 animatePress(v);
             }
         });
-        FrameLayout selectBox = new FrameLayout(activity);
-        selectBox.addView(mRegionLabel, new FrameLayout.LayoutParams(
+        mRegionRowContainer = new FrameLayout(activity);
+        mRegionRowContainer.addView(mRegionLabel, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         TextView chevron = new TextView(activity);
         chevron.setText("\u25BC");
@@ -227,8 +231,16 @@ public class MenuFragment {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         chevLp.gravity = Gravity.CENTER_VERTICAL | Gravity.RIGHT;
         chevLp.rightMargin = dp(10);
-        selectBox.addView(chevron, chevLp);
-        card.addView(selectBox, rowParams(dp(40)));
+        mRegionRowContainer.addView(chevron, chevLp);
+        card.addView(mRegionRowContainer, rowParams(dp(40)));
+
+        // ===== Region dropdown (scrollable list, hidden by default) =====
+        mRegionDropdown = new LinearLayout(activity);
+        mRegionDropdown.setOrientation(LinearLayout.VERTICAL);
+        mRegionDropdown.setBackgroundColor(0xDD333333);
+        mRegionDropdown.setVisibility(View.GONE);
+        card.addView(mRegionDropdown, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         // ===== Row 3: Play Solo =====
         mPlaySolo = makeButton("\u25B6 Play Solo", GREEN, GREEN_SHADOW, 18);
@@ -502,16 +514,31 @@ public class MenuFragment {
     }
 
     private void fetchSiteInfo() {
+        setStatus("Connecting to server...");
         SurvApi.siteInfo(mApiBaseUrl, new SurvApi.Callback() {
             @Override public void onResult(String json) {
                 if (json == null) {
                     setStatus("Cannot reach server");
                     return;
                 }
-                mPops = parsePops(json);
+                Log.i(TAG, "site_info response: " + json.substring(0, Math.min(json.length(), 200)));
+                List<Json.PopEntry> parsed = Json.parsePops(json);
+                mPops.clear();
+                for (Json.PopEntry p : parsed) {
+                    PopEntry myP = new PopEntry();
+                    myP.region = p.region;
+                    myP.playerCount = p.playerCount;
+                    myP.l10n = p.l10n;
+                    mPops.add(myP);
+                }
                 if (mPops.size() > 0) {
                     mSelectedRegionIdx = 0;
                     showRegion();
+                    buildRegionDropdown();
+                    setStatus("");
+                } else {
+                    Log.w(TAG, "No regions parsed from site_info.");
+                    setStatus("No regions available from server");
                 }
                 String newsJson = SurvBridge.getNewsJson();
                 String newsText = parseNewsText(newsJson);
@@ -536,15 +563,15 @@ public class MenuFragment {
         }
         SurvBridge.setRegion(region);
 
-        StringBuilder body = new StringBuilder();
-        body.append("{\"region\":\"").append(escapeJson(region)).append("\"");
-        body.append(",\"zones\":[]");
-        body.append(",\"version\":1028");
-        body.append(",\"playerCount\":").append(teamMode);
-        body.append(",\"autoFill\":true");
-        body.append(",\"gameModeIdx\":").append(teamMode == 1 ? 0 : teamMode == 2 ? 1 : 2);
-        body.append("}");
-        final String bodyStr = body.toString();
+        int gameModeIdx = teamMode == 1 ? 0 : teamMode == 2 ? 1 : 2;
+        final String bodyStr = "{\"region\":\"" + escapeJson(region) + "\""
+                + ",\"zones\":[]"
+                + ",\"version\":1028"
+                + ",\"playerCount\":" + teamMode
+                + ",\"autoFill\":true"
+                + ",\"gameModeIdx\":" + gameModeIdx
+                + "}";
+        Log.i(TAG, "onPlay find_game body=" + bodyStr);
 
         SurvApi.findGame(mApiBaseUrl, bodyStr, new SurvApi.Callback() {
             @Override public void onResult(String json) {
@@ -573,11 +600,51 @@ public class MenuFragment {
 
     // ===================== Interactions ====================================
 
-    private void cycleRegion() {
-        if (mPops.size() <= 1) return;
-        mSelectedRegionIdx = (mSelectedRegionIdx + 1) % mPops.size();
+    private void toggleRegionDropdown() {
+        if (mPops.isEmpty()) {
+            // Ping the server again
+            fetchSiteInfo();
+            return;
+        }
+        mRegionDropdownOpen = !mRegionDropdownOpen;
+        mRegionDropdown.setVisibility(mRegionDropdownOpen ? View.VISIBLE : View.GONE);
+    }
+
+    private void buildRegionDropdown() {
+        mRegionDropdown.removeAllViews();
+        for (int i = 0; i < mPops.size(); i++) {
+            final int idx = i;
+            PopEntry p = mPops.get(i);
+            TextView item = new TextView(mActivity);
+            item.setText(regionText(p.region, p.playerCount));
+            item.setTextColor(Color.WHITE);
+            item.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            item.setGravity(Gravity.CENTER);
+            item.setPadding(dp(8), dp(6), dp(8), dp(6));
+            GradientDrawable itemBg = new GradientDrawable();
+            itemBg.setColor(0xFF444444);
+            itemBg.setCornerRadius(dp(4));
+            item.setBackground(itemBg);
+            item.setClickable(true);
+            final int fi = i;
+            item.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    selectRegion(fi);
+                }
+            });
+            mRegionDropdown.addView(item, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
+        }
+    }
+
+    private void selectRegion(int idx) {
+        if (idx < 0 || idx >= mPops.size()) return;
+        mSelectedRegionIdx = idx;
         showRegion();
-        SurvBridge.setRegion(mPops.get(mSelectedRegionIdx).region);
+        SurvBridge.setRegion(mPops.get(idx).region);
+        // Close dropdown
+        mRegionDropdownOpen = false;
+        mRegionDropdown.setVisibility(View.GONE);
     }
 
     // ===================== Public API ======================================
@@ -615,40 +682,6 @@ public class MenuFragment {
 
     // ===================== JSON Parsing ====================================
 
-    private List<PopEntry> parsePops(String json) {
-        List<PopEntry> pops = new ArrayList<PopEntry>();
-        if (json == null) return pops;
-        int at = json.indexOf("\"pops\"");
-        if (at < 0) return pops;
-        int colon = json.indexOf(':', at);
-        if (colon < 0) return pops;
-        int arrayStart = json.indexOf('[', colon);
-        if (arrayStart < 0) return pops;
-        int depth = 0, objStart = -1;
-        for (int i = arrayStart; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (c == '{') { if (depth == 0) objStart = i; depth++; }
-            else if (c == '}') {
-                depth--;
-                if (depth == 0 && objStart >= 0) {
-                    String obj = json.substring(objStart, i + 1);
-                    String r = Json.peekString(obj, "region");
-                    if (r != null) {
-                        PopEntry p = new PopEntry();
-                        p.region = r;
-                        String pc = Json.peekString(obj, "playerCount");
-                        p.playerCount = pc != null ? Integer.parseInt(pc) : 0;
-                        p.l10n = Json.peekString(obj, "l10n");
-                        if (p.l10n == null) p.l10n = r;
-                        pops.add(p);
-                    }
-                    objStart = -1;
-                }
-            }
-        }
-        return pops;
-    }
-
     private String parseNewsText(String json) {
         if (json == null) return null;
         StringBuilder out = new StringBuilder();
@@ -681,38 +714,41 @@ public class MenuFragment {
     private List<String> parseUrls(String json) {
         List<String> urls = new ArrayList<String>();
         if (json == null) return urls;
-        int at = json.indexOf("\"urls\"");
-        if (at < 0) return urls;
-        int colon = json.indexOf(':', at);
-        if (colon < 0) return urls;
-        int arrayStart = json.indexOf('[', colon);
-        if (arrayStart < 0) return urls;
-        int depth = 0;
-        StringBuilder seg = new StringBuilder();
-        boolean inString = false;
-        for (int i = arrayStart; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (inString) {
-                if (c == '\\') { seg.append(c); i++; if (i < json.length()) seg.append(json.charAt(i)); }
-                else if (c == '"') { urls.add(seg.toString()); seg = new StringBuilder(); inString = false; }
-                else { seg.append(c); }
-            } else {
-                if (c == '"') inString = true;
-                else if (c == '[') depth++;
-                else if (c == ']') { depth--; if (depth == 0) break; }
+        try {
+            com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            com.google.gson.JsonElement resEl = root.get("res");
+            if (resEl != null && resEl.isJsonObject()) {
+                com.google.gson.JsonObject resObj = resEl.getAsJsonObject();
+                com.google.gson.JsonElement urlsEl = resObj.get("urls");
+                if (urlsEl != null && urlsEl.isJsonArray()) {
+                    com.google.gson.JsonArray arr = urlsEl.getAsJsonArray();
+                    for (int i = 0; i < arr.size(); i++) {
+                        urls.add(arr.get(i).getAsString());
+                    }
+                }
             }
+        } catch (Exception e) {
+            Log.w(TAG, "parseUrls failed: " + e.getMessage());
         }
         return urls;
     }
 
     private String parseJoinToken(String json) {
-        int at = json.indexOf("\"res\"");
-        if (at < 0) return null;
-        int colon = json.indexOf(':', at);
-        if (colon < 0) return null;
-        int objStart = json.indexOf('{', colon);
-        if (objStart < 0) return null;
-        return Json.peekString(json.substring(objStart), "joinToken");
+        if (json == null) return null;
+        try {
+            com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            com.google.gson.JsonElement resEl = root.get("res");
+            if (resEl != null && resEl.isJsonObject()) {
+                com.google.gson.JsonObject resObj = resEl.getAsJsonObject();
+                com.google.gson.JsonElement tokenEl = resObj.get("joinToken");
+                if (tokenEl != null && tokenEl.isJsonPrimitive()) {
+                    return tokenEl.getAsString();
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "parseJoinToken failed: " + e.getMessage());
+        }
+        return null;
     }
 
     private String escapeJson(String s) {
