@@ -595,3 +595,93 @@ Closes the two §10 "Remaining (not defects)" items.
 - x86_64 `libSurvevMobile.so` builds and links clean.
 
 
+
+---
+
+## 12. Session 7 - join crash fixed (2026-10-20)
+
+Starting the app and pressing **Play Solo** killed the process every time.
+Three distinct native crashes were found in sequence; the first is fixed, the
+other two share one remaining bug.
+
+### 12.1 `SIGSEGV` in `GameWorld::loadMap` (fixed)
+
+```
+#00 GameWorld::loadMap+33        mov 0x3b8(%rdi), %r15   (fault 0x3b8 = nullptr+_creator)
+#01 GameScene::init()::lambda    (the map callback)
+```
+
+`GameScene::init()` leaves `_world` null and the map callback dereferenced it.
+The world was only built by `resetWorld()` when `_inGame` was already true,
+but `enterWithJoin()` opened the socket (`tryJoinUrls()` pumps frames) *before*
+any later `resetWorld()` could run, so the first match's MapMsg always reached
+a null world.
+
+Fix:
+- `enterWithJoin()` now calls `resetWorld()` **before** `tryJoinUrls()`, so the
+  world exists when the first MapMsg arrives (and it is even loaded at once by
+  `Game::hasMap()/map()` → `GameWorld::replayMap()` when the server answered
+  before the socket opened).
+- The map/update callbacks still guard `_world` (frames can arrive between
+  joins / after `leaveGame()`).
+- `GameWorld::setScreenSize()` no longer requires `mapLoaded()`: the layers are
+  created before the map, so terrain would otherwise have rendered at the
+  default camera size. `GameScene::update()` now re-applies the real viewport
+  size once the GL view exists (`_worldSized/_worldSizeDirty`).
+- `leaveGame()` hides `_worldRoot` (game.ts `free()` hides the canvas).
+- Host tests: `tests/test_join_map.cpp`
+  (`game_map_without_world_callback`, `gameworld_replay_cached_map`).
+
+### 12.2 / 12.3 FairyGUI widgets freed after the frame that built them (root cause found, per-frame use still disabled)
+
+Symptoms: `SIGSEGV` in `fairygui::GObject::setVisible()` from
+`FguiHud::setVisible`/`refreshHealth`, and in `GObject::setPosition()` from
+`Touch::m_update` → `FguiPadGraphics`. The fault address is an unmapped heap
+page (`SEGV_ACCERR`), i.e. the object itself was freed.
+
+Root cause: FairyGUI nodes are ref-counted (`CREATE_FUNC` → `autorelease()`)
+and `GComponent::addChild()`/`GRoot::addChild()` do **not** retain their
+children. The engine's `Object::release()` only runs the destructor when the
+reference count is exactly `1`, so an autoreleased widget that was never
+retained has no valid owner: it is destroyed when the frame's autorelease pool
+drains (`GRoot`/`FguiHud` then keep raw dangling pointers). An `ax::Node`
+probe survives the same frame (retain count 2), so this is specific to how the
+FGUI widgets are created.
+
+Fixes applied:
+- `FguiHud`: `addChild()` re-parents the `create()` reference into the HUD
+  root, and `keep()` retains objects that stay detached (the minimap frame);
+  the HUD root is owned by the member that holds it.
+- `FguiEmoteWheel`: owns its container (`retain()` in `build()`, released in
+  the destructor); wedges are children of it.
+- `FguiPadGraphics`: owns its ring/dot (`retain()` in `ensureFx()`, released
+  in the destructor); the dot is raised above the ring in the `GRoot` order.
+
+Still open: with the per-frame writes enabled the app still faults as soon as
+a widget is touched, so `FguiHud::update()` is gated off and
+`GameScene::update()` no longer shows the HUD or feeds the pads (both marked
+`TEMP`, with the reason inline). The ownership change above is kept because it
+is correct on its own; the remaining lifetime problem is in the FairyGUI
+object stack and still needs a fix (build with ASan on an arm64 image, or
+mirror what `central-package` does with its widgets).
+
+Note: the `AppDelegate.cpp` simplification from the previous pass (no C++
+`MenuScene`, bridge without `_menu`) was **reverted** - the bridge dereferences
+the menu for config/region, which crashed in `ui::Config::setString` on Play.
+
+### 12.4 `AxPixiFactory` teardown use-after-free (known, still open)
+
+`AxPixiFactory::~AxPixiFactory()` destroys its `_nodes` in vector order; an
+`AxNodeImpl` destructor walks its parent's `_children`, so parents destroyed
+earlier in the same batch leave dangling pointers. This is why
+`GameScene::resetWorld()` keeps its `if (_inGame)` guard (the factory is only
+replaced on a join, never in `init()`). The details are in the comment block at
+the top of `GameScene::resetWorld()`.
+
+### Verification
+
+- `surv_tests`: **105 tests, 1,903 assertions, 0 failures.**
+- On device (x86_64 emulator + bundle server via `adb reverse`): launch, Java
+  menu, `Play Solo` → `find_game` → connect → `Map` + `Update` handled, the
+  match world renders behind the menu, no crash from 12.1; the process stays
+  alive because the HUD/pad writes are gated off (12.2).

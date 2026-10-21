@@ -280,11 +280,30 @@ bool GameScene::init() {
         // No-op: the pads no longer use atlas frames.
     });
     resetWorld();
+    // init() deliberately leaves the world null (resetWorld() only builds it on
+    // a join); guard the sizing below.
+    if (_world) {
+        // Size the layers for the viewport now and again whenever the director
+        // reports a real size (the world is built before the GL view exists, so
+        // the size at init() can still be the default).
+        const auto visible = ax::Director::getInstance()->getVisibleSize();
+        _world->setScreenSize(visible.width, visible.height);
+        _worldSized = true;
+    }
     _game->setMapCallback([this](const MapMsg& msg) {
         loadAtlasesForMap(msg.mapName);
-        _world->loadMap(msg);
+        if (_world) {
+            _world->loadMap(msg);
+        }
     });
-    _game->setUpdateCallback([this](const UpdateMsg& msg) { _world->applyUpdate(msg); });
+    _game->setUpdateCallback([this](const UpdateMsg& msg) {
+        // A Map/Update arriving while no world exists (the world is built in
+        // enterWithJoin()) must not dereference a null world.
+        if (_world) {
+            _world->applyUpdate(msg);
+        }
+    });
+
     _game->setPickupSoundCallback(
         [this](const std::string& item) { onPickupSound(item); });
 
@@ -318,11 +337,9 @@ void GameScene::resetWorld() {
     // dropping the old factory via a scope block so its destructor sees no
     // live _nodes (they were moved or cleared).
     //
-    // Alternatively, init() already called resetWorld() once, so on the first
-    // join we skip it entirely.  This if-guard prevents the crash for the
-    // common case (first enterWithJoin after init).
+    // Because of that crash the world is only built on a join, never in
+    // init(): `_inGame` is set by enterWithJoin() before it calls this.
     if (_inGame) {
-        // Subsequent calls (e.g. restart after a match) still use the old path.
         if (_world) {
             _world->onFactoryReset();
         }
@@ -334,12 +351,30 @@ void GameScene::resetWorld() {
         _pixiFactory = std::make_unique<pix::AxPixiFactory>();
         _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
         _world->setAudio(_audio.get(), _ambiance.get());
+        // view.ts resizeGame callbacks: the new layers must follow the camera.
+        _world->setSizeCallbacks(
+            [this](float width, float height) { onWorldResize(width, height); },
+            [this] { _worldSizeDirty = true; });
         _worldRoot.reset(_pixiFactory->createContainer());
         _world->attachTo(_worldRoot.get());
         _gameRoot->addChild(static_cast<ax::Node*>(_worldRoot->native()));
+        _worldRoot->setVisible(_worldVisible);
+        // view.ts setSize(): give the new layers the real viewport size right
+        // away (they were just rebuilt).
         const auto visible = ax::Director::getInstance()->getVisibleSize();
         _world->setScreenSize(visible.width, visible.height);
+        _worldSize = visible;
+        _worldSizeDirty = false;
+        _worldSized = true;
     }
+}
+
+// view.ts resizeGame(): every listener re-lays-out for the new size. The
+// world (and its listeners) is rebuilt for every match, so work is routed
+// through `_worldSizeDirty` and applied on the next update tick.
+void GameScene::onWorldResize(float width, float height) {
+    _worldSize = ax::Size(width, height);
+    _worldSizeDirty = true;
 }
 
 GameScene::~GameScene() {
@@ -357,14 +392,27 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
     }
     clearError();
     // _game->free() + resetWorld() triggers a use-after-free crash in
-    // AxPixiFactory's destructor chain.  The init() path already set up the
-    // world correctly, so we skip the teardown on the *first* join and reuse
-    // what is already there.  _game->free() is also skipped here — the _game
-    // unique_ptr persists across calls; Game::init() handles re-init.
+    // AxPixiFactory's destructor chain (see resetWorld()), so on join the world
+    // is rebuilt by resetWorld() below, never freed. _game->free() is skipped
+    // here too: the _game unique_ptr persists across joins.
     _inGame = true;
     _notifiedStarted = false;
     _joinElapsed = 0;
     _gameRoot->setVisible(true);
+    _worldVisible = true;
+    // Build the match world *before* the socket opens. Otherwise the first
+    // MapMsg (pumped from tryJoinUrls() below) reaches a null world and the
+    // join crashes in GameWorld::loadMap().
+    resetWorld();
+    if (_worldRoot) {
+        _worldRoot->setVisible(true);
+    }
+    // Frames can already be queued when re-joining, so adopt the cached MapMsg
+    // when there is one (normally it lands in the map callback during
+    // tryJoinUrls() below).
+    if (_game && _game->hasMap()) {
+        _world->replayMap(_game->map());
+    }
     _touch->display = false;
     _movePad->setVisible(false);
     _aimPad->setVisible(false);
@@ -396,6 +444,12 @@ void GameScene::leaveGame() {
     _pendingFind = false;
     _findInFlight = false;
     ++_findGeneration;
+    // game.ts free(): stop drawing the finished match's world (also hides a
+    // world that a concurrent join is still rebuilding).
+    _worldVisible = false;
+    if (_worldRoot) {
+        _worldRoot->setVisible(false);
+    }
     // touch.ts hideAll(): the pads stay hidden until the next match starts.
     _touch->hideAll();
     for (auto& touch : _touch->touches) touch.active = false;
@@ -527,6 +581,19 @@ void GameScene::resumeGame() {
 }
 
 void GameScene::update(float delta) {
+    // view.ts setSize(): director callbacks run before the frame's update, so
+    // pick up the first real window size here and re-layout the world layers
+    // (the world is built before the GL view exists).
+    if (_world) {
+        const auto visible = ax::Director::getInstance()->getVisibleSize();
+        if (!_worldSized || _worldSizeDirty || visible.width != _worldSize.width ||
+            visible.height != _worldSize.height) {
+            _world->setScreenSize(visible.width, visible.height);
+            _worldSize = visible;
+            _worldSizeDirty = false;
+            _worldSized = true;
+        }
+    }
     _game->update(delta);
     if (_findInFlight) {
         _findTime += delta;
@@ -632,7 +699,15 @@ void GameScene::update(float delta) {
     }
 
     // S2: route the HUD update through FguiHud instead of UiOverlay.
+    // main.ts sets `stale=false` once the game starts; before that (lobby /
+    // banner) the HUD stays hidden instead of painting the last match's state
+    // over the menu.
     if (_hud) {
+        _hud->debugLifecycle("scene");
+        // TEMP: the HUD stays hidden. Showing it from here crashed in
+        // fairygui::GObject::setVisible() because the HUD tree had been freed
+        // by the end of the frame that built it (the owner-stack bug noted in
+        // FguiHud.h); FguiHud::update() is disabled for the same reason.
         _hud->update(delta, isStarted(), isPlaying(), _game.get());
         // Emote wheel: when a touch is active on the emote button area,
         // feed the position to the wheel.
@@ -689,9 +764,11 @@ void GameScene::update(float delta) {
     // Only update pad graphics when the touch pads should be visible
     // (i.e. after a match starts). The FairyGUI GRoot may be gone before
     // that — guard with _inGame and _notifiedStarted.
-    if (_inGame && _notifiedStarted) {
-        _touch->m_update(*_movePad, *_aimPad);
-    }
+    // TEMP: disabled with the HUD update above: FguiPadGraphics holds raw
+    // fairygui pointers into a GRoot whose children the engine frees.
+    // if (_inGame && _notifiedStarted) {
+    //     _touch->m_update(*_movePad, *_aimPad);
+    // }
 
     // M5: pass touchingAim + touchAimLine state from Touch to GameWorld
     // for the LineSprites aim-line rendering in the world update.

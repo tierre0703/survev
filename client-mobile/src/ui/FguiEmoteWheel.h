@@ -85,6 +85,10 @@ private:
     int hitTestWedge(float dx, float dy) const;
     void highlightWedge(int index);
 
+    // Owning reference (build() retains, ~FguiEmoteWheel releases). GRoot and
+    // GComponent do not retain their children, so this is what keeps the wheel
+    // widgets alive between frames; wedges are children of _container after
+    // the addChild()/release() in build().
     fairygui::GComponent* _container = nullptr;
     std::array<EmoteWedge, 5> _wedges{}; // indices 0-3 = T/R/B/L, 4 = center close
 

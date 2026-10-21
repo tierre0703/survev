@@ -27,6 +27,7 @@ add_executable(surv_tests
     test_audio.cpp
     test_ui.cpp
     test_bridge.cpp
+    test_join_map.cpp
     ${SURV_SRC}/net/Net.cpp
     ${SURV_SRC}/net/WsUrl.cpp
     ${SURV_SRC}/game/Game.cpp

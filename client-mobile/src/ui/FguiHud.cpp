@@ -189,6 +189,25 @@ static std::string gearDisplayName(const std::string& item) {
 }
 
 // ---- Build: creates all FGUI widgets -------------------------------------
+
+// FairyGUI ownership (see FguiHud.h): a GComponent does not release its
+// children, so addChild() takes over the create() reference and the tree is
+// owned by `_hudPanel`. Without this the widgets were freed when the frame
+// that built them ended, and the first HUD update crashed in
+// GObject::setVisible().
+fairygui::GObject* FguiHud::addChild(fairygui::GComponent* parent, fairygui::GObject* child) {
+    parent->addChild(child);
+    child->release();
+    return child;
+}
+
+// Retains an object that is not a child of the HUD root (e.g. the minimap
+// frame, positioned next to the minimap container).
+fairygui::GObject* FguiHud::keep(fairygui::GObject* obj) {
+    _fgOwned.push_back(obj);
+    return obj;
+}
+
 void FguiHud::build(ax::Scene* scene) {
     fairygui::GRoot* root = fairygui::GRoot::getInstance();
     if (!root) return;
@@ -226,9 +245,10 @@ void FguiHud::buildHudPanel(fairygui::GComponent* root) {
                            Color4F(0.0f, 0.0f, 0.0f, 0.30f));
     panelBgGraph->setPosition(0.0f, 0.0f);
     panelBgGraph->setPivot(0.0f, 0.0f);
-    panelBg->addChild(panelBgGraph);
+    addChild(panelBg, panelBgGraph);
     panelBg->setPosition(0.0f, 0.0f);
     panelBg->setPivot(0.0f, 0.0f);
+    // The HUD root owns the whole tree (see addChild()/keep() in FguiHud.h).
     _hudPanel = panelBg;
 
     // --- Health bar ---
@@ -240,7 +260,7 @@ void FguiHud::buildHudPanel(fairygui::GComponent* root) {
                        Color4F(0.57f, 0.57f, 0.57f, 1.0f));
     healthBg->setPosition(kPanelPadding, healthBarY);
     healthBg->setPivot(0.0f, 0.0f);
-    panelBg->addChild(healthBg);
+    addChild(panelBg, healthBg);
 
     // Foreground fill
     fairygui::GGraph* healthFill = fairygui::GGraph::create();
@@ -249,7 +269,7 @@ void FguiHud::buildHudPanel(fairygui::GComponent* root) {
                          Color4F(0.85f, 0.2f, 0.2f, 1.0f));
     healthFill->setPosition(kPanelPadding, healthBarY);
     healthFill->setPivot(0.0f, 0.0f);
-    panelBg->addChild(healthFill);
+    addChild(panelBg, healthFill);
     _healthFill = healthFill;
 
     // Health numeric text
@@ -260,7 +280,7 @@ void FguiHud::buildHudPanel(fairygui::GComponent* root) {
     healthTf->setSingleLine(true);
     healthTf->setPosition(kPanelPadding + kBarWidth + 4.0f, healthBarY - 1.0f);
     healthTf->setPivot(0.0f, 0.0f);
-    panelBg->addChild(healthTf);
+    addChild(panelBg, healthTf);
     _healthText = healthTf;
 
     // --- Boost bar ---
@@ -271,7 +291,7 @@ void FguiHud::buildHudPanel(fairygui::GComponent* root) {
                       Color4F(0.15f, 0.15f, 0.15f, 0.9f));
     boostBg->setPosition(kPanelPadding, boostBarY);
     boostBg->setPivot(0.0f, 0.0f);
-    panelBg->addChild(boostBg);
+    addChild(panelBg, boostBg);
 
     // 4 boost segment fills
     static const uint32_t boostColors[] = {0xffff901a, 0xffff751a, 0xffff6616, 0xffff5600};
@@ -287,7 +307,7 @@ void FguiHud::buildHudPanel(fairygui::GComponent* root) {
         seg->setPosition(kPanelPadding, boostBarY);
         seg->setPivot(0.0f, 0.0f);
         seg->setVisible(false);
-        panelBg->addChild(seg);
+        addChild(panelBg, seg);
         _boostSegments[i] = seg;
     }
 
@@ -299,7 +319,7 @@ void FguiHud::buildHudPanel(fairygui::GComponent* root) {
     weaponTf->setSingleLine(true);
     weaponTf->setPosition(kPanelPadding + kBarWidth + 4.0f, boostBarY + kBarHeight + 2.0f);
     weaponTf->setPivot(0.0f, 0.0f);
-    panelBg->addChild(weaponTf);
+    addChild(panelBg, weaponTf);
     _weaponText = weaponTf;
 
     fairygui::GBasicTextField* ammoTf = fairygui::GBasicTextField::create();
@@ -309,13 +329,13 @@ void FguiHud::buildHudPanel(fairygui::GComponent* root) {
     ammoTf->setSingleLine(true);
     ammoTf->setPosition(kPanelPadding, boostBarY + kBarHeight + 2.0f);
     ammoTf->setPivot(0.0f, 0.0f);
-    panelBg->addChild(ammoTf);
+    addChild(panelBg, ammoTf);
     _ammoText = ammoTf;
 
     // Position the entire HUD panel at bottom-left
     panelBg->setPivot(0.0f, 1.0f);
     panelBg->setPosition(4.0f, -4.0f);
-    root->addChild(panelBg);
+    addChild(root, panelBg);
 }
 
 // ---- Weapon slots (4 cards: primary, secondary, melee, throwable) --------
@@ -330,7 +350,7 @@ void FguiHud::buildWeaponSlots(fairygui::GComponent* root) {
                       Color4F(0.0f, 0.0f, 0.0f, 0.30f));
     panelBg->setPivot(0.0f, 0.0f);
     panelBg->setPosition(0.0f, 0.0f);
-    panel->addChild(panelBg);
+    addChild(panel, panelBg);
     panel->setPivot(1.0f, 1.0f); // bottom-right anchored
     panel->setPosition(-4.0f, -4.0f);
 
@@ -344,7 +364,7 @@ void FguiHud::buildWeaponSlots(fairygui::GComponent* root) {
                      Color4F(0.08f, 0.08f, 0.08f, 0.7f));
         bg->setPosition(kPanelPadding, y);
         bg->setPivot(0.0f, 0.0f);
-        panel->addChild(bg);
+        addChild(panel, bg);
         _weaponSlots[i].bg = bg;
 
         // Equipped highlight bar (left edge, shown when equipped)
@@ -355,7 +375,7 @@ void FguiHud::buildWeaponSlots(fairygui::GComponent* root) {
         hl->setPosition(kPanelPadding, y);
         hl->setPivot(0.0f, 0.0f);
         hl->setVisible(false);
-        panel->addChild(hl);
+        addChild(panel, hl);
         _weaponSlots[i].equippedHighlight = hl;
 
         // Keybind (slot number)
@@ -366,7 +386,7 @@ void FguiHud::buildWeaponSlots(fairygui::GComponent* root) {
         kbTf->setSingleLine(true);
         kbTf->setPosition(kPanelPadding + 6.0f, y + 1.0f);
         kbTf->setPivot(0.0f, 0.0f);
-        panel->addChild(kbTf);
+        addChild(panel, kbTf);
         _weaponSlots[i].keybindText = kbTf;
 
         // Weapon name
@@ -377,7 +397,7 @@ void FguiHud::buildWeaponSlots(fairygui::GComponent* root) {
         nameTf->setSingleLine(true);
         nameTf->setPosition(kPanelPadding + 18.0f, y + 2.0f);
         nameTf->setPivot(0.0f, 0.0f);
-        panel->addChild(nameTf);
+        addChild(panel, nameTf);
         _weaponSlots[i].nameText = nameTf;
 
         // Ammo count
@@ -388,13 +408,13 @@ void FguiHud::buildWeaponSlots(fairygui::GComponent* root) {
         ammoTf->setSingleLine(true);
         ammoTf->setPosition(kPanelPadding + kWeaponSlotW - 35.0f, y + 2.0f);
         ammoTf->setPivot(0.0f, 0.0f);
-        panel->addChild(ammoTf);
+        addChild(panel, ammoTf);
         _weaponSlots[i].ammoText = ammoTf;
     }
 
     panel->setPivot(1.0f, 1.0f);
     panel->setPosition(-4.0f, -4.0f);
-    root->addChild(panel);
+    addChild(root, panel);
 }
 
 // ---- Gear slots (helmet, chest, backpack) --------------------------------
@@ -409,7 +429,7 @@ void FguiHud::buildGearSlots(fairygui::GComponent* root) {
                       Color4F(0.0f, 0.0f, 0.0f, 0.25f));
     panelBg->setPivot(0.0f, 0.0f);
     panelBg->setPosition(0.0f, 0.0f);
-    panel->addChild(panelBg);
+    addChild(panel, panelBg);
     panel->setPivot(1.0f, 1.0f);
 
     for (int i = 0; i < kGearSlotCount; ++i) {
@@ -421,7 +441,7 @@ void FguiHud::buildGearSlots(fairygui::GComponent* root) {
                      Color4F(0.1f, 0.1f, 0.1f, 0.7f));
         bg->setPosition(kPanelPadding, y);
         bg->setPivot(0.0f, 0.0f);
-        panel->addChild(bg);
+        addChild(panel, bg);
         _gearSlots[i].bg = bg;
 
         // Level indicator
@@ -432,7 +452,7 @@ void FguiHud::buildGearSlots(fairygui::GComponent* root) {
         lvlTf->setSingleLine(true);
         lvlTf->setPosition(kPanelPadding + 2.0f, y + 1.0f);
         lvlTf->setPivot(0.0f, 0.0f);
-        panel->addChild(lvlTf);
+        addChild(panel, lvlTf);
         _gearSlots[i].levelText = lvlTf;
 
         // Name
@@ -443,14 +463,14 @@ void FguiHud::buildGearSlots(fairygui::GComponent* root) {
         nameTf->setSingleLine(true);
         nameTf->setPosition(kPanelPadding + 22.0f, y + 1.0f);
         nameTf->setPivot(0.0f, 0.0f);
-        panel->addChild(nameTf);
+        addChild(panel, nameTf);
         _gearSlots[i].nameText = nameTf;
     }
 
     // Position relative to weapon panel (left of weapons)
     panel->setPivot(1.0f, 1.0f);
     panel->setPosition(-kWeaponSlotW - 2 * kPanelPadding - 12.0f, -4.0f);
-    root->addChild(panel);
+    addChild(root, panel);
 }
 
 // ---- Perk slots (up to 4) ------------------------------------------------
@@ -465,7 +485,7 @@ void FguiHud::buildPerkSlots(fairygui::GComponent* root) {
                       Color4F(0.0f, 0.0f, 0.0f, 0.25f));
     panelBg->setPivot(0.0f, 0.0f);
     panelBg->setPosition(0.0f, 0.0f);
-    panel->addChild(panelBg);
+    addChild(panel, panelBg);
     panel->setPivot(1.0f, 1.0f);
 
     for (int i = 0; i < kPerkSlotCount; ++i) {
@@ -477,7 +497,7 @@ void FguiHud::buildPerkSlots(fairygui::GComponent* root) {
                      Color4F(0.12f, 0.12f, 0.12f, 0.7f));
         bg->setPosition(kPanelPadding, y);
         bg->setPivot(0.0f, 0.0f);
-        panel->addChild(bg);
+        addChild(panel, bg);
         _perkSlots[i].bg = bg;
 
         fairygui::GBasicTextField* nameTf = fairygui::GBasicTextField::create();
@@ -487,7 +507,7 @@ void FguiHud::buildPerkSlots(fairygui::GComponent* root) {
         nameTf->setSingleLine(true);
         nameTf->setPosition(kPanelPadding + 2.0f, y + 1.0f);
         nameTf->setPivot(0.0f, 0.0f);
-        panel->addChild(nameTf);
+        addChild(panel, nameTf);
         _perkSlots[i].nameText = nameTf;
     }
 
@@ -496,7 +516,7 @@ void FguiHud::buildPerkSlots(fairygui::GComponent* root) {
     const float gearOffset = kGearSlotW + 2.0f * kPanelPadding + 12.0f;
     const float weaponOffset = kWeaponSlotW + 2.0f * kPanelPadding;
     panel->setPosition(-(weaponOffset + gearOffset + kPerkSlotW + 4.0f), -4.0f);
-    root->addChild(panel);
+    addChild(root, panel);
 }
 
 // ---- Scope slots (5: 1x–15x) ---------------------------------------------
@@ -511,7 +531,7 @@ void FguiHud::buildScopeSlots(fairygui::GComponent* root) {
                       Color4F(0.0f, 0.0f, 0.0f, 0.20f));
     panelBg->setPivot(0.0f, 0.0f);
     panelBg->setPosition(0.0f, 0.0f);
-    panel->addChild(panelBg);
+    addChild(panel, panelBg);
     panel->setPivot(0.5f, 1.0f);
     panel->setPosition(0.0f, 0.0f);
 
@@ -525,7 +545,7 @@ void FguiHud::buildScopeSlots(fairygui::GComponent* root) {
         bg->setPosition(x, kPanelPadding);
         bg->setPivot(0.0f, 0.0f);
         bg->setVisible(false);
-        panel->addChild(bg);
+        addChild(panel, bg);
         _scopeSlots[i].bg = bg;
 
         fairygui::GBasicTextField* labelTf = fairygui::GBasicTextField::create();
@@ -536,14 +556,14 @@ void FguiHud::buildScopeSlots(fairygui::GComponent* root) {
         labelTf->setPosition(x + 1.0f, kPanelPadding + 1.0f);
         labelTf->setPivot(0.0f, 0.0f);
         labelTf->setVisible(false);
-        panel->addChild(labelTf);
+        addChild(panel, labelTf);
         _scopeSlots[i].labelText = labelTf;
     }
 
     // Position at top center
     panel->setPivot(0.5f, 0.0f);
     panel->setPosition(0.0f, 4.0f);
-    root->addChild(panel);
+    addChild(root, panel);
 }
 
 // ---- Loot grid (ammo/heals/throwables) -----------------------------------
@@ -560,7 +580,7 @@ void FguiHud::buildLootGrid(fairygui::GComponent* root) {
                       Color4F(0.0f, 0.0f, 0.0f, 0.20f));
     panelBg->setPivot(0.0f, 0.0f);
     panelBg->setPosition(0.0f, 0.0f);
-    panel->addChild(panelBg);
+    addChild(panel, panelBg);
     panel->setPivot(1.0f, 0.0f);
 
     for (int i = 0; i < kLootGridCount; ++i) {
@@ -576,7 +596,7 @@ void FguiHud::buildLootGrid(fairygui::GComponent* root) {
         bg->setPosition(x, y);
         bg->setPivot(0.0f, 0.0f);
         bg->setVisible(false);
-        panel->addChild(bg);
+        addChild(panel, bg);
         _lootSlots[i].bg = bg;
 
         fairygui::GBasicTextField* nameTf = fairygui::GBasicTextField::create();
@@ -587,7 +607,7 @@ void FguiHud::buildLootGrid(fairygui::GComponent* root) {
         nameTf->setPosition(x + 1.0f, y);
         nameTf->setPivot(0.0f, 0.0f);
         nameTf->setVisible(false);
-        panel->addChild(nameTf);
+        addChild(panel, nameTf);
         _lootSlots[i].nameText = nameTf;
 
         fairygui::GBasicTextField* countTf = fairygui::GBasicTextField::create();
@@ -598,14 +618,14 @@ void FguiHud::buildLootGrid(fairygui::GComponent* root) {
         countTf->setPosition(x + kLootCellW - 18.0f, y);
         countTf->setPivot(0.0f, 0.0f);
         countTf->setVisible(false);
-        panel->addChild(countTf);
+        addChild(panel, countTf);
         _lootSlots[i].countText = countTf;
     }
 
     // Position right side, below scope slots
     panel->setPivot(1.0f, 0.0f);
     panel->setPosition(-4.0f, 30.0f);
-    root->addChild(panel);
+    addChild(root, panel);
 }
 
 // ---- Kill message (center screen) ----------------------------------------
@@ -617,11 +637,11 @@ void FguiHud::buildKillMessage(fairygui::GComponent* root) {
                       Color4F(0.0f, 0.0f, 0.0f, 0.0f)); // fully transparent, just a container
     bgGraph->setPivot(0.0f, 0.0f);
     bgGraph->setPosition(0.0f, 0.0f);
-    bg->addChild(bgGraph);
+    addChild(bg, bgGraph);
     bg->setPivot(0.5f, 0.5f);
     bg->setPosition(0.0f, 0.0f);
     bg->setVisible(false);
-    root->addChild(bg);
+    addChild(root, bg);
     _killMessageBg = bg;
 
     fairygui::GBasicTextField* textTf = fairygui::GBasicTextField::create();
@@ -632,7 +652,7 @@ void FguiHud::buildKillMessage(fairygui::GComponent* root) {
     textTf->setPosition(-kKillMsgW * 0.5f + 10.0f, -kKillMsgH * 0.5f + 4.0f);
     textTf->setPivot(0.0f, 0.0f);
     textTf->setVisible(false);
-    bg->addChild(textTf);
+    addChild(bg, textTf);
     _killMessageText = textTf;
 
     fairygui::GBasicTextField* countTf = fairygui::GBasicTextField::create();
@@ -643,7 +663,7 @@ void FguiHud::buildKillMessage(fairygui::GComponent* root) {
     countTf->setPosition(kKillMsgW * 0.5f - 50.0f, -kKillMsgH * 0.5f + 4.0f);
     countTf->setPivot(1.0f, 0.0f);
     countTf->setVisible(false);
-    bg->addChild(countTf);
+    addChild(bg, countTf);
     _killMessageCount = countTf;
 }
 
@@ -657,7 +677,7 @@ void FguiHud::buildPickupMessage(fairygui::GComponent* root) {
     tf->setPivot(0.5f, 1.0f);
     tf->setPosition(0.0f, -70.0f);
     tf->setVisible(false);
-    root->addChild(tf);
+    addChild(root, tf);
     _pickupMessageText = tf;
 }
 
@@ -673,11 +693,11 @@ void FguiHud::buildInteractionPrompt(fairygui::GComponent* root) {
                       Color4F(0.0f, 0.0f, 0.0f, 0.0f));
     bgGraph->setPivot(0.0f, 0.0f);
     bgGraph->setPosition(0.0f, 0.0f);
-    bg->addChild(bgGraph);
+    addChild(bg, bgGraph);
     bg->setPivot(0.5f, 1.0f);
     bg->setPosition(0.0f, -100.0f);
     bg->setVisible(false);
-    root->addChild(bg);
+    addChild(root, bg);
     _interactionBg = bg;
 
     fairygui::GBasicTextField* keyTf = fairygui::GBasicTextField::create();
@@ -688,7 +708,7 @@ void FguiHud::buildInteractionPrompt(fairygui::GComponent* root) {
     keyTf->setPosition(-promptW * 0.5f + 4.0f, 2.0f);
     keyTf->setPivot(0.0f, 0.0f);
     keyTf->setVisible(false);
-    bg->addChild(keyTf);
+    addChild(bg, keyTf);
     _interactionKeyText = keyTf;
 
     fairygui::GBasicTextField* descTf = fairygui::GBasicTextField::create();
@@ -699,7 +719,7 @@ void FguiHud::buildInteractionPrompt(fairygui::GComponent* root) {
     descTf->setPosition(-promptW * 0.5f + 30.0f, 2.0f);
     descTf->setPivot(0.0f, 0.0f);
     descTf->setVisible(false);
-    bg->addChild(descTf);
+    addChild(bg, descTf);
     _interactionDescText = descTf;
 }
 
@@ -712,7 +732,7 @@ void FguiHud::buildAliveCounter(fairygui::GComponent* root) {
     aliveTf->setSingleLine(true);
     aliveTf->setPosition(-160.0f, 6.0f);
     aliveTf->setPivot(1.0f, 0.0f);
-    root->addChild(aliveTf);
+    addChild(root, aliveTf);
     _aliveText = aliveTf;
 }
 
@@ -725,7 +745,7 @@ void FguiHud::buildKillFeed(fairygui::GComponent* root) {
     killTf->setSingleLine(false);
     killTf->setPosition(-160.0f, 34.0f);
     killTf->setPivot(1.0f, 0.0f);
-    root->addChild(killTf);
+    addChild(root, killTf);
     _killFeedText = killTf;
 }
 
@@ -738,11 +758,11 @@ void FguiHud::buildResultOverlay(fairygui::GComponent* root) {
                       Color4F(0.0f, 0.0f, 0.0f, 0.85f));
     panelBg->setPivot(0.0f, 0.0f);
     panelBg->setPosition(0.0f, 0.0f);
-    panel->addChild(panelBg);
+    addChild(panel, panelBg);
     panel->setPivot(0.5f, 0.5f);
     panel->setPosition(0.0f, 0.0f);
     panel->setVisible(false);
-    root->addChild(panel);
+    addChild(root, panel);
     _resultPanel = panel;
 
     fairygui::GBasicTextField* resultTf = fairygui::GBasicTextField::create();
@@ -753,7 +773,7 @@ void FguiHud::buildResultOverlay(fairygui::GComponent* root) {
     resultTf->setPosition(-kResultWidth / 2.0f + 20.0f, -kResultHeight / 2.0f + 30.0f);
     resultTf->setPivot(0.0f, 0.0f);
     resultTf->setVisible(false);
-    panel->addChild(resultTf);
+    addChild(panel, resultTf);
     _resultText = resultTf;
 }
 
@@ -766,11 +786,11 @@ void FguiHud::buildSquadBars(fairygui::GComponent* root) {
                       Color4F(0.0f, 0.0f, 0.0f, 0.4f));
     panelBg->setPivot(0.0f, 0.0f);
     panelBg->setPosition(0.0f, 0.0f);
-    panel->addChild(panelBg);
+    addChild(panel, panelBg);
     panel->setPosition(6.0f, 6.0f);
     panel->setPivot(0.0f, 0.0f);
     panel->setVisible(false);
-    root->addChild(panel);
+    addChild(root, panel);
 
     for (int i = 0; i < 4; ++i) {
         const float y = 4.0f + static_cast<float>(i) * kSquadSlotHeight;
@@ -778,7 +798,7 @@ void FguiHud::buildSquadBars(fairygui::GComponent* root) {
         fairygui::GComponent* slot = fairygui::GComponent::create();
         slot->setPosition(0.0f, y);
         slot->setPivot(0.0f, 0.0f);
-        panel->addChild(slot);
+        addChild(panel, slot);
 
         fairygui::GBasicTextField* nameTf = fairygui::GBasicTextField::create();
         nameTf->setText("");
@@ -787,7 +807,7 @@ void FguiHud::buildSquadBars(fairygui::GComponent* root) {
         nameTf->setSingleLine(true);
         nameTf->setPosition(4.0f, 0.0f);
         nameTf->setPivot(0.0f, 0.0f);
-        slot->addChild(nameTf);
+        addChild(slot, nameTf);
 
         fairygui::GGraph* barBg = fairygui::GGraph::create();
         barBg->drawRect(kSquadBarWidth, kSquadBarHeight, 0,
@@ -795,7 +815,7 @@ void FguiHud::buildSquadBars(fairygui::GComponent* root) {
                         Color4F(0.2f, 0.2f, 0.2f, 0.8f));
         barBg->setPosition(4.0f, kSquadNameFontSize + 2.0f);
         barBg->setPivot(0.0f, 0.0f);
-        slot->addChild(barBg);
+        addChild(slot, barBg);
 
         fairygui::GGraph* healthFill = fairygui::GGraph::create();
         healthFill->drawRect(kSquadBarWidth, kSquadBarHeight, 0,
@@ -803,7 +823,7 @@ void FguiHud::buildSquadBars(fairygui::GComponent* root) {
                              Color4F(0.3f, 0.8f, 0.3f, 1.0f));
         healthFill->setPosition(4.0f, kSquadNameFontSize + 2.0f);
         healthFill->setPivot(0.0f, 0.0f);
-        slot->addChild(healthFill);
+        addChild(slot, healthFill);
 
         fairygui::GBasicTextField* statusTf = fairygui::GBasicTextField::create();
         statusTf->setText("");
@@ -812,7 +832,7 @@ void FguiHud::buildSquadBars(fairygui::GComponent* root) {
         statusTf->setSingleLine(true);
         statusTf->setPosition(4.0f + kSquadBarWidth + 4.0f, 0.0f);
         statusTf->setPivot(0.0f, 0.0f);
-        slot->addChild(statusTf);
+        addChild(slot, statusTf);
 
         _squadMembers[i].container = slot;
         _squadMembers[i].nameText = nameTf;
@@ -838,10 +858,10 @@ void FguiHud::buildMinimap(fairygui::GComponent* root) {
                           Color4F(0.8f, 0.8f, 0.8f, 1.0f));
     containerBg->setPivot(0.0f, 0.0f);
     containerBg->setPosition(0.0f, 0.0f);
-    container->addChild(containerBg);
+    addChild(container, containerBg);
     container->setPosition(root->getWidth() - mmSize - margin, margin);
     container->setPivot(0.0f, 0.0f);
-    root->addChild(container);
+    addChild(root, container);
     _minimapContainer = container;
 
     // Frame border (white outline)
@@ -851,20 +871,21 @@ void FguiHud::buildMinimap(fairygui::GComponent* root) {
                     Color4F(1.0f, 1.0f, 1.0f, 9.0f / 15.0f));
     frame->setPosition(container->getX(), container->getY());
     frame->setPivot(0.0f, 0.0f);
-    root->addChild(frame);
+    addChild(root, frame);
+    keep(frame);
     _minimapFrame = frame;
 
     // Gas ring (dashed circle overlay, same size as minimap)
     fairygui::GGraph* gasRing = fairygui::GGraph::create();
     gasRing->setPosition(mmSize * 0.5f, mmSize * 0.5f);
     gasRing->setVisible(false);
-    container->addChild(gasRing);
+    addChild(container, gasRing);
     _minimapGasRing = gasRing;
 
     // Safe zone (solid circle, positioned at safe centre on the minimap)
     fairygui::GGraph* safeZone = fairygui::GGraph::create();
     safeZone->setVisible(false);
-    container->addChild(safeZone);
+    addChild(container, safeZone);
     _minimapSafeZone = safeZone;
 }
 
@@ -1119,7 +1140,22 @@ void FguiHud::showResult(bool show) {
     _resultShown = show;
 }
 
-void FguiHud::setVisible(bool visible) {
+
+// TEMP DIAGNOSTIC (remove): walk every FGUI object the HUD created by address
+// and report whether it is still alive, plus the tree/parent state.
+void FguiHud::debugLifecycle(const char* tag) {
+    AXLOGI("[life] {}: tracked={} hudPanel={}", tag, _fgOwned.size(), static_cast<const void*>(_hudPanel));
+    fairygui::GObject* hud = _hudPanel;
+    AXLOGI("[life]   hudPanel vis={} parent={} objects={}", hud->isVisible(), static_cast<const void*>(hud->getParent()),
+           hud->numChildren());
+    // Reach into the objects owned by the HUD (those that stayed detached).
+    for (size_t i = 0; i < _fgOwned.size(); ++i) {
+        auto* ref = static_cast<fairygui::GObject*>(_fgOwned[i]);
+        AXLOGI("[life]   owned[{}] {} parent={} vis={}", i, static_cast<const void*>(ref),
+               static_cast<const void*>(ref->getParent()), ref->isVisible());
+    }
+    AXLOGI("[life]   GRoot={}", static_cast<const void*>(fairygui::GRoot::getInstance()));
+}void FguiHud::setVisible(bool visible) {
     _visible = visible;
     if (_hudPanel) _hudPanel->setVisible(visible);
 }
@@ -1130,8 +1166,13 @@ bool FguiHud::isVisible() const {
 
 // ---- Main update: called each frame -------------------------------------
 void FguiHud::update(float dt, bool started, bool playing, const Game* game) {
+    // TEMP: per-frame widget writes are disabled until the tree lifetime below
+    // is fixed; writing to a freed widget faults in GObject::setVisible().
+    return;
     if (!_hudPanel || !_visible) return;
     if (!started || !playing || !game) return;
+
+
 
     const GameStateSnapshot snap = game->snapshot();
     const ActivePlayerData& apd = game->activePlayerData();
@@ -1260,7 +1301,8 @@ void FguiHud::refreshMinimap(const Game* game) {
     // The map background is baked into the axmol RenderTexture by
     // Map::generateMinimapTexture; the FGUI layer overlays dynamic shapes.
 
-    // Clear old player dots.
+    // Clear old player dots. removeFromParent() balances the create() retain,
+    // so the dots are destroyed here instead of being re-parented.
     for (auto* dot : _minimapDots) {
         dot->removeFromParent();
     }
@@ -1282,7 +1324,7 @@ void FguiHud::refreshMinimap(const Game* game) {
                                  ((dotColor >> 8) & 0xff) / 255.0f,
                                  (dotColor & 0xff) / 255.0f, 1.0f),
                          Color4F(0.0f, 0.0f, 0.0f, 0.0f));
-        _minimapContainer->addChild(dot);
+        addChild(_minimapContainer, dot);
         _minimapDots.push_back(dot);
     }
 }

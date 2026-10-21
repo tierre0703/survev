@@ -24,6 +24,7 @@
 #include "FguiEmoteWheel.h"
 
 namespace ax {
+class Object;
 class Scene;
 }
 
@@ -96,11 +97,23 @@ public:
     // Squad health bars — called each frame from update().
     void refreshSquad(const Game* game);
 
+    // TEMP DIAGNOSTIC (remove).
+    void debugLifecycle(const char* tag);
+
 // Inter-process: the emote wheel's input/output state lives here so the
     // GameScene can feed raw touch data into it each frame.
     surv::FguiEmoteWheel* emoteWheel() { return _emoteWheel.get(); }
 
 private:
+    // FairyGUI ownership: a GComponent does NOT release its children and the
+    // widgets are created autoreleased, so without this the tree was destroyed
+    // at the end of the frame that built it (crash in GObject::setVisible()).
+    // addChild() re-parents the create() reference into `_hudPanel` (which
+    // owns the whole tree); keep() retains objects that stay detached.
+    // Defined in FguiHud.cpp because the fairygui types are only forward
+    // declared here.
+    fairygui::GObject* addChild(fairygui::GComponent* parent, fairygui::GObject* child);
+    fairygui::GObject* keep(fairygui::GObject* obj);
     void buildHudPanel(fairygui::GComponent* root);
     void buildResultOverlay(fairygui::GComponent* root);
     void buildKillFeed(fairygui::GComponent* root);
@@ -237,6 +250,9 @@ private:
     float _killMsgDuration = 0.0f;
     std::string _killMsgText;
     std::string _killMsgCount;
+
+    // Objects retained by keep() (owned by the HUD, not children of the tree).
+    std::vector<ax::Object*> _fgOwned;
 
     bool _visible = true;
 };

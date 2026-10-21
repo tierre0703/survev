@@ -18,6 +18,19 @@ USING_NS_AX;
 
 namespace surv {
 
+namespace {
+
+// Fairygui objects are ref-counted (CREATE_FUNC -> autorelease) and a
+// GComponent does not release its children, so the wheel re-parents the
+// create() reference into the tree it keeps alive (see FguiEmoteWheel.h).
+fairygui::GObject* addChild(fairygui::GComponent* parent, fairygui::GObject* child) {
+    parent->addChild(child);
+    child->release();
+    return child;
+}
+
+} // namespace
+
 // Geometry constants (design-space pixels at 1x scale).
 constexpr float kWheelOuterRadius = 140.0f;
 constexpr float kWedgeInnerRadius = 40.0f;
@@ -33,16 +46,29 @@ constexpr float kCloseSize = 48.0f;
 static int s_nextIndex = 0;
 
 FguiEmoteWheel::FguiEmoteWheel() = default;
-FguiEmoteWheel::~FguiEmoteWheel() = default;
+FguiEmoteWheel::~FguiEmoteWheel() {
+    if (_container) {
+        // Drop the reference taken in build(); removal from GRoot balances
+        // the addChild() reference, so the container (and its children, which
+        // addChild()/release()d above) is destroyed here.
+        _container->removeFromParent();
+        _container->release();
+        _container = nullptr;
+    }
+}
 
 void FguiEmoteWheel::build(ax::Scene*) {
     fairygui::GRoot* root = fairygui::GRoot::getInstance();
     if (!root) return;
 
     _container = fairygui::GComponent::create();
+    // The wheel owns its container (see ~FguiEmoteWheel): keep the create()
+    // reference for as long as the wheel lives.
+    _container->retain();
     _container->setVisible(false);
     _container->setPivot(0.5f, 0.5f);
     root->addChild(_container);
+    _container->release();
 
     // 4 directional wedges in a cross pattern.
     // Each is a filled circle with a text label.
@@ -82,7 +108,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
         bg->setPivot(0.5f, 0.5f);
         bg->setPosition(cx, cy);
         bg->setVisible(false);
-        _container->addChild(bg);
+        addChild(_container, bg);
         _wedges[i].bgPolygon = bg;
 
         // Highlight circle (brighter, scaled up slightly)
@@ -98,7 +124,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
         hl->setPivot(0.5f, 0.5f);
         hl->setPosition(cx, cy);
         hl->setVisible(false);
-        _container->addChild(hl);
+        addChild(_container, hl);
         _wedges[i].highlight = hl;
 
         // Label text below the circle
@@ -108,7 +134,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
         text->setPosition(cx, cy + kWedgeSize * 0.5f + 8.0f);
         text->setPivot(0.5f, 0.0f);
         text->setVisible(false);
-        _container->addChild(text);
+        addChild(_container, text);
         _wedges[i].labelText = text;
     }
 
@@ -124,7 +150,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
     closeBg->setPivot(0.5f, 0.5f);
     closeBg->setPosition(0.0f, 0.0f);
     closeBg->setVisible(false);
-    _container->addChild(closeBg);
+    addChild(_container, closeBg);
     _wedges[4].bgPolygon = closeBg;
 
     fairygui::GBasicTextField* closeText = fairygui::GBasicTextField::create();
@@ -133,7 +159,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
     closeText->setPosition(0.0f, 0.0f);
     closeText->setPivot(0.5f, 0.5f);
     closeText->setVisible(false);
-    _container->addChild(closeText);
+    addChild(_container, closeText);
     _wedges[4].labelText = closeText;
 }
 

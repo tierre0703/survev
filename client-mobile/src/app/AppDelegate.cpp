@@ -58,13 +58,9 @@ bool AppDelegate::applicationDidFinishLaunching() {
     // The web client's UI font is Roboto Condensed (woff2). Stage the TTF copy
     // (tools/fetch-fonts.ps1) and register it before any Label is created.
     ::surv::ui::registerGuiFonts("fonts");
-    // S6+: On Android the Java UI replaces the C++ menu scene. On desktop the
-    // C++ menu scene owns the config/store/localization. On Android those are
-    // owned by the Java side, but the bridge still needs a *live* MenuScene
-    // for config/storage (the bridge reads/writes it).  We create the menu
-    // scene unconditionally so the bridge has an _menu to use.
-    auto* menuScene = surv::MenuScene::createScene();
-
+    // S3: Java owns the menu and matchmaking; the C++ MenuScene is not created
+    // on Android, so the bridge runs without one. It owns config access, so
+    // configJson()/saveConfig() persist through the UserDefault-backed storage.
     // One persistent scene keeps the team socket and matchmaking ticking even
     // while their UI is hidden. Node ownership avoids dangling replaceScene pointers.
     auto* gameScene = surv::GameScene::createScene();
@@ -76,9 +72,6 @@ bool AppDelegate::applicationDidFinishLaunching() {
     // When the Java menu calls SurvBridge.onJoinUrls(), it lands in
     // UiBridge::joinUrls() → GameScene::enterWithJoin(), same as the team path.
     if (gameScene) {
-        if (menuScene) {
-            menuScene->bindGame(gameScene);
-        }
         gameScene->setFindGameRequest(
             [](const std::string& region, int gameModeIdx,
                surv::GameScene::FindGameDone done) {
@@ -109,7 +102,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
     director->runWithScene(gameScene ? static_cast<ax::Scene*>(gameScene)
                                      : static_cast<ax::Scene*>(surv::GameScene::createScene()));
     _gameScene = gameScene;
-    surv::installUiBridge(menuScene, gameScene);
+    surv::installUiBridge(nullptr, gameScene);
     return true;
 }
 

@@ -11,6 +11,7 @@
 #include "AimLine.h"
 #include "objects/MapIndicator.h"
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -52,12 +53,23 @@ public:
     void attachTo(pix::Node* root);
 
     void setScreenSize(float width, float height);
+    // view.ts setSize(): the resizeGame callbacks. GameScene registers the
+    // resizing that keeps live world layers sized to `_camera` and drops the
+    // registration when the world's factory is replaced.
+    void setSizeCallbacks(std::function<void(float, float)> onResize,
+                          std::function<void()> clearSizeCallbacks) {
+        _onResize = std::move(onResize);
+        _clearSizeCallbacks = std::move(clearSizeCallbacks);
+    }
     // The adapter nodes are factory-owned and released together with the
     // factory; GameScene calls this right before the factory is destroyed so
     // objects that cache adapter pointers do not dangle on the next world.
     void onFactoryReset();
     void loadMap(const MapMsg& msg);
     void applyUpdate(const UpdateMsg& msg);
+    // Load the session's MapMsg into a world GameScene created after the map
+    // arrived (Game already cached it; game.ts keeps the map on the Game).
+    void replayMap(const MapMsg& msg) { loadMap(msg); }
     void update(float dt);
 
     // plane.ts: reconciled each UpdateMsg from `msg.planes` (see game.ts).
@@ -156,6 +168,8 @@ public:
     LineSprites _lineSprites;
     MapIndicatorBarn _indicatorBarn;
     std::unique_ptr<ObjectCreator> _creator;
+    std::function<void(float, float)> _onResize;
+    std::function<void()> _clearSizeCallbacks;
 
     Player* _activePlayer = nullptr;
     uint16_t _activePlayerId = 0;

@@ -163,12 +163,22 @@ private:
     void setError(const std::string& key, const std::string& fallback = "");
     void clearError();
     void resetWorld();
+    // view.ts resizeGame callback registered on every new GameWorld.
+    void onWorldResize(float width, float height);
 
     ax::Node* _gameRoot = nullptr;
     std::unique_ptr<Game> _game;
     std::unique_ptr<pix::Factory> _pixiFactory;
     std::unique_ptr<pix::Container> _worldRoot;
     std::unique_ptr<GameWorld> _world;
+    // Last viewport size handed to _world (view.ts setSize tracking).
+    ax::Size _worldSize;
+    bool _worldSized = false;
+    // view.setSize() bumps `_worldSizeDirty` through the world's resize callback.
+    bool _worldSizeDirty = false;
+    // game.ts free() keeps the canvas hidden until the next match; the world
+    // container mirrors that so a stale terrain never shows over the menu.
+    bool _worldVisible = false;
     std::unique_ptr<audio::AxmolAudioBackend> _audioBackend;
     std::unique_ptr<audio::AudioManager> _audio;
     std::unique_ptr<audio::Ambiance> _ambiance;

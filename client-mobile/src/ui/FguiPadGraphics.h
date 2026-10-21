@@ -35,6 +35,8 @@ public:
 private:
     void ensureFx(); // deferred creation of FairyGUI widgets
     ax::Scene* _scene = nullptr;
+    // Owning references (see the addChild()/release() note in the .cpp): GRoot
+    // does not retain its children, so these keep the pad widgets alive.
     fairygui::GComponent* _parent = nullptr;
     fairygui::GGraph* _centerRing = nullptr;
     fairygui::GGraph* _touchDot = nullptr;

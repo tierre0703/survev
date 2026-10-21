@@ -115,6 +115,11 @@ public:
     // pads) re-resolve their atlas frames here.
     using AtlasCallback = std::function<void()>;
     void setMapCallback(MapCallback cb) { _mapCallback = std::move(cb); }
+    // The last MapMsg the server sent for the current session, so a render
+    // world created *after* the map arrived (GameScene builds it on join, the
+    // server's MapMsg can land first) can load it (game.ts keeps mapData).
+    bool hasMap() const { return _hasMap; }
+    const MapMsg& map() const { return _map; }
     void setUpdateCallback(UpdateCallback cb) { _updateCallback = std::move(cb); }
     void setAtlasCallback(AtlasCallback cb) { _atlasCallback = std::move(cb); }
 

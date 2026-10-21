@@ -120,14 +120,23 @@ void GameWorld::attachTo(pix::Node* root) {
 void GameWorld::setScreenSize(float width, float height) {
     _camera.m_screenWidth = width;
     _camera.m_screenHeight = height;
-    if (mapLoaded()) {
-        _renderer->resize(*_map, _camera);
+    // Mirror view.ts setSize(): resize the live layers immediately, and notify
+    // the app so size() callbacks (renderer groups, HUD) re-layout. This must
+    // not depend on mapLoaded(): GameScene builds the world before the first
+    // MapMsg arrives, so the layers still need the real viewport size.
+    _renderer->resize(*_map, _camera);
+    if (_onResize) {
+        _onResize(width, height);
     }
 }
 
 void GameWorld::onFactoryReset() {
     _smokeBarn->onFactoryReset();
     _map->onFactoryReset();
+    // view.ts clearResizeGame(): the callbacks belong to the old layers.
+    if (_clearSizeCallbacks) {
+        _clearSizeCallbacks();
+    }
 }
 
 bool GameWorld::mapLoaded() const {
@@ -161,6 +170,8 @@ void GameWorld::loadMap(const MapMsg& msg) {
     // Emote/ping cleanup on new map
     _emoteManager.reset();
 
+    // GameScene builds the world through resetWorld() on join and hands it the
+    // session's cached MapMsg (replayMap), so this is the world's first load.
     _renderer->reset();
     _activePlayer = nullptr;
     _activePlayerId = 0;

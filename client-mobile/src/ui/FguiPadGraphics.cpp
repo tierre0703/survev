@@ -16,6 +16,14 @@ namespace surv {
 
 namespace {
 
+// Fairygui objects are ref-counted (CREATE_FUNC -> autorelease) and GRoot does
+// not retain its children, so the pad re-parents the create() reference into
+// the widgets it owns (see FguiPadGraphics.h).
+void addOwnedChild(fairygui::GComponent* parent, fairygui::GObject* child) {
+    parent->addChild(child);
+    child->release();
+}
+
 // The base size of the pad ring in FG design-space pixels.
 // Matches the 208 px atlas frame relative to a 0.25 pad scale.
 constexpr float kPadBaseSize = 208.0f;
@@ -49,8 +57,11 @@ void FguiPadGraphics::ensureFx() {
         return;
     }
 
-    // Center ring (circle outline + no fill)
     _centerRing = fairygui::GGraph::create();
+    // Odd refs create() + retain() below, addOwnedChild() balances one of them.
+    _centerRing->retain();
+
+    // Center ring (circle outline + no fill)
     const Color4F& ringColor = _isMovePad ? kMoveRingColor : kAimRingColor;
     const Color4F& ringFill = _isMovePad ? kMoveRingFill : kAimRingFill;
     _centerRing->drawEllipse(kPadBaseSize, kPadBaseSize,
@@ -58,10 +69,12 @@ void FguiPadGraphics::ensureFx() {
                              ringColor, ringFill);
     _centerRing->setVisible(false);
     _centerRing->setPivot(0.5f, 0.5f);
-    root->addChild(_centerRing);
+    addOwnedChild(root, _centerRing);
 
     // Touch dot (solid circle)
     _touchDot = fairygui::GGraph::create();
+    // Same ownership as the ring above.
+    _touchDot->retain();
     const Color4F& dotColor = _isMovePad ? kMoveDotColor : kAimDotColor;
     const float dotSize = kPadBaseSize * kDotRatio;
     _touchDot->drawEllipse(dotSize, dotSize, 0,
@@ -69,15 +82,24 @@ void FguiPadGraphics::ensureFx() {
                            dotColor);
     _touchDot->setVisible(false);
     _touchDot->setPivot(0.5f, 0.5f);
-    root->addChild(_touchDot);
+    addOwnedChild(root, _touchDot);
+    // The HUD panels were added to the GRoot before the pads: lift the dot
+    // above the ring so the stick shows on top of it.
+    root->setChildIndex(_touchDot, root->getChildIndex(_centerRing) + 1);
 }
 
 FguiPadGraphics::~FguiPadGraphics() {
+    // Removal balances the addChild() reference; release() drops the one taken
+    // in ensureFx(), so both widgets are destroyed here.
     if (_centerRing) {
         _centerRing->removeFromParent();
+        _centerRing->release();
+        _centerRing = nullptr;
     }
     if (_touchDot) {
         _touchDot->removeFromParent();
+        _touchDot->release();
+        _touchDot = nullptr;
     }
 }
 
