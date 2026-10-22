@@ -29,6 +29,9 @@ class GameWorld;
 
 class Map {
 public:
+    // The terrain node. map.ts draws the whole map into a single Graphics
+    // (`this.display.ground`); it is parented under the camera-transformed
+    // world container, so its vertices stay in world units.
     pix::Graphics* groundGfx = nullptr;
 
     std::string mapName;
@@ -85,7 +88,9 @@ public:
 
     explicit Map(pix::Factory* factory, bool canvasMode);
 
-    void loadMap(const MapMsg& msg, Camera& camera);
+    // `gridThickness` is in world units (2 / m_ppu); 0 skips the grid lines.
+    // Default = map.ts' camera.m_ppu.
+    void loadMap(const MapMsg& msg, Camera& camera, float gridThickness = 2.0f / 16.0f);
     // map.ts `clear()`: frees every pooled obstacle/building/structure and
     // clears the per-match id sets. Called by loadMap so a reused Map never
     // renders a previous match's objects. (The other barns' pools are reused

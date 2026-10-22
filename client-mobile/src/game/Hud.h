@@ -34,7 +34,9 @@ public:
     static constexpr float kWeaponSlotHeight = 30.0f;
 
     // Builds every node under `root`; `design` is the design-space rect.
-    void build(pix::Factory* factory, pix::Container* root, const Vec2& design);
+    // `minimapDisplay`, when given, is adopted as the minimap contents.
+    void build(pix::Factory* factory, pix::Container* root, const Vec2& design,
+               const pix::Node* minimapDisplay = nullptr);
 
     // Per-frame repaint (only the widgets whose value changed are touched).
     void update(float dt, const Game& game, bool visible);

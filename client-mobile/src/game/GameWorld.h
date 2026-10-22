@@ -55,6 +55,9 @@ public:
     // The node GameWorld::attachTo() filled; Renderer::applyCamera() transforms
     // it every frame (renderer.ts `pixiContainers` transform).
     pix::Node* root() { return _root; }
+    // The camera-transformed container holding the terrain + renderer layers
+    // (a child of root(); see attachTo).
+    pix::Node* contentRoot() { return _contentRoot; }
 
     void setScreenSize(float width, float height);
     // uiRoot scale for the HUD (camera.m_deviceScale).
@@ -190,8 +193,10 @@ public:
     bool _touchAimLine = true;
     bool _aimLineVisible = true;
     bool _mobile = true;
-    // Node GameWorld::attachTo() filled; carries the camera transform.
+    // Node GameWorld::attachTo() filled; holds the camera-transformed content
+    // container (terrain + layers + gas overlay).
     pix::Node* _root = nullptr;
+    pix::Node* _contentRoot = nullptr;
     float _dt = 0.0f;
 };
 

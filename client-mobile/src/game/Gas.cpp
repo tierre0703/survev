@@ -36,7 +36,12 @@ void buildGasGeometry(pix::Graphics* g, uint32_t gasColor) {
 } // namespace
 
 void GasRenderer::m_init(pix::Factory* factory) {
-    display = factory->createGraphics();
+    // A GameWorld is reused across matches; keep the overlay node and rebuild
+    // only its geometry so repeated MapMsgs do not pile up hidden gas quads on
+    // the world container.
+    if (!display) {
+        display = factory->createGraphics();
+    }
     buildGasGeometry(display, gasColor);
     display->setVisible(false);
 }

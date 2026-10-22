@@ -55,7 +55,7 @@ uint32_t Hud::healthColor(float health, bool downed) {
            static_cast<uint32_t>(mix(a.b, b.b));
 }
 
-void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design) {
+void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design, const pix::Node* minimapDisplay) {
     _factory = factory;
     _root = root;
     _design = design;
@@ -90,6 +90,11 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_ammoText);
 
     // #ui-map-wrapper: minimap frame + alive / kill counters (top right).
+    // The baked map texture (map.ts minimap) goes under the frame when the call
+    // site can hand it over (plain pix nodes cannot carry a texture yet).
+    if (minimapDisplay) {
+        _root->addChild(const_cast<pix::Node*>(minimapDisplay));
+    }
     _mapFrame = _factory->createGraphics();
     _root->addChild(_mapFrame);
     _aliveText = _factory->createText();
@@ -127,63 +132,78 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_killFeedText);
 
     // One static layout pass (the web CSS boxes do not move during a match).
+    // The HUD container is centred on the viewport (GameScene::resetWorld), and
+    // axmol's scene graph is y-up while the CSS boxes are y-down. Work in
+    // design-space bottom-left coordinates here and convert to the centred
+    // container: X/Y offset from the design centre.
     const float vw = _design.x;
     const float vh = _design.y;
+    const auto X = [vw](float x) { return x - vw * 0.5f; };
+    const auto Y = [vh](float y) { return y - vh * 0.5f; };
+
+    // #ui-bottom-center-0: 400x32 bar in a 412x44 box, 12px above the bottom.
     const float hudW = kHealthBarWidth + kHealthBarPadding * 2.0f;
     const float hudH = kHealthBarHeight + kHealthBarPadding * 2.0f;
-    // The HUD container's origin is the design rect's centre (uiRoot-style),
-    // so everything below is placed relative to it.
-    if (_root) {
-        _root->setPosition(vw * 0.5f, vh * 0.5f);
-    }
-    const float hudX = -hudW * 0.5f;
-    const float hudY = vh * 0.5f - 12.0f - hudH;
+    const float hudX = (vw - hudW) * 0.5f;
+    const float hudY = 12.0f;
 
     _healthBg->clear();
     _healthBg->beginFill(0x000000, 0.4f);
-    _healthBg->drawRect(hudX, hudY, hudW, hudH);
+    _healthBg->drawRect(X(hudX), Y(hudY), hudW, hudH);
     _healthBg->endFill();
 
-    _healthFill->setPosition(hudX + kHealthBarPadding, hudY + kHealthBarPadding);
-    _healthText->setPosition(hudX + hudW * 0.5f, hudY + hudH * 0.5f);
-    _ammoText->setPosition(hudX + hudW + 16.0f, hudY + hudH);
+    _healthFill->setPosition(X(hudX + kHealthBarPadding), Y(hudY + kHealthBarPadding));
+    _healthText->setAnchor(0.5f, 0.5f);
+    _healthText->setPosition(X(vw * 0.5f), Y(hudY + hudH * 0.5f));
+    _ammoText->setAnchor(0.0f, 1.0f);
+    _ammoText->setPosition(X(hudX + hudW + 12.0f), Y(hudY + hudH));
 
+    // #ui-map-wrapper: minimap frame + alive/kill counters, top right.
     const float mm = kMinimapSize;
-    const float mmX = vw * 0.5f - mm - 12.0f;
-    const float mmY = -vh * 0.5f + 12.0f;
+    const float mmX = vw - mm - 12.0f;
+    const float mmY = vh - mm - 12.0f;
     _mapFrame->clear();
     _mapFrame->lineStyle(2.0f, 0xffffff, 0.6f);
-    _mapFrame->moveTo(mmX, mmY);
-    _mapFrame->lineTo(mmX + mm, mmY);
-    _mapFrame->lineTo(mmX + mm, mmY + mm);
-    _mapFrame->lineTo(mmX, mmY + mm);
-    _mapFrame->lineTo(mmX, mmY);
-    _aliveText->setPosition(mmX - 12.0f, 10.0f);
-    _killsText->setPosition(mmX - 12.0f, 32.0f);
+    _mapFrame->drawRect(X(mmX), Y(mmY), mm, mm);
+    if (minimapDisplay) {
+        // The baked minimap is a square texture anchored bottom-left.
+        const_cast<pix::Node*>(minimapDisplay)->setPosition(X(mmX), Y(mmY));
+    }
+    _aliveText->setAnchor(1.0f, 1.0f);
+    _aliveText->setPosition(X(mmX - 8.0f), Y(vh - 12.0f));
+    _killsText->setAnchor(1.0f, 1.0f);
+    _killsText->setPosition(X(mmX - 8.0f), Y(vh - 36.0f));
 
+    // #ui-bottom-right: four weapon cards, bottom right.
     const float boxW = kWeaponSlotWidth + 16.0f;
     const float boxH = 4.0f * (kWeaponSlotHeight + 2.0f) + 12.0f;
-    const float boxX = vw * 0.5f - boxW - 8.0f;
-    const float boxY = vh * 0.5f - boxH - 8.0f;
+    const float boxX = vw - boxW - 8.0f;
+    const float boxY = 8.0f;
     _weaponBoxBg->clear();
     _weaponBoxBg->beginFill(0x000000, 0.25f);
-    _weaponBoxBg->drawRect(boxX, boxY, boxW, boxH);
+    _weaponBoxBg->drawRect(X(boxX), Y(boxY), boxW, boxH);
     _weaponBoxBg->endFill();
     for (int i = 0; i < 4; ++i) {
-        const float y = boxY + 6.0f + static_cast<float>(i) * (kWeaponSlotHeight + 2.0f);
-        _weaponSlots[i]->setPosition(boxX + 8.0f, y);
+        // CSS order is top -> bottom, so slot 0 sits highest inside the box.
+        const float y = boxY + boxH - 6.0f - static_cast<float>(i) * (kWeaponSlotHeight + 2.0f);
+        _weaponSlots[i]->setAnchor(0.0f, 1.0f);
+        _weaponSlots[i]->setPosition(X(boxX + 8.0f), Y(y));
     }
 
-    _pickupText->setPosition(0.0f, vh * 0.12f);
-    _killFeedText->setPosition(vw * 0.5f - 16.0f, -vh * 0.5f + 12.0f);
+    // #ui-bottom-center-2: pickup message just below the centre.
+    _pickupText->setAnchor(0.5f, 0.0f);
+    _pickupText->setPosition(X(vw * 0.5f), Y(vh * 0.12f));
+    // #ui-killfeed: right side, above the weapon cards.
+    _killFeedText->setAnchor(1.0f, 1.0f);
+    _killFeedText->setPosition(X(boxX - 8.0f), Y(boxY + boxH + 8.0f));
 
-    // The boost segments are placed relative to the health block here; update()
-    // only repaints their width.
+    // The boost segments sit above the health block; update() repaints width.
     {
         float x = hudX + kHealthBarPadding;
         for (int i = 0; i < 4; ++i) {
             const float span = kBoostBreakpoints[i] / kBoostBreakpointsTotal;
-            _boostSegments[i]->setPosition(x, hudY - 4.0f);
+            _boostSegments[i]->setAnchor(0.0f, 0.0f);
+            _boostSegments[i]->setPosition(X(x), Y(hudY + hudH + 4.0f));
             x += kHealthBarWidth * span;
         }
     }

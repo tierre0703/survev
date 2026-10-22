@@ -433,6 +433,12 @@ public:
         _family = family;
         rebuild();
     }
+    void setAnchor(float x, float y) override {
+        _anchorX = x;
+        _anchorY = y;
+        AxNodeImpl<Text>::setAnchor(x, y);
+        rebuild();
+    }
     void setColor(uint fill, uint stroke, float strokeThickness, bool bold) override {
         _fill = fill;
         _stroke = stroke;
@@ -465,7 +471,10 @@ private:
             return;
         }
         sprite->setColor(detail::toColor3B(_fill));
-        sprite->setAnchorPoint(ax::Vec2(0.0f, 1.0f));
+        // The sprite sits at the AxText node's origin; its anchor is the text
+        // anchor (HUD code passes CSS-style anchors, e.g. (0,1) = top-left).
+        sprite->setAnchorPoint(ax::Vec2(_anchorX, _anchorY));
+        sprite->setPosition(ax::Vec2::ZERO);
         // (No outline: ax::Sprite has no text outline; HUD text uses a drop
         // shadow via the stroke colour being ignored, like the menu labels.)
         sprite->retain();
@@ -481,6 +490,8 @@ private:
     uint _stroke = 0x000000;
     float _strokeThickness = 0.0f;
     bool _bold = false;
+    float _anchorX = 0.0f;
+    float _anchorY = 1.0f;
 };
 
 class AxContainer : public AxNodeImpl<Container> {
@@ -569,15 +580,30 @@ public:
     }
 
     // Node implementations are compiled ONCE here, in the derived class, where
-    // the base subobject layout is known. Deleting them from other translation
-    // units through the virtual `pix::Node` hierarchy (AxPixiFactory::clearNodes
-    // lives in PixiLike.h and the game TUs) crashed inside the allocator on
-    // device, so the factory only calls this entry point.
+    // the base subobject layout is known. The adapters are `unique_ptr<Node>`,
+    // so deleting a concrete wrapper from PixiLike.h replaces the compile-time
+    // type (the wrapper's reindex()) with a call into this TU -- a double
+    // delete/corruption on the Android build. Route the wrapper release
+    // through the dynamic type there, i.e. keep ~AxNodeImpl virtual-only here.
     void releaseNode(Node* node) override {
         if (!node) {
             return;
         }
         switch (node->kind()) {
+        case kKindSprite:
+            delete dynamic_cast<AxSprite*>(node);
+            break;
+        case kKindGraphics:
+            delete dynamic_cast<AxGraphics*>(node);
+            break;
+        case kKindText:
+            delete dynamic_cast<AxText*>(node);
+            break;
+        case kKindContainer:
+            delete dynamic_cast<AxContainer*>(node);
+            break;
+        default:
+            break;
         }
     }
 

@@ -37,7 +37,7 @@ class FguiHud;
 class Hud;
 class PieTimer;
 
-class FguiPadGraphics;
+class PadGraphicsAxmol;
 
 namespace audio {
 class AxmolAudioBackend;
@@ -46,8 +46,8 @@ class Ambiance;
 } // namespace audio
 
 // axmol PadGraphics implementation (touch.ts pad.img sprites).
-// S2: touch pad graphics replaced by FguiPadGraphics; the old TouchPadGfx
-// class is kept for the legacy atlas fallback path, but no longer instantiated.
+// Legacy atlas-based pad; the live pads are PadGraphicsAxmol (gui/pad.png +
+// DrawNode dot), so this class is kept only as a fallback and is not used.
 class TouchPadGfx : public PadGraphics {
 public:
     explicit TouchPadGfx(ax::Node* parent);
@@ -166,7 +166,13 @@ private:
     void resetWorld();
     // view.ts resizeGame callback registered on every new GameWorld.
     void onWorldResize(float width, float height);
+    // main.ts #game-area backdrop: keeps the full-screen black canvas rect
+    // (created in init()) in front of the Java menu's translucent scrim.
+    void ensureBackdropVisible();
 
+    // Scene child behind the world: a full-screen black rect, so the Java
+    // menu's scrim never shows the launcher/home screen through the canvas.
+    ax::Node* _backdrop = nullptr;
     ax::Node* _gameRoot = nullptr;
     std::unique_ptr<Game> _game;
     std::unique_ptr<pix::Factory> _pixiFactory;
@@ -186,8 +192,8 @@ private:
     // The pad sprites outlive resetWorld(): they are created once against
     // _gameRoot and merely re-positioned by Touch each frame.
     std::unique_ptr<Touch> _touch;
-    std::unique_ptr<FguiPadGraphics> _movePad;
-    std::unique_ptr<FguiPadGraphics> _aimPad;
+    std::unique_ptr<PadGraphicsAxmol> _movePad;
+    std::unique_ptr<PadGraphicsAxmol> _aimPad;
     std::shared_ptr<std::atomic<bool>> _alive;
     bool _wasConnected = false;
     bool _wasPlaying = false;

@@ -100,21 +100,31 @@ void GameWorld::registerPools() {
 
 void GameWorld::attachTo(pix::Node* root) {
     _root = root;
-    root->addChild(_map->groundGfx);
-    root->addChild(_renderer->layers[0]);
-    root->addChild(_renderer->ground);
-    root->addChild(_renderer->layers[1]);
-    root->addChild(_renderer->layers[2]);
-    root->addChild(_renderer->layers[3]);
+    // Terrain, the object layers and the gas overlay all live in world units in
+    // one content container; the camera transform is applied to that container
+    // (see update()), not to each node's vertices.
+    if (!_contentRoot) {
+        _contentRoot = _factory->createContainer();
+    }
+    root->addChild(_contentRoot);
+    // Terrain first (map.ts display.ground), then the z-sorted object layers.
+    _contentRoot->addChild(_map->groundGfx);
+    _contentRoot->addChild(_renderer->layers[0]);
+    _contentRoot->addChild(_renderer->ground);
+    _contentRoot->addChild(_renderer->layers[1]);
+    _contentRoot->addChild(_renderer->layers[2]);
+    _contentRoot->addChild(_renderer->layers[3]);
     // The aim line renders with the player layer (renderer.addPIXIObj re-parents
     // it each frame anyway; creating it once keeps the node owned).
     if (_lineSprites.container) {
-        root->addChild(_lineSprites.container);
+        _contentRoot->addChild(_lineSprites.container);
     }
-    // The gas overlay draws above the world (gas.ts m_render runs after the
-    // map/objects, before the UI).
+    // The gas overlay is world-space geometry (authored around the safe-zone
+    // circle in map units), so it belongs under the camera-transformed content
+    // container, above the object layers. It is normally created later, by
+    // loadMap() -> Gas::m_init(); attach it there when that happens.
     if (_gas.gasRenderer.display) {
-        root->addChild(_gas.gasRenderer.display);
+        _contentRoot->addChild(_gas.gasRenderer.display);
     }
 }
 
@@ -185,6 +195,12 @@ void GameWorld::loadMap(const MapMsg& msg) {
     // When unset, the minimap texture is created but not baked — the FGUI
     // minimap layer still works with its own team-dot overlays.
     _gas.m_init(_factory);
+    // The overlay's geometry is rebuilt per map and lives in world space:
+    // parent it under the camera-transformed content container, above the
+    // object layers.
+    if (_contentRoot && _gas.gasRenderer.display) {
+        _contentRoot->addChild(_gas.gasRenderer.display);
+    }
 
     // Init the minimap indicator barn (data only; sprite barn set by FguiHud).
     _indicatorBarn.init(nullptr);
@@ -351,6 +367,16 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
     _planeBarn->updatePlanes(*this, msg.planes);
 
     _activePlayer = _playerBarn->getPlayerById(_activePlayerId);
+    // game.ts `m_activePlayer.m_setLocalData(msg.activePlayerData)`: the zoom
+    // step lives on the active-player payload, not on the object delta, so
+    // without this the camera never learns the player's view radius and zooms
+    // to the 1.0 fallback (dozens of times too far in).
+    if (_activePlayer) {
+        if (msg.activePlayerData.zoomDirty) {
+            _activePlayer->zoom = static_cast<float>(msg.activePlayerData.zoom);
+            _activePlayer->zoomFast = false;
+        }
+    }
 
     // Process map indicators from the update message.
     for (const auto& mi : msg.mapIndicators) {
@@ -407,16 +433,26 @@ void GameWorld::update(float dt) {
     _emoteManager.update(dt, *this);
 
     _renderer->m_update(dt, _camera, *_map, false);
-    // game.ts restores the camera to the active player and re-derives the zoom
-    // every frame; the aim-line transform reads the same camera.
+    // game.ts restoreCamera() only recentres on an ACTIVE player. Until the
+    // server names one (game.ts plays the map with the camera frozen on the
+    // viewport centre), do not force m_pos onto the held player, or a stale
+    // pointer would hide the terrain behind an all-water view.
     if (_activePlayer) {
         _camera.m_pos = _activePlayer->pos;
+    } else {
+        const float w = _camera.m_screenWidth;
+        const float h = _camera.m_screenHeight;
+        if (w > 0.0f && h > 0.0f) {
+            _camera.m_pos = _camera.m_screenToPoint(Vec2(w * 0.5f, h * 0.5f));
+        }
     }
     updateCameraZoom(dt);
     if (_root) {
         // renderer.ts: the camera live transform goes on the containers, right
-        // after the zoom update so this frame already uses it.
-        _renderer->applyCamera(_root, _camera);
+        // after the zoom update so this frame already uses it. Only the world
+        // content container carries it (see attachTo); the root itself stays
+        // untransformed so the gas overlay can mimic the camera transform.
+        _renderer->applyCamera(_contentRoot, _camera);
         // The ground rect and the layer mask are sized to the camera zoom /
         // viewport, so they are rebuilt whenever the transform changes.
         _renderer->resize(*_map, _camera);

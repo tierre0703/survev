@@ -169,13 +169,15 @@ TEST(renderer_world_root_transform) {
     camera.m_ppu = 16.0f;
     camera.m_zoom = 1.5f;
 
-    // renderer.ts: the containers carry position = pointToScreen(pos) and
-    // scale = (z, -z); objects themselves stay in world space.
+    // renderer.ts: the container's origin is world (0,0), so it goes to
+    // pointToScreen(0,0) and carries scale (z, -z); objects stay in world
+    // space. m_pointToScreen(m_pos) would pin the world origin to the centre
+    // and the camera would never scroll.
     renderer.applyCamera(root, camera);
     CHECK_NEAR(root->sx, 24.0f, 1e-4f);
     CHECK_NEAR(root->sy, -24.0f, 1e-4f);
-    CHECK_NEAR(root->x, 400.0f, 1e-4f);
-    CHECK_NEAR(root->y, 300.0f, 1e-4f);
+    CHECK_NEAR(root->x, 400.0f - 100.0f * 24.0f, 1e-4f);
+    CHECK_NEAR(root->y, 300.0f + 100.0f * 24.0f, 1e-4f);
 
     camera.m_zoom = 0.75f;
     renderer.applyCamera(root, camera);
@@ -957,7 +959,10 @@ TEST(hud_builds_health_bar_at_bottom_centre) {
     hud.build(&factory, root, Vec2(1280.0f, 720.0f));
 
     // #ui-health-counter: 400x32 bar in a 412x44 box (6px padding), 12px above
-    // the design rect's bottom edge (game.css #ui-bottom-center-0).
+    // the design rect's bottom edge (game.css #ui-bottom-center-0). The HUD
+    // lays out in design-space bottom-left coordinates but the container is
+    // centred on the design rect (GameScene centres the HUD root), so the box
+    // spans x [-206, 206] and y [-348, -304] (axmol is y-up).
     bool foundHealthBg = false;
     for (pix::Node* child : root->children) {
         auto* g = dynamic_cast<pix::NullGraphics*>(child);
@@ -965,8 +970,8 @@ TEST(hud_builds_health_bar_at_bottom_centre) {
         for (const auto& cmd : g->commands) {
             if (cmd.kind == pix::DrawCommand::Rect && std::fabs(cmd.c - 412.0f) < 0.01f &&
                 std::fabs(cmd.d - 44.0f) < 0.01f) {
-                CHECK_NEAR(cmd.b, 720.0f - 12.0f - 44.0f, 0.01f);
-                CHECK_NEAR(cmd.a, (1280.0f - 412.0f) * 0.5f, 0.01f);
+                CHECK_NEAR(cmd.b, 12.0f - 360.0f, 0.01f);
+                CHECK_NEAR(cmd.a, -412.0f * 0.5f, 0.01f);
                 foundHealthBg = true;
             }
         }
@@ -1036,16 +1041,25 @@ TEST(map_ground_surface_and_island_hole) {
     CHECK(map.isInOcean(Vec2(-50.0f, -50.0f)));
     CHECK(map.distanceToShore(Vec2(-50.0f, -50.0f)) > 0.0f);
 
-    // Native terrain uses a real polygon hole for the island (water rect minus
-    // the shore contour); without it the grass would be covered by water.
+    // Terrain is drawn as water rect -> shore ring -> grass overpaint (map.ts'
+    // canvas ordering) for every adapter: a punched hole would need the
+    // slab-scanline tessellator to split the full island contour, which
+    // produced tens of thousands of overlapping triangles and broke the
+    // terrain on the GPU.
     map.renderTerrain(map.groundGfx, 0.5f, false, false);
     auto* g = static_cast<pix::NullGraphics*>(map.groundGfx);
     bool hasHole = false;
+    int fills = 0;
     for (const auto& cmd : g->commands) {
         if (cmd.kind == pix::DrawCommand::BeginHole) hasHole = true;
+        if (cmd.kind == pix::DrawCommand::BeginFill) fills++;
     }
-    CHECK(hasHole);
+    CHECK(!hasHole);
+    CHECK(fills >= 3); // surround + water + beach + grass
     CHECK(!g->fillTriangles.empty());
+    // The grass contour (last fill) is tessellated, not dropped: its centroid
+    // must still be covered after the tessellation regression above.
+    CHECK(!map.terrain.grass.empty());
 
     // Canvas keeps the overpaint ordering.
     Map canvasMap(&factory, true);
@@ -1057,6 +1071,54 @@ TEST(map_ground_surface_and_island_hole) {
         if (cmd.kind == pix::DrawCommand::BeginHole) canvasHole = true;
     }
     CHECK(!canvasHole);
+}
+
+// The whole terrain is drawn into the single ground node (map.ts
+// display.ground) and the world container carries the camera. The island
+// (grass) must actually be tessellated: the terrain centroid has to be covered
+// by at least one emitted triangle, otherwise the map renders as flat water.
+TEST(map_ground_covers_island) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    Camera camera;
+    camera.m_screenWidth = 800.0f;
+    camera.m_screenHeight = 600.0f;
+    Map map(&factory, false);
+    MapMsg msg;
+    msg.mapName = "main";
+    msg.seed = 123456;
+    msg.width = 512.0f;
+    msg.height = 512.0f;
+    msg.shoreInset = 4.0f;
+    msg.grassInset = 2.0f;
+    map.loadMap(msg, camera);
+
+    auto* g = static_cast<pix::NullGraphics*>(map.groundGfx);
+    CHECK(g != nullptr);
+    CHECK(!g->fillTriangles.empty());
+
+    Vec2 inside = Vec2(0.0f, 0.0f);
+    for (const auto& v : map.terrain.grass) {
+        inside = v2Add(inside, v);
+    }
+    inside = v2Div(inside, static_cast<float>(map.terrain.grass.size()));
+
+    const auto bary = [](const pix::FillTriangle& t, const Vec2& p) {
+        const float d = (t[1].y - t[2].y) * (t[0].x - t[2].x) + (t[2].x - t[1].x) * (t[0].y - t[2].y);
+        if (std::fabs(d) < 1e-6f) return false;
+        const float a = ((t[1].y - t[2].y) * (p.x - t[2].x) + (t[2].x - t[1].x) * (p.y - t[2].y)) / d;
+        const float b = ((t[2].y - t[0].y) * (p.x - t[2].x) + (t[0].x - t[2].x) * (p.y - t[2].y)) / d;
+        const float c = 1.0f - a - b;
+        return a >= -1e-4f && b >= -1e-4f && c >= -1e-4f;
+    };
+    bool covered = false;
+    for (const auto& t : g->fillTriangles) {
+        if (bary(t, inside)) {
+            covered = true;
+            break;
+        }
+    }
+    CHECK(covered);
 }
 
 TEST(player_aura_submerge_frozen) {

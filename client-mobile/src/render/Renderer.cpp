@@ -111,13 +111,24 @@ void Renderer::resize(Map& map, Camera& camera) {
 // whenever m_z() != 1 (zoom in/out, world aspect). Objects now stay in world
 // units (the web client's convention) and the root carries the camera.
 void Renderer::applyCamera(pix::Node* root, const Camera& camera) {
+    // Never accept a null target and keep the transform unconditional: the gas
+    // overlay is a sibling of the world content container and only inherits a
+    // transform from this call.
     if (!root) {
         return;
     }
     // A masked layer's handle is the wrapper node (see AxNodeImpl::setMask), so
     // the transform lands on the real container even while the stencil is live.
+    // (Camera::m_pointToScreen already handles the pre-setSize() case, where
+    // m_pos is the screen point under the viewport centre, so no special case
+    // is needed here.)
+    // The container's local origin is world (0, 0), so it goes to the screen
+    // position of the world origin -- NOT of the camera itself (which is always
+    // the viewport centre). Using m_pointToScreen(m_pos) pinned world (0,0) to
+    // the centre and the camera never scrolled. map.ts does the same:
+    // `p0 = camera.m_pointToScreen(v2.create(0, 0))`.
     const float s = camera.m_z();
-    const Vec2 p = camera.m_pointToScreen(camera.m_pos);
+    const Vec2 p = camera.m_pointToScreen(Vec2(0.0f, 0.0f));
     root->setScale(s, -s);
     root->setPosition(p.x, p.y);
 }

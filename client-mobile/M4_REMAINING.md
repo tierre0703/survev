@@ -714,3 +714,61 @@ version, was removed in the last commit - that is the likely trigger).
   world renders, pause and back to the menu both work, process stays alive;
   the HUD/pad writes are still gated off (12.2) and the second join hits the
   `AxPixiFactory` teardown above.
+
+## 13. Session 8 - world camera, HUD and pads (2026-10-22)
+
+After the last few UI commits a join rendered a flat water/background split and
+no HUD/pad. Three independent regressions were found and fixed.
+
+### 13.1 World camera never scrolled (`Renderer::applyCamera`)
+
+`applyCamera()` set the content container to `camera.m_pointToScreen(m_pos)`,
+which is always the viewport centre, and then scaled world-space children by
+`m_z()`. The world origin therefore stayed pinned to the centre: at the default
+zoom the viewport showed only the map corner (water rect + background surround),
+which looked like a flat two-colour screen. `map.ts` puts the container at
+`p0 = camera.m_pointToScreen(0, 0)`, so applyCamera now uses world (0,0). The gas
+overlay moved under the same camera-transformed container (world-space geometry)
+instead of being transformed separately.
+
+The chunked terrain workaround from the previous pass was removed: it was
+diagnosing this camera bug (the "only the water rect survived" symptom), and it
+re-drew the full terrain 64 times with a white outside band. The map is back to
+one `display.ground` node like `map.ts`; `AxGraphics`/`DrawNode` has no buffer
+cap. The hole/clip branch in `buildGroundChunks` was also a no-op (a
+`beginHole()` without an open fill).
+
+### 13.2 Active-player view radius never reached the camera
+
+`game.ts` applies `msg.activePlayerData.zoom` to the active player
+(`m_setLocalData`) each update. The port only read `ObjectData.zoom`, so
+`Player::zoom` stayed 0, `getZoom()` returned 1, and the camera settled at
+~40x instead of the 1x-scope radius 32 (m_z ~20). `GameWorld::applyUpdate()` now
+applies `activePlayerData.zoom` when `zoomDirty`.
+
+### 13.3 HUD was vertically mirrored and the pads were off-screen
+
+`Hud` laid out in CSS coordinates (y down) but the HUD container is a positive-
+scale axmol node (y up), so the health bar appeared at the top. The layout is
+now done in design-space bottom-left coordinates and converted to the centred
+container; `AxText` also applies its anchor to the glyph sprite (previously only
+the empty wrapper node, so every anchored label was top-left).
+
+Pads: `Touch` was fed axmol touch points (y up) as if they were web points
+(y down) - the listener now flips y. `GameScene` also passed the player's view
+*radius* (32) to `Touch::setPadOffsetScale`, which multiplied the locked pad
+offsets to ~(4032, 3200) and moved both pads off-screen; that call is gone (the
+web client does not scale pad offsets with zoom). `FguiPadGraphics` is replaced
+by `PadGraphicsAxmol`: two ordinary axmol nodes on the game root (`gui/pad.png`
+ring + a DrawNode touch dot), so no FairyGUI lifetime issue.
+
+### Verification
+
+- `surv_tests`: **109 tests, 1,924 assertions, 0 failures.** New/renamed:
+  `map_ground_covers_island` (terrain tessellation covers the island centroid)
+  and the corrected `renderer_world_root_transform` / HUD position expectations.
+- x86_64 native lib + APK build, sign, install and run on the emulator against
+  the local `pnpm dev` API (`adb reverse` 8000/9000/9001). `Play Solo` joins,
+  the terrain scrolls with the camera, the health bar sits bottom-centre, the
+  minimap frame sits top-right, both joystick rings/dots render, and a swipe on
+  the move pad scrolls the world (`logcat -b crash` empty).

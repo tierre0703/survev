@@ -18,7 +18,7 @@
 #include "../ui/FguiHud.h"
 #include "../game/Hud.h"
 #include "../ui/FguiPieTimer.h"
-#include "../ui/FguiPadGraphics.h"
+#include "../ui/PadGraphicsAxmol.h"
 #include "../ui/Layout.h"
 #include "../../../shared/config/ui2Constants.inc"
 
@@ -77,14 +77,16 @@ static void loadAtlasesForMap(const std::string& mapName) {
     }
 }
 
-// S2: FairyGUI GRoot for the HUD layer.
-// Created once in init(), used by FguiHud and FguiPadGraphics.
+// S2: FairyGUI GRoot for the UI layer. Created once in init(); the in-game HUD
+// and pads now use plain pix/axmol nodes, so this is only needed if a
+// FairyGUI-based widget (e.g. FguiHud) is enabled again.
 static fairygui::GRoot* s_fguiRoot = nullptr;
 
 fairygui::GRoot* fguiRoot() { return s_fguiRoot; }
 
 // ---------------------------------------------------------------------------
-// TouchPadGfx (touch.ts pad.img sprites) — replaced by FguiPadGraphics in S2
+// TouchPadGfx (touch.ts pad.img sprites) - legacy, no longer instantiated
+// (the live pads are PadGraphicsAxmol). Kept as an atlas-based fallback.
 // ---------------------------------------------------------------------------
 // Port of touch.ts createPadSprite(): the joystick ring is the web client's
 // `pad.img` (client/public/img/gui/pad.svg, a grey circle stroke). The web
@@ -212,19 +214,37 @@ bool GameScene::init() {
         AXLOGI("FairyGUI GRoot created");
     }
 
+    // The gameplay canvas backdrop. Before the world is built (and whenever no
+    // match is running) the scene would otherwise clear to black, so the Java
+    // menu's scrim showed the translucent launcher/home screen through it.
+    // main.ts paints #game-area solid black; do the same here. It sits behind
+    // the world layers.
+    _backdrop = ax::LayerColor::create(ax::Color4B(0, 0, 0, 255),
+                                       visible.width, visible.height);
+    _backdrop->setLocalZOrder(-1);
+    this->addChild(_backdrop);
+
     _gameRoot = ax::Node::create();
     this->addChild(_gameRoot);
 
     // Dual-joystick touch input (multi-touch).
     auto listener = ax::EventListenerTouchAllAtOnce::create();
-    listener->onTouchesBegan = [this](const std::vector<ax::Touch*>& touches, ax::Event*) {
+    // Touch/GUI code (touch.ts) works in web screen space: origin top-left,
+    // y increasing downwards. axmol hands us design-space points with y up, so
+    // flip y here; the pad renderer flips it back for the axmol scene graph.
+    auto webY = [](const ax::Vec2& p) {
+        return ax::Director::getInstance()->getVisibleSize().height - p.y;
+    };
+    listener->onTouchesBegan = [this, webY](const std::vector<ax::Touch*>& touches, ax::Event*) {
         for (auto* t : touches) {
-            onTouchBegan(t->getLocation().x, t->getLocation().y, t->getID() & 3);
+            const ax::Vec2 p = t->getLocation();
+            onTouchBegan(p.x, webY(p), t->getID() & 3);
         }
     };
-    listener->onTouchesMoved = [this](const std::vector<ax::Touch*>& touches, ax::Event*) {
+    listener->onTouchesMoved = [this, webY](const std::vector<ax::Touch*>& touches, ax::Event*) {
         for (auto* t : touches) {
-            onTouchMoved(t->getLocation().x, t->getLocation().y, t->getID() & 3);
+            const ax::Vec2 p = t->getLocation();
+            onTouchMoved(p.x, webY(p), t->getID() & 3);
         }
     };
     listener->onTouchesEnded = [this](const std::vector<ax::Touch*>& touches, ax::Event*) {
@@ -240,9 +260,10 @@ bool GameScene::init() {
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 
     _touch = std::make_unique<Touch>(visible.width, visible.height, isLandscape);
-    // S2: replace the axmol Sprite-based TouchPadGfx with FairyGUI pad graphics.
-    _movePad = std::make_unique<FguiPadGraphics>(this, true);
-    _aimPad = std::make_unique<FguiPadGraphics>(this, false);
+    // Dual-joystick graphics: plain axmol sprites/draw nodes on the game root
+    // (see PadGraphicsAxmol), updated from Touch every frame.
+    _movePad = std::make_unique<PadGraphicsAxmol>(_gameRoot, true);
+    _aimPad = std::make_unique<PadGraphicsAxmol>(_gameRoot, false);
     // Touch keeps feeding setCenterScale/setTouchScale with the raw touch.ts
     // ratios (asserted by the host tests); TouchPadGfx::sizeSprite maps those
     // onto the texture actually in use, so the on-screen ring size no longer
@@ -277,10 +298,10 @@ bool GameScene::init() {
     _audio->preloadSounds();
 
     _pixiFactory = std::make_unique<pix::AxPixiFactory>();
-    // S2: remove atlas callback for old TouchPadGfx; FguiPadGraphics draws
-    // programmatic circles and does not need pad.img frames.
+    // The pads use the bundled gui/pad.png (not a map atlas), so a map load
+    // does not need to refresh them.
     _game->setAtlasCallback([this] {
-        // No-op: the pads no longer use atlas frames.
+        // No-op.
     });
     resetWorld();
     // ui2.ts reads the device scale (points per CSS pixel, i.e. the uiRoot
@@ -301,6 +322,8 @@ bool GameScene::init() {
     _game->setMapCallback([this](const MapMsg& msg) {
         loadAtlasesForMap(msg.mapName);
         if (_world) {
+            // The world (and its terrain node) was attached by resetWorld()
+            // before this MapMsg arrived; loadMap renders the terrain in place.
             _world->loadMap(msg);
         }
     });
@@ -314,10 +337,6 @@ bool GameScene::init() {
 
     _game->setPickupSoundCallback(
         [this](const std::string& item) { onPickupSound(item); });
-
-    // TEMP (M4 12.2): FguiPadGraphics faults on its first widget write.
-    // _movePad->setVisible(false);
-    // _aimPad->setVisible(false);
 
     // Android hardware back button / desktop Escape: pause/leave the game.
     auto* keyListener = ax::EventListenerKeyboard::create();
@@ -408,13 +427,30 @@ void GameScene::resetWorld() {
 void GameScene::onWorldResize(float width, float height) {
     _worldSize = ax::Size(width, height);
     _worldSizeDirty = true;
-    // The FairyGUI GRoot is sized to the design resolution; keep the HUD root's
-    // device scale in sync (uiRoot scale == points per CSS pixel).
+    // ui2.ts sizes the HUD in CSS px / device scale; the native HUD is laid out
+    // in the 1280x720 design space, which is already the uiRoot scale.
     const auto visible = ax::Director::getInstance()->getVisibleSize();
     const float scale = std::fmin(visible.width / ::ui::kit::designWidth(),
                                   visible.height / ::ui::kit::designHeight());
     if (_world && scale > 0.0f) {
         _world->setDeviceScale(scale);
+    }
+    // Full-screen layers follow the viewport (view.ts setSize()).
+    if (_backdrop) {
+        _backdrop->setContentSize(ax::Size(visible.width, visible.height));
+    }
+    // Re-fit the HUD to the real viewport once the GL view exists (the first
+    // pass runs before it, so the HUD would keep the default size scale).
+    if (_hudRoot) {
+        const float fit = std::fmin(width / ::ui::kit::designWidth(), height / ::ui::kit::designHeight());
+        _hudRoot->setPosition(width * 0.5f, height * 0.5f);
+        _hudRoot->setScale(fit, fit);
+    }
+}
+
+void GameScene::ensureBackdropVisible() {
+    if (_backdrop && !_backdrop->isVisible()) {
+        _backdrop->setVisible(true);
     }
 }
 
@@ -441,6 +477,7 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
     _joinElapsed = 0;
     _gameRoot->setVisible(true);
     _worldVisible = true;
+    ensureBackdropVisible();
     // Build the match world *before* the socket opens. Otherwise the first
     // MapMsg (pumped from tryJoinUrls() below) reaches a null world and the
     // join crashes in GameWorld::loadMap().
@@ -685,9 +722,6 @@ void GameScene::update(float delta) {
         if (Player* active = _world->activePlayer()) {
             // Camera follows the active player (M5 adds the smoothing/shake).
             _world->camera().m_pos = active->pos;
-            // touch.ts scales the locked joystick offsets with the player's
-            // zoom (a scoped player pushes the pads inward proportionally).
-            _touch->setPadOffsetScale(active->getZoom(_world->mobile()));
         }
     }
 
@@ -804,14 +838,12 @@ void GameScene::update(float delta) {
     if (_game->isPlaying() && _game->getActivePlayerId() != 0) {
         updateInput(delta);
     }
-    // Only update pad graphics when the touch pads should be visible
-    // (i.e. after a match starts). The FairyGUI GRoot may be gone before
-    // that — guard with _inGame and _notifiedStarted.
-    // TEMP: disabled with the HUD update above: FguiPadGraphics holds raw
-    // fairygui pointers into a GRoot whose children the engine frees.
-    // if (_inGame && _notifiedStarted) {
-    //     _touch->m_update(*_movePad, *_aimPad);
-    // }
+    // Dual joysticks: Touch::m_update reads the pad centres that getMovement/
+    // getAim publish and forwards them to the axmol pad graphics. It is safe to
+    // call every frame; `display` gates visibility (false until a match starts).
+    if (_touch && _movePad && _aimPad) {
+        _touch->m_update(*_movePad, *_aimPad);
+    }
 
     // M5: pass touchingAim + touchAimLine state from Touch to GameWorld
     // for the LineSprites aim-line rendering in the world update.

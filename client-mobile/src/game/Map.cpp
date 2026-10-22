@@ -56,9 +56,11 @@ static void traceGroundPatch(pix::Graphics* g, const GroundPatch& patch, uint32_
     }
 }
 
-Map::Map(pix::Factory* factory, bool canvasMode) : groundGfx(factory->createGraphics()), _canvasMode(canvasMode) {}
+Map::Map(pix::Factory* factory, bool canvasMode)
+    : groundGfx(factory->createGraphics()), _canvasMode(canvasMode) {}
 
-void Map::loadMap(const MapMsg& msg, Camera& camera) {
+void Map::loadMap(const MapMsg& msg, Camera& camera, float gridThickness) {
+    (void)camera;
     mapName = msg.mapName;
     const DefProvider* provider = getDefProvider();
     const MapRenderDef* renderDef = provider ? provider->mapRender(mapName) : nullptr;
@@ -94,8 +96,10 @@ void Map::loadMap(const MapMsg& msg, Camera& camera) {
     resetObjectPools();
     mapLoaded = true;
 
+    // map.ts draws the whole terrain into the one ground Graphics; the camera
+    // transform lives on the world container it is parented under (GameWorld).
     groundGfx->clear();
-    renderTerrain(groundGfx, 2.0f / camera.m_ppu, _canvasMode, false);
+    renderTerrain(groundGfx, gridThickness, _canvasMode, false);
 }
 
 void Map::resetObjectPools() {
@@ -144,41 +148,34 @@ void Map::renderTerrain(pix::Graphics* g, float gridThickness, bool canvasMode, 
     const Vec2 ur(w, h);
     const BiomeColors& colors = mapDef.colors;
 
-    // Background surround.
-    g->beginFill(colors.background);
-    g->drawRect(-120.0f, -120.0f, w + 240.0f, 120.0f);
-    g->drawRect(-120.0f, h, w + 240.0f, 120.0f);
-    g->drawRect(-120.0f, -120.0f, 120.0f, h + 240.0f);
-    g->drawRect(w, -120.0f, 120.0f, h + 240.0f);
-    g->endFill();
-
-    // The island hole is real on native: the water is a full-map rect with the
-    // shore contour punched out (FillGeometry tessellates in both adapters), so
-    // beach/grass never need an overpaint fallback. The canvas keeps its
-    // overpaint ordering because canvas Graphics has no hole support.
-    if (canvasMode) {
-        g->beginFill(colors.water);
-        g->drawRect(0.0f, 0.0f, w, h);
-        g->endFill();
-        g->beginFill(colors.beach);
-        tracePath(g, terrain.shore);
-        g->endFill();
-    } else {
-        g->beginFill(colors.water);
-        g->drawRect(0.0f, 0.0f, w, h);
-        g->beginHole();
-        tracePath(g, terrain.shore);
-        g->endHole();
-        g->endFill();
-        // Beach ring: the beach contour minus the (smaller) grass contour, so
-        // the grass drawn next is not covered by beach fill.
-        g->beginFill(colors.beach);
-        tracePath(g, terrain.shore);
-        g->beginHole();
-        tracePath(g, terrain.grass);
-        g->endHole();
+    // Background surround. map.ts draws four separate strips; a single fill
+    // with four rects makes FillGeometry's slab scanline split the full
+    // 240px-thick ring, so it emits ~2 slivers per pixel row and the GPU
+    // quad-budget drops/overdraws them (slab-coloured screen).
+    const float surround[][4] = {
+        {-120.0f, -120.0f, w + 240.0f, 120.0f}, // top
+        {-120.0f, h, w + 240.0f, 120.0f},       // bottom
+        {-120.0f, -120.0f, 120.0f, h + 240.0f}, // left
+        {w, -120.0f, 120.0f, h + 240.0f},       // right
+    };
+    for (const auto& r : surround) {
+        g->beginFill(colors.background);
+        g->drawRect(r[0], r[1], r[2], r[3]);
         g->endFill();
     }
+
+    // Water -> shore ring -> grass, each layer overpainting the previous one,
+    // like map.ts' canvas branch. The other branch punched the shore/grass
+    // contours out as holes, but FillGeometry tessellates every contour with a
+    // horizontal-slab scanline, and a 260-point island contour produced ~18k
+    // overlapping slabs (~35k triangles) whose overdraw read as a flat slab of
+    // colour on the GPU instead of the island. Overpaint needs 4 fills.
+    g->beginFill(colors.water);
+    g->drawRect(0.0f, 0.0f, w, h);
+    g->endFill();
+    g->beginFill(colors.beach);
+    tracePath(g, terrain.shore);
+    g->endFill();
 
     g->beginFill(colors.grass);
     tracePath(g, terrain.grass);
@@ -207,15 +204,19 @@ void Map::renderTerrain(pix::Graphics* g, float gridThickness, bool canvasMode, 
         g->endFill();
     }
 
-    // Grid.
-    g->lineStyle(gridThickness, 0, 0.15f);
-    for (float x = 0.0f; x <= w; x += MapConfig::gridSize) {
-        drawLine(g, Vec2(x, 0.0f), Vec2(x, h));
+    // Grid (renderer.ts drawGrid). map.ts skips it at zero thickness. Every
+    // line is its own DrawNode quad, i.e. the largest single batch of the
+    // ground node; `gridThickness <= 0` also lets the app drop the grid.
+    if (gridThickness > 0.0f) {
+        g->lineStyle(gridThickness, 0, 0.15f);
+        for (float x = 0.0f; x <= w; x += MapConfig::gridSize) {
+            drawLine(g, Vec2(x, 0.0f), Vec2(x, h));
+        }
+        for (float y = 0.0f; y <= h; y += MapConfig::gridSize) {
+            drawLine(g, Vec2(0.0f, y), Vec2(w, y));
+        }
+        g->lineStyle(gridThickness, 0, 0.0f);
     }
-    for (float y = 0.0f; y <= h; y += MapConfig::gridSize) {
-        drawLine(g, Vec2(0.0f, y), Vec2(w, y));
-    }
-    g->lineStyle(gridThickness, 0, 0.0f);
 
     // Order 1 ground patches.
     for (const auto& patch : groundPatches) {
