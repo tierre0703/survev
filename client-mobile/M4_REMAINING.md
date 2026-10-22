@@ -772,3 +772,54 @@ ring + a DrawNode touch dot), so no FairyGUI lifetime issue.
   the terrain scrolls with the camera, the health bar sits bottom-centre, the
   minimap frame sits top-right, both joystick rings/dots render, and a swipe on
   the move pad scrolls the world (`logcat -b crash` empty).
+
+## 14. Session 9 - per-match world rebuild, back to the menu (2026-10-22)
+
+Closes §12.4 (second join) and the missing match-end notification that made it
+impossible to reach the menu again.
+
+### 14.1 Second join double-free (`GameScene::resetWorld`)
+
+The previous pass had already fixed the factory side (`AxPixiFactory::clearNodes`
+deletes the wrappers while its own list is alive, and `~AxNodeImpl` no longer
+walks a dead parent). The remaining crash was **double ownership of the two
+scene roots**: `_worldRoot`/`_hudRoot` were `unique_ptr<pix::Container>` *and*
+every adapter node is owned by the factory.
+
+On a second join `resetWorld()` replaced `_pixiFactory` (whose `clearNodes()`
+deleted the old root wrappers) and then called `_worldRoot.reset(newRoot)`,
+which deleted the already-freed old wrapper - a use-after-free that surfaced as
+`removeChild`/`setVisible` faults. That is why the function still early-returned
+when `_world` existed ("TEMP" in §12.2).
+
+Fix (`src/app/GameScene.h`, `GameScene.cpp`):
+- `_worldRoot`/`_hudRoot` are now raw `pix::Container*` handles owned by the
+  factory; GameScene never deletes them.
+- `resetWorld()` tears down in dependency order: detach the root's axmol node
+  from `_gameRoot`, drop `_hud`/`_world` (they only hold raw node pointers),
+  null the handles, replace the factory (which frees the previous match's whole
+  adapter tree), then build the new world/HUD.
+- The `if (_world) return;` TEMP guard is gone, so every join gets a fresh
+  `GameWorld` + renderer + HUD like game.ts `free()` + re-init.
+
+### 14.2 Match end never reached the Java menu
+
+`GameScene::onMatchEnded` was only subscribed by the C++ `MenuScene`, which the
+Android build no longer creates (AppDelegate runs `GameScene` directly). The
+Java fragment hidden by `enterGame()` was therefore never shown again: hardware
+back / quit left a black canvas with no way to start a second match.
+
+`AppDelegate` now wires `gameScene->onMatchEnded` to
+`uiHost()->returnToMenu(errorL10nKey)` (the `SurvBridge.onNativeMatchEnded`
+path), so a clean exit, a socket close and a failed join all restore the menu.
+
+### Verification
+
+- `surv_tests`: **109 tests, 1,924 assertions, 0 failures.**
+- x86_64 native lib + APK, installed on the emulator against the bundle API
+  (`adb reverse` 8000/8001).
+- Three consecutive **Play Solo** joins with **Back** between them: each join
+  got a new `activePlayerId` (4512 → 4513 → 4514), terrain/minimap/HUD rendered
+  every time, the Java menu came back after each back press, and
+  `logcat -b crash` stayed empty.
+

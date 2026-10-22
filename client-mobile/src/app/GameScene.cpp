@@ -352,73 +352,62 @@ bool GameScene::init() {
 }
 
 void GameScene::resetWorld() {
-    // **CRASH**: AxPixiFactory::~AxPixiFactory() iterates its _nodes vector,
-    // destroying each unique_ptr<AxNodeImpl>.  Each AxNodeImpl destructor calls
-    // removeFromParent(), which accesses _parentNode->_children — but the
-    // parent was already destroyed in the same vector iteration (use-after-free).
-    //
-    // The only safe teardown is to clear the factory's node list BEFORE the
-    // unique_ptr destructor runs (i.e. when the vector is still alive).  We
-    // do this by creating the new factory first, transferring ownership, then
-    // dropping the old factory via a scope block so its destructor sees no
-    // live _nodes (they were moved or cleared).
-    //
-    // Because of that crash the world is only built on a join, never in
-    // init(): `_inGame` is set by enterWithJoin() before it calls this.
-    if (_inGame) {
-        // TEMP: the adapter node teardown is not device-safe yet (see
-        // M4_REMAINING.md); keep the world, factory and HUD for the session.
-        if (_world) {
-            return;
-        }
-        if (_world) {
-            _world->onFactoryReset();
-        }
-        _world.reset();
-        // The HUD's FairyGUI tree points at this world's adapter nodes; drop it
-        // before the factory that owns those nodes is destroyed.
-        _hud.reset();
-        // The crosshair is owned by the pixel factory.
-        _crosshair = nullptr;
-        if (_worldRoot) {
-            static_cast<ax::Node*>(_worldRoot->native())->removeFromParent();
-            _worldRoot.reset();
-        }
-        _pixiFactory = std::make_unique<pix::AxPixiFactory>();
-        _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
-        _world->setAudio(_audio.get(), _ambiance.get());
-        _world->setDeviceScale(::ui2::kDeviceScale);
-        // view.ts resizeGame callbacks: the new layers must follow the camera.
-        _world->setSizeCallbacks(
-            [this](float width, float height) { onWorldResize(width, height); },
-            [this] { _worldSizeDirty = true; });
-        _worldRoot.reset(_pixiFactory->createContainer());
-        _world->attachTo(_worldRoot.get());
-        _gameRoot->addChild(static_cast<ax::Node*>(_worldRoot->native()));
-        _worldRoot->setVisible(_worldVisible);
-        // view.ts setSize(): give the new layers the real viewport size right
-        // away (they were just rebuilt).
-        const auto visible = ax::Director::getInstance()->getVisibleSize();
-        _world->setScreenSize(visible.width, visible.height);
-        _worldSize = visible;
-        _worldSizeDirty = false;
-        _worldSized = true;
-        // In-game HUD: plain pix nodes on _gameRoot (the 1280x720 design
-        // space the menu uses); see game/Hud.h.
-        _hudRoot.reset(_pixiFactory->createContainer());
-        // The HUD is laid out around the design rect's centre (like the menu's
-        // uiRoot); ui::layoutUiRoot fits the 1280x720 rect into the view.
-        {
-            const float vw = ax::Director::getInstance()->getVisibleSize().width;
-            const float vh = ax::Director::getInstance()->getVisibleSize().height;
-            const float fit = std::fmin(vw / ::ui::kit::designWidth(), vh / ::ui::kit::designHeight());
-            _hudRoot->setPosition(vw * 0.5f, vh * 0.5f);
-            _hudRoot->setScale(fit, fit);
-        }
-        _gameRoot->addChild(static_cast<ax::Node*>(_hudRoot->native()));
-        _hud = std::make_unique<Hud>();
-        _hud->build(_pixiFactory.get(), _hudRoot.get(), Vec2(svui::kit::designWidth(), svui::kit::designHeight()));
+    // game.ts builds a fresh world (renderer + map + barns) for every match.
+    // The native world is only built on a join, never in init(), because
+    // `_inGame` is set by enterWithJoin() before it calls this.
+    if (!_inGame) {
+        return;
     }
+    // Tear the previous match down in dependency order: the world/HUD hold raw
+    // pointers into the adapter nodes, and the factory owns every adapter node.
+    // Dropping the world first (it never deletes nodes) and detaching the two
+    // roots from the axmol scene leaves the factory as the only owner, so its
+    // clearNodes() can delete the whole tree safely.
+    if (_worldRoot) {
+        static_cast<ax::Node*>(_worldRoot->native())->removeFromParent();
+    }
+    _crosshair = nullptr; // owned (and freed) by the factory
+    _hud.reset();
+    _world.reset();
+    _worldRoot = nullptr;
+    _hudRoot = nullptr;
+    // Replacing the factory destroys the previous match's adapter nodes.
+    // clearNodes() deletes them while its own list is still alive (see
+    // AxPixiFactory), which is the only device-safe teardown order.
+    _pixiFactory = std::make_unique<pix::AxPixiFactory>();
+    _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
+    _world->setAudio(_audio.get(), _ambiance.get());
+    _world->setDeviceScale(::ui2::kDeviceScale);
+    // view.ts resizeGame callbacks: the new layers must follow the camera.
+    _world->setSizeCallbacks(
+        [this](float width, float height) { onWorldResize(width, height); },
+        [this] { _worldSizeDirty = true; });
+    _worldRoot = _pixiFactory->createContainer();
+    _world->attachTo(_worldRoot);
+    _gameRoot->addChild(static_cast<ax::Node*>(_worldRoot->native()));
+    _worldRoot->setVisible(_worldVisible);
+    // view.ts setSize(): give the new layers the real viewport size right
+    // away (they were just rebuilt).
+    const auto visible = ax::Director::getInstance()->getVisibleSize();
+    _world->setScreenSize(visible.width, visible.height);
+    _worldSize = visible;
+    _worldSizeDirty = false;
+    _worldSized = true;
+    // In-game HUD: plain pix nodes on _gameRoot (the 1280x720 design
+    // space the menu uses); see game/Hud.h.
+    _hudRoot = _pixiFactory->createContainer();
+    // The HUD is laid out around the design rect's centre (like the menu's
+    // uiRoot); ui::layoutUiRoot fits the 1280x720 rect into the view.
+    {
+        const float vw = ax::Director::getInstance()->getVisibleSize().width;
+        const float vh = ax::Director::getInstance()->getVisibleSize().height;
+        const float fit = std::fmin(vw / ::ui::kit::designWidth(), vh / ::ui::kit::designHeight());
+        _hudRoot->setPosition(vw * 0.5f, vh * 0.5f);
+        _hudRoot->setScale(fit, fit);
+    }
+    _gameRoot->addChild(static_cast<ax::Node*>(_hudRoot->native()));
+    _hud = std::make_unique<Hud>();
+    _hud->build(_pixiFactory.get(), _hudRoot, Vec2(svui::kit::designWidth(), svui::kit::designHeight()));
 }
 
 // view.ts resizeGame(): every listener re-lays-out for the new size. The
@@ -468,10 +457,9 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
         return;
     }
     clearError();
-    // _game->free() + resetWorld() triggers a use-after-free crash in
-    // AxPixiFactory's destructor chain (see resetWorld()), so on join the world
-    // is rebuilt by resetWorld() below, never freed. _game->free() is skipped
-    // here too: the _game unique_ptr persists across joins.
+    // Every join rebuilds the match world (and its adapter nodes) from
+    // scratch, like game.ts free() + init(); resetWorld() below does the
+    // teardown. _game itself survives across matches (free() resets it).
     _inGame = true;
     _notifiedStarted = false;
     _joinElapsed = 0;

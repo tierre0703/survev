@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-18** — Minimap: `Map::generateMinimapTexture` is now wired into `GameWorld::loadMap` and baked via the pix::Renderer; `FguiHud::buildMinimap` draws the FGUI frame/border/gas-ring/safe-zone stubs; `FguiHud::refreshMinimap` draws team-player dots per frame. **79 host tests pass, 0 fail** (the `aim_line_default_range` test crashes with SIGSEGV — a pre-existing regression triggered by `fists` vs `mosin` in the `addGunPlayer` helper; `aim_line_gun_def_fields`, `aim_line_gun_range_and_clamp`, and `aim_line_stops_at_obstacle` all pass). Player action sounds, pickup sounds, emote sounds, and ping sounds are wired. See `REMAININGS.md` §3 for the next-priority gaps.
+Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) rebuilt the match world per join (fixing the §12.4 second-join double-free) and wired match-end back to the Java menu, so repeat `Play Solo` → `Back` → `Play Solo` works. **109 host tests pass, 0 fail.** Minimap, HUD, pads, inventory v2, pie timer and crosshair are live; player action sounds, pickup sounds, emote sounds, and ping sounds are wired. See §3 for the next-priority gaps (emote wheel UI, reverb, M8 accounts).
 
 ---
 

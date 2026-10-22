@@ -176,7 +176,12 @@ private:
     ax::Node* _gameRoot = nullptr;
     std::unique_ptr<Game> _game;
     std::unique_ptr<pix::Factory> _pixiFactory;
-    std::unique_ptr<pix::Container> _worldRoot;
+    // Owned by `_pixiFactory` (like every other adapter node); GameScene only
+    // keeps the handle. A unique_ptr here double-deleted the wrapper: the
+    // factory already destroys all of its nodes, so resetting this after the
+    // factory was replaced freed an already-deleted object (the second-join
+    // crash, M4_REMAINING 12.4).
+    pix::Container* _worldRoot = nullptr;
     std::unique_ptr<GameWorld> _world;
     // Last viewport size handed to _world (view.ts setSize tracking).
     ax::Size _worldSize;
@@ -201,8 +206,9 @@ private:
 
     // In-game HUD drawn through the pix adapter on _gameRoot (design space).
     std::unique_ptr<Hud> _hud;
-    // HUD container on _gameRoot (pix adapter nodes, design space).
-    std::unique_ptr<pix::Container> _hudRoot;
+    // HUD container on _gameRoot (pix adapter nodes, design space). Owned by
+    // `_pixiFactory`; see `_worldRoot` above.
+    pix::Container* _hudRoot = nullptr;
     std::unique_ptr<PieTimer> _pieTimer;
     // Crosshair overlay (factor-owned; parented to _gameRoot, not the camera-
     // transformed world root).

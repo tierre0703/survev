@@ -72,6 +72,16 @@ bool AppDelegate::applicationDidFinishLaunching() {
     // When the Java menu calls SurvBridge.onJoinUrls(), it lands in
     // UiBridge::joinUrls() → GameScene::enterWithJoin(), same as the team path.
     if (gameScene) {
+        // Java owns the menu, so nothing else subscribed to match-end: without
+        // this the fragment hidden by enterGame() was never shown again and a
+        // quit/back left a black canvas (the second-join test could not even
+        // reach the menu). `returnToMenu("")` is the clean-exit path used by
+        // the hardware back button and the pause dialog.
+        gameScene->onMatchEnded = [](const std::string& errorL10nKey) {
+            if (surv::UiHost* host = surv::uiHost()) {
+                host->returnToMenu(errorL10nKey);
+            }
+        };
         gameScene->setFindGameRequest(
             [](const std::string& region, int gameModeIdx,
                surv::GameScene::FindGameDone done) {
