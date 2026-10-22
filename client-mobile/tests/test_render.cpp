@@ -879,9 +879,11 @@ TEST(obstacle_render_parity) {
     // zIdx = floor(scale * 1000) * 65535 + __id (obstacle.ts sprite.zIdx).
     CHECK_EQ(o.zIdx, 1000 * 65535 + 42);
     CHECK_EQ(o.zOrd, barrelDef->img.zIdx);
-    // obstacle.ts scales the sprite by its def scale (world units); the camera
-    // transform on the world root applies the view scale.
-    CHECK_NEAR(sprite(o.sprite)->sx, 1.0f * barrelDef->img.scale, 1e-4f);
+    // obstacle.ts scales the sprite by camera.m_pixels(scale * imgScale) =
+    // scale * imgScale * m_zoom. Sprites live in world units under the
+    // camera-transformed root (m_ppu * m_zoom), so the native sprite scale is
+    // that screen scale divided by m_ppu.
+    CHECK_NEAR(sprite(o.sprite)->sx, 1.0f * barrelDef->img.scale / world.camera().m_ppu, 1e-4f);
     // The sprite is only rendered when it is visible.
     auto* layer0 = static_cast<pix::NullContainer*>(world.renderer().layers[0]);
     CHECK(layer0->children.size() >= 1u);

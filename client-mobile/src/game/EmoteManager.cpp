@@ -285,9 +285,11 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
         float zoomClamp = camera.m_zoom < 0.75f ? 0.75f : (camera.m_zoom > 1.0f ? 1.0f : camera.m_zoom);
         offsetPos.y += 4.0f / zoomClamp;
 
-        // World space (emoteManager.ts): the camera lives on the world root.
+        // World space (emoteManager.ts): the camera lives on the world root, so
+        // the web's screen-space m_pixels() scale needs the /m_ppu conversion.
         const float emoteScale =
-            scale * 0.55f * (camera.m_zoom < 0.9f ? 0.9f : (camera.m_zoom > 1.75f ? 1.75f : camera.m_zoom));
+            scale * 0.55f * (camera.m_zoom < 0.9f ? 0.9f : (camera.m_zoom > 1.75f ? 1.75f : camera.m_zoom)) /
+            camera.m_ppu;
         e.container->setPosition(offsetPos.x, offsetPos.y);
         e.container->setScale(emoteScale, emoteScale);
         e.container->setVisible(true);
@@ -313,8 +315,11 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             Vec2 dir = v2NormalizeSafe(v2Sub(ind.pos, camera.m_pos), Vec2(1.0f, 0.0f));
 
             Vec2 screenPos = camera.m_pointToScreen(ind.pos);
-            float borderScale = camera.m_pixels(0.4f);
-            float pingScale = camera.m_pixels(0.4f);
+            // The indicator nodes live under the camera-transformed world root,
+            // so the web's screen-space positions/scales are converted here.
+            const Vec2 worldPos = camera.m_screenToPoint(screenPos);
+            float borderScale = camera.m_pixels(0.4f) / camera.m_ppu;
+            float pingScale = camera.m_pixels(0.4f) / camera.m_ppu;
 
             ind.borderSprite->setScale(borderScale, borderScale);
             ind.pingSprite->setScale(pingScale, pingScale);
@@ -323,8 +328,8 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             ind.indSpriteInner->setAlpha(ind.fadeIn > 0 ? 0.0f : 1.0f);
             ind.indSpriteOuter->setAlpha(ind.fadeIn > 0 ? 0.0f : 1.0f);
 
-            ind.pingSprite->setPosition(screenPos.x, screenPos.y);
-            ind.borderSprite->setPosition(screenPos.x, screenPos.y);
+            ind.pingSprite->setPosition(worldPos.x, worldPos.y);
+            ind.borderSprite->setPosition(worldPos.x, worldPos.y);
 
             // On-screen vs edge-of-screen positioning
             const float off = 64.0f;
@@ -336,14 +341,15 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             else if (screenPos.y > camera.m_screenHeight - off) topConstrain = camera.m_screenHeight - off;
 
             float rot = std::atan2(dir.y, -dir.x) + 3.14159f * 0.5f;
-            ind.indSpriteOuter->setPosition(leftConstrain, topConstrain);
+            const Vec2 edgeWorld = camera.m_screenToPoint(Vec2(leftConstrain, topConstrain));
+            ind.indSpriteOuter->setPosition(edgeWorld.x, edgeWorld.y);
             ind.indSpriteOuter->setRotation(rot);
-            ind.indSpriteInner->setPosition(leftConstrain, topConstrain);
+            ind.indSpriteInner->setPosition(edgeWorld.x, edgeWorld.y);
 
             // Pulse effect on border
             float pulseAlpha = ind.borderSprite->getAlpha() <= 0 ? 1 : ind.borderSprite->getAlpha() - dt;
             ind.borderSprite->setAlpha(pulseAlpha);
-            float pulseScale = camera.m_pixels(0.4f * (2 - pulseAlpha));
+            float pulseScale = camera.m_pixels(0.4f * (2 - pulseAlpha)) / camera.m_ppu;
             ind.borderSprite->setScale(pulseScale, pulseScale);
 
             // Fade in/out

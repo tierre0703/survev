@@ -414,10 +414,12 @@ void Obstacle::render(Ctx& ctx, int activeLayer) {
         renderPos = v2Lerp(posT, posInterpOld, pos);
     }
 
-    const float spriteScale = scale * imgScale;
+    // obstacle.ts projects the sprite to screen space and scales it by
+    // camera.m_pixels(scale * imgScale) = x * m_zoom. The port keeps sprites in
+    // world units under the camera-transformed content root (m_ppu * m_zoom),
+    // so the same screen size needs the /m_ppu conversion.
+    const float spriteScale = scale * imgScale / ctx.camera().m_ppu;
     // obstacle.ts renders the sprite directly at the object's world position;
-    // the sprite's own anchor (0.5 or the door's def.door.spriteAnchor) is the
-    // pivot, applied by applyFrame. The camera lives on the world root.
     placeInWorldLayer(sprite, renderPos);
     float sx = spriteScale;
     float sy = spriteScale;
@@ -455,7 +457,7 @@ void Obstacle::render(Ctx& ctx, int activeLayer) {
             casingSprite->setAnchor(0.5f, 0.5f);
         }
         const Vec2 casingWorld = v2Add(doorClosedPos, casingPosOffset);
-        const float casingScale = scale * casingImgScale;
+        const float casingScale = scale * casingImgScale / ctx.camera().m_ppu;
         placeInWorldLayer(casingSprite, casingWorld);
         casingSprite->setScale(casingScale, casingScale);
         casingSprite->setRotation(-renderRot);
@@ -723,7 +725,9 @@ void Building::update(float dt, Ctx& ctx) {
             continue;
         }
         const float alpha = img.isCeiling ? ceilingFadeAlpha : 1.0f;
-        const float imgScale = scale * img.defScale;
+        // building.ts: camera.m_pixels(scale * sprite.defScale); world units
+        // need the /m_ppu conversion (see Obstacle::update).
+        const float imgScale = scale * img.defScale / ctx.camera().m_ppu;
         placeInWorldLayer(img.sprite, v2Add(pos, img.posOffset));
         float sx = imgScale;
         float sy = imgScale;
@@ -852,7 +856,8 @@ void Loot::update(float dt, Ctx& ctx) {
                                : 1.0f;
         renderPos = v2Lerp(posT, visualPosOld, pos);
     }
-    const float lootScale = imgScale * scale;
+    // loot.ts: camera.m_pixels(loot.imgScale * scale) -> /m_ppu in world units.
+    const float lootScale = imgScale * scale / camera.m_ppu;
     placeInWorldLayer(container, renderPos);
     container->setScale(lootScale, lootScale);
     container->setVisible(true);
@@ -957,7 +962,8 @@ void DecalRenderObj::update(float dt, float valueAdjust_, const Camera& camera, 
     if (!sprite) {
         return;
     }
-    const float spriteScale = scale * imgScale;
+    // decal.ts: camera.m_pixels(scale * imgScale) -> /m_ppu in world units.
+    const float spriteScale = scale * imgScale / camera.m_ppu;
     placeInWorldLayer(sprite, pos);
     sprite->setScale(spriteScale, spriteScale);
     sprite->setRotation(-rot);
@@ -1123,7 +1129,8 @@ void DeadBodyBarn::update(float dt, GameWorld& ctx) {
         ctx.renderer().addPIXIObj(d->container, layer, zOrd, d->__id);
 
         placeInWorldLayer(d->container, d->pos);
-        d->container->setScale(1.0f, 1.0f);
+        // deadBody.ts: container.scale = camera.m_pixels(1) -> 1/m_ppu.
+        d->container->setScale(1.0f / ctx.camera().m_ppu, 1.0f / ctx.camera().m_ppu);
         d->container->setVisible(true);
     }
 }
@@ -1164,6 +1171,7 @@ void Projectile::m_updateData(const ObjectData& data, bool fullUpdate, bool isNe
     ensureSprite(ctx, container, sprite);
     const GameObjRenderDef* def = gameDefFor(type);
     if (def && def->hasImg && !def->img.sprite.empty()) {
+        imgScale = def->img.scale;
         sprite->setFrame(def->img.sprite);
         sprite->setTint(def->img.tint);
     }
@@ -1178,7 +1186,11 @@ void ProjectileBarn::update(float dt, GameWorld& ctx) {
         ctx.renderer().addPIXIObj(p->container, p->layer, 200, p->__id);
         // projectile.ts: pos + (0, posZ) in world space.
         placeInWorldLayer(p->container, Vec2(p->pos.x, p->pos.y + p->posZ));
-        p->container->setScale(1.0f, 1.0f);
+        // projectile.ts: camera.m_pixels(imgScale * remap(posZ, 0, maxHeight,
+        // 1, 4.75)); world units need the extra /m_ppu.
+        const float scale = p->imgScale * math::remap(p->posZ, 0.0f, defs::kProjectileMaxHeight, 1.0f, 4.75f);
+        const float worldScale = scale / ctx.camera().m_ppu;
+        p->container->setScale(worldScale, worldScale);
         p->container->setVisible(true);
     }
 }
@@ -1309,7 +1321,8 @@ void SmokeBarn::update(float dt, GameWorld& ctx) {
         const int zOrd = p->interior ? 500 : 1000;
         ctx.renderer().addPIXIObj(p->sprite, layer, zOrd, p->zIdx);
 
-        const float smokeScale = (p->rad * 2.0f) / ctx.camera().m_ppu;
+        // smoke.ts: camera.m_pixels((rad * 2) / m_ppu); world units add /m_ppu.
+        const float smokeScale = (p->rad * 2.0f) / (ctx.camera().m_ppu * ctx.camera().m_ppu);
         placeInWorldLayer(p->sprite, p->pos);
         p->sprite->setScale(smokeScale, smokeScale);
         p->sprite->setRotation(p->rot);
@@ -1634,7 +1647,8 @@ void AirdropBarn::update(float dt, GameWorld& ctx) {
         airdrop->rad = math::lerp(std::pow(1.0f - fallT, 1.1f), 5.0f, 12.0f);
         ctx.renderer().addPIXIObj(airdrop->sprite, layer, 1500, airdrop->__id);
 
-        const float airdropScale = (2.0f * airdrop->rad) / ctx.camera().m_ppu;
+        // airdrop.ts: camera.m_pixels((2 * rad) / m_ppu); world units add /m_ppu.
+        const float airdropScale = (2.0f * airdrop->rad) / (ctx.camera().m_ppu * ctx.camera().m_ppu);
         placeInWorldLayer(airdrop->sprite, airdrop->pos);
         airdrop->sprite->setScale(airdropScale, airdropScale);
         airdrop->sprite->setTint(0xffff00);
@@ -1773,7 +1787,12 @@ void FlareBarn::update(float dt, GameWorld& ctx) {
         // flare.ts m_render: world-space placement (camera lives on the root).
         if (d->alive || d->collided) {
             placeInWorldLayer(d->container, d->pos);
-            d->container->setScale(d->flareScale, d->flareScale);
+            // flare.ts: both containers scale by camera.m_pixels(1) = m_zoom;
+            // in world units that is 1/m_ppu, with the flare's own factor on
+            // the sprite (trail keeps its relative length).
+            const float containerScale = 1.0f / ctx.camera().m_ppu;
+            d->container->setScale(containerScale, containerScale);
+            d->flare->setScale(d->flareScale, d->flareScale);
             const float dist = v2Length(v2Sub(d->pos, d->startPos));
             const float trailLength = math::min(d->tracerLength * 15.0f, dist / 2.0f);
             d->trail->setPosition(0.0f, 0.0f);
@@ -1902,7 +1921,8 @@ void PlaneBarn::update(float dt, GameWorld& ctx) {
 
         ctx.renderer().addPIXIObj(p->sprite, layer, 1501, p->id);
 
-        const float planeScale = p->rad / ctx.camera().m_ppu;
+        // plane.ts: camera.m_pixels(rad / m_ppu); world units add /m_ppu.
+        const float planeScale = p->rad / (ctx.camera().m_ppu * ctx.camera().m_ppu);
         const bool indoors = ctx.map().insideBuildingCeiling(
             Collider::createCircle(activePlayer->pos, 0.01f), true);
         float alphaTarget = p->alpha;
@@ -2334,7 +2354,10 @@ void ParticleBarn::update(float dt, GameWorld& ctx) {
         }
         // particles.ts renders in world space; the world root scales it.
         p->sprite->setPosition(particlePos.x, particlePos.y);
-        p->sprite->setScale(scale, scale);
+        // particles.ts: camera.m_pixels(scale) = scale * m_zoom; the world root
+        // already applies m_ppu * m_zoom, so the sprite needs scale / m_ppu.
+        const float worldScale = scale / ctx.camera().m_ppu;
+        p->sprite->setScale(worldScale, worldScale);
         p->sprite->setRotation(p->rot);
         p->sprite->setAlpha(alpha);
         p->sprite->setVisible(true);

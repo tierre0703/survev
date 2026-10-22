@@ -318,6 +318,7 @@ public:
     float posZ = 0.0f;
     int layer = 0;
     int ori = 0;
+    float imgScale = 1.0f;
     pix::Container* container = nullptr;
     pix::Sprite* sprite = nullptr;
 

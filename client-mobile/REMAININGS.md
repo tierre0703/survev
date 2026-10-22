@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) rebuilt the match world per join (fixing the §12.4 second-join double-free) and wired match-end back to the Java menu, so repeat `Play Solo` → `Back` → `Play Solo` works. **109 host tests pass, 0 fail.** Minimap, HUD, pads, inventory v2, pie timer and crosshair are live; player action sounds, pickup sounds, emote sounds, and ping sounds are wired. See §3 for the next-priority gaps (emote wheel UI, reverb, M8 accounts).
+Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) rebuilt the match world per join (fixing the §12.4 second-join double-free) and wired match-end back to the Java menu, so repeat `Play Solo` → `Back` → `Play Solo` works. Session 10 (§15) fixed the world-space sprite scale (`/ m_ppu`), so the player and map objects render at the web client's scale instead of being 16x too large/invisible. **109 host tests pass, 0 fail.** Minimap, HUD, pads, inventory v2, pie timer and crosshair are live; player action sounds, pickup sounds, emote sounds, and ping sounds are wired. See §3 for the next-priority gaps (emote wheel UI, reverb, M8 accounts); world-space name labels still render vertically mirrored (camera flip; §15).
 
 ---
 

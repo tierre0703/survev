@@ -823,3 +823,63 @@ path), so a clean exit, a socket close and a failed join all restore the menu.
   every time, the Java menu came back after each back press, and
   `logcat -b crash` stayed empty.
 
+## 15. Session 10 - object sprites were 16x too large (2026-10-22, later)
+
+Symptom: after a join the map rendered but **no objects or player** were
+visible, and the world looked far more zoomed in than the web client. The HUD
+(plain pix nodes on `_gameRoot`) was fine.
+
+### 15.1 Root cause: screen-space scales under a world-space camera
+
+`applyCamera()` puts the camera on the content container (`scale = m_z() =
+m_ppu * m_zoom`) and the port keeps every object in **world units**. The web
+client instead projects each object to screen space and scales it with
+`camera.m_pixels(x) = x * m_zoom` (see `obstacle.ts`, `player.ts`, `loot.ts`,
+`deadBody.ts`, `projectile.ts`, `flare.ts`, `plane.ts`, `particles.ts`,
+`emote.ts`).
+
+The §13 refactor moved the *positions* into the world container but kept those
+screen-space scale factors, so the container multiplied them by `m_ppu` (16)
+again. Every world sprite was 16x too large: obstacles/player covered the
+viewport (the visible "white shirt" blobs) or were clipped away, so the map
+looked empty and over-magnified. HUD/terrain were correct because they are not
+`m_pixels()`-sized sprites.
+
+### 15.2 Fix - divide world-space sprite scales by `m_ppu`
+
+`worldScale = webScreenScale / m_ppu` (and the sizes assembled as
+`rad / m_ppu` need `m_ppu^2`):
+
+- `Obstacle::update` sprite + door casing (was `scale * imgScale`)
+- `Building` images (`scale * img.defScale`)
+- `Loot` container (`imgScale * scale`)
+- `DeadBody` container (`m_pixels(1)` -> `1/m_ppu`)
+- `Projectile` container - also restored the missing `imgScale * remap(posZ,
+  0, maxHeight, 1, 4.75)` factor
+- `Player`/aura containers (`m_pixels(1)` -> `1/m_ppu`); body/bone sprites keep
+  their relative 0.25/0.175/... scales
+- `Flare` container (`1/m_ppu`, flare factor on the flare sprite)
+- particles (`camera.m_pixels(scale)`)
+- smoke/airdrop/plane (`m_pixels(rad / m_ppu)` -> `rad / m_ppu^2`)
+- world emotes and team ping indicators; the ping indicators still used
+  `m_pointToScreen`/`m_pixels` after §13, so their positions/scales are now
+  converted with `m_screenToPoint()` and `/m_ppu`
+
+`AxSprite::setFrame` now logs a throttled `[pix] sprite frame missing` warning
+(frames are registered by the per-map atlas load; a none/missing frame silently
+drew nothing before).
+
+### Verification
+
+- `surv_tests`: **109 tests, 1,924 assertions, 0 failures** (the obstacle scale
+  expectation now includes `/ m_ppu`).
+- x86_64 native lib + APK installed on the emulator against the bundle server.
+  On join: terrain, roads, trees, rocks, crates, doors, loot, the player sprite
+  and its name render at the web's scale; both pads and the live minimap render;
+  the player moves with the joystick (world pos 388.7,667.4 -> 396.1,666.1); no
+  crash.
+- Known follow-up: the camera transform is a negative-Y scale, so world-space
+  **text** (player/dead-body name labels) is vertically mirrored. The web client
+  flips only positions, not textures; fixing it needs either per-sprite
+  un-mirroring under the flipped root or screen-space text.
+

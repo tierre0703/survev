@@ -390,6 +390,10 @@ public:
         if (auto* frame = cache->getSpriteFrameByName(frameName)) {
             _sprite->setSpriteFrame(frame);
         } else {
+            static int missing = 0;
+            if (missing++ < 20) {
+                AXLOGW("[pix] sprite frame missing: {}", frameName);
+            }
             _sprite->setTexture(frameName);
         }
     }

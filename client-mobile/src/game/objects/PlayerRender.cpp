@@ -509,7 +509,10 @@ void Player::update(float dt, Ctx& ctx) {
     // player.ts renders the container at the player's world position; the camera
     // transform lives on the world root.
     container->setPosition(pos.x, pos.y);
-    container->setScale(1.0f, 1.0f);
+    // player.ts: container.scale = camera.m_pixels(1) = m_zoom. The port keeps
+    // the container in world units under the camera-transformed root, so the
+    // equivalent world scale is m_zoom / (m_ppu * m_zoom) = 1 / m_ppu.
+    container->setScale(1.0f / ctx.camera().m_ppu, 1.0f / ctx.camera().m_ppu);
     container->setVisible(!dead);
     int renderLayer = layer;
     int zOrd = 18;
@@ -758,7 +761,7 @@ void Player::update(float dt, Ctx& ctx) {
     if (auraContainer) {
         ctx.renderer().addPIXIObj(auraContainer, renderLayer, zOrd - 1, zIdx);
         auraContainer->setPosition(pos.x, pos.y);
-        auraContainer->setScale(1.0f, 1.0f);
+        auraContainer->setScale(1.0f / ctx.camera().m_ppu, 1.0f / ctx.camera().m_ppu);
         auraContainer->setVisible(auraVisible && auraCircle && auraCircle->getSortOrd() >= 0);
     }
 
