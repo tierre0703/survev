@@ -156,6 +156,31 @@ TEST(camera_transform) {
     CHECK_NEAR(cam.m_shakeInt, 2.0f, 1e-4f);
 }
 
+TEST(renderer_world_root_transform) {
+    pix::NullPixiFactory factory;
+    Renderer renderer(&factory, false);
+    auto* root = static_cast<pix::NullContainer*>(factory.createContainer());
+    Camera camera;
+    camera.m_pos = Vec2(100.0f, 100.0f);
+    camera.m_screenWidth = 800.0f;
+    camera.m_screenHeight = 600.0f;
+    camera.m_ppu = 16.0f;
+    camera.m_zoom = 1.5f;
+
+    // renderer.ts: the containers carry position = pointToScreen(pos) and
+    // scale = (z, -z); objects themselves stay in world space.
+    renderer.applyCamera(root, camera);
+    CHECK_NEAR(root->sx, 24.0f, 1e-4f);
+    CHECK_NEAR(root->sy, -24.0f, 1e-4f);
+    CHECK_NEAR(root->x, 400.0f, 1e-4f);
+    CHECK_NEAR(root->y, 300.0f, 1e-4f);
+
+    camera.m_zoom = 0.75f;
+    renderer.applyCamera(root, camera);
+    CHECK_NEAR(root->sx, 12.0f, 1e-4f);
+    CHECK_NEAR(root->sy, -12.0f, 1e-4f);
+}
+
 // ---------------------------------------------------------------------------
 TEST(terrain_matches_ts) {
     const std::string raw = fixture("terrain");
@@ -850,7 +875,9 @@ TEST(obstacle_render_parity) {
     // zIdx = floor(scale * 1000) * 65535 + __id (obstacle.ts sprite.zIdx).
     CHECK_EQ(o.zIdx, 1000 * 65535 + 42);
     CHECK_EQ(o.zOrd, barrelDef->img.zIdx);
-    CHECK_NEAR(sprite(o.sprite)->sx, world.camera().m_pixels(1.0f * barrelDef->img.scale), 1e-4f);
+    // obstacle.ts scales the sprite by its def scale (world units); the camera
+    // transform on the world root applies the view scale.
+    CHECK_NEAR(sprite(o.sprite)->sx, 1.0f * barrelDef->img.scale, 1e-4f);
     // The sprite is only rendered when it is visible.
     auto* layer0 = static_cast<pix::NullContainer*>(world.renderer().layers[0]);
     CHECK(layer0->children.size() >= 1u);
@@ -916,11 +943,15 @@ TEST(gas_overlay_world_scale) {
     Gas gas;
     gas.m_init(&factory);
     gas.setFullState(0.0f, GasData{});
-    gas.gasRenderer.render(&factory, Vec2(100.0f, 100.0f), camera.m_scaleToScreen(50.0f), true,
-                           camera.m_zoom);
+    gas.setProgress(1.0f);
+    gas.mode = 1; // GasMode_Active: the overlay is only visible in an active gas
+    gas.m_render(&factory, 0.016f, camera);
     auto* gfx = static_cast<pix::NullGraphics*>(gas.gasRenderer.display);
     CHECK(gfx->visible);
-    CHECK_NEAR(gfx->sx, camera.m_scaleToScreen(50.0f) * camera.m_zoom, 1e-4f);
+    // gas.ts draws the quad in world units and the camera transform (on the
+    // world root) scales it, so the node keeps the world radius 1 and the
+    // camera zoom. The hole must not be shrunk by a second zoom factor.
+    CHECK_NEAR(gfx->sx, 1.0f, 1e-4f);
     bool hasHole = false;
     for (const auto& cmd : gfx->commands) {
         if (cmd.kind == pix::DrawCommand::BeginHole) hasHole = true;

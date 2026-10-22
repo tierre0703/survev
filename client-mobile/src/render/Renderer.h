@@ -39,6 +39,16 @@ public:
     void setUnderground(bool u) { underground = u; }
 
     void resize(Map& map, Camera& camera);
+    // Port of renderer.ts m_update()'s view transform (position + scale on
+    // `pixiContainers`, i.e. the node GameWorld::attachTo() receives). Every
+    // per-object draw already works in world/point space, so the camera lives
+    // here instead of inside each object's projection.
+    //   root.scale = camera.m_z(), y flipped
+    //   root.position = camera.m_pointToScreen(m_pos)
+    void applyCamera(pix::Node* root, const Camera& camera);
+    // Re-apply the view transform after the zoom changed (ground rect, layer
+    // mask and the stale debug mask all depend on the camera).
+    void markViewDirty() { layerMaskDirty = true; }
     void redrawLayerMask(Camera& camera, Map& map);
     void redrawDebugLayerMask(Camera& camera, Map& map);
     void m_update(float dt, Camera& camera, Map& map, bool debugLayerMaskEnabled);

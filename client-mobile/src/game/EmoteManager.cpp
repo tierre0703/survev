@@ -285,10 +285,11 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
         float zoomClamp = camera.m_zoom < 0.75f ? 0.75f : (camera.m_zoom > 1.0f ? 1.0f : camera.m_zoom);
         offsetPos.y += 4.0f / zoomClamp;
 
-        Vec2 screenPos = camera.m_pointToScreen(offsetPos);
-        float screenScale = scale * 0.55f * (camera.m_zoom < 0.9f ? 0.9f : (camera.m_zoom > 1.75f ? 1.75f : camera.m_zoom));
-        e.container->setPosition(screenPos.x, screenPos.y);
-        e.container->setScale(screenScale, screenScale);
+        // World space (emoteManager.ts): the camera lives on the world root.
+        const float emoteScale =
+            scale * 0.55f * (camera.m_zoom < 0.9f ? 0.9f : (camera.m_zoom > 1.75f ? 1.75f : camera.m_zoom));
+        e.container->setPosition(offsetPos.x, offsetPos.y);
+        e.container->setScale(emoteScale, emoteScale);
         e.container->setVisible(true);
     }
 

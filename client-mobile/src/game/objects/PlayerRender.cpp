@@ -506,10 +506,10 @@ void Player::update(float dt, Ctx& ctx) {
     }
     bodyContainer->setScale(scale, scale);
     bodyContainer->setRotation(-std::atan2(dir.y, dir.x));
-    const Vec2 screenPos = ctx.camera().m_pointToScreen(pos);
-    const float screenScale = ctx.camera().m_pixels(1.0f);
-    container->setPosition(screenPos.x, screenPos.y);
-    container->setScale(screenScale, screenScale);
+    // player.ts renders the container at the player's world position; the camera
+    // transform lives on the world root.
+    container->setPosition(pos.x, pos.y);
+    container->setScale(1.0f, 1.0f);
     container->setVisible(!dead);
     int renderLayer = layer;
     int zOrd = 18;
@@ -757,8 +757,8 @@ void Player::update(float dt, Ctx& ctx) {
     }
     if (auraContainer) {
         ctx.renderer().addPIXIObj(auraContainer, renderLayer, zOrd - 1, zIdx);
-        auraContainer->setPosition(screenPos.x, screenPos.y);
-        auraContainer->setScale(screenScale, screenScale);
+        auraContainer->setPosition(pos.x, pos.y);
+        auraContainer->setScale(1.0f, 1.0f);
         auraContainer->setVisible(auraVisible && auraCircle && auraCircle->getSortOrd() >= 0);
     }
 

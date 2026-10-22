@@ -309,8 +309,9 @@ bool GameScene::init() {
 
     // M7: the menu starts a game via enterWithJoin()/enterWithFindGame().
     _gameRoot->setVisible(false);
-    _movePad->setVisible(false);
-    _aimPad->setVisible(false);
+    // TEMP (M4 12.2): FguiPadGraphics faults on its first widget write.
+    // _movePad->setVisible(false);
+    // _aimPad->setVisible(false);
 
     // Android hardware back button / desktop Escape: pause/leave the game.
     auto* keyListener = ax::EventListenerKeyboard::create();
@@ -414,8 +415,6 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
         _world->replayMap(_game->map());
     }
     _touch->display = false;
-    _movePad->setVisible(false);
-    _aimPad->setVisible(false);
     _game->setJoinInfo(_joinInfo);
     _awaitingJoin = true;
     _joinRetryUrls.clear();
@@ -456,8 +455,9 @@ void GameScene::leaveGame() {
     _awaitingJoin = false;
     _joinRetryUrls.clear();
     _gameRoot->setVisible(false);
-    _movePad->setVisible(false);
-    _aimPad->setVisible(false);
+    // TEMP (M4 12.2): FguiPadGraphics faults on its first widget write.
+    // _movePad->setVisible(false);
+    // _aimPad->setVisible(false);
     if (_audio) {
         _audio->stopAll();
     }

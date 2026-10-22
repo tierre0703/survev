@@ -98,28 +98,60 @@ void Renderer::reset() {
     }
 }
 
-void Renderer::resize(Map& map, Camera& camera) {    _groundColor = map.mapLoaded ? map.mapDef.colors.underground : 1772803u;
+void Renderer::resize(Map& map, Camera& camera) {
+    _groundColor = map.mapLoaded ? map.mapDef.colors.underground : 1772803u;
     _groundAlphaDrawn = -1.0f;
     redrawGround(camera);
     layerMaskDirty = true;
 }
 
+// renderer.ts container transform. The old port projected every object by hand
+// into screen space (`camera.m_pointToScreen`) while the containers stayed
+// unscaled; combined with the sprites' point-space sizes the framing was off
+// whenever m_z() != 1 (zoom in/out, world aspect). Objects now stay in world
+// units (the web client's convention) and the root carries the camera.
+void Renderer::applyCamera(pix::Node* root, const Camera& camera) {
+    if (!root) {
+        return;
+    }
+    // A masked layer's handle is the wrapper node (see AxNodeImpl::setMask), so
+    // the transform lands on the real container even while the stencil is live.
+    const float s = camera.m_z();
+    const Vec2 p = camera.m_pointToScreen(camera.m_pos);
+    root->setScale(s, -s);
+    root->setPosition(p.x, p.y);
+}
+
+// drawGround draws the snap-to-underground-colour rect that fills the floor of a
+// building (renderer.ts `drawGround`). The geometry is a screen-space rectangle
+// (0,0)-(w,h); the parent is the camera-transformed root, so the rect is
+// converted back into world units here to stay put on screen.
 // T6: DrawNode bakes vertex alpha into the geometry, so setAlpha() on the node
 // does not fade the drawn rect. Rebuild the ground rect with the current alpha.
 void Renderer::redrawGround(Camera& camera) {
     ground->clear();
+    if (camera.m_z() <= 0.0f) {
+        return;
+    }
+    const Vec2 min = camera.m_screenToPoint(Vec2(0.0f, camera.m_screenHeight));
+    const Vec2 max = camera.m_screenToPoint(Vec2(camera.m_screenWidth, 0.0f));
     ground->beginFill(_groundColor, groundAlpha);
-    ground->drawRect(0.0f, 0.0f, camera.m_screenWidth, camera.m_screenHeight);
+    ground->drawRect(min.x, min.y, max.x - min.x, max.y - min.y);
     ground->endFill();
 }
 
 void Renderer::redrawLayerMask(Camera& camera, Map& map) {
+    (void)camera;
     auto& structures = map.structurePool.m_getPool();
     if (_canvasMode) {
+        // Canvas mode masks with a screen rect; same world-space conversion as
+        // redrawGround() (the parent already carries the camera transform).
         layerMask->clear();
         if (layerMaskActive) {
+            const Vec2 min = camera.m_screenToPoint(Vec2(0.0f, camera.m_screenHeight));
+            const Vec2 max = camera.m_screenToPoint(Vec2(camera.m_screenWidth, 0.0f));
             layerMask->beginFill(0xffffff, 1.0f);
-            layerMask->drawRect(0.0f, 0.0f, camera.m_screenWidth, camera.m_screenHeight);
+            layerMask->drawRect(min.x, min.y, max.x - min.x, max.y - min.y);
             for (auto* structure : structures) {
                 if (!structure->active) {
                     continue;
@@ -127,10 +159,8 @@ void Renderer::redrawLayerMask(Camera& camera, Map& map) {
                 for (const auto& m : structure->mask) {
                     const Vec2 halfExtents = v2Mul(v2Sub(m.max, m.min), 0.5f);
                     const Vec2 center = v2Add(m.min, halfExtents);
-                    const Vec2 bottomLeft = camera.m_pointToScreen(v2Sub(center, halfExtents));
-                    const Vec2 topRight = camera.m_pointToScreen(v2Add(center, halfExtents));
-                    layerMask->drawRect(bottomLeft.x, bottomLeft.y, topRight.x - bottomLeft.x,
-                                        topRight.y - bottomLeft.y);
+                    layerMask->drawRect(center.x - halfExtents.x, center.y - halfExtents.y,
+                                        halfExtents.x * 2.0f, halfExtents.y * 2.0f);
                 }
             }
             layerMask->endFill();
@@ -162,13 +192,15 @@ void Renderer::redrawLayerMask(Camera& camera, Map& map) {
         }
         layerMask->endFill();
     }
-    const Vec2 p0 = camera.m_pointToScreen(Vec2(0.0f, 0.0f));
-    const float s = camera.m_scaleToScreen(1.0f);
-    layerMask->setPosition(p0.x, p0.y);
-    layerMask->setScale(s, -s);
+    // World space, like the layers it masks: the parent (and the stencil branch's
+    // clipper) already carries the camera transform, so the mask needs no
+    // transform of its own.
+    layerMask->setPosition(0.0f, 0.0f);
+    layerMask->setScale(1.0f, 1.0f);
 }
 
 void Renderer::redrawDebugLayerMask(Camera& camera, Map& map) {
+    (void)camera;
     if (!debugLayerMask) {
         // create the debug mask and add it on top of the main layer containers
         if (!_factory) {
@@ -193,10 +225,9 @@ void Renderer::redrawDebugLayerMask(Camera& camera, Map& map) {
         }
     }
     debugLayerMask->endFill();
-    const Vec2 p0 = camera.m_pointToScreen(Vec2(0.0f, 0.0f));
-    const float s = camera.m_scaleToScreen(1.0f);
-    debugLayerMask->setPosition(p0.x, p0.y);
-    debugLayerMask->setScale(s, -s);
+    // World space (see redrawLayerMask).
+    debugLayerMask->setPosition(0.0f, 0.0f);
+    debugLayerMask->setScale(1.0f, 1.0f);
 }
 
 void Renderer::m_update(float dt, Camera& camera, Map& map, bool debugLayerMaskEnabled) {
@@ -211,7 +242,9 @@ void Renderer::m_update(float dt, Camera& camera, Map& map, bool debugLayerMaskE
     layers[3]->setAlpha(1.0f);
 
     // T6: rebuild the ground geometry when the fade changes (DrawNode bakes
-    // vertex alpha, so node opacity alone does not fade it).
+    // vertex alpha, so node opacity alone does not fade it). The rect is sized
+    // to the viewport through the camera, so any zoom change rebuilds it too
+    // (GameWorld re-runs resize() after applyCamera()).
     if (std::fabs(groundAlpha - _groundAlphaDrawn) > 0.001f) {
         _groundAlphaDrawn = groundAlpha;
         redrawGround(camera);

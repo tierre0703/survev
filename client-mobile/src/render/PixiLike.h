@@ -29,6 +29,8 @@ enum class BlendMode {
     Screen,
 };
 
+enum : int { kKindSprite = 1, kKindGraphics = 2, kKindText = 3, kKindContainer = 4 };
+
 // PIXI tint helpers (0xRRGGBB).
 inline uint rgbToInt(int r, int g, int b) {
     return (static_cast<uint>(r & 0xff) << 16) | (static_cast<uint>(g & 0xff) << 8) |
@@ -82,6 +84,10 @@ public:
 
     // Opaque native handle (ax::Node*) for attaching to a scene.
     virtual void* native() = 0;
+
+    // Which concrete adapter node this is; used by Factory::releaseNode() to
+    // delete through the exact type.
+    virtual int kind() const = 0;
 };
 
 // PIXI.Graphics equivalent (vector paths).
@@ -152,6 +158,15 @@ public:
     virtual Text* createText() = 0;
     virtual Container* createContainer() = 0;
     virtual RenderTexture* createRenderTexture() = 0;
+
+    // Releases every node this factory created. A factory that keeps its nodes
+    // in a member list must destroy them from here (which its destructor
+    // calls): letting the list's own destructor do it deallocated the vector
+    // before the elements, and the wrapper destructors crashed on device.
+    virtual void clearNodes() {}
+    // Destroys a node created by one of the create*() calls. Called from the
+    // implementation's own translation unit so the concrete type is known.
+    virtual void releaseNode(Node* node) = 0;
 };
 
 } // namespace pix

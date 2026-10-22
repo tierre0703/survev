@@ -99,6 +99,7 @@ void GameWorld::registerPools() {
 }
 
 void GameWorld::attachTo(pix::Node* root) {
+    _root = root;
     root->addChild(_map->groundGfx);
     root->addChild(_renderer->layers[0]);
     root->addChild(_renderer->ground);
@@ -406,15 +407,22 @@ void GameWorld::update(float dt) {
     _emoteManager.update(dt, *this);
 
     _renderer->m_update(dt, _camera, *_map, false);
-    _map->m_render(_camera);
-    _gas.m_render(_factory, dt, _camera);
-
     // game.ts restores the camera to the active player and re-derives the zoom
     // every frame; the aim-line transform reads the same camera.
     if (_activePlayer) {
         _camera.m_pos = _activePlayer->pos;
     }
     updateCameraZoom(dt);
+    if (_root) {
+        // renderer.ts: the camera live transform goes on the containers, right
+        // after the zoom update so this frame already uses it.
+        _renderer->applyCamera(_root, _camera);
+        // The ground rect and the layer mask are sized to the camera zoom /
+        // viewport, so they are rebuilt whenever the transform changes.
+        _renderer->resize(*_map, _camera);
+    }
+    _map->m_render(_camera);
+    _gas.m_render(_factory, dt, _camera);
 
     // touch.ts LineSprites: driven each frame while the aim pad is touched.
     if (_activePlayer) {

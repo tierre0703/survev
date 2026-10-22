@@ -61,10 +61,9 @@ void GasRenderer::render(pix::Factory* factory, const Vec2& gasPos, float gasRad
         rad = 1.0f;
         center.x += kOverdraw * 0.5f;
     }
-    // The geometry is authored in world units (a 100000-unit quad), so it needs
-    // the camera world->screen scale. `rad` is already a screen-space radius
-    // (camera.m_scaleToScreen applied by Gas::m_render), so the hole stays in
-    // registers with the world while the quad still covers the viewport.
+    // The geometry is authored in world units (a 100000-unit quad) and the
+    // world root carries the camera; `gasRad` and `zoom` are world-space (the
+    // world passes 1 for the zoom).
     display->setPosition(center.x, center.y);
     display->setScale(rad * zoom, rad * zoom);
     display->setVisible(isActive);
@@ -170,9 +169,11 @@ void Gas::m_render(pix::Factory* factory, float dt, const Camera& camera) {
         interpT = math::clamp(interpolationT / camera.m_interpInterval, 0.0f, 1.0f);
     }
     const Circle circle = getCircle(interpT);
-    const Vec2 pos = camera.m_pointToScreen(circle.pos);
-    const float scale = camera.m_scaleToScreen(circle.rad);
-    gasRenderer.render(factory, pos, scale, isActive(), camera.m_zoom);
+    // gas.ts renders the overlay in world space (the quad is authored in world
+    // units) and the world root carries the camera transform. The "hole closed"
+    // branch (rad < 0.1) hands the renderer the raw radius so it applies the
+    // same overdraw offset as gas.ts.
+    gasRenderer.render(factory, circle.pos, circle.rad, isActive(), 1.0f);
 }
 
 } // namespace surv

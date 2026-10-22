@@ -665,23 +665,52 @@ is correct on its own; the remaining lifetime problem is in the FairyGUI
 object stack and still needs a fix (build with ASan on an arm64 image, or
 mirror what `central-package` does with its widgets).
 
+Bisect results (x86_64 RP build, one tap at a time):
+- Bootstrap verified: the `GGraph`s created with the hand-rolled ownership in
+  `FguiPadGraphics` - which are **not** attached anymore (all pad calls are
+  gated) - stayed alive; `isVisible()` on `_healthFill` also reads fine.
+- Failure point: the **first write** to a HUD widget after layout faults in
+  `GObject::setVisible()` (`fault 0x88`, i.e. `_parent->setBoundsChangedFlag()`
+  on a deleted parent, or the object itself in an unmapped page).
+- The `GRoot` is alive with an empty child list, so the whole HUD tree was
+  detached/destroyed once. Neither `GRoot::onExit()` nor a second `GRoot` is
+  involved (`FairyGUI GRoot created` logs once).
+- The pads crash even untouched: `enterWithJoin()` -> `_movePad->setVisible()`
+  faults in the same function, so the corruption happens before the first
+  match frame.
+
+Next suspect: the FGUI display chain (`FUIContainer`/`FUIInnerContainer`),
+i.e. the axmol-node `CCNode::removeFromParent()`/`_running` handling or the
+node-ownership changes in `AxmolPixi.h`; that needs an ASan arm64 run.
+
 Note: the `AppDelegate.cpp` simplification from the previous pass (no C++
 `MenuScene`, bridge without `_menu`) was **reverted** - the bridge dereferences
 the menu for config/region, which crashed in `ui::Config::setString` on Play.
 
 ### 12.4 `AxPixiFactory` teardown use-after-free (known, still open)
 
-`AxPixiFactory::~AxPixiFactory()` destroys its `_nodes` in vector order; an
-`AxNodeImpl` destructor walks its parent's `_children`, so parents destroyed
-earlier in the same batch leave dangling pointers. This is why
-`GameScene::resetWorld()` keeps its `if (_inGame)` guard (the factory is only
-replaced on a join, never in `init()`). The details are in the comment block at
-the top of `GameScene::resetWorld()`.
+`AxPixiFactory::~AxPixiFactory()` destroys its `_nodes`; an `AxNodeImpl`
+destructor walks its parent's `_children`, so parents destroyed earlier in the
+same batch leave dangling pointers. Fixed in two steps: the factory now pops
+its node list back-to-front (children were created/re-parented after their
+parents) and `GameScene::resetWorld()` destroys the factory only through
+`_pixiFactory.reset()`. This is why `resetWorld()` keeps its `if (_inGame)`
+guard (the factory is only replaced on a join, never in `init()`).
+
+Still open: the **second** join (menu -> match 1 -> back -> match 2) still
+faults in `AxNodeImpl<Container>::removeChild` from `AxPixiFactory::~...`: a
+sprite is destroyed whose parent wrapper is already gone (the parents are
+destroyed later in the back-to-front order, so the sprite's `_parentNode`
+points at a live parent whose `_children` no longer holds it, or at a dead
+one). Needs the parent/child ownership in `AxNodeImpl` reworked
+(`removeFromParent()` in the destructor, as in the pre-"game play changes"
+version, was removed in the last commit - that is the likely trigger).
 
 ### Verification
 
 - `surv_tests`: **105 tests, 1,903 assertions, 0 failures.**
 - On device (x86_64 emulator + bundle server via `adb reverse`): launch, Java
-  menu, `Play Solo` → `find_game` → connect → `Map` + `Update` handled, the
-  match world renders behind the menu, no crash from 12.1; the process stays
-  alive because the HUD/pad writes are gated off (12.2).
+  menu, `Play Solo` -> `find_game` -> connect -> `Map` + `Update` handled, match
+  world renders, pause and back to the menu both work, process stays alive;
+  the HUD/pad writes are still gated off (12.2) and the second join hits the
+  `AxPixiFactory` teardown above.

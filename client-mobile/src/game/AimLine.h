@@ -121,11 +121,10 @@ public:
                 dot->setVisible(static_cast<int>(i) < dotCount);
             }
 
-            const Vec2 p0 = camera.m_pointToScreen(Vec2(0.0f, 0.0f));
-            const Vec2 p1 = camera.m_pointToScreen(Vec2(1.0f, 1.0f));
-            const Vec2 r = v2Sub(p1, p0);
-            container->setPosition(p0.x, p0.y);
-            container->setScale(r.x, r.y);
+            // touch.ts draws the container in world space; the camera transform
+            // lives on the world root.
+            container->setPosition(0.0f, 0.0f);
+            container->setScale(1.0f, 1.0f);
             container->setAlpha(0.3f);
             renderer.addPIXIObj(container, activePlayer.layer, 19, 0);
         }

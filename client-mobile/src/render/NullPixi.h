@@ -159,6 +159,7 @@ protected:
 
 class NullGraphics : public NullNodeImpl<Graphics> {
 public:
+    int kind() const override { return kKindGraphics; }
     std::vector<FillTriangle> fillTriangles;
     void clear() override { commands.clear(); fillTriangles.clear(); geometry.clear(); filling = false; line = false; }
     void beginFill(uint color, float a) override {
@@ -215,6 +216,7 @@ private:
 
 class NullSprite : public NullNodeImpl<Sprite> {
 public:
+    int kind() const override { return kKindSprite; }
     std::string frame;
     void setFrame(const std::string& f) override { frame = f; }
     const std::string& getFrame() const { return frame; }
@@ -227,6 +229,7 @@ public:
 
 class NullText : public NullNodeImpl<Text> {
 public:
+    int kind() const override { return kKindText; }
     std::string text;
     float fontSize = 24.0f;
     std::string family;
@@ -238,6 +241,7 @@ public:
 
 class NullContainer : public NullNodeImpl<Container> {
 public:
+    int kind() const override { return kKindContainer; }
     void sortChildren() override {
         std::stable_sort(children.begin(), children.end(), [](Node* a, Node* b) {
             if (a->getSortOrd() != b->getSortOrd()) {
@@ -280,6 +284,17 @@ public:
         auto* rt = new NullRenderTexture();
         _textures.emplace_back(rt);
         return rt;
+    }
+    void clearNodes() override {
+        for (auto& node : _nodes) {
+            delete node.release();
+        }
+        _nodes.clear();
+    }
+    void releaseNode(Node* node) override {
+        if (node) {
+            node->~Node();
+        }
     }
 
 private:

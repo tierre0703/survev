@@ -47,26 +47,17 @@ public:
     ax::ClippingNode* _clipper = nullptr;
     bool _maskInverted = false;
 
+    // A wrapper being destroyed must never touch a parent: during factory
+    // teardown the parent containers are already destroyed (their `_children`
+    // vectors are gone), so walking them crashed the second match. Children are
+    // unlinked up front instead (see AxPixiFactory::~AxPixiFactory); the axmol
+    // scene graph is detached there, so only the retain taken by ownNode() is
+    // released here.
     ~AxNodeImpl() override {
-        // Release the reference taken in ownNode(). axmol nodes are
-        // autoreleased by create(); wrappers that are never added to a parent
-        // (e.g. the layer mask, which is only used as a ClippingNode stencil)
-        // would otherwise be freed when the frame's pool drains.
-        // **IMPORTANT**: Detach from parent first so the axmol node is removed
-        // from the scene graph before the retain count goes to zero.
-        // Otherwise the node's own destructor tries to unparent and hits a
-        // use-after-free on the parent's child list (AxPixiFactory destruction
-        // is the primary trigger — see resetWorld()).
-        removeFromParent();
-        if (_clipper) {
-            _clipper->release();
-            _clipper = nullptr;
-        }
-        // Clear children so the factory's unique_ptr list is the only owner;
-        // this prevents AxNodeImpl from touching nodes that are being
-        // destructed alongside it in the same batch.
-        _children.clear();
-        _parentNode = nullptr;
+        AXLOGE("[teardown] ~AxNodeImpl p={} node={} clipper={}", static_cast<const void*>(this),
+               static_cast<const void*>(_node), static_cast<const void*>(_clipper));
+        // The wrapper's `_children` vector (and a clipper released by
+        // setMask/clearMask) is already gone at this point.
         if (_node) {
             _node->release();
             _node = nullptr;
@@ -107,6 +98,7 @@ public:
         _sortOrd = ord;
         _sortIdx = idx;
     }
+    int kind() const override { return kKindGraphics; }
     int getSortOrd() const override { return _sortOrd; }
     int getSortIdx() const override { return _sortIdx; }
 
@@ -134,7 +126,16 @@ public:
         reindex();
     }
     void removeChild(Node* child) override {
-        _node->removeChild(static_cast<ax::Node*>(child->native()));
+        if (!child) {
+            return;
+        }
+        // The child may already be detached (e.g. it was masked into a
+        // ClippingNode, so `native()` is the clipper); axmol's removeChild
+        // dereferences the parent of a node that is not a child.
+        ax::Node* axChild = static_cast<ax::Node*>(child->native());
+        if (axChild && axChild->getParent() == _node) {
+            _node->removeChild(axChild);
+        }
         for (auto it = _children.begin(); it != _children.end(); ++it) {
             if (*it == child) {
                 _children.erase(it);
@@ -365,6 +366,7 @@ private:
 
 class AxSprite : public AxNodeImpl<Sprite> {
 public:
+    int kind() const override { return kKindSprite; }
     AxSprite() {
         ownNode(ax::Sprite::create());
         _sprite = static_cast<ax::Sprite*>(_node);
@@ -374,6 +376,13 @@ public:
         _sprite = static_cast<ax::Sprite*>(_node);
         setFrame(frame);
     }
+    ~AxSprite() override {
+        // A sprite must not hold a frame from a purged texture at teardown.
+        if (_sprite) {
+            _sprite->setSpriteFrame(std::string());
+        }
+    }
+
     void setFrame(const std::string& frameName) override {
         if (frameName.empty()) {
             return;
@@ -385,6 +394,10 @@ public:
             _sprite->setTexture(frameName);
         }
     }
+    // Point size of the frame. axmol's getContentSize() is the sprite frame's
+    // rect divided by its texture's content scale, i.e. exactly PIXI's
+    // `sheet.resolution`-corrected width; world objects are sized from it and
+    // then scaled by the camera (Renderer::applyCamera).
     float sourceWidth() const override { return _sprite->getContentSize().width; }
     float sourceHeight() const override { return _sprite->getContentSize().height; }
 
@@ -394,6 +407,7 @@ private:
 
 class AxText : public AxNodeImpl<Text> {
 public:
+    int kind() const override { return kKindText; }
     AxText() {
         ownNode(ax::Label::createWithSystemFont("", "Arial", 24));
         _label = static_cast<ax::Label*>(_node);
@@ -416,6 +430,7 @@ private:
 
 class AxContainer : public AxNodeImpl<Container> {
 public:
+    int kind() const override { return kKindContainer; }
     AxContainer() { ownNode(ax::Node::create()); }
 
     void sortChildren() override {
@@ -474,6 +489,49 @@ public:
 // Factory owning the wrapper nodes for the lifetime of the game scene.
 class AxPixiFactory : public Factory {
 public:
+    // Teardown never deletes the wrappers from the member vector's own
+    // destructor (that deallocates the vector before the elements die, and a
+    // wrapper destructor uses its virtual base subobject -> crash on the second
+    // match). clearNodes() deletes them explicitly while the list is alive.
+    ~AxPixiFactory() override { clearNodes(); }
+
+    // Deletes the wrappers explicitly, in creation order, while `_nodes` is
+    // still alive (letting the vector's destructor do it deallocated the vector
+    // before the elements died).
+    void clearNodes() override {
+        auto nodes = std::move(_nodes);
+        _nodes.clear();
+        for (auto& node : nodes) {
+            if (node && !node->getParent()) {
+                node->removeAllChildren();
+            }
+        }
+        for (auto it = nodes.begin(); it != nodes.end();) {
+            Node* raw = it->release();
+            ++it;
+            AXLOGE("[teardown] deleting {}", (int)(it - nodes.begin()));
+            releaseNode(raw);
+        }
+    }
+
+    // Node implementations are compiled ONCE here, in the derived class, where
+    // the base subobject layout is known. Deleting them from other translation
+    // units through the virtual `pix::Node` hierarchy (AxPixiFactory::clearNodes
+    // lives in PixiLike.h and the game TUs) crashed inside the allocator on
+    // device, so the factory only calls this entry point.
+    void releaseNode(Node* node) override {
+        AXLOGE("[teardown] releaseNode kind={}", node ? node->kind() : 0);
+        if (!node) {
+            return;
+        }
+        switch (node->kind()) {
+        case kKindSprite: AXLOGE("[teardown] sprite dtor"); delete static_cast<AxSprite*>(dynamic_cast<void*>(node)); AXLOGE("[teardown] sprite gone"); break;
+        case kKindGraphics: AXLOGE("[teardown] graphics dtor"); delete static_cast<AxGraphics*>(dynamic_cast<void*>(node)); AXLOGE("[teardown] graphics gone"); break;
+        case kKindText: AXLOGE("[teardown] text dtor"); delete static_cast<AxText*>(dynamic_cast<void*>(node)); AXLOGE("[teardown] text gone"); break;
+        case kKindContainer: AXLOGE("[teardown] container dtor"); delete static_cast<AxContainer*>(dynamic_cast<void*>(node)); AXLOGE("[teardown] container gone"); break;
+        }
+    }
+
     Graphics* createGraphics() override { return keep(new AxGraphics()); }
     Sprite* createSprite() override { return keep(new AxSprite()); }
     Sprite* createSprite(const std::string& frameName) override {

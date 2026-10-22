@@ -441,6 +441,20 @@ now fixed and verified:
 With those fixes the app renders the terrain (water/beach/grass), ground
 patches, grid, joystick overlay and name labels on-device, and stays connected.
 
+- **World space vs. the camera transform (the "magnified" match view).** Every
+  object draw used to project its world position by hand
+  (`camera.m_pointToScreen` + `m_pixels`) while the layer containers were never
+  scaled, so the framing only matched the web client when `m_z() == 1` and the
+  viewport was 16:9. `Renderer::applyCamera()` now ports renderer.ts: the world
+  root (the node `GameWorld::attachTo()` gets) carries
+  `position = m_pointToScreen(m_pos)` / `scale = (z, -z)`, and obstacles, loot,
+  decals, dead bodies, projectiles, smoke, bullets, explosions, flares, planes,
+  air drops, parts/emitters, the player (and its aura), the aim line, the gas
+  overlay and the eye emote all draw in world (point) units again. The ground
+  rect and the layer mask are built in world space too (the mask rides the same
+  camera transform), and `GameWorld::update()` applies the camera right after
+  `updateCameraZoom()` so each frame uses the current zoom.
+
 **Key remaining blocker for sprite rendering: the atlas pipeline.** The web
 client builds virtual texture atlases from `public/img/**/*.svg` via
 `client/atlas-builder` (Vite plugin), and every `*.img` sprite name resolves to

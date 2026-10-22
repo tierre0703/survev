@@ -1146,8 +1146,7 @@ void FguiHud::showResult(bool show) {
 void FguiHud::debugLifecycle(const char* tag) {
     AXLOGI("[life] {}: tracked={} hudPanel={}", tag, _fgOwned.size(), static_cast<const void*>(_hudPanel));
     fairygui::GObject* hud = _hudPanel;
-    AXLOGI("[life]   hudPanel vis={} parent={} objects={}", hud->isVisible(), static_cast<const void*>(hud->getParent()),
-           hud->numChildren());
+    AXLOGI("[life]   hudPanel vis={} parent={}", hud->isVisible(), static_cast<const void*>(hud->getParent()));
     // Reach into the objects owned by the HUD (those that stayed detached).
     for (size_t i = 0; i < _fgOwned.size(); ++i) {
         auto* ref = static_cast<fairygui::GObject*>(_fgOwned[i]);

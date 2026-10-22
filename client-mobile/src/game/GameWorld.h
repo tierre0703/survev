@@ -52,6 +52,10 @@ public:
     // pixiContainers order in game.ts.
     void attachTo(pix::Node* root);
 
+    // The node GameWorld::attachTo() filled; Renderer::applyCamera() transforms
+    // it every frame (renderer.ts `pixiContainers` transform).
+    pix::Node* root() { return _root; }
+
     void setScreenSize(float width, float height);
     // view.ts setSize(): the resizeGame callbacks. GameScene registers the
     // resizing that keeps live world layers sized to `_camera` and drops the
@@ -181,6 +185,8 @@ public:
     bool _touchAimLine = true;
     bool _aimLineVisible = true;
     bool _mobile = true;
+    // Node GameWorld::attachTo() filled; carries the camera transform.
+    pix::Node* _root = nullptr;
     float _dt = 0.0f;
 };
 

@@ -228,11 +228,11 @@ void Map::renderTerrain(pix::Graphics* g, float gridThickness, bool canvasMode, 
 }
 
 void Map::m_render(const Camera& camera) {
-    const Vec2 p0 = camera.m_pointToScreen(Vec2(0.0f, 0.0f));
-    const Vec2 p1 = camera.m_pointToScreen(Vec2(1.0f, 1.0f));
-    const Vec2 s = v2Sub(p1, p0);
-    groundGfx->setPosition(p0.x, p0.y);
-    groundGfx->setScale(s.x, s.y);
+    (void)camera;
+    // map.ts draws the terrain at world scale (the camera transform lives on
+    // the world container), so the ground node keeps the identity transform.
+    groundGfx->setPosition(0.0f, 0.0f);
+    groundGfx->setScale(1.0f, 1.0f);
 }
 
 void Map::update(float dt, GameWorld& ctx) {
