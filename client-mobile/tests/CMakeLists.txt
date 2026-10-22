@@ -31,6 +31,7 @@ add_executable(surv_tests
     ${SURV_SRC}/net/Net.cpp
     ${SURV_SRC}/net/WsUrl.cpp
     ${SURV_SRC}/game/Game.cpp
+    ${SURV_SRC}/game/Hud.cpp
     ${SURV_SRC}/render/Terrain.cpp
     ${SURV_SRC}/render/Renderer.cpp
     ${SURV_SRC}/render/Defs.cpp

@@ -7,6 +7,8 @@
 #include "game/GameWorld.h"
 #include "game/Map.h"
 #include "game/Gas.h"
+#include "game/Game.h"
+#include "game/Hud.h"
 #include "game/objects/Barns.h"
 #include "game/objects/GameObject.h"
 #include "game/objects/Structure.h"
@@ -936,6 +938,49 @@ TEST(obstacle_door_interp_and_casing) {
     CHECK(sprite(o.casingSprite)->visible);
 }
 
+// ---------------------------------------------------------------------------
+// In-game HUD (game/Hud.h): the plain-pix HUD built on the game root.
+TEST(hud_health_color_steps) {
+    // ui2.ts healthColourSteps: 100 white, 75 pink, 25 red, 0 pure red.
+    CHECK_EQ(Hud::healthColor(100.0f, false), 0xffffffu);
+    CHECK_EQ(Hud::healthColor(75.0f, false), 0xff9e9eu);
+    // 25 pots between the pink (75) and medium-red (25) steps: exact red.\n    CHECK_EQ(Hud::healthColor(25.0f, false), 0xff0000u);\n    CHECK_EQ(Hud::healthColor(50.0f, false), 0xff7f7fu);
+    CHECK_EQ(Hud::healthColor(0.0f, false), 0xff0000u);
+    // Downed players use the flat red step.
+    CHECK_EQ(Hud::healthColor(50.0f, true), 0xff0000u);
+}
+
+TEST(hud_builds_health_bar_at_bottom_centre) {
+    pix::NullPixiFactory factory;
+    auto* root = static_cast<pix::NullContainer*>(factory.createContainer());
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+
+    // #ui-health-counter: 400x32 bar in a 412x44 box (6px padding), 12px above
+    // the design rect's bottom edge (game.css #ui-bottom-center-0).
+    bool foundHealthBg = false;
+    for (pix::Node* child : root->children) {
+        auto* g = dynamic_cast<pix::NullGraphics*>(child);
+        if (!g) continue;
+        for (const auto& cmd : g->commands) {
+            if (cmd.kind == pix::DrawCommand::Rect && std::fabs(cmd.c - 412.0f) < 0.01f &&
+                std::fabs(cmd.d - 44.0f) < 0.01f) {
+                CHECK_NEAR(cmd.b, 720.0f - 12.0f - 44.0f, 0.01f);
+                CHECK_NEAR(cmd.a, (1280.0f - 412.0f) * 0.5f, 0.01f);
+                foundHealthBg = true;
+            }
+        }
+    }
+    CHECK(foundHealthBg);
+
+    // Hidden until the match is playable, like the web client's `stale` flag.
+    CHECK(!hud.isVisible());
+    Game game;
+    hud.update(0.016f, game, false);
+    CHECK(!hud.isVisible());
+    hud.update(0.016f, game, true);
+    CHECK(hud.isVisible());
+}
 TEST(gas_overlay_world_scale) {
     pix::NullPixiFactory factory;
     Camera camera;

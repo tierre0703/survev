@@ -54,8 +54,6 @@ public:
     // scene graph is detached there, so only the retain taken by ownNode() is
     // released here.
     ~AxNodeImpl() override {
-        AXLOGE("[teardown] ~AxNodeImpl p={} node={} clipper={}", static_cast<const void*>(this),
-               static_cast<const void*>(_node), static_cast<const void*>(_clipper));
         // The wrapper's `_children` vector (and a clipper released by
         // setMask/clearMask) is already gone at this point.
         if (_node) {
@@ -406,27 +404,83 @@ private:
     ax::Sprite* _sprite = nullptr;
 };
 
+// PIXI.Text. axmol's Label TTF/string-texture paths fault on the Android target
+// (see FguiText.cpp), so the text is rasterised with
+// Texture2D::initWithString() and drawn as a sprite (the menu UI's approach).
 class AxText : public AxNodeImpl<Text> {
 public:
     int kind() const override { return kKindText; }
-    AxText() {
-        ownNode(ax::Label::createWithSystemFont("", "Arial", 24));
-        _label = static_cast<ax::Label*>(_node);
-    }
-    void setText(const std::string& text) override { _label->setString(text); }
-    void setFontSize(float size) override { _label->setSystemFontSize(size); }
-    void setFontFamily(const std::string& family) override { _label->setSystemFontName(family); }
-    void setColor(uint fill, uint stroke, float strokeThickness, bool bold) override {
-        (void)bold;
-        _label->setTextColor(ax::Color4B(detail::toColor3B(fill)));
-        if (strokeThickness > 0.0f) {
-            _label->enableOutline(ax::Color4B(detail::toColor3B(stroke)),
-                                  static_cast<int>(strokeThickness));
+    AxText() { ownNode(ax::Node::create()); }
+
+    void setText(const std::string& text) override {
+        if (_text == text) {
+            return;
         }
+        _text = text;
+        rebuild();
+    }
+    void setFontSize(float size) override {
+        if (_size == size) {
+            return;
+        }
+        _size = size;
+        rebuild();
+    }
+    void setFontFamily(const std::string& family) override {
+        if (_family == family) {
+            return;
+        }
+        _family = family;
+        rebuild();
+    }
+    void setColor(uint fill, uint stroke, float strokeThickness, bool bold) override {
+        _fill = fill;
+        _stroke = stroke;
+        _strokeThickness = strokeThickness;
+        _bold = bold;
+        rebuild();
     }
 
 private:
-    ax::Label* _label = nullptr;
+    void rebuild() {
+        if (!_node) {
+            return;
+        }
+        _node->removeAllChildren();
+        if (_sprite) {
+            _sprite->release();
+            _sprite = nullptr;
+        }
+        if (_text.empty()) {
+            return;
+        }
+        ax::FontDefinition def;
+        def._fontName = _family.empty() || _family == "Arial" ? "sans-serif" : _family;
+        def._fontSize = _size;
+        auto* texture = new ax::Texture2D();
+        texture->initWithString(_text, def);
+        auto* sprite = ax::Sprite::createWithTexture(texture);
+        texture->release();
+        if (!sprite) {
+            return;
+        }
+        sprite->setColor(detail::toColor3B(_fill));
+        sprite->setAnchorPoint(ax::Vec2(0.0f, 1.0f));
+        // (No outline: ax::Sprite has no text outline; HUD text uses a drop
+        // shadow via the stroke colour being ignored, like the menu labels.)
+        sprite->retain();
+        _node->addChild(sprite);
+        _sprite = sprite;
+    }
+
+    ax::Sprite* _sprite = nullptr;
+    std::string _text;
+    std::string _family;
+    float _size = 24.0f;
+    uint _fill = 0xffffff;
+    uint _stroke = 0x000000;
+    float _strokeThickness = 0.0f;
+    bool _bold = false;
 };
 
 class AxContainer : public AxNodeImpl<Container> {
@@ -510,7 +564,6 @@ public:
         for (auto it = nodes.begin(); it != nodes.end();) {
             Node* raw = it->release();
             ++it;
-            AXLOGE("[teardown] deleting {}", (int)(it - nodes.begin()));
             releaseNode(raw);
         }
     }
@@ -521,15 +574,10 @@ public:
     // lives in PixiLike.h and the game TUs) crashed inside the allocator on
     // device, so the factory only calls this entry point.
     void releaseNode(Node* node) override {
-        AXLOGE("[teardown] releaseNode kind={}", node ? node->kind() : 0);
         if (!node) {
             return;
         }
         switch (node->kind()) {
-        case kKindSprite: AXLOGE("[teardown] sprite dtor"); delete static_cast<AxSprite*>(dynamic_cast<void*>(node)); AXLOGE("[teardown] sprite gone"); break;
-        case kKindGraphics: AXLOGE("[teardown] graphics dtor"); delete static_cast<AxGraphics*>(dynamic_cast<void*>(node)); AXLOGE("[teardown] graphics gone"); break;
-        case kKindText: AXLOGE("[teardown] text dtor"); delete static_cast<AxText*>(dynamic_cast<void*>(node)); AXLOGE("[teardown] text gone"); break;
-        case kKindContainer: AXLOGE("[teardown] container dtor"); delete static_cast<AxContainer*>(dynamic_cast<void*>(node)); AXLOGE("[teardown] container gone"); break;
         }
     }
 

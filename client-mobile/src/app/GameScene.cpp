@@ -1,4 +1,5 @@
 #include "GameScene.h"
+#include "UiHost.h"
 #include "DevConfig.h"
 #include "../net/Api.h"
 #include "../net/Messages.h"
@@ -15,6 +16,7 @@
 #include "../audio/AxmolAudioBackend.h"
 #include "../audio/GeneratedSoundDefs.h"
 #include "../ui/FguiHud.h"
+#include "../game/Hud.h"
 #include "../ui/FguiPieTimer.h"
 #include "../ui/FguiPadGraphics.h"
 #include "../ui/Layout.h"
@@ -382,10 +384,21 @@ void GameScene::resetWorld() {
         _worldSize = visible;
         _worldSizeDirty = false;
         _worldSized = true;
-        // S2: (re)build the FairyGUI HUD against the new factory. The tree was
-        // dropped above, so every widget is rebuilt here.
-        _hud = std::make_unique<FguiHud>();
-        _hud->build(this);
+        // In-game HUD: plain pix nodes on _gameRoot (the 1280x720 design
+        // space the menu uses); see game/Hud.h.
+        _hudRoot.reset(_pixiFactory->createContainer());
+        // The HUD is laid out around the design rect's centre (like the menu's
+        // uiRoot); ui::layoutUiRoot fits the 1280x720 rect into the view.
+        {
+            const float vw = ax::Director::getInstance()->getVisibleSize().width;
+            const float vh = ax::Director::getInstance()->getVisibleSize().height;
+            const float fit = std::fmin(vw / ::ui::kit::designWidth(), vh / ::ui::kit::designHeight());
+            _hudRoot->setPosition(vw * 0.5f, vh * 0.5f);
+            _hudRoot->setScale(fit, fit);
+        }
+        _gameRoot->addChild(static_cast<ax::Node*>(_hudRoot->native()));
+        _hud = std::make_unique<Hud>();
+        _hud->build(_pixiFactory.get(), _hudRoot.get(), Vec2(svui::kit::designWidth(), svui::kit::designHeight()));
     }
 }
 
@@ -644,6 +657,12 @@ void GameScene::update(float delta) {
             if (_hud) {
                 _hud->setVisible(true);
             }
+            // The Java layer hides its menu when a match starts (JavaUiHost::
+            // enterGame); without this the menu fragment keeps painting over the
+            // game canvas.
+            if (UiHost* host = uiHost()) {
+                host->enterGame(static_cast<int>(_game->getActivePlayerId()));
+            }
             if (onMatchStarted) onMatchStarted();
         } else if (_joinElapsed > 30) {
             leaveGame();
@@ -733,17 +752,10 @@ void GameScene::update(float delta) {
         _awaitingJoin = false;
     }
 
-    // S2: route the HUD update through FguiHud instead of UiOverlay.
-    // main.ts sets `stale=false` once the game starts; before that (lobby /
-    // banner) the HUD stays hidden instead of painting the last match's state
-    // over the menu.
+    // In-game HUD (game/Hud.h): visible while the match is playable, like the
+    // web client's stale flag.
     if (_hud) {
-        _hud->update(delta, isStarted(), isPlaying(), _game.get());
-        // Emote wheel: when a touch is active on the emote button area,
-        // feed the position to the wheel.
-        if (_emoteButtonActive) {
-            _hud->feedEmoteWheel(_emoteScreenX, _emoteScreenY, true);
-        }
+        _hud->update(delta, *_game, _inGame && _notifiedStarted && _game->isPlaying());
     }
 
     // Priority 2: pie timer — driven by active player action data each frame.

@@ -9,6 +9,7 @@
 #include "../game/objects/MapIndicator.h"
 #include "../render/Defs.h"
 #include "../ui/Localization.h"
+#include "../app/DevConfig.h"
 #include "Layout.h"
 #include "../app/GameScene.h"
 #include "FguiRoot.h"
@@ -285,25 +286,19 @@ void FguiHud::build(ax::Scene* scene) {
     fairygui::GRoot* root = ::surv::fguiRoot();
     if (!root) return;
 
-    // TEMP: FairyGUI widgets crash the GRoot/queue pipeline on device (see
-    // M4_REMAINING.md); build no HUD until the adapter fix lands.
-    return;
+    // HUD-disable switch on debug builds (`surv_debug` == 1, see dev::kKeyDebug).
+    // The HUD build is the last known device crash site; this allows a match
+    // without it while that is being fixed.
+    if (ax::UserDefault::getInstance()->getStringForKey(dev::kKeyDebug, "0") == "1") {
+        return;
+    }
 
-    // Device diagnosis: skip the FairyGUI widgets while the GRoot/queue pipeline
-    // is being fixed (it crashes when the GRoot retains its children).
-
-    // Every widget is a child of this component, which is the single retained
-    // root of the HUD tree (the HUD owns the tree; see FguiHud.h). GRoot and
-    // GComponent do not retain children, so without an owning component the
-    // whole tree is destroyed with the frame that built it.
+    // An empty GComponent as the HUD root. Must not be attached to the scene:
+    // on the Android target the GRoot's scene-graph queue crashes when a new
+    // FairyGUI component enters it at runtime (see M4_REMAINING.md).
     freeTree();
     _hudPanel = fairygui::GComponent::create();
     _hudPanel->retain();
-    // GRoot.addChild() would release() the component, freeing it before any
-    // child exists (GRoot/GComponent do not retain children); attach the
-    // display object to the root container directly. The HUD retains
-    // _hudPanel, which owns the tree.
-    fgui::attachToRoot(root, _hudPanel);
 
     buildHudPanel(root);         // health, boost, weapon/ammo compact text
     buildWeaponSlots(root);      // 4 weapon cards (bottom right)

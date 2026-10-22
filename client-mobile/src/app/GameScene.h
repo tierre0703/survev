@@ -34,6 +34,7 @@ class GameWorld;
 fairygui::GRoot* fguiRoot();
 
 class FguiHud;
+class Hud;
 class PieTimer;
 
 class FguiPadGraphics;
@@ -192,7 +193,10 @@ private:
     bool _wasPlaying = false;
     bool _inGame = false;
 
-    std::unique_ptr<FguiHud> _hud;
+    // In-game HUD drawn through the pix adapter on _gameRoot (design space).
+    std::unique_ptr<Hud> _hud;
+    // HUD container on _gameRoot (pix adapter nodes, design space).
+    std::unique_ptr<pix::Container> _hudRoot;
     std::unique_ptr<PieTimer> _pieTimer;
     // Crosshair overlay (factor-owned; parented to _gameRoot, not the camera-
     // transformed world root).
