@@ -194,6 +194,9 @@ private:
 
     std::unique_ptr<FguiHud> _hud;
     std::unique_ptr<PieTimer> _pieTimer;
+    // Crosshair overlay (factor-owned; parented to _gameRoot, not the camera-
+    // transformed world root).
+    pix::Sprite* _crosshair = nullptr;
     FindGameRequest _findGameRequest;
     uikit::UiOverlay* _overlay = nullptr;
     ax::Node* _uiRoot = nullptr;

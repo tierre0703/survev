@@ -23,6 +23,12 @@ public:
     bool m_localRotationEnabled = false;
     float m_interpInterval = 0.0f;
 
+    // ui2.ts divides the HUD sizes by this. The native HUD lives in the
+    // 1280x720 design space (uiRoot), whose scale is exactly the web client's
+    // device scale (points per CSS pixel), so the same CSS sizes land on the
+    // same screen area. 1 = desktop CSS sizes.
+    float m_deviceScale = 1.0f;
+
     float m_z() const { return m_ppu * m_zoom; }
 
     Vec2 m_pointToScreen(const Vec2& point) const {

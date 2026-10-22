@@ -37,6 +37,9 @@ class GRichTextField;
 }
 
 namespace surv {
+namespace fgui {
+class TextField;
+} // namespace fgui
 class Touch;
 class Game;
 
@@ -97,9 +100,6 @@ public:
     // Squad health bars — called each frame from update().
     void refreshSquad(const Game* game);
 
-    // TEMP DIAGNOSTIC (remove).
-    void debugLifecycle(const char* tag);
-
 // Inter-process: the emote wheel's input/output state lives here so the
     // GameScene can feed raw touch data into it each frame.
     surv::FguiEmoteWheel* emoteWheel() { return _emoteWheel.get(); }
@@ -128,14 +128,20 @@ private:
     void buildKillMessage(fairygui::GComponent* root);
     void buildPickupMessage(fairygui::GComponent* root);
     void buildInteractionPrompt(fairygui::GComponent* root);
+    // Releases the FairyGUI tree (destructor + rebuild); every widget lives
+    // under the retained `_hudPanel`, so this clears the cached pointers too.
+    void freeTree();
+    // Places the top-level blocks on their ui-top-left / ui-bottom-center-0 /
+    // ... anchors (pivot at the anchor, position = anchor * design size).
+    void layoutAnchors(fairygui::GComponent* hudRoot);
 
     // ---- Weapon slots (4: Primary, Secondary, Melee, Throwable) ----
     static constexpr int kWeaponSlotCount = 4;
     struct WeaponSlotWidgets {
         fairygui::GGraph* bg = nullptr;
-        fairygui::GBasicTextField* nameText = nullptr;
-        fairygui::GBasicTextField* ammoText = nullptr;
-        fairygui::GBasicTextField* keybindText = nullptr;
+        surv::fgui::TextField* nameText = nullptr;
+        surv::fgui::TextField* ammoText = nullptr;
+        surv::fgui::TextField* keybindText = nullptr;
         fairygui::GGraph* equippedHighlight = nullptr;
     };
     std::array<WeaponSlotWidgets, kWeaponSlotCount> _weaponSlots{};
@@ -145,8 +151,8 @@ private:
     static constexpr std::array<const char*, kGearSlotCount> kGearTypeNames = {"helmet", "chest", "backpack"};
     struct GearSlotWidgets {
         fairygui::GGraph* bg = nullptr;
-        fairygui::GBasicTextField* levelText = nullptr;
-        fairygui::GBasicTextField* nameText = nullptr;
+        surv::fgui::TextField* levelText = nullptr;
+        surv::fgui::TextField* nameText = nullptr;
     };
     std::array<GearSlotWidgets, kGearSlotCount> _gearSlots{};
 
@@ -154,7 +160,7 @@ private:
     static constexpr int kPerkSlotCount = 4;
     struct PerkSlotWidgets {
         fairygui::GGraph* bg = nullptr;
-        fairygui::GBasicTextField* nameText = nullptr;
+        surv::fgui::TextField* nameText = nullptr;
     };
     std::array<PerkSlotWidgets, kPerkSlotCount> _perkSlots{};
 
@@ -165,7 +171,7 @@ private:
     };
     struct ScopeSlotWidgets {
         fairygui::GGraph* bg = nullptr;
-        fairygui::GBasicTextField* labelText = nullptr;
+        surv::fgui::TextField* labelText = nullptr;
     };
     std::array<ScopeSlotWidgets, kScopeSlotCount> _scopeSlots{};
 
@@ -174,23 +180,23 @@ private:
     static constexpr int kLootGridCount = 25; // matches kBagSizeKeys size
     struct LootSlotWidgets {
         fairygui::GGraph* bg = nullptr;
-        fairygui::GBasicTextField* nameText = nullptr;
-        fairygui::GBasicTextField* countText = nullptr;
+        surv::fgui::TextField* nameText = nullptr;
+        surv::fgui::TextField* countText = nullptr;
     };
     std::array<LootSlotWidgets, kLootGridCount> _lootSlots{};
 
     // ---- Kill message (center screen) ----
     fairygui::GComponent* _killMessageBg = nullptr;
-    fairygui::GBasicTextField* _killMessageText = nullptr;
-    fairygui::GBasicTextField* _killMessageCount = nullptr;
+    surv::fgui::TextField* _killMessageText = nullptr;
+    surv::fgui::TextField* _killMessageCount = nullptr;
 
     // ---- Pickup message (below center) ----
-    fairygui::GBasicTextField* _pickupMessageText = nullptr;
+    surv::fgui::TextField* _pickupMessageText = nullptr;
 
     // ---- Interaction prompt ----
     fairygui::GComponent* _interactionBg = nullptr;
-    fairygui::GBasicTextField* _interactionKeyText = nullptr;
-    fairygui::GBasicTextField* _interactionDescText = nullptr;
+    surv::fgui::TextField* _interactionKeyText = nullptr;
+    surv::fgui::TextField* _interactionDescText = nullptr;
 
     // Minimap: FGUI sprite + overlay
     fairygui::GComponent* _minimapContainer = nullptr;
@@ -200,33 +206,42 @@ private:
     std::vector<fairygui::GGraph*> _minimapDots;
 
     // Health bar: fill rect (redrawn each frame with varying width+color)
-    fairygui::GBasicTextField* _healthText = nullptr;
+    surv::fgui::TextField* _healthText = nullptr;
     fairygui::GGraph* _healthFill = nullptr;
+    fairygui::GGraph* _healthDepleted = nullptr;
+
+    // Top-level blocks re-anchored by layoutAnchors().
+    fairygui::GComponent* _bottomCenter = nullptr;
+    fairygui::GComponent* _scopePanel = nullptr;
+    fairygui::GComponent* _weaponPanel = nullptr;
+    fairygui::GComponent* _gearPanel = nullptr;
+    fairygui::GComponent* _perkPanel = nullptr;
+    fairygui::GComponent* _lootPanel = nullptr;
 
     // Boost bar: 4 segments (one GGraph each)
     fairygui::GGraph* _boostSegments[4]{};
 
     // Weapon + ammo display (compact top-right of HUD panel)
-    fairygui::GBasicTextField* _weaponText = nullptr;
-    fairygui::GBasicTextField* _ammoText = nullptr;
+    surv::fgui::TextField* _weaponText = nullptr;
+    surv::fgui::TextField* _ammoText = nullptr;
 
     // Alive counter
-    fairygui::GBasicTextField* _aliveText = nullptr;
+    surv::fgui::TextField* _aliveText = nullptr;
 
     // Kill feed (multi-line via multi-line text field)
-    fairygui::GBasicTextField* _killFeedText = nullptr;
+    surv::fgui::TextField* _killFeedText = nullptr;
 
     // Result overlay
-    fairygui::GBasicTextField* _resultText = nullptr;
+    surv::fgui::TextField* _resultText = nullptr;
     fairygui::GComponent* _resultPanel = nullptr;
     bool _resultShown = false;
 
     // Squad health bars (4 team members)
     struct SquadMember {
         fairygui::GComponent* container = nullptr;
-        fairygui::GBasicTextField* nameText = nullptr;
+        surv::fgui::TextField* nameText = nullptr;
         fairygui::GGraph* healthBar = nullptr;
-        fairygui::GBasicTextField* statusText = nullptr;
+        surv::fgui::TextField* statusText = nullptr;
         // Cached state
         int prevHealth = -1;
         bool prevDead = false;
@@ -241,6 +256,9 @@ private:
 
     // Root panel containing all HUD elements
     fairygui::GComponent* _hudPanel = nullptr;
+
+    // ui2.ts device scale (points per CSS px): HUD sizes are divided by it.
+    float _deviceScale = 1.5f;
 
     // Message ticker state (mirrors ui2.ts pickupMessage/killMessage)
     float _pickupTicker = 0.0f;

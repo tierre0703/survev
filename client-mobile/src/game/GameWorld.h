@@ -57,6 +57,11 @@ public:
     pix::Node* root() { return _root; }
 
     void setScreenSize(float width, float height);
+    // uiRoot scale for the HUD (camera.m_deviceScale).
+    void setDeviceScale(float scale) {
+        _camera.m_deviceScale = scale > 0.0f ? scale : 1.0f;
+    }
+    float deviceScale() const { return _camera.m_deviceScale; }
     // view.ts setSize(): the resizeGame callbacks. GameScene registers the
     // resizing that keeps live world layers sized to `_camera` and drops the
     // registration when the world's factory is replaced.

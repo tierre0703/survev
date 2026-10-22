@@ -4,8 +4,11 @@
 #
 # Usage:
 #   powershell -File tools/build-native.ps1 -Abis "armeabi-v7a,arm64-v8a"
+#   powershell -File tools/build-native.ps1 -Abis "x86_64" -ExtraArgs "-DTEMP_DIAG=1"
 param(
-    [string[]]$Abis = @('armeabi-v7a', 'arm64-v8a')
+    [string[]]$Abis = @('armeabi-v7a', 'arm64-v8a'),
+    # Extra `-D...` arguments forwarded to the CMake configure step.
+    [string[]]$ExtraArgs = @()
 )
 # CMake/Ninja write warnings to stderr, which PowerShell turns into a
 # terminating error under 'Stop'. Every invocation is checked via
@@ -40,7 +43,8 @@ foreach ($abi in $Abis) {
         -DANDROID_TOOLCHAIN=clang -DANDROID_ARM_NEON=TRUE `
         -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON -DANDROID_USE_LEGACY_TOOLCHAIN_FILE=false `
         -DCMAKE_MAKE_PROGRAM="$env:SURV_NINJA" -DCMAKE_BUILD_TYPE=Release `
-        -D_AX_ANDROID_PROJECT_DIR="$proj"
+        -D_AX_ANDROID_PROJECT_DIR="$proj" `
+        @ExtraArgs
     if ($LASTEXITCODE -ne 0) { throw "configure failed for $abi" }
 
     Write-Host "== build $abi =="

@@ -17,6 +17,8 @@
 #include "../ui/FguiHud.h"
 #include "../ui/FguiPieTimer.h"
 #include "../ui/FguiPadGraphics.h"
+#include "../ui/Layout.h"
+#include "../../../shared/config/ui2Constants.inc"
 
 #include "fairygui/GRoot.h"
 #include "fairygui/FairyGUI.h"
@@ -251,10 +253,6 @@ bool GameScene::init() {
     _game = std::make_unique<Game>();
     _game->init(this, createWebSocketConnection);
 
-    // S2: build the FairyGUI HUD.
-    _hud = std::make_unique<FguiHud>();
-    _hud->build(this);
-
     // Priority 2: build the pie timer.
     _pieTimer = std::make_unique<PieTimer>();
     _pieTimer->build();
@@ -262,6 +260,9 @@ bool GameScene::init() {
     // M4: render world (terrain + z-sorted object layers) driven by the map /
     // update messages the game dispatches.
     installGeneratedDefs();
+
+    // M7: the menu starts a game via enterWithJoin()/enterWithFindGame().
+    _gameRoot->setVisible(false);
     // The atlas converter emits the low-resolution sheets (the web client's
     // mobile path); 0.5 makes axmol render those frames at full point size.
     ax::Director::getInstance()->setContentScaleFactor(0.5f);
@@ -280,6 +281,11 @@ bool GameScene::init() {
         // No-op: the pads no longer use atlas frames.
     });
     resetWorld();
+    // ui2.ts reads the device scale (points per CSS pixel, i.e. the uiRoot
+    // scale) for every HUD size; the camera carries it to the HUD.
+    if (_world) {
+        _world->setDeviceScale(::ui2::kDeviceScale);
+    }
     // init() deliberately leaves the world null (resetWorld() only builds it on
     // a join); guard the sizing below.
     if (_world) {
@@ -307,8 +313,6 @@ bool GameScene::init() {
     _game->setPickupSoundCallback(
         [this](const std::string& item) { onPickupSound(item); });
 
-    // M7: the menu starts a game via enterWithJoin()/enterWithFindGame().
-    _gameRoot->setVisible(false);
     // TEMP (M4 12.2): FguiPadGraphics faults on its first widget write.
     // _movePad->setVisible(false);
     // _aimPad->setVisible(false);
@@ -341,10 +345,20 @@ void GameScene::resetWorld() {
     // Because of that crash the world is only built on a join, never in
     // init(): `_inGame` is set by enterWithJoin() before it calls this.
     if (_inGame) {
+        // TEMP: the adapter node teardown is not device-safe yet (see
+        // M4_REMAINING.md); keep the world, factory and HUD for the session.
+        if (_world) {
+            return;
+        }
         if (_world) {
             _world->onFactoryReset();
         }
         _world.reset();
+        // The HUD's FairyGUI tree points at this world's adapter nodes; drop it
+        // before the factory that owns those nodes is destroyed.
+        _hud.reset();
+        // The crosshair is owned by the pixel factory.
+        _crosshair = nullptr;
         if (_worldRoot) {
             static_cast<ax::Node*>(_worldRoot->native())->removeFromParent();
             _worldRoot.reset();
@@ -352,6 +366,7 @@ void GameScene::resetWorld() {
         _pixiFactory = std::make_unique<pix::AxPixiFactory>();
         _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
         _world->setAudio(_audio.get(), _ambiance.get());
+        _world->setDeviceScale(::ui2::kDeviceScale);
         // view.ts resizeGame callbacks: the new layers must follow the camera.
         _world->setSizeCallbacks(
             [this](float width, float height) { onWorldResize(width, height); },
@@ -367,6 +382,10 @@ void GameScene::resetWorld() {
         _worldSize = visible;
         _worldSizeDirty = false;
         _worldSized = true;
+        // S2: (re)build the FairyGUI HUD against the new factory. The tree was
+        // dropped above, so every widget is rebuilt here.
+        _hud = std::make_unique<FguiHud>();
+        _hud->build(this);
     }
 }
 
@@ -376,6 +395,14 @@ void GameScene::resetWorld() {
 void GameScene::onWorldResize(float width, float height) {
     _worldSize = ax::Size(width, height);
     _worldSizeDirty = true;
+    // The FairyGUI GRoot is sized to the design resolution; keep the HUD root's
+    // device scale in sync (uiRoot scale == points per CSS pixel).
+    const auto visible = ax::Director::getInstance()->getVisibleSize();
+    const float scale = std::fmin(visible.width / ::ui::kit::designWidth(),
+                                  visible.height / ::ui::kit::designHeight());
+    if (_world && scale > 0.0f) {
+        _world->setDeviceScale(scale);
+    }
 }
 
 GameScene::~GameScene() {
@@ -455,9 +482,14 @@ void GameScene::leaveGame() {
     _awaitingJoin = false;
     _joinRetryUrls.clear();
     _gameRoot->setVisible(false);
-    // TEMP (M4 12.2): FguiPadGraphics faults on its first widget write.
-    // _movePad->setVisible(false);
-    // _aimPad->setVisible(false);
+    // main.ts un-hides the menu on quit; the HUD is hidden until the match is
+    // playing again (FguiHud::update gates on isPlaying()).
+    if (_hud) {
+        _hud->setVisible(false);
+    }
+    if (_crosshair) {
+        _crosshair->setVisible(false);
+    }
     if (_audio) {
         _audio->stopAll();
     }
@@ -609,6 +641,9 @@ void GameScene::update(float delta) {
             // The match is actually running; show the joystick pads (game.ts
             // only enables the touch display once the game starts).
             _touch->display = true;
+            if (_hud) {
+                _hud->setVisible(true);
+            }
             if (onMatchStarted) onMatchStarted();
         } else if (_joinElapsed > 30) {
             leaveGame();
@@ -703,11 +738,6 @@ void GameScene::update(float delta) {
     // banner) the HUD stays hidden instead of painting the last match's state
     // over the menu.
     if (_hud) {
-        _hud->debugLifecycle("scene");
-        // TEMP: the HUD stays hidden. Showing it from here crashed in
-        // fairygui::GObject::setVisible() because the HUD tree had been freed
-        // by the end of the frame that built it (the owner-stack bug noted in
-        // FguiHud.h); FguiHud::update() is disabled for the same reason.
         _hud->update(delta, isStarted(), isPlaying(), _game.get());
         // Emote wheel: when a touch is active on the emote button area,
         // feed the position to the wheel.
@@ -736,24 +766,25 @@ void GameScene::update(float delta) {
     // Crosshair defs are in GeneratedDefs.cpp and have texture names like
     // "crosshair000.img". The sprite is created once and shown/hidden.
     if (_world && _pixiFactory && isStarted() && _game->isPlaying() && _game->hasJoined()) {
-        static bool crossInit = false;
-        static pix::Sprite* crossSprite = nullptr;
-        if (!crossInit && _worldRoot) {
-            crossSprite = _pixiFactory->createSprite();
-            crossSprite->setAnchor(0.5f, 0.5f);
-            crossSprite->setFrame("crosshair000.img");
-            crossSprite->setTint(0xffffff);
-            crossSprite->setAlpha(0.8f);
-            crossSprite->setScale(1.0f, 1.0f);
-            _worldRoot->addChild(crossSprite);
-            crossInit = true;
+        if (!_crosshair) {
+            _crosshair = _pixiFactory->createSprite();
+            _crosshair->setAnchor(0.5f, 0.5f);
+            _crosshair->setFrame("crosshair000.img");
+            _crosshair->setTint(0xffffff);
+            _crosshair->setAlpha(0.8f);
+            _crosshair->setScale(1.0f, 1.0f);
+            // The crosshair is a screen-space overlay: parent it to the game
+            // root (the world root carries the camera transform).
+            _gameRoot->addChild(static_cast<ax::Node*>(_crosshair->native()));
         }
-        if (crossSprite) {
+        if (_crosshair) {
             // Position at screen center each frame (camera independent).
             const auto size = ax::Director::getInstance()->getVisibleSize();
-            crossSprite->setPosition(size.width * 0.5f, size.height * 0.5f);
-            crossSprite->setVisible(true);
+            _crosshair->setPosition(size.width * 0.5f, size.height * 0.5f);
+            _crosshair->setVisible(true);
         }
+    } else if (_crosshair) {
+        _crosshair->setVisible(false);
     }
 
     // S6: the pause menu is now Java (GamePauseDialog).

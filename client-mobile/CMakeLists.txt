@@ -65,3 +65,6 @@ include(AXGamePlatformSetup)
 
 # Make sure the AXGameFinalSetup is included at the end of this file
 include(AXGameFinalSetup)
+
+# TEMP device diagnostics (see cmake/temp_diag.cmake).
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/temp_diag.cmake)

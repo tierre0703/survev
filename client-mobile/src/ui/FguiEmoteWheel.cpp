@@ -8,6 +8,8 @@
 #include <cstdlib>
 
 #include "fairygui/GRoot.h"
+#include "FguiRoot.h"
+#include "../app/GameScene.h"
 #include "fairygui/GGraph.h"
 #include "fairygui/GComponent.h"
 #include "fairygui/GTextField.h"
@@ -24,8 +26,7 @@ namespace {
 // GComponent does not release its children, so the wheel re-parents the
 // create() reference into the tree it keeps alive (see FguiEmoteWheel.h).
 fairygui::GObject* addChild(fairygui::GComponent* parent, fairygui::GObject* child) {
-    parent->addChild(child);
-    child->release();
+    fgui::adopt(parent, child);
     return child;
 }
 
@@ -51,14 +52,14 @@ FguiEmoteWheel::~FguiEmoteWheel() {
         // Drop the reference taken in build(); removal from GRoot balances
         // the addChild() reference, so the container (and its children, which
         // addChild()/release()d above) is destroyed here.
-        _container->removeFromParent();
+        _container->displayObject()->removeFromParent();
         _container->release();
         _container = nullptr;
     }
 }
 
 void FguiEmoteWheel::build(ax::Scene*) {
-    fairygui::GRoot* root = fairygui::GRoot::getInstance();
+    fairygui::GRoot* root = ::surv::fguiRoot();
     if (!root) return;
 
     _container = fairygui::GComponent::create();
@@ -67,8 +68,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
     _container->retain();
     _container->setVisible(false);
     _container->setPivot(0.5f, 0.5f);
-    root->addChild(_container);
-    _container->release();
+    fgui::attachToRoot(root, _container);
 
     // 4 directional wedges in a cross pattern.
     // Each is a filled circle with a text label.
@@ -109,6 +109,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
         bg->setPosition(cx, cy);
         bg->setVisible(false);
         addChild(_container, bg);
+        bg->setVisible(true);
         _wedges[i].bgPolygon = bg;
 
         // Highlight circle (brighter, scaled up slightly)
@@ -125,6 +126,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
         hl->setPosition(cx, cy);
         hl->setVisible(false);
         addChild(_container, hl);
+        hl->setVisible(false);
         _wedges[i].highlight = hl;
 
         // Label text below the circle
@@ -135,6 +137,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
         text->setPivot(0.5f, 0.0f);
         text->setVisible(false);
         addChild(_container, text);
+        text->setVisible(true);
         _wedges[i].labelText = text;
     }
 
@@ -151,6 +154,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
     closeBg->setPosition(0.0f, 0.0f);
     closeBg->setVisible(false);
     addChild(_container, closeBg);
+    closeBg->setVisible(true);
     _wedges[4].bgPolygon = closeBg;
 
     fairygui::GBasicTextField* closeText = fairygui::GBasicTextField::create();
@@ -160,6 +164,7 @@ void FguiEmoteWheel::build(ax::Scene*) {
     closeText->setPivot(0.5f, 0.5f);
     closeText->setVisible(false);
     addChild(_container, closeText);
+    closeText->setVisible(true);
     _wedges[4].labelText = closeText;
 }
 

@@ -250,8 +250,14 @@ void Renderer::m_update(float dt, Camera& camera, Map& map, bool debugLayerMaskE
         redrawGround(camera);
     }
 
+    // Layer container visibility as in renderer.ts. layers[2] is also the
+    // mask's scene parent, so it must stay visible: the ClippingNode would
+    // otherwise hide the whole player layer, and the mask must never be drawn
+    // outside it.
     layers[0]->setVisible(groundAlpha < 1.0f);
     layers[1]->setVisible(layerAlpha > 0.0f);
+    layers[2]->setVisible(true);
+    layers[3]->setVisible(true);
     ground->setVisible(groundAlpha > 0.0f);
 
     redrawLayerMask(camera, map);
@@ -263,6 +269,7 @@ void Renderer::m_update(float dt, Camera& camera, Map& map, bool debugLayerMaskE
         debugLayerMask->setVisible(debugLayerMaskEnabled);
     }
 
+#ifndef TEMP_NO_TREE_MASK
     const bool maskActive = layer == 0;
     if (maskActive && !layerMaskActive) {
         layers[2]->setMask(layerMask);
@@ -271,6 +278,7 @@ void Renderer::m_update(float dt, Camera& camera, Map& map, bool debugLayerMaskE
         layers[2]->clearMask();
         layerMaskActive = false;
     }
+#endif
 
     for (int i = 0; i < 4; i++) {
         if (_layerDirty[i]) {

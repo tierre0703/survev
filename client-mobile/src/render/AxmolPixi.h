@@ -86,6 +86,7 @@ public:
     float getAnchorY() const override { return _node->getAnchorPoint().y; }
     float getAlpha() const override { return _node->getOpacity() / 255.0f; }
     bool isVisible() const override { return _node->isVisible(); }
+
     void setAlpha(float alpha) override {
         const float a = alpha < 0.0f ? 0.0f : (alpha > 1.0f ? 1.0f : alpha);
         _node->setOpacity(static_cast<uint8_t>(a * 255.0f + 0.5f));
