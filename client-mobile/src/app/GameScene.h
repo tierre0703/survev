@@ -36,6 +36,7 @@ fairygui::GRoot* fguiRoot();
 class FguiHud;
 class Hud;
 class PieTimer;
+class EmoteWheel;
 
 class PadGraphicsAxmol;
 
@@ -156,6 +157,9 @@ public:
 private:
     // M5: build an InputMsg from Touch and send it at the server's input rate.
     void updateInput(float dt);
+    // Web screen point (y down, visible pixels) -> HUD design space (y up,
+    // 1280x720 bottom-left origin): the inverse of the _hudRoot transform.
+    Vec2 screenToDesign(float x, float y) const;
     // Retries the next url with the same token (main.ts joinGame()).
     void tryJoinUrls(const std::vector<std::string>& urls, const std::string& joinToken, size_t index = 0);
     // Pending quick-start: waits out the anti-spam delay, then calls the
@@ -212,7 +216,7 @@ private:
     std::unique_ptr<PieTimer> _pieTimer;
     // Crosshair overlay (factor-owned; parented to _gameRoot, not the camera-
     // transformed world root).
-    pix::Sprite* _crosshair = nullptr;
+    pix::Graphics* _crosshair = nullptr;
     FindGameRequest _findGameRequest;
     uikit::UiOverlay* _overlay = nullptr;
     ax::Node* _uiRoot = nullptr;
@@ -242,12 +246,12 @@ private:
     float _inputMsgTimeout = 0.0f;
     bool _shootStartPending = false;
 
-    // Emote wheel state (FguiHud feeds its own wheel; these fields are
-    // declared but unused in the app build — the emote button lives in
-    // FguiHud and drives the wheel directly).
-    bool _emoteButtonActive = false;
-    float _emoteScreenX = 0.0f;
-    float _emoteScreenY = 0.0f;
+    // Emote wheel (game/EmoteWheel.h): the on-screen emote button + radial
+    // loadout selector. Owned by the per-match world (raw pix nodes).
+    std::unique_ptr<EmoteWheel> _emoteWheel;
+    // Touch id currently driving the wheel (-1 = none); the pad logic ignores
+    // that touch so opening the wheel does not also move/aim.
+    int _emoteTouchId = -1;
 };
 
 } // namespace surv

@@ -71,6 +71,7 @@ struct RawEmitter {
 struct RawPlane { float actionOffset; float planeVel, planeRad, soundRangeMult, soundRangeDelta, soundRangeMax, fallOff; };
 struct RawTracer { unsigned regular, saturated, chambered, apSaturated; float alphaRate, alphaMin; };
 struct RawBulletRender { float distance, speed, variance; const char* tracerColor; float tracerWidth, tracerLength; unsigned flareColor; float maxFlareScale; };
+struct RawEmote { const char* type; const char* texture; const char* sound; const char* channel; const char* name; int teamOnly; int category; };
 
 static PlaneDef toPlane(const RawPlane& r) {
     PlaneDef d;
@@ -3896,6 +3897,117 @@ static const RawMapRender kMapRenders[] = {
     {"beach",2118510,16771002,8104037,10711321,4370618,11792639,10711321,4370618,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4751,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
     {"test_normal",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_5005,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
     {"test_faction",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,1,0,0,0,1,"",kMapAtlases_5263,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+};
+static const RawEmote kEmotes[] = {
+    {"emote_medical","emote-medical-healthkit.img","emote_01","ui","",1,0},
+    {"emote_ammo","ammo-box.img","emote_01","ui","",1,0},
+    {"emote_ammo9mm","ammo-9mm.img","emote_01","ui","",1,0},
+    {"emote_ammo12gauge","ammo-12gauge.img","emote_01","ui","",1,0},
+    {"emote_ammo762mm","ammo-762mm.img","emote_01","ui","",1,0},
+    {"emote_ammo556mm","ammo-556mm.img","emote_01","ui","",1,0},
+    {"emote_ammo50ae","ammo-50AE.img","emote_01","ui","",1,0},
+    {"emote_ammo308sub","ammo-308sub.img","emote_01","ui","",1,0},
+    {"emote_ammoflare","ammo-flare.img","emote_01","ui","",1,0},
+    {"emote_ammo45acp","ammo-45acp.img","emote_01","ui","",1,0},
+    {"emote_loot","","emote_01","ui","",0,0},
+    {"emote_trick_nothing","face-imp-trick.img","trick_01","ui","",0,0},
+    {"emote_trick_size","face-imp-trick.img","trick_01","ui","",0,0},
+    {"emote_trick_m9","face-imp-trick.img","trick_03","ui","",0,0},
+    {"emote_trick_chatty","face-imp-trick.img","trick_02","ui","",0,0},
+    {"emote_trick_drain","face-imp-trick.img","trick_02","ui","",0,0},
+    {"emote_treat_9mm","face-angel-treat.img","treat_01","ui","",0,0},
+    {"emote_treat_12g","face-angel-treat.img","treat_01","ui","",0,0},
+    {"emote_treat_556","face-angel-treat.img","treat_01","ui","",0,0},
+    {"emote_treat_762","face-angel-treat.img","treat_01","ui","",0,0},
+    {"emote_treat_super","face-angel-treat.img","treat_01","ui","",0,0},
+    {"emote_bugle_inspiration_red","bugle-inspiration-red.img","emote_01","ui","",0,5},
+    {"emote_bugle_final_red","bugle-final-red.img","emote_01","ui","",0,5},
+    {"emote_bugle_inspiration_blue","bugle-inspiration-blue.img","emote_01","ui","",0,5},
+    {"emote_bugle_final_blue","bugle-final-blue.img","emote_01","ui","",0,5},
+    {"emote_thumbsup","thumbs-up.img","emote_01","ui","Thumbs Up",0,5},
+    {"emote_sadface","face-sad.img","emote_01","ui","Sad Face",0,1},
+    {"emote_happyface","face-happy.img","emote_01","ui","Happy Face",0,1},
+    {"emote_boffy","face-boffy.img","emote_01","ui","Boffy",0,1},
+    {"emote_sadboffy","face-sadboffy.img","emote_01","ui","Sad Boffy",0,1},
+    {"emote_surviv","surviv.img","emote_01","ui","Surviv Logo",0,4},
+    {"emote_gg","gg.img","emote_01","ui","GG",0,5},
+    {"emote_question","question.img","emote_01","ui","Question Mark",0,5},
+    {"emote_tombstone","tombstone.img","emote_01","ui","Tombstone",0,5},
+    {"emote_joyface","face-joy.img","emote_01","ui","Joyful Face",0,1},
+    {"emote_sobface","face-sob.img","emote_01","ui","Sobbing Face",0,1},
+    {"emote_thinkingface","face-thinking.img","emote_01","ui","Thonk",0,1},
+    {"emote_heart","heart.img","emote_01","ui","Heart",0,5},
+    {"emote_sleepy","sleepy.img","emote_01","ui","Zzz",0,5},
+    {"emote_flex","flex.img","emote_01","ui","Flex",0,5},
+    {"emote_angryface","face-angry.img","emote_01","ui","Angry Face",0,1},
+    {"emote_upsidedownface","face-upsidedown.img","emote_01","ui","Upside Down Face",0,1},
+    {"emote_teabag","teabag.img","emote_01","ui","Teabag",0,5},
+    {"emote_alienface","face-alien.img","emote_01","ui","Alien Face",0,1},
+    {"emote_egg","egg.img","emote_01","ui","Egg",0,5},
+    {"emote_police","police.img","emote_01","ui","Police Insignia",0,5},
+    {"emote_dabface","face-dab.img","emote_01","ui","Dab Face",0,1},
+    {"emote_logosurviv","logo-surviv.img","emote_01","ui","PARMA",0,4},
+    {"emote_logoegg","logo-egg.img","emote_01","ui","The Egg",0,4},
+    {"emote_logoswine","logo-swine.img","emote_01","ui","The Swine",0,4},
+    {"emote_logohydra","logo-hydra.img","emote_01","ui","The Hydra",0,4},
+    {"emote_logostorm","logo-storm.img","emote_01","ui","The Storm",0,4},
+    {"emote_logocaduceus","logo-caduceus.img","emote_01","ui","The Caduceus",0,4},
+    {"emote_impface","face-imp.img","emote_01","ui","Imp Face",0,1},
+    {"emote_monocleface","face-monocle.img","emote_01","ui","Monocole Face",0,1},
+    {"emote_sunglassface","face-sunglass.img","emote_01","ui","Sunglasses Face",0,1},
+    {"emote_headshotface","face-headshot.img","emote_01","ui","Headshot!",0,1},
+    {"emote_potato","potato.img","emote_01","ui","Potato",0,2},
+    {"emote_tomato","tomato.img","emote_01","ui","Tomato",0,2},
+    {"emote_cake","cake.img","emote_01","ui","Cake",0,2},
+    {"emote_leek","leek.img","emote_01","ui","Leek",0,2},
+    {"emote_eggplant","eggplant.img","emote_01","ui","Eggplant",0,2},
+    {"emote_baguette","baguette.img","emote_01","ui","Baguette",0,2},
+    {"emote_chick","chick.img","emote_01","ui","Chick",0,5},
+    {"emote_logoconch","logo-conch.img","emote_01","ui","The Conch",0,4},
+    {"emote_pineapple","pineapple.img","emote_01","ui","Pineapple",0,2},
+    {"emote_coconut","coconut.img","emote_01","ui","Coconut",0,2},
+    {"emote_crab","crab.img","emote_01","ui","Crab",0,3},
+    {"emote_whale","whale.img","emote_01","ui","Whale",0,3},
+    {"emote_logometeor","logo-meteor.img","emote_01","ui","The Meteor",0,4},
+    {"emote_salt","salt.img","emote_01","ui","Salt Shaker",0,5},
+    {"emote_disappointface","face-disappoint.img","emote_01","ui","Disappointed Face",0,1},
+    {"emote_logocrossing","logo-crossing.img","emote_01","ui","The Crossing",0,4},
+    {"emote_fish","fish.img","emote_01","ui","Fish",0,3},
+    {"emote_campfire","campfire.img","emote_01","ui","Campfire",0,5},
+    {"emote_chickendinner","chicken-dinner.img","emote_01","ui","Chicken Dinner",0,2},
+    {"emote_cattle","cattle.img","emote_01","ui","Cattle Skull",0,3},
+    {"emote_icecream","ice-cream.img","emote_01","ui","Ice Cream",0,2},
+    {"emote_cupcake","cupcake.img","emote_01","ui","Cupcake",0,2},
+    {"emote_donut","donut.img","emote_01","ui","Donut",0,2},
+    {"emote_logohatchet","logo-hatchet.img","emote_01","ui","The Hatchet",0,4},
+    {"emote_acorn","acorn.img","emote_01","ui","Acorn",0,2},
+    {"emote_leaf","leaf.img","emote_01","ui","Leaf",0,5},
+    {"emote_trunk","trunk.img","emote_01","ui","Tree Trunk",0,5},
+    {"emote_forest","forest.img","emote_01","ui","Forest",0,5},
+    {"emote_pumpkin","pumpkin.img","emote_01","ui","Pumpkin",0,5},
+    {"emote_candycorn","candy-corn.img","emote_01","ui","Candy Corn",0,2},
+    {"emote_pilgrimhat","pilgrim-hat.img","emote_01","ui","Pilgrim",0,5},
+    {"emote_turkeyanimal","turkey-animal.img","emote_01","ui","Turkey",0,3},
+    {"emote_heartface","face-heart.img","emote_01","ui","Heart Face",0,1},
+    {"emote_logochrysanthemum","logo-chrysanthemum.img","emote_01","ui","The Chrysanthemum",0,4},
+    {"emote_santahat","santa-hat.img","emote_01","ui","Santa Hat",0,5},
+    {"emote_snowman","snowman.img","emote_01","ui","Snowman",0,5},
+    {"emote_snowflake","snowflake.img","emote_01","ui","Snowflake",0,5},
+    {"emote_logocloud","logo-cloud.img","emote_01","ui","The Cloud",0,4},
+    {"emote_ghost_base","ghost-base.img","emote_01","ui","Ghost",0,5},
+    {"emote_bandagedface","face-bandaged.img","emote_01","ui","Bandaged Face",0,1},
+    {"emote_picassoface","face-picasso.img","emote_01","ui","Picasso Face",0,1},
+    {"emote_pooface","face-poo.img","emote_01","ui","Poo Face",0,1},
+    {"emote_ok","ok.img","emote_01","ui","Ok",0,5},
+    {"emote_rainbow","rainbow.img","emote_01","ui","Rainbow",0,5},
+    {"emote_logotwins","logo-twins.img","emote_01","ui","The Twins",0,4},
+    {"emote_antisocial","antisocial.img","emote_01","ui","Antisocial",0,5},
+    {"emote_timeout","timeout.img","emote_01","ui","Timeout!",0,5},
+    {"emote_traumatizedface","face-traumatized.img","emote_01","ui","Traumatized Face",0,1},
+    {"emote_bruh","bruh.img","emote_01","ui","b r u h",0,5},
+    {"emote_flatteredface","face-flattered.img","emote_01","ui","Flattered Face",0,1},
+    {"emote_salutingface","face-salute.img","emote_01","ui","Saluting Face",0,1},
+    {"emote_screamingface","face-screaming.img","emote_01","ui","Screaming Face",0,1},
 };
 static const RawGameObj kGameObjs[] = {
     {"bullet_mp5","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0,0,0,0,0,0,"","",0,"",0.0f,"",16777215,0,16777215},
@@ -11771,6 +11883,16 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
             d.zOrd = r.zOrd;
             _emitters[r.name] = std::move(d);
         }
+        for (const auto& r : kEmotes) {
+            EmoteRenderDef d;
+            d.texture = r.texture ? r.texture : "";
+            d.sound = r.sound ? r.sound : "";
+            d.channel = r.channel ? r.channel : "";
+            d.name = r.name ? r.name : "";
+            d.teamOnly = r.teamOnly != 0;
+            d.category = r.category;
+            _emotes[r.type] = std::move(d);
+        }
         _planes.reserve(2);
         for (const auto& r : kPlanes) _planes.push_back(toPlane(r));
         for (int i = 0; i < 13; ++i) {
@@ -11821,6 +11943,10 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         auto it = _bullets.find(type);
         return it == _bullets.end() ? nullptr : &it->second;
     }
+    const EmoteRenderDef* emote(const std::string& type) const override {
+        auto it = _emotes.find(type);
+        return it == _emotes.end() ? nullptr : &it->second;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
@@ -11829,6 +11955,7 @@ private:
     std::unordered_map<std::string, ParticleDef> _particles;
     std::unordered_map<std::string, TracerColorDef> _tracers;
     std::unordered_map<std::string, BulletRenderDef> _bullets;
+    std::unordered_map<std::string, EmoteRenderDef> _emotes;
     std::unordered_map<std::string, EmitterDef> _emitters;
     std::unordered_map<std::string, PlayerPose> _poses;
     std::unordered_map<std::string, PlayerAnimationDef> _animations;

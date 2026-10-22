@@ -602,6 +602,7 @@ ObjectData playerData() {
 }
 pix::NullSprite* sprite(pix::Sprite* s) { return static_cast<pix::NullSprite*>(s); }
 pix::NullContainer* container(pix::Container* c) { return static_cast<pix::NullContainer*>(c); }
+pix::NullText* text(pix::Text* t) { return static_cast<pix::NullText*>(t); }
 }
 
 TEST(graphics_polygon_hole) {
@@ -699,6 +700,10 @@ TEST(player_skin_and_equipment) {
     CHECK_NEAR(container(p.container)->rotation, 0, 1e-4f); // name stays upright
     CHECK_EQ(p.activeWeapon, std::string("ak47"));
     CHECK_EQ(p.container->getSortOrd(), 18);
+    // World-space labels counter the camera's negative-Y flip (they used to
+    // render vertically mirrored; M4_REMAINING 15 follow-up).
+    CHECK(p.nameText != nullptr);
+    CHECK(text(p.nameText)->flipY);
 }
 
 TEST(player_animation_sequence_and_interpolation) {

@@ -40,6 +40,18 @@ enum GasMode : uint8_t {
     GasMode_Moving,
 };
 
+// shared/gameConfig.ts EmoteSlot: index into the emote loadout (JoinedMsg
+// emotes) that each emote-wheel wedge maps to.
+enum EmoteSlot : uint8_t {
+    EmoteSlot_Top,
+    EmoteSlot_Right,
+    EmoteSlot_Bottom,
+    EmoteSlot_Left,
+    EmoteSlot_Win,
+    EmoteSlot_Death,
+    EmoteSlot_Count,
+};
+
 enum HasteType : uint8_t {
     HasteType_None,
     HasteType_Windwalk,
@@ -147,6 +159,10 @@ struct PlayerConfig {
     static constexpr float medicReviveRange = 6.0f;
     // player.ts maxVisualRadius (stairs sort test).
     static constexpr float maxVisualRadius = 1.0f;
+    // emote.ts throttle (gameConfig.ts player.emoteSoftCooldown etc.).
+    static constexpr float emoteSoftCooldown = 2.0f;
+    static constexpr float emoteHardCooldown = 6.0f;
+    static constexpr int emoteThreshold = 6;
 };
 
 // Port of GameConfig.map (terrain generation + grid).

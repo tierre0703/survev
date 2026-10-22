@@ -28,10 +28,12 @@ add_executable(surv_tests
     test_ui.cpp
     test_bridge.cpp
     test_join_map.cpp
+    test_emote_wheel.cpp
     ${SURV_SRC}/net/Net.cpp
     ${SURV_SRC}/net/WsUrl.cpp
     ${SURV_SRC}/game/Game.cpp
     ${SURV_SRC}/game/Hud.cpp
+    ${SURV_SRC}/game/EmoteWheel.cpp
     ${SURV_SRC}/render/Terrain.cpp
     ${SURV_SRC}/render/Renderer.cpp
     ${SURV_SRC}/render/Defs.cpp

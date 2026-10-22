@@ -1096,6 +1096,8 @@ void DeadBody::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew,
         nameText->setAnchor(0.5f, -1.0f);
         nameText->setScale(0.5f, 0.5f);
         nameText->setColor(0x808080, 0x000000, 0.0f, true);
+        // The dead-body container lives under the camera root's negative-Y scale.
+        nameText->setFlipY(true);
         container->addChild(nameText);
         // The sprite colour is baked into the skull frame; no extra tint.
         sprite->setTint(5921370u);

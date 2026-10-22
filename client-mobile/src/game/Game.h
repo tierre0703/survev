@@ -145,6 +145,13 @@ public:
         float timeLeft = 8.0f;
     };
     const std::vector<KillFeedEntry>& killFeed() const { return _killFeed; }
+    // JoinedMsg/JoinMsg emote loadout (4 emote types for the emote wheel).
+    const std::vector<std::string>& emotes() const { return _emotes; }
+    // JoinedMsg team mode (gameConfig.ts TeamMode: Solo = 1).
+    uint8_t teamMode() const { return _teamMode; }
+    // EmoteMsg send (game.ts newEmotes/newPings loop). The chat/emote wheel
+    // queues into EmoteManager and GameScene forwards the queue here.
+    void sendEmote(const std::string& type, const Vec2& pos, bool isPing);
     std::vector<int> aliveCounts() const;
     const GameOverMsg* gameOver() const { return _hasGameOver ? &_gameOver : nullptr; }
     // Priority 2: squad health bar data.
@@ -175,9 +182,6 @@ private:
     void handleGameOver(NetBitStream& s);
     void handlePickup(NetBitStream& s);
     void handleMap(NetBitStream& s);
-
-    // Emote/ping support
-    void sendEmote(const std::string& type, const Vec2& pos, bool isPing);
 
     void onOpen();
     void onFrame(std::vector<uint8_t>&& frame);

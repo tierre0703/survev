@@ -233,10 +233,12 @@ public:
     std::string text;
     float fontSize = 24.0f;
     std::string family;
+    bool flipY = false;
     void setText(const std::string& t) override { text = t; }
     void setFontSize(float s) override { fontSize = s; }
     void setFontFamily(const std::string& f) override { family = f; }
     void setColor(uint, uint, float, bool) override {}
+    void setFlipY(bool flip) override { flipY = flip; }
 };
 
 class NullContainer : public NullNodeImpl<Container> {

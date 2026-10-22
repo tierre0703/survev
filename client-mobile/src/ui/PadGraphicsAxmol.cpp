@@ -9,13 +9,14 @@ namespace surv {
 namespace {
 // `Content/gui/pad.png` is the 4x (832 px) copy of the web client's 208 px
 // `pad.img` ring. touch.ts sizes the ring by `padScaleBase * padScaleDown`
-// (0.6) and the touch dot by `* padScalePos` (0.25); the ring sprite content
-// size is the raw texture size here (the loose PNG is not in a sheet), so
-// 0.0625 (= 1/16) reproduces the web's 208 px * 4 * 0.0625 = 52 px art.
-constexpr float kPadSpriteScale = 0.0625f;
-// Small white dot at the touch position (radius in design points at the web's
-// 0.25 dot scale).
-constexpr float kDotBaseRadius = 26.0f;
+// (0.6), i.e. 208 * 0.6 = 124.8 px, and axmol's sprite content size for this
+// loose (unsheeted) PNG is its raw 832 px. The multiplier that turns the Touch
+// scale into that size is therefore 124.8 / (0.6 * 832) = 0.25.
+constexpr float kPadSpriteScale = 0.25f;
+// Small white dot at the touch position: pad.img at `padScalePos` (0.25) is
+// 208 * 0.25 = 52 px across, so the unit DrawNode circle needs a 26 px radius
+// at that Touch scale (0.25 * 104 = 26).
+constexpr float kDotBaseRadius = 104.0f;
 } // namespace
 
 PadGraphicsAxmol::PadGraphicsAxmol(ax::Node* parent, bool isMovePad)

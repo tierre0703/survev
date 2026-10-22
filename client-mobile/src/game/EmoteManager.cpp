@@ -88,12 +88,16 @@ void EmoteManager::addEmote(const Emote& msg, GameWorld& ctx) {
         e->container->setVisible(false);
     }
 
-    // Set texture from emote def
-    const auto* provider = getDefProvider();
-    (void)provider; // future: look up emote def from provider
-
-    // For now, use a simple fallback frame naming convention
-    e->sprite->setFrame("emote-circle-outer.img");
+    // Set texture from the emote def (shared/defs/gameObjects/emoteDefs.ts).
+    // Previously this fell back to emote-circle-outer.img, so every emote drew
+    // the same circle instead of its face/food/logo art.
+    const DefProvider* provider = getDefProvider();
+    const EmoteRenderDef* emoteDef = provider ? provider->emote(msg.type) : nullptr;
+    if (emoteDef && !emoteDef->texture.empty()) {
+        e->sprite->setFrame(emoteDef->texture);
+    } else {
+        e->sprite->setFrame("emote-circle-outer.img");
+    }
 
     // Handle emote_loot type (special weapon image display)
     if (msg.type == "emote_loot" && !msg.itemType.empty()) {
@@ -104,12 +108,14 @@ void EmoteManager::addEmote(const Emote& msg, GameWorld& ctx) {
         }
     }
 
-    // Play sound
+    // Play the def's sound on its channel (web: audioManager.playSound(emote.sound,
+    // { channel: emote.channel, soundPos, layer })).
     if (ctx.audio()) {
         audio::PlaySoundOptions opts;
-        opts.channel = "ui";
+        opts.channel = emoteDef && !emoteDef->channel.empty() ? emoteDef->channel : "ui";
         opts.rangeMult = 48.0f;
-        ctx.audio()->playSound("emote_01", opts);
+        const std::string sound = emoteDef && !emoteDef->sound.empty() ? emoteDef->sound : "emote_01";
+        ctx.audio()->playSound(sound, opts);
     }
 }
 

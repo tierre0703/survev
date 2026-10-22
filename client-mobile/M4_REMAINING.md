@@ -878,8 +878,99 @@ drew nothing before).
   and its name render at the web's scale; both pads and the live minimap render;
   the player moves with the joystick (world pos 388.7,667.4 -> 396.1,666.1); no
   crash.
-- Known follow-up: the camera transform is a negative-Y scale, so world-space
-  **text** (player/dead-body name labels) is vertically mirrored. The web client
-  flips only positions, not textures; fixing it needs either per-sprite
-  un-mirroring under the flipped root or screen-space text.
+- Fixed in ยง16: the camera transform is a negative-Y scale, so world-space
+  **text** (player/dead-body name labels) rendered vertically mirrored.
+  `pix::Text::setFlipY(true)` now counter-flips the glyph sprite about its
+  anchor (the anchor point is preserved, so placement is unchanged).
 
+
+---
+
+## 16. Session 11 - emote wheel, emote defs, pad scale, upright labels (2026-10-22)
+
+The next Priority-2 gap from `REMAININGS.md` was the emote wheel. It is now
+implemented end to end for touch, along with three defects found while verifying
+on the emulator.
+
+### 16.1 Emote defs are codegen'd (`EmoteRenderDef`)
+
+`shared/defs/gameObjects/emoteDefs.ts` is now part of
+`tools/codegen_render_defs.mjs`: `Defs.h` gains `EmoteRenderDef`
+(texture/sound/channel/name/teamOnly/category) and `DefProvider::emote(type)`.
+`EmoteManager::addEmote` uses the def's atlas frame and sound/channel; before
+this every world emote drew the same `emote-circle-outer.img` placeholder.
+
+Regenerate with:
+
+```sh
+node --experimental-transform-types tools/codegen_render_defs.mjs
+```
+
+The emote frames live in the `loadout` atlas, which every map's atlas list
+already includes.
+
+### 16.2 Emote wheel (`game/EmoteWheel.{h,cpp}`)
+
+Engine-independent (pix adapter only, host-tested with `NullPixi`), in design
+space next to `game/Hud`:
+
+- On-screen emote button (`#ui-emote-button`) one wheel radius in from the
+  right edge, so the wheel it opens stays fully on screen.
+- Four wedges in `gameConfig.ts` `EmoteSlot` order (top/right/bottom/left),
+  each showing the loadout emote's atlas icon and name; coloured slot rings and
+  a centre close icon.
+- Touch on the button opens the wheel around it and claims that touch id, so
+  the pads do not also move/aim. Dragging past `distMinLength` (35 design px)
+  highlights a wedge and sends immediately, like `emote.ts`'s touch path.
+- `teamOnly` emotes are disabled in solo (`TeamMode.Solo == 1`).
+- Throttle mirrors `emote.ts`: soft every 2 s*1.5, hard 9 s after the 6th send;
+  the wheel greys out during the hard cooldown.
+
+Selections are queued on `EmoteManager::queueEmote`; `GameScene` forwards the
+queue to `Game::sendEmote` each frame (the `game.ts` newEmotes loop), so the
+world emote comes back through the server like a remote player's.
+
+### 16.3 Touch pads were 4x too small
+
+`PadGraphicsAxmol` used `kPadSpriteScale = 0.0625` against the 832 px
+`gui/pad.png`, i.e. a ~31 px ring. `touch.ts` sizes the ring as `pad.img`
+(208 px) * `padScaleBase * padScaleDown` = 124.8 px, so the multiplier must be
+`124.8 / (0.6 * 832) = 0.25`; the touch dot likewise needs a 26 px radius at
+scale 0.25 (`kDotBaseRadius = 104`). Both pads now match the web's footprint.
+
+### 16.4 World-space text was vertically mirrored (closes ง15's follow-up)
+
+The camera root carries `scale(s, -s)`, which mirrors y-up glyphs (sprite art
+is authored y-down, text is not). `pix::Text::setFlipY(true)` draws the glyph
+sprite with `scaleY = -1`; because the flip happens about the anchor line, the
+anchor position is unchanged. Player and dead-body name labels enable it;
+HUD/wheel text stays positive-scale.
+
+### 16.5 Crosshair frame never existed
+
+`GameScene` requested `crosshair000.img`, which is not an atlas frame (the
+default crosshair is inline SVG in `crosshairDefs.ts`), so the crosshair logged
+`[pix] sprite frame missing` and drew nothing. It is now two white bars drawn
+with `pix::Graphics` at the screen centre (64 px art: 32 px long, 4 px thick).
+
+### Verification
+
+- `surv_tests`: **116 tests, 1,979 assertions, 0 failures** (new:
+  `emote_defs_provider`, `emote_wheel_wedge_geometry`,
+  `emote_wheel_button_and_loadout`, `emote_wheel_selects_and_closes`,
+  `emote_wheel_team_only_wedges_are_disabled_in_solo`,
+  `emote_wheel_throttle_matches_web_cooldowns`, `emote_wheel_opens_and_updates`;
+  `player_skin_and_equipment` now asserts the name label counters the flip).
+- x86_64 native lib + APK installed on the emulator against the bundle server:
+  `Play Solo` joins, pads render at the web's size, the player name reads
+  upright, the emote button shows the first loadout emote, holding it opens the
+  wheel with the four loadout icons, and dragging up sends `Happy Face` which
+  the server echoes above the player (screenshot-verified). `logcat -b crash`
+  empty.
+
+### Still open from this area
+
+- Team-ping wheel input, ammo-specific ping emotes, minimap ping sprites.
+- Crosshair style/colour from the loadout (only the default style is drawn).
+- `ui/FguiHud.*` remains unused (the live HUD is `game/Hud`); its gear/perk
+  panels are not on screen yet.

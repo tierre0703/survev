@@ -450,6 +450,13 @@ public:
         _bold = bold;
         rebuild();
     }
+    void setFlipY(bool flip) override {
+        if (_flipY == flip) {
+            return;
+        }
+        _flipY = flip;
+        rebuild();
+    }
 
 private:
     void rebuild() {
@@ -479,6 +486,12 @@ private:
         // anchor (HUD code passes CSS-style anchors, e.g. (0,1) = top-left).
         sprite->setAnchorPoint(ax::Vec2(_anchorX, _anchorY));
         sprite->setPosition(ax::Vec2::ZERO);
+        // World labels sit under the camera's negative-Y root scale, which
+        // mirrors y-up glyphs; counter-flip about the anchor line so the label
+        // reads upright while keeping its anchor position.
+        if (_flipY) {
+            sprite->setScaleY(-1.0f);
+        }
         // (No outline: ax::Sprite has no text outline; HUD text uses a drop
         // shadow via the stroke colour being ignored, like the menu labels.)
         sprite->retain();
@@ -496,6 +509,7 @@ private:
     bool _bold = false;
     float _anchorX = 0.0f;
     float _anchorY = 1.0f;
+    bool _flipY = false;
 };
 
 class AxContainer : public AxNodeImpl<Container> {

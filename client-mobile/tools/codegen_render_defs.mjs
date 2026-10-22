@@ -19,6 +19,7 @@ function pathToFile(dir, rel) {
 
 const { MapObjectDefs, GameObjectDefs } = await import(pathToFile(sharedDir, "defs/register.ts"));
 const { DecalDefs } = await import(pathToFile(sharedDir, "defs/mapObjects/decalDefs.ts"));
+const { EmotesDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/emoteDefs.ts"));
 const { MapDefs } = await import(pathToFile(sharedDir, "defs/mapDefs.ts"));
 const { util } = await import(pathToFile(sharedDir, "utils/util.ts"));
 const { math } = await import(pathToFile(sharedDir, "utils/math.ts"));
@@ -658,6 +659,16 @@ for (const [name, def] of Object.entries(EmitterDefs)) {
     }},\n`;
 }
 
+// Emote defs (shared/defs/gameObjects/emoteDefs.ts): world emote sprites and
+// the emote wheel take the atlas frame, sound and teamOnly flag from here.
+let emoteEntries = "";
+for (const type of Object.keys(EmotesDefs)) {
+    const d = EmotesDefs[type] || {};
+    emoteEntries += `    {${str(type)},${str(d.texture || "")},${str(d.sound || "")},${str(d.channel || "")},${
+        str(d.name || "")
+    },${d.teamOnly ? 1 : 0},${n(d.category)}},\n`;
+}
+
 // GameConfig plane tuning + bullet tracer colours (plane.ts / flare.ts / shot.ts).
 const { GameConfig } = await import(pathToFile(sharedDir, "gameConfig.ts"));
 const { BulletDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/bulletDefs.ts"));
@@ -807,6 +818,7 @@ struct RawEmitter {
 struct RawPlane { float actionOffset; float planeVel, planeRad, soundRangeMult, soundRangeDelta, soundRangeMax, fallOff; };
 struct RawTracer { unsigned regular, saturated, chambered, apSaturated; float alphaRate, alphaMin; };
 struct RawBulletRender { float distance, speed, variance; const char* tracerColor; float tracerWidth, tracerLength; unsigned flareColor; float maxFlareScale; };
+struct RawEmote { const char* type; const char* texture; const char* sound; const char* channel; const char* name; int teamOnly; int category; };
 
 static PlaneDef toPlane(const RawPlane& r) {
     PlaneDef d;
@@ -883,6 +895,8 @@ static const RawMapObj kMapObjs[] = {
 ${entries}};
 ${mapAtlasArrays}static const RawMapRender kMapRenders[] = {
 ${mapRenderEntries}};
+static const RawEmote kEmotes[] = {
+${emoteEntries}};
 static const RawGameObj kGameObjs[] = {
 ${gameEntries}};
 static const RawParticle kParticles[] = {
@@ -1103,6 +1117,16 @@ ${
             d.zOrd = r.zOrd;
             _emitters[r.name] = std::move(d);
         }
+        for (const auto& r : kEmotes) {
+            EmoteRenderDef d;
+            d.texture = r.texture ? r.texture : "";
+            d.sound = r.sound ? r.sound : "";
+            d.channel = r.channel ? r.channel : "";
+            d.name = r.name ? r.name : "";
+            d.teamOnly = r.teamOnly != 0;
+            d.category = r.category;
+            _emotes[r.type] = std::move(d);
+        }
         _planes.reserve(2);
         for (const auto& r : kPlanes) _planes.push_back(toPlane(r));
         for (int i = 0; i < ${tracerCount}; ++i) {
@@ -1153,6 +1177,10 @@ ${
         auto it = _bullets.find(type);
         return it == _bullets.end() ? nullptr : &it->second;
     }
+    const EmoteRenderDef* emote(const std::string& type) const override {
+        auto it = _emotes.find(type);
+        return it == _emotes.end() ? nullptr : &it->second;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
@@ -1161,6 +1189,7 @@ private:
     std::unordered_map<std::string, ParticleDef> _particles;
     std::unordered_map<std::string, TracerColorDef> _tracers;
     std::unordered_map<std::string, BulletRenderDef> _bullets;
+    std::unordered_map<std::string, EmoteRenderDef> _emotes;
     std::unordered_map<std::string, EmitterDef> _emitters;
     std::unordered_map<std::string, PlayerPose> _poses;
     std::unordered_map<std::string, PlayerAnimationDef> _animations;

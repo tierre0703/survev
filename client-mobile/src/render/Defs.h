@@ -179,6 +179,18 @@ struct MapObjectDef {
     bool hasBounding = false;
 };
 
+// shared/defs/gameObjects/emoteDefs.ts. Used by the world emote sprites
+// (EmoteManager) and the emote wheel, which both need the atlas frame and the
+// sound/channel the web client takes from EmotesDefs.
+struct EmoteRenderDef {
+    std::string texture; // atlas frame, e.g. "face-happy.img"
+    std::string sound;   // e.g. "emote_01"
+    std::string channel; // "ui"
+    std::string name;    // display name, e.g. "Happy Face"
+    bool teamOnly = false;
+    int category = 0;
+};
+
 struct BiomeColors {
     uint32_t background = 0x2b2b2b;
     uint32_t beach = 0xd9c38a;
@@ -413,6 +425,8 @@ public:
     virtual const PlaneDef* plane(int /*type*/) const { return nullptr; }
     virtual const TracerColorDef* tracerColor(const std::string&) const { return nullptr; }
     virtual const BulletRenderDef* bullet(const std::string&) const { return nullptr; }
+    // shared/defs/gameObjects/emoteDefs.ts (world emotes + emote wheel).
+    virtual const EmoteRenderDef* emote(const std::string& /*type*/) const { return nullptr; }
 };
 
 // Process-wide provider, installed by the app/generated code. May be null.

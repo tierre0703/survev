@@ -17,6 +17,7 @@
 #include "../audio/GeneratedSoundDefs.h"
 #include "../ui/FguiHud.h"
 #include "../game/Hud.h"
+#include "../game/EmoteWheel.h"
 #include "../ui/FguiPieTimer.h"
 #include "../ui/PadGraphicsAxmol.h"
 #include "../ui/Layout.h"
@@ -367,6 +368,8 @@ void GameScene::resetWorld() {
         static_cast<ax::Node*>(_worldRoot->native())->removeFromParent();
     }
     _crosshair = nullptr; // owned (and freed) by the factory
+    _emoteWheel.reset();
+    _emoteTouchId = -1;
     _hud.reset();
     _world.reset();
     _worldRoot = nullptr;
@@ -408,6 +411,14 @@ void GameScene::resetWorld() {
     _gameRoot->addChild(static_cast<ax::Node*>(_hudRoot->native()));
     _hud = std::make_unique<Hud>();
     _hud->build(_pixiFactory.get(), _hudRoot, Vec2(svui::kit::designWidth(), svui::kit::designHeight()));
+    // Emote wheel + button (Priority 2: emote wheel UI/input). The loadout comes
+    // from the JoinMsg/JoinedMsg emotes; it is refreshed once the server accepts
+    // the join in update().
+    _emoteWheel = std::make_unique<EmoteWheel>();
+    _emoteWheel->build(_pixiFactory.get(), _hudRoot,
+                       Vec2(svui::kit::designWidth(), svui::kit::designHeight()));
+    _emoteWheel->setLoadout(_game->emotes());
+    _emoteWheel->setTeamMode(_game->teamMode() == 1);
 }
 
 // view.ts resizeGame(): every listener re-lays-out for the new size. The
@@ -711,6 +722,10 @@ void GameScene::update(float delta) {
             // Camera follows the active player (M5 adds the smoothing/shake).
             _world->camera().m_pos = active->pos;
         }
+        // game.ts newEmotes/newPings loop: send what the emote wheel queued.
+        for (const auto& emote : _world->emoteManager().consumeOutgoing()) {
+            _game->sendEmote(emote.type, emote.pos, emote.isPing);
+        }
     }
 
     // Low-noise lifecycle logging (once per transition) for the M3 net gate.
@@ -779,6 +794,15 @@ void GameScene::update(float delta) {
     if (_hud) {
         _hud->update(delta, *_game, _inGame && _notifiedStarted && _game->isPlaying());
     }
+    // Emote wheel: same visibility rule as the HUD; refresh the loadout each
+    // frame (cheap, it only rebuilds when the JoinedMsg emotes changed).
+    if (_emoteWheel && _game) {
+        const bool playing = _inGame && _notifiedStarted && _game->isPlaying();
+        _emoteWheel->setLoadout(_game->emotes());
+        _emoteWheel->setTeamMode(_game->teamMode() == 1);
+        _emoteWheel->setHudVisible(playing);
+        _emoteWheel->update(delta);
+    }
 
     // Priority 2: pie timer — driven by active player action data each frame.
     if (_pieTimer && _game && isStarted()) {
@@ -795,18 +819,17 @@ void GameScene::update(float delta) {
         }
     }
 
-    // M7: crosshair sprite — rendered at screen center via the PIXI adapter
-    // at the highest z-order so it always sits on top of the game world.
-    // Crosshair defs are in GeneratedDefs.cpp and have texture names like
-    // "crosshair000.img". The sprite is created once and shown/hidden.
+    // M7: crosshair — a screen-space overlay drawn at the screen centre above
+    // the game world. The default crosshair's art is an inline SVG in
+    // crosshairDefs.ts, not an atlas frame, so it is drawn as two bars here
+    // (64 px art: 32 px long, 4 px thick).
     if (_world && _pixiFactory && isStarted() && _game->isPlaying() && _game->hasJoined()) {
         if (!_crosshair) {
-            _crosshair = _pixiFactory->createSprite();
-            _crosshair->setAnchor(0.5f, 0.5f);
-            _crosshair->setFrame("crosshair000.img");
-            _crosshair->setTint(0xffffff);
-            _crosshair->setAlpha(0.8f);
-            _crosshair->setScale(1.0f, 1.0f);
+            _crosshair = _pixiFactory->createGraphics();
+            _crosshair->beginFill(0xffffff, 0.85f);
+            _crosshair->drawRect(-2.0f, -16.0f, 4.0f, 32.0f);
+            _crosshair->drawRect(-16.0f, -2.0f, 32.0f, 4.0f);
+            _crosshair->endFill();
             // The crosshair is a screen-space overlay: parent it to the game
             // root (the world root carries the camera transform).
             _gameRoot->addChild(static_cast<ax::Node*>(_crosshair->native()));
@@ -870,19 +893,67 @@ void GameScene::onTouchBegan(float x, float y, int id) {
     // S6: _overlay is never created; the Java GamePauseDialog is the
     // actual pause. Don't block touches because of a null overlay.
     if (!_inGame || !_notifiedStarted) return;
+    // Emote wheel trigger (#ui-emote-button): the touch drives the wheel and is
+    // kept away from the pads so opening it never moves or fires.
+    if (_emoteWheel && _game->isPlaying()) {
+        const Vec2 design = screenToDesign(x, y);
+        if (_emoteWheel->buttonHit(design.x, design.y)) {
+            _emoteTouchId = id;
+            // Open the wheel around the button so dragging outward picks a
+            // wedge (the button sits one wheel radius in from the edge, so the
+            // whole wheel stays on screen).
+            _emoteWheel->open(_emoteWheel->buttonCenter());
+            return;
+        }
+    }
     _touch->touches[id].active = true;
     _touch->touches[id].posDown = Vec2(x, y);
     _touch->touches[id].pos = Vec2(x, y);
 }
 
 void GameScene::onTouchMoved(float x, float y, int id) {
+    if (id == _emoteTouchId && _emoteWheel) {
+        std::string type;
+        const Vec2 design = screenToDesign(x, y);
+        if (_emoteWheel->select(design, type)) {
+            // Queue for Game::sendEmote (game.ts newEmotes) and apply the
+            // emote.ts throttle.
+            if (_world && _world->activePlayer()) {
+                _world->emoteManager().queueEmote(type, _world->activePlayer()->pos);
+            }
+            _emoteWheel->incrementEmote();
+            _emoteWheel->close();
+            _emoteTouchId = -1;
+        }
+        return;
+    }
     if (_touch->touches[id].active) {
         _touch->touches[id].pos = Vec2(x, y);
     }
 }
 
 void GameScene::onTouchEnded(int id) {
+    if (id == _emoteTouchId) {
+        if (_emoteWheel) {
+            _emoteWheel->close();
+        }
+        _emoteTouchId = -1;
+        return;
+    }
     _touch->touches[id].active = false;
+}
+
+Vec2 GameScene::screenToDesign(float x, float y) const {
+    const auto visible = ax::Director::getInstance()->getVisibleSize();
+    const float designW = ::ui::kit::designWidth();
+    const float designH = ::ui::kit::designHeight();
+    const float fit = std::fmin(visible.width / designW, visible.height / designH);
+    if (fit <= 0.0f) {
+        return Vec2(designW * 0.5f, designH * 0.5f);
+    }
+    // Web screen space is y-down; the HUD design space is y-up.
+    return Vec2((x - visible.width * 0.5f) / fit + designW * 0.5f,
+                (visible.height * 0.5f - y) / fit + designH * 0.5f);
 }
 
 } // namespace surv

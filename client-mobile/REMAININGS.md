@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) rebuilt the match world per join (fixing the §12.4 second-join double-free) and wired match-end back to the Java menu, so repeat `Play Solo` → `Back` → `Play Solo` works. Session 10 (§15) fixed the world-space sprite scale (`/ m_ppu`), so the player and map objects render at the web client's scale instead of being 16x too large/invisible. **109 host tests pass, 0 fail.** Minimap, HUD, pads, inventory v2, pie timer and crosshair are live; player action sounds, pickup sounds, emote sounds, and ping sounds are wired. See §3 for the next-priority gaps (emote wheel UI, reverb, M8 accounts); world-space name labels still render vertically mirrored (camera flip; §15).
+Latest recorded state: **2026-10-22** — Session 11 (`M4_REMAINING.md` §16) implemented the emote wheel end to end: emote defs are codegen'd from `shared/defs/gameObjects/emoteDefs.ts`, the on-screen emote button opens a four-wedge loadout wheel (icons, labels, teamOnly gating, soft/hard emote cooldowns), and the selection is queued through `EmoteManager` → `Game::sendEmote`. The same pass fixed the pads rendering ~4x too small (`PadGraphicsAxmol` scale) and world-space name labels rendering vertically mirrored (counter-flipped `pix::Text`). **116 host tests pass, 0 fail.** See §3 for the next-priority gaps (team-ping wheel input, ammo-specific ping emotes, reverb, M8 accounts).
 
 ---
 
@@ -23,9 +23,9 @@ Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) reb
 | M2 | Shared core ports (bit-exact) | **done** | `BitBuffer`, `Vec2/MathUtil/Collider`, message classes, TS-generated fixtures. |
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
 | M4 | Rendering | **done, latest verified** | terrain/island hole, obstacles, buildings + ceilings, particles, decals, gas, skeletal player. |
-| M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; joystick gfx is a placeholder shape; aim-line dots missing. |
+| M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired. |
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + reverb volume computation. Player action sounds and UI sounds still unwired (see §2). |
-| M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause + FairyGUI HUD stubs are all in place. `FguiHud.*`/`FguiPadGraphics.*` are stubs needing implementation. |
+| M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) is live with loadout icons + input. |
 | M8 | Accounts / API | **not started** | login/profile/team-link/quests/pass. |
 | M9 | Polish & release | **not started** | lifecycle, perf, soak, store-ready AAB. |
 
@@ -70,7 +70,7 @@ Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) reb
 | `client/src/soundDefs.ts` → `audio/GeneratedSoundDefs.cpp` (codegen) | ✅ generated |
 | `client/src/ambiance.ts` → `audio/Ambiance.*` | ✅ |
 | `client/lib/createJS.ts` → `audio/AxmolAudioBackend.h` | ✅ |
-| `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | ✅ data model + aim line; **pad sprites are placeholders**, **aim-line dots missing** |
+| `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | ✅ data model + aim line + real pad sprites (`PadGraphicsAxmol`) |
 | `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | ✅ |
 | `client/src/device.ts` → `ui/Device.*` | 🔶 simplified |
 | `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*` | ✅ |
@@ -78,19 +78,19 @@ Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) reb
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ |
 | `client/src/ui/teamMenu.ts` → `ui/TeamMenu.*`, Java `TeamFragment.java` + `TeamSocket.java` | ✅ |
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | ✅ |
-| `client/src/ui/ui.ts` (HUD) → `ui/FguiHud.*` (FairyGUI stub) | ⏳ stub — most HUD elements missing |
-| `client/src/ui/touch.ts` (pad gfx) → `ui/FguiPadGraphics.*` (FairyGUI stub) | ⏳ stub — placeholder shapes |
-| `client/src/emote.ts` (pings + emote wheel + indicators) | ⏳ partial — server send + receive + world emote/ping sprites done; UI wheels not ported |
+| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | ✅ health/boost, weapon cards, ammo, alive/kills, kill feed, pickup message |
+| `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
+| `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + emote wheel UI/input/throttle; **team-ping wheel + ammo pings + map ping sprites remain** |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | ❌ **not ported** |
 | `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | ❌ **not ported** (BT keyboard/controller) |
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ❌ **not wired** — `Player` lacks surface/step/action state |
 | UI sounds (ambient lab, pickup pings, notifications) | ❌ **not wired** — UI is Java |
 | Reverb convolution (`setReverbProperties`) | 🔶 volume computed + stored; axmol API not called |
-| `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ FguiHud — weapon cards, gear slots, perk slots, scope inventory, loot counts, pickup/kill messages, interaction prompt |
-| `client/src/emote.ts` (emote/ping system) | ⏳ partial — server send + receive + world emote/ping sprites done; UI wheels not ported |
-| `client/src/ui/pieTimer.ts` (action progress circle) | ❌ **not ported** |
+| `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ weapons/ammo in `game/Hud`, gear/perks in `ui/FguiHud` (not built by the live scene yet) |
+| `client/src/emote.ts` (emote/ping system) | ✅ see the emote row above |
+| `client/src/ui/pieTimer.ts` (action progress circle) | ✅ `ui/FguiPieTimer` driven by `ActivePlayerData.actionTime` |
 | `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ❌ **not ported** (M8) |
-| `client/src/crosshair.ts` (custom crosshair) | ❌ **not ported** |
+| `client/src/crosshair.ts` (custom crosshair) | ✅ screen-space crosshair overlay (default style; loadout-specific art is a follow-up) |
 | `client/src/pingTest.ts` (pre-game latency check) | ❌ **not ported** |
 | `client/src/account.ts` / `proxy.ts` / `errorLogs.ts` | ❌ **not ported** |
 | `client/src/sdk/*` (ad/partner SDK) | ❌ out of scope |
@@ -123,6 +123,11 @@ Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) reb
 - [x] **Emote/ping system** (`client/src/emote.ts`) — port to C++ (with remaining gaps)
 
 ### Priority 2 — HUD/UI gaps (visible during gameplay)
+
+> The live in-game HUD is the plain pix-adapter `game/Hud.*` (design space,
+> host-tested). `ui/FguiHud.*` is the older FairyGUI implementation and is not
+> constructed by `GameScene`; treat the "FguiHud" bullets below as feature
+> descriptions, not the shipping widget tree.
 
 - [x] **FairyGUI HUD** (`FguiHud.*`) — **Health/boost bars**:
   - Health bar with color interpolation (8-step grey→white→pink→red)
@@ -169,10 +174,16 @@ Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) reb
   - Panel hidden in solo mode, shown top-left in team/squad modes
   - Wired into FguiHud::update() per frame
 - [x] **Crosshair** (`crosshair.ts` — custom crosshair rendering):
-  - PIXI Sprite rendered at screen center above the game world
-  - Uses "crosshair000.img" atlas frame from GeneratedDefs
-  - Created once in GameScene::update(), shown during gameplay
-  - Future: read the crosshair type/color/size from Config loadout
+  - Screen-space overlay drawn at the screen centre above the world
+  - Default crosshair art is an inline SVG in `crosshairDefs.ts` (not an atlas
+    frame), so it is drawn as two white bars via `pix::Graphics`
+  - Created once in `GameScene::update()`, shown during gameplay
+  - Future: read the crosshair type/color/size from the Config loadout
+- [x] **Touch pad sizing** — `PadGraphicsAxmol` was 4x too small; the ring is
+  now sized to the web's `pad.img` (208 px * 0.6) and the dot to 208 px * 0.25
+- [x] **World-space name labels** — player/dead-body labels were vertically
+  mirrored under the camera's negative-Y root; `pix::Text::setFlipY()` counters
+  the flip about the anchor (`M4_REMAINING` §16)
 - [x] **Minimap** (baked RenderTexture + FGUI overlay):
   - Map::generateMinimapTexture() renders terrain + obstacles + buildings
     into a pix::RenderTexture using the PIXI adapter
@@ -180,15 +191,21 @@ Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) reb
   - FguiHud::buildMinimap() FGUI frame + gas ring + player dot overlays
   - onFactoryReset() clears minimap texture on map reload
 - [x] **Inventory UI v2** (`ui2.ts` features — weapon cards, gear slots, perk slots, scope inventory, loot counts, pickup/kill messages, interaction prompt) — implemented 2026-10-17
-- [ ] **Emote/ping system** (`client/src/emote.ts`) — **partial port 2026-10-17**:
-  - [x] Game::sendEmote() wire → server (MsgType_Emote)
+- [x] **Emote/ping system** (`client/src/emote.ts`) — **emote wheel landed 2026-10-22**:
+  - [x] Game::sendEmote() wire → server (MsgType_Emote); wheel output is queued
+        on `EmoteManager` and forwarded by `GameScene` per frame (game.ts loop)
   - [x] EmoteManager C++ class: addPing/addEmote from UpdateMsg.emotes
+  - [x] Emote defs codegen (`EmoteRenderDef`: texture/sound/channel/name/teamOnly)
+        — world emotes now draw their real face/food/logo frame + sound
   - [x] World-space emote sprites (container + circle + sprite + animation)
   - [x] Team ping indicators (border + ping + edge-of-screen indicators)
-  - [ ] Emote wheel UI (FguiHud radial menu)
-  - [ ] Emote wheel input triggering (touch/long-press emote button)
+  - [x] **Emote wheel UI** (`game/EmoteWheel`): on-screen emote button + four
+        EmoteSlot wedges with loadout icons/labels, centre close, open animation
+  - [x] **Emote wheel input**: touch on the button opens the wheel around it;
+        dragging past the dead zone sends the highlighted wedge immediately
+  - [x] **Emote throttle logic** (soft 2s / hard 6s at 6 sends; wheel greys out)
+  - [x] Solo gating for `teamOnly` emotes
   - [ ] Ping wheel input triggering (touch/bind)
-  - [ ] Emote throttle logic (soft/hard cooldown)
   - [ ] Ammo-specific ping emotes (ammo type → emote mapping)
   - [ ] Map ping sprites (minimap dot from ping sprite barn)
   - [x] Emote sound playback on addEmote
@@ -237,7 +254,7 @@ Latest recorded state: **2026-10-22** — Session 9 (`M4_REMAINING.md` §14) reb
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (93 tests, 0 failures expected)
+# host tests (116 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
