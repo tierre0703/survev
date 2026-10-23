@@ -316,10 +316,21 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_bigMapCloseText);
     setBigMapVisible(false);
 
+    // Gear/perk slots (ui2.ts ui-armor-*/ui-perk-*): item atlas frames along
+    // the top-left, above the squad bars.
+    for (int i = 0; i < kGearIconCount; ++i) {
+        pix::Sprite* icon = _factory->createSprite();
+        icon->setAnchor(0.0f, 1.0f);
+        icon->setPosition(X(12.0f + static_cast<float>(i) * 32.0f), Y(vh - 12.0f));
+        icon->setVisible(false);
+        _root->addChild(icon);
+        _gearIcons[static_cast<size_t>(i)] = icon;
+    }
+
     // Squad bars (#ui-top-left / FguiHud::buildSquadBars): name, health bar,
     // Dead/Down/DC. Shown only when GameScene supplies team members.
     const float squadX = 12.0f;
-    const float squadTop = vh - 14.0f;
+    const float squadTop = vh - 54.0f;
     for (int i = 0; i < 4; ++i) {
         SquadRow& row = _squad[static_cast<size_t>(i)];
         const float rowY = squadTop - static_cast<float>(i) * 32.0f;
@@ -421,6 +432,11 @@ void Hud::setVisible(bool visible) {
         }
         if (row.status) {
             row.status->setVisible(showRow);
+        }
+    }
+    for (size_t i = 0; i < _gearIcons.size(); ++i) {
+        if (_gearIcons[i]) {
+            _gearIcons[i]->setVisible(visible && !_gearFrames[i].empty());
         }
     }
     const bool over = visible && _overShown;
@@ -565,6 +581,32 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
         row.barBg->setVisible(showRow);
         row.barFill->setVisible(showRow && fillWidth > 0.0f);
         row.status->setVisible(showRow);
+    }
+}
+
+void Hud::setGearState(const std::vector<std::string>& frames) {
+    if (!_built) {
+        return;
+    }
+    for (size_t i = 0; i < _gearIcons.size(); ++i) {
+        const std::string frame = i < frames.size() ? frames[i] : std::string();
+        const bool changed = frame != _gearFrames[i];
+        _gearFrames[i] = frame;
+        pix::Sprite* icon = _gearIcons[i];
+        if (!icon) {
+            continue;
+        }
+        if (frame.empty()) {
+            icon->setVisible(false);
+            continue;
+        }
+        if (changed) {
+            icon->setFrame(frame);
+            const float source = std::max(icon->sourceWidth(), icon->sourceHeight());
+            const float size = source > 0.0f ? 26.0f / source : 1.0f;
+            icon->setScale(size, size);
+        }
+        icon->setVisible(_visible);
     }
 }
 

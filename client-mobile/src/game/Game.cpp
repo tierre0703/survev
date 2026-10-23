@@ -260,6 +260,10 @@ void Game::handleJoined(NetBitStream& s) {
     m.deserialize(s);
     _teamMode = m.teamMode;
     _localPlayerId = m.playerId;
+    // The active player is the local player until an UpdateMsg says otherwise
+    // (spectating). Setting it here lets the first full object's gear/perks be
+    // extracted even if that update does not repeat activePlayerIdDirty.
+    _activePlayerId = m.playerId;
     _started = m.started;
     _emotes = std::move(m.emotes);
     _joined = true;
@@ -330,7 +334,8 @@ void Game::handleUpdate(NetBitStream& s) {
     // (mirrors player.ts m_updateData where chest/helmet/backpack/role/perks come from ObjectData)
     {
         auto extractPlayerData = [this](const ObjectData& od, bool isPart) {
-            if (od.__id != _activePlayerId) return;
+            const uint16_t activeId = _activePlayerId != 0 ? _activePlayerId : _localPlayerId;
+            if (od.__id != activeId) return;
             if (od.__type != ObjectType_Player) return;
             if (isPart) {
                 // Part updates may have empty fields if not dirty

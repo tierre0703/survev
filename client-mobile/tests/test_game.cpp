@@ -172,6 +172,9 @@ TEST(game_hud_preserves_delta_inventory_and_health) {
     CHECK_NEAR(h.game.activePlayerData().boost, 50, 0.3f);
     CHECK_EQ(h.game.activePlayerData().weapons[0].type, std::string("ak47"));
     CHECK_EQ(h.game.activePlayerData().weapons[0].ammo, uint8_t(20));
+    CHECK_EQ(h.game.activePlayerData().backpack, std::string("backpack00"));
+    CHECK_EQ(h.game.activePlayerData().helmet, std::string("helmet02"));
+    CHECK_EQ(h.game.activePlayerData().chest, std::string("chest02"));
     CHECK_EQ(h.game.activePlayerData().inventory[0], uint16_t(10));
     h.game.free();
     CHECK(h.game.activePlayerData().weapons.empty());

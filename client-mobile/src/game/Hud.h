@@ -51,6 +51,8 @@ public:
     static constexpr float kHealthBarPadding = 6.0f;
     static constexpr float kBoostBarHeight = 8.0f;
     static constexpr float kMinimapSize = 140.0f;
+    // Gear (helmet/chest/backpack) + up to 4 perk icons.
+    static constexpr int kGearIconCount = 7;
     static constexpr float kWeaponSlotWidth = 160.0f;
     static constexpr float kWeaponSlotHeight = 30.0f;
 
@@ -62,6 +64,8 @@ public:
     void setGasState(const GasHudState& gas);
     // Team modes: up to 4 members (name, health bar, Dead/Down/DC).
     void setSquadState(const std::vector<SquadMember>& members);
+    // ui2.ts gear/perk slots: resolved atlas frames, gear then perks (max 7).
+    void setGearState(const std::vector<std::string>& frames);
 
     // ui.ts displayStats: result screen (victory/defeat, rank, team kills and
     // the local player's kills/damage/time). Called with GameOverMsg data.
@@ -111,6 +115,9 @@ public:
     }
     const pix::Text* squadStatusText(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].status : nullptr;
+    }
+    const pix::Sprite* gearIcon(int idx) const {
+        return (idx >= 0 && idx < kGearIconCount) ? _gearIcons[static_cast<size_t>(idx)] : nullptr;
     }
 
 private:
@@ -164,6 +171,9 @@ private:
     };
     std::array<SquadRow, 4> _squad{};
     std::vector<SquadMember> _squadState;
+
+    std::array<pix::Sprite*, kGearIconCount> _gearIcons{};
+    std::array<std::string, kGearIconCount> _gearFrames{};
 
     pix::Container* _weaponBox = nullptr;
     pix::Graphics* _weaponBoxBg = nullptr;

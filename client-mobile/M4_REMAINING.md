@@ -1549,3 +1549,49 @@ Ported the `ui.ts` team health display (previously only in the unused
 - See the bars with a real/auto-filled teammate; render the active-player
   highlight (`SquadMember.active` is populated but not styled yet).
 - Role icons (`local`, `medic`, ...) next to squad names.
+
+---
+
+## 28. Session 23 - gear/perk HUD + player full-object desync (2026-10-23)
+
+### 28.1 Gear/perk icons
+
+The live HUD now draws the `ui2.ts` gear/perk slots: `GameScene` resolves the
+active player's `helmet`/`chest`/`backpack` and each perk type through
+`DefProvider::gameObject(type)->img.sprite`, then `Hud::setGearState` shows up to
+seven 26px icons along the top-left (squad bars start below them). The icon
+frames are the codegen'd gear/perk frames (`loot-helmet-*`, `loot-pack-*`,
+`loot-perk-*`). Host test: `hud_gear_and_perk_icons`.
+
+### 28.2 New bug: player full-object fields are misaligned
+
+On device the gear row stayed empty. A temporary log of the active player's
+`fullObjects` entry showed:
+
+```
+full obj id=4498 type=1 outfit=usas backpack=emote_pumpkin helmet= chest=
+         weap=helmet04_last_man_red
+```
+
+Those are valid game types but not a player's gear: `usas` is a gun,
+`helmet04_last_man_red` a helmet skin, `emote_pumpkin` an emote. Positions, IDs
+and the partial stream (pos/dir) are correct, so the **full stream** is being
+read at the wrong offset (or the server writes a different full layout). This is
+pre-existing (not caused by the gear HUD) and likely affects the player's
+outfit/skin/held weapon/role/perks too; the top-down art made it subtle.
+
+`Game::handleJoined` now seeds `_activePlayerId` from the local player id (and
+the extraction falls back to `_localPlayerId`), which is correct but did not fix
+the offset.
+
+**Next step:** dump one server `UpdateMsg` frame and decode it with
+`shared/net/updateMsg.ts` to compare the full-object byte/bit offsets against
+`ObjectSerializeFns.h`. This is recorded as the top Priority-1 item in
+`REMAININGS.md`.
+
+### Verification
+
+- `surv_tests`: **135 tests, 2,244 assertions, 0 failures** (gear/perk icons and
+  the active-player gear extraction assertions).
+- x86_64 APK built/installed; the HUD change is inert when gear is empty and the
+  desync remains the blocker for the initial icons.

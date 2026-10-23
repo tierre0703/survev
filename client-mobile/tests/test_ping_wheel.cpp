@@ -618,6 +618,39 @@ TEST(hud_squad_health_bars) {
     CHECK(!n0->visible);
 }
 
+TEST(hud_gear_and_perk_icons) {
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.setVisible(true);
+
+    hud.setGearState({
+        "loot-helmet-02.img",
+        "loot-chest-02.img",
+        "loot-pack-00.img",
+        "loot-perk-takedown.img",
+    });
+    const auto* helmet = static_cast<const pix::NullSprite*>(hud.gearIcon(0));
+    const auto* chest = static_cast<const pix::NullSprite*>(hud.gearIcon(1));
+    const auto* perk = static_cast<const pix::NullSprite*>(hud.gearIcon(3));
+    const auto* empty = static_cast<const pix::NullSprite*>(hud.gearIcon(4));
+    CHECK(helmet && chest && perk && empty);
+    CHECK(helmet->visible);
+    CHECK_EQ(helmet->getFrame(), std::string("loot-helmet-02.img"));
+    CHECK_EQ(chest->getFrame(), std::string("loot-chest-02.img"));
+    CHECK_EQ(perk->getFrame(), std::string("loot-perk-takedown.img"));
+    CHECK(helmet->sx > 0.0f);
+    CHECK(!empty->visible); // unused slots stay hidden
+
+    hud.setGearState({});
+    CHECK(!helmet->visible);
+    hud.setGearState({ "loot-helmet-02.img" });
+    CHECK(helmet->visible);
+    hud.setVisible(false);
+    CHECK(!helmet->visible);
+}
+
 TEST(hud_big_map_toggle_and_hits) {
     installGeneratedDefs();
     pix::NullPixiFactory factory;

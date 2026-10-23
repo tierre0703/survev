@@ -867,6 +867,28 @@ void GameScene::update(float delta) {
             }
             _hud->setSquadState(squad);
         }
+        // Gear/perk icons (ui2.ts): helmet, chest, backpack, then perks.
+        {
+            std::vector<std::string> frames;
+            const ActivePlayerData& apd = _game->activePlayerData();
+            const DefProvider* provider = getDefProvider();
+            const auto pushFrame = [&](const std::string& type) {
+                if (type.empty() || frames.size() >= static_cast<size_t>(Hud::kGearIconCount)) {
+                    return;
+                }
+                const GameObjRenderDef* def = provider ? provider->gameObject(type) : nullptr;
+                if (def && def->hasImg && !def->img.sprite.empty()) {
+                    frames.push_back(def->img.sprite);
+                }
+            };
+            pushFrame(apd.helmet);
+            pushFrame(apd.chest);
+            pushFrame(apd.backpack);
+            for (const auto& perk : apd.perks) {
+                pushFrame(perk.type);
+            }
+            _hud->setGearState(frames);
+        }
         _hud->update(delta, *_game,
                      _inGame && _notifiedStarted && (_game->isPlaying() || _game->gameOver() != nullptr));
         // ui.ts createPing / mapSprite.ts: minimap ping sprites over the baked
