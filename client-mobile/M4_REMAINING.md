@@ -1534,10 +1534,15 @@ Ported the `ui.ts` team health display (previously only in the unused
 - `surv_tests`: **134 tests, 2,231 assertions, 0 failures** (new:
   `hud_squad_health_bars` covering the four rows, names, Dead/Down/DC and
   hiding for solo/hidden HUD).
+- Device follow-up found the first layout overlapped: the health bar was drawn
+  over the lower half of the name. Rows are now 32px apart with the bar at
+  `rowY - 20` (name above it). A temporary build that included the solo row
+  confirmed the fixed layout ("Player" above a separate green bar).
 - x86_64 native lib + APK built and a **Duo** match joined on the emulator
-  (`playerCount=2, gameModeIdx=1`); the server had not added the auto-fill
-  teammate yet during the short session, so `teamIds.size() > 1` was false and
-  the bars correctly stayed hidden. A teammate is needed for a visual check.
+  (`playerCount=2, gameModeIdx=1`). The auto-fill teammate had not joined during
+  the short sessions, so the real team rows still need a teammate to appear
+  (`teamIds.size() > 1`). The gas timer was visible on the minimap ("0:49",
+  red while moving) during the same match.
 
 ### Still open
 

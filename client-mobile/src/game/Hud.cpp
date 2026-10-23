@@ -319,10 +319,10 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     // Squad bars (#ui-top-left / FguiHud::buildSquadBars): name, health bar,
     // Dead/Down/DC. Shown only when GameScene supplies team members.
     const float squadX = 12.0f;
-    const float squadTop = vh - 16.0f;
+    const float squadTop = vh - 14.0f;
     for (int i = 0; i < 4; ++i) {
         SquadRow& row = _squad[static_cast<size_t>(i)];
-        const float rowY = squadTop - static_cast<float>(i) * 26.0f;
+        const float rowY = squadTop - static_cast<float>(i) * 32.0f;
         row.name = _factory->createText();
         row.name->setFontSize(12.0f);
         row.name->setColor(0xffffff, 0x000000, 1.0f, false);
@@ -331,11 +331,11 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         _root->addChild(row.name);
         row.barBg = _factory->createGraphics();
         row.barBg->beginFill(0x000000, 0.4f);
-        row.barBg->drawRect(X(squadX), Y(rowY - 14.0f), 120.0f, 8.0f);
+        row.barBg->drawRect(X(squadX), Y(rowY - 20.0f), 120.0f, 8.0f);
         row.barBg->endFill();
         _root->addChild(row.barBg);
         row.barFill = _factory->createGraphics();
-        row.barFill->setPosition(X(squadX), Y(rowY - 14.0f));
+        row.barFill->setPosition(X(squadX), Y(rowY - 20.0f));
         _root->addChild(row.barFill);
         row.status = _factory->createText();
         row.status->setFontSize(11.0f);
