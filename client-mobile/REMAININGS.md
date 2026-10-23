@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 18 fixed the world's vertical orientation: the camera root now uses a positive Y scale with an axmol y-up origin (`screenH - p.y`), so the world matches the minimap and the joystick's up/down; world name labels no longer counter-flip. Earlier: §17 reverb, §16 role icons, §15 map airstrikes/names/big-map pings, §14 dots/gas/big map, §13 minimap, §12 ping wheel. **131 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-23** — Session 19 added role announcements and the kill-leader HUD: `RoleAnnouncementMsg` is queued by `Game` and played through the role's codegen'd `soundAssign`/`soundDead`; `UpdateMsg.killLeaderDirty` drives a top-centre "Kill Leader: name (N)" label in the live HUD. Earlier: §18 world orientation, §17 reverb, §16 role icons, §15 map airstrikes/names/big-map pings. **132 host tests pass, 0 fail.**
 
 ---
 
@@ -247,7 +247,7 @@ Latest recorded state: **2026-10-23** — Session 18 fixed the world's vertical 
 - [x] **Reverb mapping** — `audio/ReverbModel.h` maps the cathedral/cave `ReverbDef` to EAX params; `AxmolAudioBackend` applies them to all active handles (and new ones in `play()`), replacing the old silent-carrier stub
 - [x] **UI/pickup sounds** — wired: `Game::handlePickup` → `GameScene::onPickupSound` plays `item + "_pickup_01"` on `"ui"`; emote/ping sounds play on `"ui"` via `EmoteManager`
 - [x] **Reverb** — mapped and applied per active sound handle (see §3); audible check underground is the remaining verification
-- [ ] **Kill leader / notification sounds** — wire into the FairyGUI/Java UI layer
+- [x] **Role announcements / kill leader** — `RoleAnnouncementMsg` sounds (role `soundAssign`/`soundDead`, `ui` channel) and a top-centre kill-leader label driven by `UpdateMsg.killLeaderDirty`
 
 ### Priority 4 — Minor simulation/render parity
 
@@ -276,7 +276,7 @@ Latest recorded state: **2026-10-23** — Session 18 fixed the world's vertical 
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (131 tests, 0 failures expected)
+# host tests (132 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe

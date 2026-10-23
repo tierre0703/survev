@@ -744,6 +744,24 @@ void GameScene::update(float delta) {
         }
     }
 
+    // game.ts RoleAnnouncement: play the role's assigned/dead sound on the UI
+    // channel (leader/captain/medic/...); the defs come from roleDefs.ts.
+    if (_game) {
+        for (const auto& ann : _game->consumeRoleAnnouncements()) {
+            const DefProvider* provider = getDefProvider();
+            const RoleRenderDef* roleDef = provider ? provider->role(ann.role) : nullptr;
+            if (!roleDef) {
+                continue;
+            }
+            const std::string& sound = ann.assigned ? roleDef->soundAssign : roleDef->soundDead;
+            if (!sound.empty() && _audio) {
+                audio::PlaySoundOptions opts;
+                opts.channel = "ui";
+                _audio->playSound(sound, opts);
+            }
+        }
+    }
+
     // Low-noise lifecycle logging (once per transition) for the M3 net gate.
     const bool connected = _game->isConnected();
     if (connected != _wasConnected) {

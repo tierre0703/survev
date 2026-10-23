@@ -689,7 +689,10 @@ let roleEntries = "";
 for (const type of Object.keys(RoleDefs)) {
     const d = RoleDefs[type] || {};
     const icon = d.mapIcon || {};
-    roleEntries += `    {${str(type)},${str(icon.alive || "")},${str(icon.dead || "")}},\n`;
+    const sound = d.sound || {};
+    roleEntries += `    {${str(type)},${str(icon.alive || "")},${str(icon.dead || "")},${str(sound.assign || "")},${
+        str(sound.dead || "")
+    }},\n`;
 }
 
 // GameConfig plane tuning + bullet tracer colours (plane.ts / flare.ts / shot.ts).
@@ -846,7 +849,10 @@ struct RawPing {
     const char* type; const char* texture; const char* mapTexture; const char* sound; const char* soundLeader;
     int pingMap; float pingLife, mapLife; int worldDisplay; int mapEvent; unsigned tint;
 };
-struct RawRole { const char* type; const char* mapIconAlive; const char* mapIconDead; };
+struct RawRole {
+    const char* type; const char* mapIconAlive; const char* mapIconDead;
+    const char* soundAssign; const char* soundDead;
+};
 
 static PlaneDef toPlane(const RawPlane& r) {
     PlaneDef d;
@@ -1177,6 +1183,8 @@ ${
             RoleRenderDef d;
             d.mapIconAlive = r.mapIconAlive ? r.mapIconAlive : "";
             d.mapIconDead = r.mapIconDead ? r.mapIconDead : "";
+            d.soundAssign = r.soundAssign ? r.soundAssign : "";
+            d.soundDead = r.soundDead ? r.soundDead : "";
             _roles[r.type] = std::move(d);
         }
         _planes.reserve(2);

@@ -104,6 +104,13 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _killsText->setColor(0xffffff, 0x000000, 2.0f, true);
     _killsText->setAnchor(1.0f, 0.0f);
     _root->addChild(_killsText);
+    // #ui-kill-leader-wrapper: name + kill count, top centre (game.ts
+    // msg.killLeaderDirty -> uiManager.updateKillLeader).
+    _killLeaderText = _factory->createText();
+    _killLeaderText->setFontSize(15.0f);
+    _killLeaderText->setColor(0xffd060, 0x000000, 2.0f, true);
+    _killLeaderText->setAnchor(0.5f, 1.0f);
+    _root->addChild(_killLeaderText);
 
     // #ui-bottom-right: four weapon cards.
     _weaponBoxBg = _factory->createGraphics();
@@ -167,6 +174,8 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _aliveText->setPosition(X(mmX - 8.0f), Y(vh - 12.0f));
     _killsText->setAnchor(1.0f, 1.0f);
     _killsText->setPosition(X(mmX - 8.0f), Y(vh - 36.0f));
+    _killLeaderText->setAnchor(0.5f, 1.0f);
+    _killLeaderText->setPosition(X(vw * 0.5f), Y(vh - 8.0f));
 
     // #ui-bottom-right: four weapon cards, bottom right.
     const float boxW = kWeaponSlotWidth + 16.0f;
@@ -278,6 +287,7 @@ void Hud::setVisible(bool visible) {
     show(_mapFrame);
     show(_aliveText);
     show(_killsText);
+    show(_killLeaderText);
     show(_weaponBoxBg);
     show(_killFeedText);
     for (auto* seg : _boostSegments) {
@@ -499,6 +509,19 @@ void Hud::update(float dt, const Game& game, bool visible) {
     if (kills != _lastKills) {
         _lastKills = kills;
         _killsText->setText(std::to_string(kills) + " K");
+    }
+
+    // --- Kill leader (game.ts msg.killLeaderDirty) ---
+    std::string leaderText;
+    if (const uint16_t leaderId = game.killLeaderId()) {
+        const auto& infos = game.allPlayerInfo();
+        const auto it = infos.find(leaderId);
+        const std::string name = it != infos.end() ? it->second.name : std::string("Kill Leader");
+        leaderText = "Kill Leader: " + name + " (" + std::to_string(game.killLeaderKills()) + ")";
+    }
+    if (leaderText != _lastKillLeader) {
+        _lastKillLeader = leaderText;
+        _killLeaderText->setText(leaderText);
     }
 
     // --- Kill feed (#ui-killfeed) ---

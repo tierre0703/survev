@@ -211,6 +211,8 @@ struct PingRenderDef {
 struct RoleRenderDef {
     std::string mapIconAlive; // e.g. "player-star.img"
     std::string mapIconDead;  // e.g. "skull-leader.img" (optional)
+    std::string soundAssign;  // game.ts RoleAnnouncement assigned sound
+    std::string soundDead;    // ... dead sound
 };
 
 struct BiomeColors {

@@ -117,6 +117,39 @@ TEST(game_join_sends_joinmsg) {
     CHECK_EQ(jm.boost, std::string("soda"));
 }
 
+TEST(game_role_announcement_and_kill_leader) {
+    Harness h;
+    h.game.tryJoinGame("ws://dev/play", "tok");
+    h.conn()->open();
+    h.game.update(0.0f);
+
+    RoleAnnouncementMsg ra;
+    ra.playerId = 42;
+    ra.role = "leader";
+    ra.assigned = true;
+    ra.killed = false;
+    h.conn()->pushFrame(makeFrame(MsgType_RoleAnnouncement, ra));
+    h.game.update(0.0f);
+    std::vector<Game::RoleAnnouncement> announcements = h.game.consumeRoleAnnouncements();
+    CHECK_EQ(announcements.size(), static_cast<size_t>(1));
+    if (!announcements.empty()) {
+        CHECK_EQ(announcements[0].playerId, static_cast<uint16_t>(42));
+        CHECK_EQ(announcements[0].role, std::string("leader"));
+        CHECK(announcements[0].assigned);
+        CHECK(!announcements[0].killed);
+    }
+    CHECK(h.game.consumeRoleAnnouncements().empty());
+
+    UpdateMsg u = makeUpdate();
+    u.killLeaderDirty = true;
+    u.killLeaderId = 42;
+    u.killLeaderKills = 7;
+    h.conn()->pushFrame(makeFrame(MsgType_Update, u));
+    h.game.update(0.0f);
+    CHECK_EQ(h.game.killLeaderId(), static_cast<uint16_t>(42));
+    CHECK_EQ(h.game.killLeaderKills(), static_cast<uint8_t>(7));
+}
+
 TEST(game_hud_preserves_delta_inventory_and_health) {
     Harness h;
     h.game.tryJoinGame("ws://dev/play", "tok");

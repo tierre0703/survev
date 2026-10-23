@@ -154,6 +154,18 @@ public:
     void sendEmote(const std::string& type, const Vec2& pos, bool isPing);
     std::vector<int> aliveCounts() const;
     const GameOverMsg* gameOver() const { return _hasGameOver ? &_gameOver : nullptr; }
+
+    // game.ts RoleAnnouncement: role assigned/dead sounds + kill-leader UI.
+    struct RoleAnnouncement {
+        uint16_t playerId = 0;
+        uint16_t killerId = 0;
+        std::string role;
+        bool assigned = false;
+        bool killed = false;
+    };
+    std::vector<RoleAnnouncement> consumeRoleAnnouncements();
+    uint16_t killLeaderId() const { return _killLeaderId; }
+    uint8_t killLeaderKills() const { return _killLeaderKills; }
     // Priority 2: squad health bar data.
     const std::unordered_map<uint16_t, PlayerInfo>& allPlayerInfo() const { return _playersById; }
     const std::unordered_map<uint16_t, PlayerStatus>& allPlayerStatus() const { return _playerStatus; }
@@ -225,6 +237,9 @@ private:
     std::vector<KillFeedEntry> _killFeed;
     GameOverMsg _gameOver;
     bool _hasGameOver = false;
+    std::vector<RoleAnnouncement> _roleAnnouncements;
+    uint16_t _killLeaderId = 0;
+    uint8_t _killLeaderKills = 0;
     std::unordered_map<uint16_t, ObjectSnapshot> _objectsById;
     // GroupStatus from latest UpdateMsg (health + disconnected per group member).
     std::vector<GroupStatus> _groupStatus;

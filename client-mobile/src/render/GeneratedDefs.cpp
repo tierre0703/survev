@@ -76,7 +76,10 @@ struct RawPing {
     const char* type; const char* texture; const char* mapTexture; const char* sound; const char* soundLeader;
     int pingMap; float pingLife, mapLife; int worldDisplay; int mapEvent; unsigned tint;
 };
-struct RawRole { const char* type; const char* mapIconAlive; const char* mapIconDead; };
+struct RawRole {
+    const char* type; const char* mapIconAlive; const char* mapIconDead;
+    const char* soundAssign; const char* soundDead;
+};
 
 static PlaneDef toPlane(const RawPlane& r) {
     PlaneDef d;
@@ -4024,25 +4027,25 @@ static const RawPing kPings[] = {
     {"ping_unlock","ping-team-unlock.img","ping-map-unlock.img","ping_unlock_01","",1,4,10,0,1,55551},
 };
 static const RawRole kRoles[] = {
-    {"leader","player-star.img","skull-leader.img"},
-    {"captain","player-captain.img",""},
-    {"lieutenant","",""},
-    {"medic","player-medic.img","skull-leader.img"},
-    {"marksman","",""},
-    {"recon","",""},
-    {"grenadier","",""},
-    {"bugler","",""},
-    {"last_man","player-last-man.img",""},
-    {"woods_king","",""},
-    {"kill_leader","",""},
-    {"the_hunted","",""},
-    {"healer","",""},
-    {"tank","",""},
-    {"sniper","",""},
-    {"scout","",""},
-    {"demo","",""},
-    {"assault","",""},
-    {"classless","",""},
+    {"leader","player-star.img","skull-leader.img","leader_assigned_01","leader_dead_01"},
+    {"captain","player-captain.img","","captain_assigned_01",""},
+    {"lieutenant","","","lt_assigned_01",""},
+    {"medic","player-medic.img","skull-leader.img","medic_assigned_01",""},
+    {"marksman","","","marksman_assigned_01",""},
+    {"recon","","","recon_assigned_01",""},
+    {"grenadier","","","grenadier_assigned_01",""},
+    {"bugler","","","bugler_assigned_01",""},
+    {"last_man","player-last-man.img","","last_man_assigned_01",""},
+    {"woods_king","","","","leader_dead_01"},
+    {"kill_leader","","","leader_assigned_01","leader_dead_01"},
+    {"the_hunted","","","leader_assigned_01","leader_dead_01"},
+    {"healer","","","spawn_01",""},
+    {"tank","","","spawn_01",""},
+    {"sniper","","","spawn_01",""},
+    {"scout","","","spawn_01",""},
+    {"demo","","","spawn_01",""},
+    {"assault","","","spawn_01",""},
+    {"classless","","","spawn_01",""},
 };
 static const RawGameObj kGameObjs[] = {
     {"bullet_mp5","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0,0,0,0,0,0,"","",0,"",0.0f,"",16777215,0,16777215},
@@ -11946,6 +11949,8 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
             RoleRenderDef d;
             d.mapIconAlive = r.mapIconAlive ? r.mapIconAlive : "";
             d.mapIconDead = r.mapIconDead ? r.mapIconDead : "";
+            d.soundAssign = r.soundAssign ? r.soundAssign : "";
+            d.soundDead = r.soundDead ? r.soundDead : "";
             _roles[r.type] = std::move(d);
         }
         _planes.reserve(2);

@@ -244,11 +244,15 @@ TEST(role_defs_provider) {
     CHECK(leader != nullptr);
     CHECK_EQ(leader->mapIconAlive, std::string("player-star.img"));
     CHECK_EQ(leader->mapIconDead, std::string("skull-leader.img"));
+    CHECK_EQ(leader->soundAssign, std::string("leader_assigned_01"));
+    CHECK_EQ(leader->soundDead, std::string("leader_dead_01"));
 
     const RoleRenderDef* captain = provider->role("captain");
     CHECK(captain != nullptr);
     CHECK_EQ(captain->mapIconAlive, std::string("player-captain.img"));
     CHECK(captain->mapIconDead.empty());
+    CHECK_EQ(captain->soundAssign, std::string("captain_assigned_01"));
+    CHECK(captain->soundDead.empty());
 
     // Roles without custom icons still resolve (empty alive means "no icon").
     const RoleRenderDef* marksman = provider->role("marksman");

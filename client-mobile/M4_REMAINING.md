@@ -1403,3 +1403,40 @@ and the player's forward pose).
   now that the camera is positive-Y; the player aim and buildings look correct.
 - Ping edge-indicator `rot` was tuned under the old mirror; verify when a ping
   is visible on device.
+
+---
+
+## 24. Session 19 - role announcements + kill leader (2026-10-23)
+
+### 24.1 Role sounds
+
+`RoleAnnouncementMsg` was parsed and dropped. Now:
+
+- `RoleRenderDef` also carries `soundAssign`/`soundDead` from `roleDefs.ts`
+  (leader `leader_assigned_01`/`leader_dead_01`, captain/medic/etc. assign
+  sounds, etc.).
+- `Game` queues each announcement; `GameScene` consumes the queue and plays
+  `assigned ? soundAssign : soundDead` on the `ui` channel, mirroring
+  `game.ts RoleAnnouncement` (without the spooky-map `kill_leader_assigned`
+  group variant — the direct role sound is used).
+
+### 24.2 Kill-leader HUD
+
+`UpdateMsg.killLeaderDirty` (`killLeaderId`/`killLeaderKills`) is now stored by
+`Game`. The live HUD gained a top-centre `pix::Text` label
+`"Kill Leader: <name> (<kills>)"` (hidden while no leader), matching
+`ui.ts updateKillLeader`.
+
+### Verification
+
+- `surv_tests`: **132 tests, 2,201 assertions, 0 failures** (new:
+  `game_role_announcement_and_kill_leader` covers the queue + kill-leader
+  fields; `role_defs_provider` asserts the role sounds).
+- x86_64 native lib + APK built and smoke-tested to a live match (building
+  interior renders correctly with the positive-Y camera; no kill leader was
+  assigned in that match so the label stayed hidden); `logcat -b crash` empty.
+
+### Still open
+
+- Hear/see a role assignment and kill-leader label in a real (faction/role)
+  match on device; spooky-map kill-leader sound group; role announcement text.

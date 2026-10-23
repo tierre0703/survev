@@ -102,6 +102,8 @@ private:
     bool _bigMapVisible = false;
     pix::Text* _aliveText = nullptr;
     pix::Text* _killsText = nullptr;
+    pix::Text* _killLeaderText = nullptr;
+    std::string _lastKillLeader;
 
     pix::Container* _weaponBox = nullptr;
     pix::Graphics* _weaponBoxBg = nullptr;

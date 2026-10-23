@@ -46,6 +46,9 @@ void Game::free() {
     _playerStatus.clear();
     _aliveCounts.clear();
     _killFeed.clear();
+    _roleAnnouncements.clear();
+    _killLeaderId = 0;
+    _killLeaderKills = 0;
     _activePlayer = ActivePlayerData{};
     _hasGameOver = false;
     _lastUrl.clear();
@@ -241,7 +244,12 @@ void Game::onServerMessage(uint8_t type, NetBitStream& s) {
             break;
         }
         case MsgType_PlayerStats: { PlayerStatsMsg m; m.deserialize(s); break; }
-        case MsgType_RoleAnnouncement: { RoleAnnouncementMsg m; m.deserialize(s); break; }
+        case MsgType_RoleAnnouncement: {
+            RoleAnnouncementMsg m;
+            m.deserialize(s);
+            _roleAnnouncements.push_back({m.playerId, m.killerId, m.role, m.assigned, m.killed});
+            break;
+        }
         default:
             break;
     }
@@ -377,6 +385,10 @@ void Game::handleUpdate(NetBitStream& s) {
     if (m.groupStatusDirty) {
         _groupStatus = m.groupStatus;
     }
+    if (m.killLeaderDirty) {
+        _killLeaderId = m.killLeaderId;
+        _killLeaderKills = m.killLeaderKills;
+    }
     _lastUpdate = std::move(m);
     _hasUpdate = true;
     if (_updateCallback) {
@@ -423,6 +435,12 @@ void Game::sendEmote(const std::string& type, const Vec2& pos, bool isPing) {
     msg.pos = pos;
     msg.isPing = isPing;
     sendMessage(MsgType_Emote, msg, 128);
+}
+
+std::vector<Game::RoleAnnouncement> Game::consumeRoleAnnouncements() {
+    std::vector<RoleAnnouncement> out = std::move(_roleAnnouncements);
+    _roleAnnouncements.clear();
+    return out;
 }
 
 void Game::handleMap(NetBitStream& s) {
