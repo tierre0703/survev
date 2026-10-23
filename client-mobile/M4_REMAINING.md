@@ -1206,3 +1206,57 @@ One clipped square view of the whole map, used by the 140px minimap and the
 - Big-map tap-to-ping (web `bigmapCollision` → team ping at the tapped map
   position), and airstrike zone drawing on the map.
 - Map place name labels in the baked texture (`map.ts renderMap` nameContainer).
+
+---
+
+## 20. Session 15 - map airstrikes, place names, big-map tap-to-ping (2026-10-23)
+
+### 20.1 Airstrike warning zones
+
+`MapView` gained a second Graphics layer (`setAirstrikes`) mirroring
+`plane.ts AirstrikeZone.render`: a yellow `#eaff00` circle with 20% fill and a
+1.5px outline, faded in/out over 0.5s. `GameScene` builds the list from
+`PlaneBarn::airstrikeZones` (active zones + `ticker`/`duration`) and passes it
+through `Hud::updateMapOverlay`, so the warning shows on both the minimap and
+the big map.
+
+### 20.2 Place names
+
+`MapView::setLabels` ports `map.ts renderMap`'s nameContainer. `Hud::setMapLabels`
+is called once from the MapMsg callback (`msg.places`).
+
+- **MapMsg place positions are normalized (0..1)**, unlike every other map
+  position; the label is placed at `(pos.x * size, pos.y * size)` directly.
+- Labels are HUD `pix::Text` over the map, sized `14 * size/256` (7px on the
+  minimap, 35px on the big map), under the dots and over the gas. Rendering the
+  text into the RenderTexture itself did not appear on device, so this keeps
+  the same visual result through the proven text path.
+
+### 20.3 Big-map tap-to-ping
+
+Ports `ui.ts bigmapCollision` + `triggerPing`:
+
+- Tapping inside the big map converts the design-space tap through
+  `MapView::unproject`, clamps it to the map bounds and stores it as
+  `_pingTarget`; the big map closes and the team-ping wheel opens at the screen
+  centre (the web's `emoteScreenPos`).
+- The next touch claims the open wheel (so it never moves/fires), and the
+  selected ping is sent at `_pingTarget`; emotes still send at the player.
+- An untouched wheel closes after 10s (`emote.ts emoteTimeout`), which clears
+  the pending target; a send/dismiss clears it too.
+
+### Verification
+
+- `surv_tests`: **128 tests, 2,133 assertions, 0 failures** (new:
+  `ping_wheel_idle_timeout_closes`; `map_view_dots_gas_and_pings` now covers
+  airstrike graphics and place labels).
+- x86_64 native lib + APK on the emulator: the big map shows all 8 place names
+  (Pineapple, Todesfelde, The Killpit, ...), tapping it closes the map and opens
+  the wheel at the centre, dragging up sent the ping at the tapped position and
+  closed the wheel; the active gas paints the red outside-fill + safe ring on
+  both views. `logcat -b crash` empty.
+
+### Still open
+
+- Role-specific map icons (`roleDef.mapIcon`), airstrike zone visuals on device
+  (host-only so far), and a big-map spectator/player markers for other teams.

@@ -409,6 +409,38 @@ TEST(map_view_dots_gas_and_pings) {
     const Vec2 world = view.unproject(Vec2(128.0f, 128.0f));
     CHECK_NEAR(world.x, 256.0f, 0.01f);
     CHECK_NEAR(world.y, 256.0f, 0.01f);
+
+    // Airstrike warning zone (yellow fill/outline) is drawn as well.
+    std::vector<MapAirstrike> strikes(1);
+    strikes[0].pos = Vec2(128.0f, 128.0f);
+    strikes[0].rad = 64.0f;
+    strikes[0].alpha = 1.0f;
+    view.setAirstrikes(strikes);
+    CHECK(view.airstrikeGraphics() != nullptr);
+    CHECK(!static_cast<pix::NullGraphics*>(view.airstrikeGraphics())->commands.empty());
+
+    // Place names (map.ts nameContainer) are laid over the map in HUD text.
+    // MapMsg places are normalized (0..1) into the view box.
+    std::vector<MapPlace> places(1);
+    places[0].name = "Bank";
+    places[0].pos = Vec2(0.5f, 0.5f);
+    view.setLabels(places);
+    auto* label = static_cast<pix::NullText*>(view.labelText(0));
+    CHECK(label != nullptr);
+    CHECK_EQ(label->text, std::string("Bank"));
+    CHECK_NEAR(label->x, 128.0f, 0.01f);
+    CHECK_NEAR(label->y, 128.0f, 0.01f);
+}
+
+TEST(ping_wheel_idle_timeout_closes) {
+    PingFixture fx;
+    fx.wheel.open(fx.wheel.buttonCenter());
+    CHECK(fx.wheel.visible());
+    fx.wheel.update(9.0f);
+    CHECK(fx.wheel.visible());
+    // emote.ts emoteTimeout = 10s.
+    fx.wheel.update(1.5f);
+    CHECK(!fx.wheel.visible());
 }
 
 TEST(hud_big_map_toggle_and_hits) {

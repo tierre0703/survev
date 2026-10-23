@@ -331,6 +331,7 @@ bool GameScene::init() {
             if (_hud) {
                 _hud->setMinimap(_world->map().getMinimapTexture(),
                                  _world->map().width, _world->map().height);
+                _hud->setMapLabels(msg.places);
             }
         }
     });
@@ -379,6 +380,7 @@ void GameScene::resetWorld() {
     _pingWheel.reset();
     _pingTouchId = -1;
     _bigMapTouchId = -1;
+    _pingTargetValid = false;
     _hud.reset();
     _world.reset();
     _worldRoot = nullptr;
@@ -897,7 +899,21 @@ void GameScene::update(float delta) {
                 gas.safeRad = g.circleNew.rad;
             }
             gas.playerPos = me ? me->pos : Vec2(0.0f, 0.0f);
-            _hud->updateMapOverlay(dots, gas);
+
+            std::vector<MapAirstrike> strikes;
+            for (const AirstrikeZone* zone : _world->planeBarn().airstrikeZones) {
+                if (!zone || !zone->active) {
+                    continue;
+                }
+                MapAirstrike strike;
+                strike.pos = zone->pos;
+                strike.rad = zone->rad;
+                // plane.ts AirstrikeZone.render: fade in/out over 0.5s.
+                strike.alpha = math::smoothstep(zone->ticker, 0.0f, 0.5f) *
+                               (1.0f - math::smoothstep(zone->ticker, zone->duration - 0.5f, zone->duration));
+                strikes.push_back(strike);
+            }
+            _hud->updateMapOverlay(dots, gas, strikes);
         }
     }
     // Emote wheel: same visibility rule as the HUD; refresh the loadout each
@@ -931,6 +947,13 @@ void GameScene::update(float delta) {
         _pingWheel->setHudVisible(playing);
         _pingWheel->setGreyed(_emoteWheel && !_emoteWheel->canSend());
         _pingWheel->update(delta);
+        if (!_pingWheel->visible()) {
+            // Wheel dismissed (tap outside, timeout, or sent).
+            _pingTargetValid = false;
+            if (_pingTouchId >= 0 && !_pingWheel->visible()) {
+                _pingTouchId = -1;
+            }
+        }
     }
 
     // Priority 2: pie timer — driven by active player action data each frame.
@@ -1027,8 +1050,33 @@ void GameScene::onTouchBegan(float x, float y, int id) {
         const Vec2 design = screenToDesign(x, y);
         if (_hud->bigMapCloseHit(design.x, design.y) || !_hud->bigMapContains(design.x, design.y)) {
             _hud->setBigMapVisible(false);
+        } else {
+            // ui.ts bigmapCollision: remember the tapped world position, then
+            // open the team-ping wheel (it is sent at that position).
+            const float halfW = ::ui::kit::designWidth() * 0.5f;
+            const float halfH = ::ui::kit::designHeight() * 0.5f;
+            const Vec2 centered(design.x - halfW, design.y - halfH);
+            const Vec2 local(centered.x - _hud->bigMap().pos().x, centered.y - _hud->bigMap().pos().y);
+            Vec2 world = _hud->bigMap().unproject(local);
+            if (_world) {
+                world.x = std::clamp(world.x, 0.0f, _world->map().width);
+                world.y = std::clamp(world.y, 0.0f, _world->map().height);
+            }
+            _pingTarget = world;
+            _pingTargetValid = true;
+            _hud->setBigMapVisible(false);
+            if (_pingWheel) {
+                _pingWheel->open(Vec2(halfW, halfH));
+                _pingTouchId = -1; // the next touch drives the open wheel
+            }
         }
         _bigMapTouchId = id;
+        return;
+    }
+    // A programmatically opened ping wheel (big-map tap) claims the next touch
+    // so it does not move or fire.
+    if (_pingWheel && _pingWheel->visible() && _pingTouchId < 0) {
+        _pingTouchId = id;
         return;
     }
     // Minimap expand button (#ui-map-expand-mobile) opens the big map.
@@ -1091,19 +1139,22 @@ void GameScene::onTouchMoved(float x, float y, int id) {
         const Vec2 design = screenToDesign(x, y);
         if (_pingWheel->select(design, selection)) {
             if (_world && _world->activePlayer() && _emoteWheel && _emoteWheel->canSend()) {
-                // Ping at the crosshair: the camera follows the active player,
-                // and the web clamps the target to the map bounds.
-                Vec2 pos = _world->activePlayer()->pos;
+                // Pings target the big-map tap when there was one, otherwise
+                // the crosshair (the active player; web clamps to map bounds).
+                Vec2 pos = (_pingTargetValid && !selection.ping.empty())
+                    ? _pingTarget
+                    : _world->activePlayer()->pos;
                 pos.x = std::clamp(pos.x, 0.0f, _world->map().width);
                 pos.y = std::clamp(pos.y, 0.0f, _world->map().height);
                 if (!selection.ping.empty()) {
                     _world->emoteManager().queuePing(selection.ping, pos);
                 } else if (!selection.emote.empty()) {
-                    _world->emoteManager().queueEmote(selection.emote, pos);
+                    _world->emoteManager().queueEmote(selection.emote, _world->activePlayer()->pos);
                 }
                 // Pings and emotes share the emote.ts counter.
                 _emoteWheel->incrementEmote();
             }
+            _pingTargetValid = false;
             _pingWheel->close();
             _pingTouchId = -1;
         }
@@ -1123,6 +1174,7 @@ void GameScene::onTouchEnded(int id) {
         if (_pingWheel) {
             _pingWheel->close();
         }
+        _pingTargetValid = false;
         _pingTouchId = -1;
         return;
     }

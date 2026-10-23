@@ -359,6 +359,7 @@ void PingWheel::open(const Vec2& center) {
     _center = center;
     _active = true;
     _openT = 0.0f;
+    _idle = 0.0f;
     _highlighted = -1;
     applyHighlight();
     _wheel->setVisible(true);
@@ -432,6 +433,7 @@ bool PingWheel::select(const Vec2& pos, Selection& out) {
     if (!_active) {
         return false;
     }
+    _idle = 0.0f;
     const int idx = selectorAt(pos.x - _center.x, pos.y - _center.y);
     const int nextHighlight = _greyed ? -1 : idx;
     if (nextHighlight != _highlighted) {
@@ -472,6 +474,12 @@ void PingWheel::update(float dt) {
     }
     _button->setVisible(_hudVisible);
     if (!_active) {
+        return;
+    }
+    _idle += dt;
+    if (_idle > 10.0f) {
+        // emote.ts emoteTimeout: an untouched wheel closes after 10s.
+        close();
         return;
     }
     _openT += dt;

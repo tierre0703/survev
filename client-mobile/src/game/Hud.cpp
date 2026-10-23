@@ -328,7 +328,8 @@ void Hud::updateMapPings(const std::vector<MapPing>& pings) {
     _bigMap.setPings(pings);
 }
 
-void Hud::updateMapOverlay(const std::vector<MapDot>& dots, const MapGas& gas) {
+void Hud::updateMapOverlay(const std::vector<MapDot>& dots, const MapGas& gas,
+                           const std::vector<MapAirstrike>& strikes) {
     if (!_built) {
         return;
     }
@@ -336,6 +337,16 @@ void Hud::updateMapOverlay(const std::vector<MapDot>& dots, const MapGas& gas) {
     _bigMap.setDots(dots);
     _miniMap.setGas(gas);
     _bigMap.setGas(gas);
+    _miniMap.setAirstrikes(strikes);
+    _bigMap.setAirstrikes(strikes);
+}
+
+void Hud::setMapLabels(const std::vector<MapPlace>& places) {
+    if (!_built) {
+        return;
+    }
+    _miniMap.setLabels(places);
+    _bigMap.setLabels(places);
 }
 
 void Hud::setBigMapVisible(bool visible) {

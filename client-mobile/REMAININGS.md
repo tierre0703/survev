@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 14 (`M4_REMAINING.md` §19) finished the map UI: player/team dots and the gas/safe-zone circles draw on the minimap, and the minimap expand button opens a full-screen big map (clipped, with dots/gas/pings) closable by its X or by tapping outside. Shared by a new `game/MapView` used for both views. Session 13 baked/displayed the minimap and added minimap ping sprites; Session 12 added the team-ping wheel and `PingRenderDef` codegen. **127 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-23** — Session 15 (`M4_REMAINING.md` §20) completed the map UI: airstrike warning zones draw on both maps, place names overlay the map (MapMsg places are normalized 0..1), and tapping the big map opens the team-ping wheel so the ping is sent at the tapped map position (10s idle timeout). Session 14 added player/team dots, gas/safe-zone circles and the big map; Session 13 baked/displayed the minimap and ping sprites. **128 host tests pass, 0 fail.**
 
 ---
 
@@ -194,7 +194,10 @@ Latest recorded state: **2026-10-23** — Session 14 (`M4_REMAINING.md` §19) fi
 - [x] **Big map** (`game/MapView`, 640×640 centred):
   - Minimap expand button opens it; X or tapping outside closes it
   - Same texture/dots/gas/pings as the minimap, with the HUD dimmed behind
-  - `displayMapLarge`/`#big-map` port; touch is swallowed by the view
+  - Tap inside the map opens the team-ping wheel; the ping is sent at the
+    tapped world position (`bigmapCollision`/`getWorldPosFromMapPos`)
+  - Airstrike warning zones (`plane.ts AirstrikeZone`) and place names draw on
+    both views
 - [x] **Inventory UI v2** (`ui2.ts` features — weapon cards, gear slots, perk slots, scope inventory, loot counts, pickup/kill messages, interaction prompt) — implemented 2026-10-17
 - [x] **Emote/ping system** (`client/src/emote.ts`) — **emote wheel landed 2026-10-22**:
   - [x] Game::sendEmote() wire → server (MsgType_Emote); wheel output is queued
@@ -270,7 +273,7 @@ Latest recorded state: **2026-10-23** — Session 14 (`M4_REMAINING.md` §19) fi
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (127 tests, 0 failures expected)
+# host tests (128 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -306,3 +309,5 @@ node tools/build-gui-icons.mjs
 - Minimap ping sprites stay in the masked layer (the 512px pulse ring spills otherwise)
 - The masked ping layer must be created **lazily** (`MapView::setPings`, not HUD build): a ClippingNode created at build time crashed axmol's GL renderer on device
 - `Hud` hit tests (`minimapExpandHit`, `bigMapContains/CloseHit`) take design-space coords; widget positions are centred HUD coords
+- `MapMsg` place positions are normalized (0..1); do not divide by map width/height again
+- Place names are drawn as HUD text in `MapView`, not baked into the RenderTexture (text-in-RT did not show on device)

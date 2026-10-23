@@ -258,6 +258,9 @@ private:
     int _emoteTouchId = -1;
     int _pingTouchId = -1;
     int _bigMapTouchId = -1;
+    // Big-map tap target for the next ping (web bigmapPingPos).
+    bool _pingTargetValid = false;
+    Vec2 _pingTarget;
 };
 
 } // namespace surv

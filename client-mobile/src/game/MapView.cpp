@@ -31,8 +31,17 @@ void MapView::build(pix::Factory* factory, pix::Container* parent, const Vec2& p
     _gasGfx->setLocalZOrder(1);
     _root->addChild(_gasGfx);
 
+    _strikeGfx = _factory->createGraphics();
+    _strikeGfx->clear();
+    _strikeGfx->setLocalZOrder(1);
+    _root->addChild(_strikeGfx);
+
+    _labelLayer = _factory->createContainer();
+    _labelLayer->setLocalZOrder(2);
+    _root->addChild(_labelLayer);
+
     _dotLayer = _factory->createContainer();
-    _dotLayer->setLocalZOrder(2);
+    _dotLayer->setLocalZOrder(3);
     _root->addChild(_dotLayer);
 
     // The ping layer is created lazily by setPings() (see ensurePingLayer):
@@ -174,6 +183,64 @@ void MapView::setPings(const std::vector<MapPing>& pings) {
         if (_pingSprites[static_cast<size_t>(i)]) {
             _pingSprites[static_cast<size_t>(i)]->setVisible(false);
         }
+    }
+}
+
+void MapView::setLabels(const std::vector<MapPlace>& places) {
+    if (!_labelLayer) {
+        return;
+    }
+    const float fontSize = std::max(7.0f, _size / kTextureSize * 14.0f);
+    int used = 0;
+    for (const auto& place : places) {
+        if (place.name.empty() || used >= kLabelPool) {
+            continue;
+        }
+        pix::Text* text = _labels[static_cast<size_t>(used)];
+        if (!text) {
+            text = _factory->createText();
+            text->setAnchor(0.5f, 0.5f);
+            text->setColor(0xffffff, 0x000000, 1.0f, true);
+            _labelLayer->addChild(text);
+            _labels[static_cast<size_t>(used)] = text;
+        }
+        // MapMsg places are normalized (0..1), like map.ts renderMap.
+        text->setFontSize(fontSize);
+        text->setPosition(place.pos.x * _size, place.pos.y * _size);
+        text->setText(place.name);
+        text->setVisible(true);
+        ++used;
+    }
+    for (int i = used; i < kLabelPool; ++i) {
+        if (_labels[static_cast<size_t>(i)]) {
+            _labels[static_cast<size_t>(i)]->setVisible(false);
+        }
+    }
+}
+
+void MapView::setAirstrikes(const std::vector<MapAirstrike>& strikes) {
+    if (!_strikeGfx) {
+        return;
+    }
+    _strikeGfx->clear();
+    if (_mapW <= 0.0f || _mapH <= 0.0f) {
+        return;
+    }
+    const float radScale = _size / std::max(_mapW, _mapH);
+    for (const auto& strike : strikes) {
+        if (strike.alpha <= 0.001f || strike.rad <= 0.0f) {
+            continue;
+        }
+        const Vec2 c = project(strike.pos);
+        const float r = strike.rad * radScale;
+        // plane.ts AirstrikeZone: 1.5px yellow outline + 20% fill, fading in
+        // over 0.5s and out over the last 0.5s.
+        _strikeGfx->beginFill(0xeaff00, 0.2f * strike.alpha);
+        _strikeGfx->drawCircle(c.x, c.y, r);
+        _strikeGfx->endFill();
+        _strikeGfx->lineStyle(1.5f, 0xeaff00, strike.alpha);
+        _strikeGfx->drawCircle(c.x, c.y, r);
+        _strikeGfx->lineStyle(0.0f, 0, 0.0f);
     }
 }
 

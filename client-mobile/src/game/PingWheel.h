@@ -140,6 +140,7 @@ private:
     Vec2 _center;
     int _highlighted = -1;
     float _openT = 0.0f;
+    float _idle = 0.0f;
     std::string _ammoType;
     std::string _ammoEmote = "emote_ammo";
 };

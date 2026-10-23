@@ -47,7 +47,10 @@ public:
     // ui.ts createPing / mapSprite.ts: draw the active minimap ping sprites.
     void updateMapPings(const std::vector<MapPing>& pings);
     // ui.ts updatePlayerMapSprites + m_render: player/team dots and gas.
-    void updateMapOverlay(const std::vector<MapDot>& dots, const MapGas& gas);
+    void updateMapOverlay(const std::vector<MapDot>& dots, const MapGas& gas,
+                          const std::vector<MapAirstrike>& strikes);
+    // map.ts renderMap place names, over both map views.
+    void setMapLabels(const std::vector<MapPlace>& places);
 
     // Full-screen map (#big-map): toggled from the minimap's expand button.
     static constexpr float kBigMapSize = 640.0f;
