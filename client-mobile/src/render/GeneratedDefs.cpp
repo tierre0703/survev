@@ -72,6 +72,10 @@ struct RawPlane { float actionOffset; float planeVel, planeRad, soundRangeMult, 
 struct RawTracer { unsigned regular, saturated, chambered, apSaturated; float alphaRate, alphaMin; };
 struct RawBulletRender { float distance, speed, variance; const char* tracerColor; float tracerWidth, tracerLength; unsigned flareColor; float maxFlareScale; };
 struct RawEmote { const char* type; const char* texture; const char* sound; const char* channel; const char* name; int teamOnly; int category; };
+struct RawPing {
+    const char* type; const char* texture; const char* mapTexture; const char* sound; const char* soundLeader;
+    int pingMap; float pingLife, mapLife; int worldDisplay; int mapEvent; unsigned tint;
+};
 
 static PlaneDef toPlane(const RawPlane& r) {
     PlaneDef d;
@@ -4008,6 +4012,15 @@ static const RawEmote kEmotes[] = {
     {"emote_flatteredface","face-flattered.img","emote_01","ui","Flattered Face",0,1},
     {"emote_salutingface","face-salute.img","emote_01","ui","Saluting Face",0,1},
     {"emote_screamingface","face-screaming.img","emote_01","ui","Screaming Face",0,1},
+};
+static const RawPing kPings[] = {
+    {"ping_danger","ping-team-danger.img","ping-map-danger.img","ping_danger_01","ping_leader_01",1,4,4,1,0,16777215},
+    {"ping_coming","ping-team-coming.img","ping-map-coming.img","ping_coming_01","ping_leader_01",1,4,300,1,0,16777215},
+    {"ping_help","ping-team-help.img","ping-map-help.img","ping_help_01","ping_leader_01",1,4,4,1,0,16777215},
+    {"ping_airdrop","ping-team-airdrop.img","ping-map-airdrop.img","ping_airdrop_01","",1,4,10,0,1,16737792},
+    {"ping_airstrike","ping-team-airstrike.img","ping-map-airstrike.img","ping_airstrike_01","",1,2,2,1,1,15400704},
+    {"ping_woodsking","player-king-woods.img","ping-map-woods-king.img","helmet03_forest_pickup_01","",1,4,10,0,1,1244928},
+    {"ping_unlock","ping-team-unlock.img","ping-map-unlock.img","ping_unlock_01","",1,4,10,0,1,55551},
 };
 static const RawGameObj kGameObjs[] = {
     {"bullet_mp5","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0,0,0,0,0,0,"","",0,"",0.0f,"",16777215,0,16777215},
@@ -11893,6 +11906,20 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
             d.category = r.category;
             _emotes[r.type] = std::move(d);
         }
+        for (const auto& r : kPings) {
+            PingRenderDef d;
+            d.texture = r.texture ? r.texture : "";
+            d.mapTexture = r.mapTexture ? r.mapTexture : "";
+            d.sound = r.sound ? r.sound : "";
+            d.soundLeader = r.soundLeader ? r.soundLeader : "";
+            d.pingMap = r.pingMap != 0;
+            d.pingLife = r.pingLife;
+            d.mapLife = r.mapLife;
+            d.worldDisplay = r.worldDisplay != 0;
+            d.mapEvent = r.mapEvent != 0;
+            d.tint = r.tint;
+            _pings[r.type] = std::move(d);
+        }
         _planes.reserve(2);
         for (const auto& r : kPlanes) _planes.push_back(toPlane(r));
         for (int i = 0; i < 13; ++i) {
@@ -11947,6 +11974,10 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         auto it = _emotes.find(type);
         return it == _emotes.end() ? nullptr : &it->second;
     }
+    const PingRenderDef* ping(const std::string& type) const override {
+        auto it = _pings.find(type);
+        return it == _pings.end() ? nullptr : &it->second;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
@@ -11956,6 +11987,7 @@ private:
     std::unordered_map<std::string, TracerColorDef> _tracers;
     std::unordered_map<std::string, BulletRenderDef> _bullets;
     std::unordered_map<std::string, EmoteRenderDef> _emotes;
+    std::unordered_map<std::string, PingRenderDef> _pings;
     std::unordered_map<std::string, EmitterDef> _emitters;
     std::unordered_map<std::string, PlayerPose> _poses;
     std::unordered_map<std::string, PlayerAnimationDef> _animations;

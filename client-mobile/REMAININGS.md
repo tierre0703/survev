@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-22** — Session 11 (`M4_REMAINING.md` §16) implemented the emote wheel end to end: emote defs are codegen'd from `shared/defs/gameObjects/emoteDefs.ts`, the on-screen emote button opens a four-wedge loadout wheel (icons, labels, teamOnly gating, soft/hard emote cooldowns), and the selection is queued through `EmoteManager` → `Game::sendEmote`. The same pass fixed the pads rendering ~4x too small (`PadGraphicsAxmol` scale) and world-space name labels rendering vertically mirrored (counter-flipped `pix::Text`). **116 host tests pass, 0 fail.** See §3 for the next-priority gaps (team-ping wheel input, ammo-specific ping emotes, reverb, M8 accounts).
+Latest recorded state: **2026-10-23** — Session 12 (`M4_REMAINING.md` §17) implemented the team-ping wheel end to end: `PingDefs` are codegen'd (`PingRenderDef`), an on-screen ping button opens the six-selector wheel (danger/coming/help pings + medical/ammo team emotes), ammo emotes follow the equipped weapon's ammo type, and ping indicators use the def's texture/tint/lifetimes/sound. It also fixed a reused indicator inheriting the previous ping's fade-out alpha. **122 host tests pass, 0 fail.** Remaining gap in this area: map ping sprites (they need the live HUD minimap display, which is still not wired — see §3).
 
 ---
 
@@ -23,9 +23,9 @@ Latest recorded state: **2026-10-22** — Session 11 (`M4_REMAINING.md` §16) im
 | M2 | Shared core ports (bit-exact) | **done** | `BitBuffer`, `Vec2/MathUtil/Collider`, message classes, TS-generated fixtures. |
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
 | M4 | Rendering | **done, latest verified** | terrain/island hole, obstacles, buildings + ceilings, particles, decals, gas, skeletal player. |
-| M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired. |
+| M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired; emote + team-ping wheels own their touches. |
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + reverb volume computation. Player action sounds and UI sounds still unwired (see §2). |
-| M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) is live with loadout icons + input. |
+| M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
 | M8 | Accounts / API | **not started** | login/profile/team-link/quests/pass. |
 | M9 | Polish & release | **not started** | lifecycle, perf, soak, store-ready AAB. |
 
@@ -80,7 +80,7 @@ Latest recorded state: **2026-10-22** — Session 11 (`M4_REMAINING.md` §16) im
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | ✅ |
 | `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | ✅ health/boost, weapon cards, ammo, alive/kills, kill feed, pickup message |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
-| `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + emote wheel UI/input/throttle; **team-ping wheel + ammo pings + map ping sprites remain** |
+| `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) | **map ping sprites remain** (needs the live HUD minimap display) |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | ❌ **not ported** |
 | `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | ❌ **not ported** (BT keyboard/controller) |
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ❌ **not wired** — `Player` lacks surface/step/action state |
@@ -205,9 +205,21 @@ Latest recorded state: **2026-10-22** — Session 11 (`M4_REMAINING.md` §16) im
         dragging past the dead zone sends the highlighted wedge immediately
   - [x] **Emote throttle logic** (soft 2s / hard 6s at 6 sends; wheel greys out)
   - [x] Solo gating for `teamOnly` emotes
-  - [ ] Ping wheel input triggering (touch/bind)
-  - [ ] Ammo-specific ping emotes (ammo type → emote mapping)
-  - [ ] Map ping sprites (minimap dot from ping sprite barn)
+  - [x] **Team-ping wheel** (`game/PingWheel`): on-screen ping button + six
+        selectors in `emote.ts` order (danger/coming/help pings, medical and
+        ammo team emotes, centre close)
+  - [x] **Ping wheel input**: touch on the button opens the wheel; dragging past
+        the dead zone sends immediately (shares the emote throttle/grey-out)
+  - [x] **Ammo-specific ping emotes**: equipped weapon `ammoType` → `emote_ammo*`
+        (`emote.ts AmmoTypeToEmote`), refreshed when the weapon changes
+  - [x] **Ping defs codegen** (`PingRenderDef`): texture/mapTexture/sound/
+        soundLeader/lifetimes/worldDisplay/mapEvent/tint from `pingDefs.ts`;
+        `EmoteManager::addPing` now resolves the group indicator slot, group
+        tint, edge indicator visibility, and resets fade-out alpha on reuse
+  - [ ] Map ping sprites (minimap dot from ping sprite barn) — blocked on the
+        live HUD minimap display: `Map::generateMinimapTexture` is not baked
+        (`_minimapRenderFn` is never set) and `Hud` is built without a minimap
+        node, so the top-right frame is empty. Track that as its own task.
   - [x] Emote sound playback on addEmote
 
 - [x] **FairyGUI touch pads** (`FguiPadGraphics.*`) — implement:
@@ -254,7 +266,7 @@ Latest recorded state: **2026-10-22** — Session 11 (`M4_REMAINING.md` §16) im
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (116 tests, 0 failures expected)
+# host tests (122 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe

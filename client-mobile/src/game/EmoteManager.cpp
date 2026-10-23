@@ -121,85 +121,113 @@ void EmoteManager::addEmote(const Emote& msg, GameWorld& ctx) {
 
 // ---- Add ping from server (UpdateMsg.emotes with isPing=true) ---------------
 void EmoteManager::addPing(const Emote& msg, bool factionMode, GameWorld& ctx) {
-    (void)factionMode;
-    const auto* provider = getDefProvider();
-    (void)provider;
+    // shared/defs/gameObjects/pingDefs.ts drives the sprite, sound, lifetime and
+    // map-event flag. Before the codegen existed every ping drew the danger
+    // icon and used ping_danger_01.
+    const DefProvider* provider = getDefProvider();
+    const PingRenderDef* pingDef = provider ? provider->ping(msg.type) : nullptr;
+    if (!pingDef) {
+        return;
+    }
 
-    // Find indicator slot: airdrop/airstrike map events, or team ping
+    // Pick the indicator slot exactly like emote.ts addPing():
+    //   * airdrop/airstrike have dedicated slots 4/5
+    //   * team pings use the sender's index in our sorted group member list
+    //     (playerBarn.getGroupInfo(groupId).playerIds.indexOf(playerId))
+    //   * pings from other groups play their sound but get no indicator
     int indicatorIdx = -1;
     if (msg.type == "ping_airdrop") {
         indicatorIdx = 4;
     } else if (msg.type == "ping_airstrike") {
         indicatorIdx = 5;
     } else {
-        // Team pings: find matching group member slot
-        const auto activeId = ctx.activePlayerId();
-        for (int i = 0; i < 4; ++i) {
-            // Simplification: assign round-robin or by player index
-            // Full implementation would look up player group info
-            indicatorIdx = 0; // placeholder - assign to first slot
+        const uint8_t activeGroup = ctx.activeGroupId();
+        if (ctx.hasPlayerGroup(msg.playerId) && ctx.hasPlayerGroup(ctx.activePlayerId())
+            && ctx.playerGroupId(msg.playerId) == activeGroup) {
+            const std::vector<uint16_t> members = ctx.groupMembers(activeGroup);
+            for (size_t i = 0; i < members.size() && i < 4; ++i) {
+                if (members[i] == msg.playerId) {
+                    indicatorIdx = static_cast<int>(i);
+                    break;
+                }
+            }
         }
     }
 
-    PingIndicator* ind = nullptr;
+    // GameConfig.groupColors: the web tints team indicators by group slot and
+    // map events by their pingDef.tint.
+    static const uint32_t kGroupColors[4] = { 0xffff00, 0xff00ff, 0x0000ff, 0xff5400 };
+    const uint32_t tint = pingDef->mapEvent
+        ? pingDef->tint
+        : (indicatorIdx >= 0 && indicatorIdx < 4 ? kGroupColors[indicatorIdx] : 0xffffff);
+
     if (indicatorIdx >= 0 && indicatorIdx < kPingIndicatorCount) {
-        ind = &_indicators[indicatorIdx];
+        PingIndicator* ind = &_indicators[indicatorIdx];
+
+        // Create indicator sprites lazily.
+        if (!ind->pingContainer) {
+            ind->pingContainer = ctx.factory()->createContainer();
+            ind->indContainer = ctx.factory()->createContainer();
+
+            ind->borderSprite = ctx.factory()->createSprite("ping-border.img");
+            ind->borderSprite->setAnchor(0.5f, 0.5f);
+            ind->borderSprite->setScale(0.4f, 0.4f);
+            ind->pingContainer->addChild(ind->borderSprite);
+
+            ind->pingSprite = ctx.factory()->createSprite("ping-team-danger.img");
+            ind->pingSprite->setAnchor(0.5f, 0.5f);
+            ind->pingSprite->setScale(0.4f, 0.4f);
+            ind->pingContainer->addChild(ind->pingSprite);
+
+            ind->indSpriteInner = ctx.factory()->createSprite("ping-team-danger.img");
+            ind->indSpriteInner->setAnchor(0.5f, 0.5f);
+            ind->indSpriteInner->setScale(0.5f, 0.5f);
+            ind->indContainer->addChild(ind->indSpriteInner);
+
+            ind->indSpriteOuter = ctx.factory()->createSprite("ping-indicator.img");
+            ind->indSpriteOuter->setAnchor(0.5f, 0.0f);
+            ind->indSpriteOuter->setScale(0.5f, 0.5f);
+            ind->indContainer->addChild(ind->indSpriteOuter);
+        }
+
+        if (!pingDef->texture.empty()) {
+            ind->pingSprite->setFrame(pingDef->texture);
+            ind->indSpriteInner->setFrame(pingDef->texture);
+        }
+        ind->borderSprite->setTint(tint);
+        ind->pingSprite->setTint(tint);
+        // The edge indicator keeps the group colour unless this is a map event
+        // (indSpriteInner.baseTint / indSpriteOuter.baseTint in emote.ts).
+        const uint32_t edgeTint = pingDef->mapEvent ? pingDef->tint : 0xffffff;
+        ind->indSpriteInner->setTint(edgeTint);
+        ind->indSpriteOuter->setTint(edgeTint);
+
+        ind->pos = msg.hasPos ? msg.pos : Vec2(0, 0);
+        ind->playerId = msg.playerId;
+        ind->fadeIn = kPingFadeIn;
+        ind->life = kPingLife;
+        ind->fadeOut = kPingFadeOut;
+        ind->mapEvent = pingDef->mapEvent;
+        ind->worldDisplay = pingDef->worldDisplay;
+        ind->displayed = false;
+        // A reused slot may still carry the previous ping's fade-out alpha;
+        // without this every ping after a faded-out one was nearly invisible.
+        ind->pingContainer->setAlpha(1.0f);
+        ind->indContainer->setAlpha(1.0f);
+        ind->borderSprite->setAlpha(1.0f);
+        ind->pingSprite->setAlpha(1.0f);
+        ind->indSpriteInner->setAlpha(0.0f);
+        ind->indSpriteOuter->setAlpha(0.0f);
     }
 
-    if (!ind) return;
-
-    // Create indicator sprites lazily
-    if (!ind->pingContainer) {
-        // All 6 indicators share the same ping container parent in the world
-        ind->pingContainer = ctx.factory()->createContainer();
-        ind->indContainer = ctx.factory()->createContainer();
-
-        ind->borderSprite = ctx.factory()->createSprite("ping-border.img");
-        ind->borderSprite->setAnchor(0.5f, 0.5f);
-        ind->borderSprite->setScale(0.4f, 0.4f);
-        ind->borderSprite->setTint(0xffffff);
-        ind->pingContainer->addChild(ind->borderSprite);
-
-        ind->pingSprite = ctx.factory()->createSprite("ping-team-danger.img");
-        ind->pingSprite->setAnchor(0.5f, 0.5f);
-        ind->pingSprite->setScale(0.4f, 0.4f);
-        ind->pingSprite->setTint(0xffffff);
-        ind->pingContainer->addChild(ind->pingSprite);
-
-        ind->indSpriteInner = ctx.factory()->createSprite("ping-team-danger.img");
-        ind->indSpriteInner->setAnchor(0.5f, 0.5f);
-        ind->indSpriteInner->setScale(0.5f, 0.5f);
-        ind->indSpriteInner->setTint(0xffffff);
-        ind->indContainer->addChild(ind->indSpriteInner);
-
-        ind->indSpriteOuter = ctx.factory()->createSprite("ping-indicator.img");
-        ind->indSpriteOuter->setAnchor(0.5f, 0.0f);
-        ind->indSpriteOuter->setScale(0.5f, 0.5f);
-        ind->indSpriteOuter->setTint(0xffffff);
-        ind->indContainer->addChild(ind->indSpriteOuter);
-    }
-
-    ind->pos = msg.hasPos ? msg.pos : Vec2(0, 0);
-    ind->fadeIn = kPingFadeIn;
-    ind->life = kPingLife;
-    ind->fadeOut = kPingFadeOut;
-    ind->worldDisplay = true; // could look up ping def
-    ind->displayed = false;
-
-    // Play ping sound
-    if (ctx.audio()) {
-        // Map common ping types to their sound keys
-        const char* pingSound = "ping_danger_01";
-        if (msg.type == "ping_airdrop")     pingSound = "ping_airdrop_01";
-        else if (msg.type == "ping_airstrike") pingSound = "ping_airstrike_01";
-        else if (msg.type == "ping_help")   pingSound = "ping_help_01";
-        else if (msg.type == "ping_coming") pingSound = "ping_coming_01";
-        else if (msg.type == "ping_leader") pingSound = "ping_leader_01";
-        else if (msg.type == "ping_unlock") pingSound = "ping_unlock_01";
+    // Play the ping sound on the UI channel. Pings always play at full volume
+    // (emote.ts addPing); airstrike falloff in non-faction mode is a follow-up.
+    (void)factionMode;
+    if (ctx.audio() && !pingDef->sound.empty()) {
         audio::PlaySoundOptions opts;
         opts.channel = "ui";
         opts.rangeMult = 48.0f;
-        ctx.audio()->playSound(pingSound, opts);
+        ctx.audio()->playSound(pingDef->sound, opts);
     }
 }
 
@@ -361,6 +389,8 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             // Fade in/out
             if (ind.fadeIn > 0) {
                 float elemOpacity = 1 - ind.fadeIn / kPingFadeIn;
+                ind.pingContainer->setAlpha(1.0f);
+                ind.indContainer->setAlpha(1.0f);
                 ind.indSpriteOuter->setAlpha(elemOpacity);
             }
             if (ind.life < 0) {
@@ -371,7 +401,9 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
 
             if (!ind.displayed) {
                 ind.pingContainer->setVisible(ind.worldDisplay);
-                ind.indContainer->setVisible(true);
+                // emote.ts hides our own edge-of-screen indicator unless the
+                // ping is a map event (airdrop/airstrike).
+                ind.indContainer->setVisible(!(ind.playerId == ctx.activePlayerId()) || ind.mapEvent);
                 ind.displayed = true;
             }
 

@@ -124,6 +124,15 @@ public:
     uint16_t activePlayerId() const { return _activePlayerId; }
     void setActivePlayerId(uint16_t id) { _activePlayerId = id; }
 
+    // Player group membership from UpdateMsg.playerInfos (player.ts
+    // recomputeTeamData). EmoteManager uses it to pick the team ping indicator
+    // slot + group tint, exactly like playerBarn.getGroupInfo() on the web.
+    uint8_t playerGroupId(uint16_t playerId) const;
+    bool hasPlayerGroup(uint16_t playerId) const;
+    uint8_t activeGroupId() const;
+    // Group member ids sorted ascending (player.ts sorts groupInfo.playerIds).
+    std::vector<uint16_t> groupMembers(uint8_t groupId) const;
+
     // M6: audio is owned by the app (GameScene) and driven here.
     void setAudio(audio::AudioManager* audio, audio::Ambiance* ambiance) {
         _audio = audio;
@@ -186,6 +195,7 @@ public:
     Player* _activePlayer = nullptr;
     uint16_t _activePlayerId = 0;
     std::unordered_map<uint16_t, std::string> _playerNames;
+    std::unordered_map<uint16_t, uint8_t> _playerGroups;
     std::string _emptyName;
     audio::AudioManager* _audio = nullptr;
     audio::Ambiance* _ambiance = nullptr;

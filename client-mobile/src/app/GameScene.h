@@ -37,6 +37,7 @@ class FguiHud;
 class Hud;
 class PieTimer;
 class EmoteWheel;
+class PingWheel;
 
 class PadGraphicsAxmol;
 
@@ -249,9 +250,13 @@ private:
     // Emote wheel (game/EmoteWheel.h): the on-screen emote button + radial
     // loadout selector. Owned by the per-match world (raw pix nodes).
     std::unique_ptr<EmoteWheel> _emoteWheel;
+    // Team-ping wheel (game/PingWheel.h): button + danger/coming/help pings and
+    // the team-only medical/ammo emotes.
+    std::unique_ptr<PingWheel> _pingWheel;
     // Touch id currently driving the wheel (-1 = none); the pad logic ignores
     // that touch so opening the wheel does not also move/aim.
     int _emoteTouchId = -1;
+    int _pingTouchId = -1;
 };
 
 } // namespace surv

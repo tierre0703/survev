@@ -938,7 +938,7 @@ world emote comes back through the server like a remote player's.
 `124.8 / (0.6 * 832) = 0.25`; the touch dot likewise needs a 26 px radius at
 scale 0.25 (`kDotBaseRadius = 104`). Both pads now match the web's footprint.
 
-### 16.4 World-space text was vertically mirrored (closes �15's follow-up)
+### 16.4 World-space text was vertically mirrored (closes �15's follow-up)
 
 The camera root carries `scale(s, -s)`, which mirrors y-up glyphs (sprite art
 is authored y-down, text is not). `pix::Text::setFlipY(true)` draws the glyph
@@ -968,9 +968,98 @@ with `pix::Graphics` at the screen centre (64 px art: 32 px long, 4 px thick).
   the server echoes above the player (screenshot-verified). `logcat -b crash`
   empty.
 
-### Still open from this area
+### Still open from this area (as of session 11)
 
-- Team-ping wheel input, ammo-specific ping emotes, minimap ping sprites.
+- ~~Team-ping wheel input, ammo-specific ping emotes~~ — closed in §17.
+- Minimap ping sprites (still open; see §17 for the minimap blocker).
 - Crosshair style/colour from the loadout (only the default style is drawn).
 - `ui/FguiHud.*` remains unused (the live HUD is `game/Hud`); its gear/perk
   panels are not on screen yet.
+
+---
+
+## 17. Session 12 - team-ping wheel, ping defs, indicator fade bug (2026-10-23)
+
+Closes the next Priority-2 gap from `REMAININGS.md` §3: the team-ping wheel.
+The web client opens it from the `TeamPingMenu` bind (mouse/keyboard) or via
+the big map on touch; the native touch client now has its own button next to
+the emote button and sends at the crosshair.
+
+### 17.1 Ping defs are codegen'd (`PingRenderDef`)
+
+`shared/defs/gameObjects/pingDefs.ts` is now emitted by
+`tools/codegen_render_defs.mjs` alongside the emote table. `Defs.h` gains
+`PingRenderDef` (texture/mapTexture/sound/soundLeader/pingMap/pingLife/
+mapLife/worldDisplay/mapEvent/tint) and `DefProvider::ping(type)`.
+
+`EmoteManager::addPing` is now data-driven:
+
+- Indicator slot mirrors `emote.ts addPing`: airdrop/airstrike use slots 4/5;
+  team pings use the sender's index in our sorted group member list; pings
+  from other groups play their sound but draw no indicator.
+- Group membership comes from `UpdateMsg.playerInfos` (`GameWorld` now keeps
+  `playerId -> groupId`, sorted like `playerBarn.getGroupInfo`).
+- Sprites use the def's world texture; the ring/edge indicator use the group
+  colour (`GameConfig.groupColors`) or the def tint for map events; the sound
+  is the def's `sound` on the `ui` channel.
+- Our own edge-of-screen indicator is hidden unless the ping is a map event.
+
+### 17.2 Team-ping wheel (`game/PingWheel.{h,cpp}`)
+
+Engine-independent (pix adapter only, host-tested with `NullPixi`), design
+space next to `game/EmoteWheel`:
+
+- On-screen ping button one 56 px gap left of the emote button; the wheel opens
+  around it so it stays fully on screen.
+- Six selectors in `emote.ts teamPingData` order and sector bounds
+  (`isAngleBetween` is ported verbatim): middle close, top `ping_danger`, right
+  `ping_coming`, bottom `ping_help`, bottom-left `emote_medical`, top-left
+  `emote_ammo*`. Labels/icons come from the ping/emote defs.
+- Ammo selector follows the equipped weapon: `ammoType` from
+  `GameObjRenderDef` → `emote.ts AmmoTypeToEmote`
+  (`9mm`→`emote_ammo9mm`, ..., fallback `emote_ammo`).
+- `teamOnly` ammo/medical emotes are disabled in solo (`TeamMode.Solo`); the
+  whole wheel greys during the shared emote hard cooldown (the counter lives in
+  `EmoteWheel`, and pings call `incrementEmote()` like the web).
+- `GameScene` routes the button touch id away from the pads, queues
+  `EmoteManager::queuePing/queueEmote`, and forwards the queue to
+  `Game::sendEmote` (the `game.ts newPings/newEmotes` loop already existed).
+
+### 17.3 Bug found on device: reused indicators inherited fade-out alpha
+
+The first ping on a slot drew correctly, but a ping arriving after that slot had
+fully faded out was nearly invisible: `EmoteManager` set the indicator container
+alpha to `fadeOut / kPingFadeOut` (→0) and `addPing` never reset it. `addPing`
+now restores container/sprite alpha to 1 and the edge indicators to 0, and the
+fade-in branch re-asserts container alpha 1. Host test:
+`ping_manager_resets_indicator_alpha_on_reuse`.
+
+### Verification
+
+- `surv_tests`: **122 tests, 2,062 assertions, 0 failures** (new:
+  `ping_defs_provider`, `ping_wheel_selector_sectors`,
+  `ping_wheel_button_and_ammo_mapping`,
+  `ping_wheel_selects_pings_and_team_emotes`,
+  `ping_wheel_solo_gating_and_throttle_grey`,
+  `ping_manager_resets_indicator_alpha_on_reuse`).
+- x86_64 native lib + APK installed on the emulator against the bundle server:
+  `Play Solo` joins; the ping button shows the danger icon next to the emote
+  button; holding it opens the six-selector wheel (medical/ammo greyed in solo);
+  dragging up/right/down sends `danger`/`coming`/`help`, and the server echo
+  draws the matching icon with the yellow group ring at the crosshair — including
+  a ping sent after the slot had faded out (alpha fix verified). Dragging to the
+  greyed medical wedge in solo sends nothing. `logcat -b crash` empty.
+
+### Still open from this area
+
+- **Minimap ping sprites** (`ui.ts createPing` → `ping-map-*.img` +
+  `ping-map-pulse.img`). Blocked on the live HUD minimap: the top-right frame is
+  empty because `Map::generateMinimapTexture` is never baked
+  (`_minimapRenderFn` is unset, and `generateMinimapTexture` also mixes world
+  space terrain with minimap-space objects) and `Hud::build` receives no
+  minimap node. This should be its own session: wire a pix renderer for the
+  bake, fix the projection, add a render-texture sprite to `Hud`, then draw
+  `MapSprite` pings over it.
+- Airstrike ping falloff in non-faction mode (`emote.ts rangeMult: 20`).
+- Faction-leader ping sound (`pingDef.soundLeader`): the def is codegen'd, but
+  `GameWorld` does not receive `PlayerStatus.role` yet.

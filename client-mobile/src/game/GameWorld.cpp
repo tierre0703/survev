@@ -11,6 +11,7 @@
 #include "../audio/Ambiance.h"
 #include "../audio/AudioManager.h"
 
+#include <algorithm>
 #include <chrono>
 
 namespace surv {
@@ -180,6 +181,7 @@ void GameWorld::loadMap(const MapMsg& msg) {
 
     // Emote/ping cleanup on new map
     _emoteManager.reset();
+    _playerGroups.clear();
 
     // GameScene builds the world through resetWorld() on join and hands it the
     // session's cached MapMsg (replayMap), so this is the world's first load.
@@ -259,6 +261,7 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
 
     for (const auto& info : msg.playerInfos) {
         _playerNames[info.playerId] = info.name;
+        _playerGroups[info.playerId] = info.groupId;
         _playerBarn->names[info.playerId] = info.name;
         _playerBarn->teams[info.playerId] = info.teamId;
     }
@@ -487,6 +490,30 @@ void GameWorld::update(float dt) {
 const std::string& GameWorld::getPlayerName(uint16_t playerId) const {
     auto it = _playerNames.find(playerId);
     return it == _playerNames.end() ? _emptyName : it->second;
+}
+
+uint8_t GameWorld::playerGroupId(uint16_t playerId) const {
+    auto it = _playerGroups.find(playerId);
+    return it == _playerGroups.end() ? 0 : it->second;
+}
+
+bool GameWorld::hasPlayerGroup(uint16_t playerId) const {
+    return _playerGroups.find(playerId) != _playerGroups.end();
+}
+
+uint8_t GameWorld::activeGroupId() const {
+    return playerGroupId(_activePlayerId);
+}
+
+std::vector<uint16_t> GameWorld::groupMembers(uint8_t groupId) const {
+    std::vector<uint16_t> ids;
+    for (const auto& entry : _playerGroups) {
+        if (entry.second == groupId) {
+            ids.push_back(entry.first);
+        }
+    }
+    std::sort(ids.begin(), ids.end());
+    return ids;
 }
 
 } // namespace surv

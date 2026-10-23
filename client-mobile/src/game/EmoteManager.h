@@ -41,6 +41,7 @@ struct PingIndicator {
     float life = 0.0f;
     float fadeOut = 0.0f;
     Vec2 pos;
+    uint16_t playerId = 0;
     bool mapEvent = false;
     bool worldDisplay = true;
     pix::Container* pingContainer = nullptr;
@@ -77,6 +78,11 @@ public:
 
     // Reset (match end / free)
     void reset();
+
+    // Test/diagnostic access to the pooled world indicators.
+    const PingIndicator* indicator(int idx) const {
+        return (idx >= 0 && idx < kPingIndicatorCount) ? &_indicators[static_cast<size_t>(idx)] : nullptr;
+    }
 
 private:
     static constexpr int kPingIndicatorCount = 6; // 4 team + airdrop + airstrike

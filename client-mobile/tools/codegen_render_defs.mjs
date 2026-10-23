@@ -20,6 +20,7 @@ function pathToFile(dir, rel) {
 const { MapObjectDefs, GameObjectDefs } = await import(pathToFile(sharedDir, "defs/register.ts"));
 const { DecalDefs } = await import(pathToFile(sharedDir, "defs/mapObjects/decalDefs.ts"));
 const { EmotesDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/emoteDefs.ts"));
+const { PingDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/pingDefs.ts"));
 const { MapDefs } = await import(pathToFile(sharedDir, "defs/mapDefs.ts"));
 const { util } = await import(pathToFile(sharedDir, "utils/util.ts"));
 const { math } = await import(pathToFile(sharedDir, "utils/math.ts"));
@@ -669,6 +670,18 @@ for (const type of Object.keys(EmotesDefs)) {
     },${d.teamOnly ? 1 : 0},${n(d.category)}},\n`;
 }
 
+// Ping defs (shared/defs/gameObjects/pingDefs.ts): the world ping indicator,
+// the team-ping wheel icons and the minimap ping sprites all read this table.
+let pingEntries = "";
+for (const type of Object.keys(PingDefs)) {
+    const d = PingDefs[type] || {};
+    pingEntries += `    {${str(type)},${str(d.texture || "")},${str(d.mapTexture || "")},${str(d.sound || "")},${
+        str(d.soundLeader || "")
+    },${d.pingMap ? 1 : 0},${f(d.pingLife, 4)},${f(d.mapLife, 4)},${d.worldDisplay ? 1 : 0},${d.mapEvent ? 1 : 0},${
+        n(d.tint, 0xffffff)
+    }},\n`;
+}
+
 // GameConfig plane tuning + bullet tracer colours (plane.ts / flare.ts / shot.ts).
 const { GameConfig } = await import(pathToFile(sharedDir, "gameConfig.ts"));
 const { BulletDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/bulletDefs.ts"));
@@ -819,6 +832,10 @@ struct RawPlane { float actionOffset; float planeVel, planeRad, soundRangeMult, 
 struct RawTracer { unsigned regular, saturated, chambered, apSaturated; float alphaRate, alphaMin; };
 struct RawBulletRender { float distance, speed, variance; const char* tracerColor; float tracerWidth, tracerLength; unsigned flareColor; float maxFlareScale; };
 struct RawEmote { const char* type; const char* texture; const char* sound; const char* channel; const char* name; int teamOnly; int category; };
+struct RawPing {
+    const char* type; const char* texture; const char* mapTexture; const char* sound; const char* soundLeader;
+    int pingMap; float pingLife, mapLife; int worldDisplay; int mapEvent; unsigned tint;
+};
 
 static PlaneDef toPlane(const RawPlane& r) {
     PlaneDef d;
@@ -897,6 +914,8 @@ ${mapAtlasArrays}static const RawMapRender kMapRenders[] = {
 ${mapRenderEntries}};
 static const RawEmote kEmotes[] = {
 ${emoteEntries}};
+static const RawPing kPings[] = {
+${pingEntries}};
 static const RawGameObj kGameObjs[] = {
 ${gameEntries}};
 static const RawParticle kParticles[] = {
@@ -1127,6 +1146,20 @@ ${
             d.category = r.category;
             _emotes[r.type] = std::move(d);
         }
+        for (const auto& r : kPings) {
+            PingRenderDef d;
+            d.texture = r.texture ? r.texture : "";
+            d.mapTexture = r.mapTexture ? r.mapTexture : "";
+            d.sound = r.sound ? r.sound : "";
+            d.soundLeader = r.soundLeader ? r.soundLeader : "";
+            d.pingMap = r.pingMap != 0;
+            d.pingLife = r.pingLife;
+            d.mapLife = r.mapLife;
+            d.worldDisplay = r.worldDisplay != 0;
+            d.mapEvent = r.mapEvent != 0;
+            d.tint = r.tint;
+            _pings[r.type] = std::move(d);
+        }
         _planes.reserve(2);
         for (const auto& r : kPlanes) _planes.push_back(toPlane(r));
         for (int i = 0; i < ${tracerCount}; ++i) {
@@ -1181,6 +1214,10 @@ ${
         auto it = _emotes.find(type);
         return it == _emotes.end() ? nullptr : &it->second;
     }
+    const PingRenderDef* ping(const std::string& type) const override {
+        auto it = _pings.find(type);
+        return it == _pings.end() ? nullptr : &it->second;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
@@ -1190,6 +1227,7 @@ private:
     std::unordered_map<std::string, TracerColorDef> _tracers;
     std::unordered_map<std::string, BulletRenderDef> _bullets;
     std::unordered_map<std::string, EmoteRenderDef> _emotes;
+    std::unordered_map<std::string, PingRenderDef> _pings;
     std::unordered_map<std::string, EmitterDef> _emitters;
     std::unordered_map<std::string, PlayerPose> _poses;
     std::unordered_map<std::string, PlayerAnimationDef> _animations;

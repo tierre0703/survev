@@ -191,6 +191,21 @@ struct EmoteRenderDef {
     int category = 0;
 };
 
+// shared/defs/gameObjects/pingDefs.ts. Used by the world ping indicators
+// (EmoteManager), the team-ping wheel and the minimap ping sprites.
+struct PingRenderDef {
+    std::string texture;    // world ping sprite, e.g. "ping-team-danger.img"
+    std::string mapTexture; // minimap sprite, e.g. "ping-map-danger.img"
+    std::string sound;      // e.g. "ping_danger_01"
+    std::string soundLeader;
+    bool pingMap = true;
+    float pingLife = 4.0f;
+    float mapLife = 4.0f;
+    bool worldDisplay = true;
+    bool mapEvent = false;
+    uint32_t tint = 0xffffff;
+};
+
 struct BiomeColors {
     uint32_t background = 0x2b2b2b;
     uint32_t beach = 0xd9c38a;
@@ -427,6 +442,8 @@ public:
     virtual const BulletRenderDef* bullet(const std::string&) const { return nullptr; }
     // shared/defs/gameObjects/emoteDefs.ts (world emotes + emote wheel).
     virtual const EmoteRenderDef* emote(const std::string& /*type*/) const { return nullptr; }
+    // shared/defs/gameObjects/pingDefs.ts (team pings + minimap markers).
+    virtual const PingRenderDef* ping(const std::string& /*type*/) const { return nullptr; }
 };
 
 // Process-wide provider, installed by the app/generated code. May be null.

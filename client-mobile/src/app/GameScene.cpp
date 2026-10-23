@@ -18,6 +18,7 @@
 #include "../ui/FguiHud.h"
 #include "../game/Hud.h"
 #include "../game/EmoteWheel.h"
+#include "../game/PingWheel.h"
 #include "../ui/FguiPieTimer.h"
 #include "../ui/PadGraphicsAxmol.h"
 #include "../ui/Layout.h"
@@ -370,6 +371,8 @@ void GameScene::resetWorld() {
     _crosshair = nullptr; // owned (and freed) by the factory
     _emoteWheel.reset();
     _emoteTouchId = -1;
+    _pingWheel.reset();
+    _pingTouchId = -1;
     _hud.reset();
     _world.reset();
     _worldRoot = nullptr;
@@ -419,6 +422,11 @@ void GameScene::resetWorld() {
                        Vec2(svui::kit::designWidth(), svui::kit::designHeight()));
     _emoteWheel->setLoadout(_game->emotes());
     _emoteWheel->setTeamMode(_game->teamMode() == 1);
+    // Team-ping wheel (Priority 2: ping wheel input + ammo-specific pings).
+    _pingWheel = std::make_unique<PingWheel>();
+    _pingWheel->build(_pixiFactory.get(), _hudRoot,
+                      Vec2(svui::kit::designWidth(), svui::kit::designHeight()));
+    _pingWheel->setTeamMode(_game->teamMode() == 1);
 }
 
 // view.ts resizeGame(): every listener re-lays-out for the new size. The
@@ -803,6 +811,29 @@ void GameScene::update(float delta) {
         _emoteWheel->setHudVisible(playing);
         _emoteWheel->update(delta);
     }
+    // Team-ping wheel: same visibility, sharing the emote throttle (the web
+    // EmoteBarn greys both wheels during the hard cooldown). The ammo emote
+    // follows the equipped weapon's ammo type each frame.
+    if (_pingWheel && _game) {
+        const bool playing = _inGame && _notifiedStarted && _game->isPlaying();
+        std::string ammoType;
+        const ActivePlayerData& apd = _game->activePlayerData();
+        if (apd.curWeapIdx >= 0 && apd.curWeapIdx < static_cast<int>(apd.weapons.size())) {
+            const std::string& weaponType = apd.weapons[static_cast<size_t>(apd.curWeapIdx)].type;
+            const DefProvider* provider = getDefProvider();
+            const GameObjRenderDef* def = (!weaponType.empty() && provider)
+                ? provider->gameObject(weaponType)
+                : nullptr;
+            if (def) {
+                ammoType = def->ammoType;
+            }
+        }
+        _pingWheel->setTeamMode(_game->teamMode() == 1);
+        _pingWheel->setAmmoType(ammoType);
+        _pingWheel->setHudVisible(playing);
+        _pingWheel->setGreyed(_emoteWheel && !_emoteWheel->canSend());
+        _pingWheel->update(delta);
+    }
 
     // Priority 2: pie timer — driven by active player action data each frame.
     if (_pieTimer && _game && isStarted()) {
@@ -906,6 +937,15 @@ void GameScene::onTouchBegan(float x, float y, int id) {
             return;
         }
     }
+    // Team-ping wheel trigger (the button sits left of the emote button).
+    if (_pingWheel && _game->isPlaying()) {
+        const Vec2 design = screenToDesign(x, y);
+        if (_pingWheel->buttonHit(design.x, design.y)) {
+            _pingTouchId = id;
+            _pingWheel->open(_pingWheel->buttonCenter());
+            return;
+        }
+    }
     _touch->touches[id].active = true;
     _touch->touches[id].posDown = Vec2(x, y);
     _touch->touches[id].pos = Vec2(x, y);
@@ -927,12 +967,42 @@ void GameScene::onTouchMoved(float x, float y, int id) {
         }
         return;
     }
+    if (id == _pingTouchId && _pingWheel) {
+        PingWheel::Selection selection;
+        const Vec2 design = screenToDesign(x, y);
+        if (_pingWheel->select(design, selection)) {
+            if (_world && _world->activePlayer() && _emoteWheel && _emoteWheel->canSend()) {
+                // Ping at the crosshair: the camera follows the active player,
+                // and the web clamps the target to the map bounds.
+                Vec2 pos = _world->activePlayer()->pos;
+                pos.x = std::clamp(pos.x, 0.0f, _world->map().width);
+                pos.y = std::clamp(pos.y, 0.0f, _world->map().height);
+                if (!selection.ping.empty()) {
+                    _world->emoteManager().queuePing(selection.ping, pos);
+                } else if (!selection.emote.empty()) {
+                    _world->emoteManager().queueEmote(selection.emote, pos);
+                }
+                // Pings and emotes share the emote.ts counter.
+                _emoteWheel->incrementEmote();
+            }
+            _pingWheel->close();
+            _pingTouchId = -1;
+        }
+        return;
+    }
     if (_touch->touches[id].active) {
         _touch->touches[id].pos = Vec2(x, y);
     }
 }
 
 void GameScene::onTouchEnded(int id) {
+    if (id == _pingTouchId) {
+        if (_pingWheel) {
+            _pingWheel->close();
+        }
+        _pingTouchId = -1;
+        return;
+    }
     if (id == _emoteTouchId) {
         if (_emoteWheel) {
             _emoteWheel->close();
