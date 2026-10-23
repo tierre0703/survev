@@ -515,6 +515,64 @@ TEST(ping_wheel_idle_timeout_closes) {
     CHECK(!fx.wheel.visible());
 }
 
+TEST(hud_gas_timer_and_result_overlay) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.setVisible(true);
+
+    // Gas countdown: m:ss, hidden when gas is inactive.
+    CHECK_EQ(Hud::formatTime(5), std::string("0:05"));
+    CHECK_EQ(Hud::formatTime(65), std::string("1:05"));
+    CHECK_EQ(Hud::formatTime(600), std::string("10:00"));
+    GasHudState gas;
+    gas.active = true;
+    gas.moving = false;
+    gas.secondsLeft = 83.9f;
+    hud.setGasState(gas);
+    auto* gasText = static_cast<const pix::NullText*>(hud.gasText());
+    CHECK(gasText != nullptr);
+    CHECK_EQ(gasText->text, std::string("1:23"));
+    CHECK(gasText->visible);
+    gas.active = false;
+    hud.setGasState(gas);
+    CHECK(!gasText->visible);
+
+    // Result screen: defeat + rank + team kills + local stats.
+    GameOverMsg over;
+    over.teamId = 1;
+    over.teamRank = 3;
+    over.winningTeamId = 2;
+    over.gameOver = true;
+    PlayerStatsMsg me;
+    me.playerId = 42;
+    me.kills = 4;
+    me.damageDealt = 321;
+    me.timeAlive = 95;
+    PlayerStatsMsg mate;
+    mate.playerId = 43;
+    mate.kills = 2;
+    over.playerStats = { me, mate };
+    hud.showGameOver(over, 1, 42);
+    CHECK(hud.gameOverShown());
+    auto* title = static_cast<const pix::NullText*>(hud.gameOverTitleText());
+    auto* rank = static_cast<const pix::NullText*>(hud.gameOverRankText());
+    auto* stats = static_cast<const pix::NullText*>(hud.gameOverStatsText());
+    CHECK(title != nullptr && rank != nullptr && stats != nullptr);
+    CHECK_EQ(title->text, std::string("DEFEAT"));
+    CHECK_EQ(rank->text, std::string("Rank #3"));
+    CHECK(stats->text.find("Team kills: 6") != std::string::npos);
+    CHECK(stats->text.find("Kills: 4") != std::string::npos);
+    CHECK(stats->text.find("Damage: 321") != std::string::npos);
+    CHECK(stats->text.find("Survived: 1:35") != std::string::npos);
+
+    over.winningTeamId = 1;
+    hud.showGameOver(over, 1, 42);
+    CHECK_EQ(title->text, std::string("VICTORY"));
+}
+
 TEST(hud_big_map_toggle_and_hits) {
     installGeneratedDefs();
     pix::NullPixiFactory factory;

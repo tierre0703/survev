@@ -826,7 +826,17 @@ void GameScene::update(float delta) {
     // In-game HUD (game/Hud.h): visible while the match is playable, like the
     // web client's stale flag.
     if (_hud) {
-        _hud->update(delta, *_game, _inGame && _notifiedStarted && _game->isPlaying());
+        // Gas countdown (ui.ts #ui-gas-timer).
+        if (_world) {
+            GasHudState gasHud;
+            const Gas& gas = _world->gas();
+            gasHud.active = gas.isActive();
+            gasHud.moving = gas.mode == GasMode_Moving;
+            gasHud.secondsLeft = std::max(0.0f, gas.duration * (1.0f - gas.circleT));
+            _hud->setGasState(gasHud);
+        }
+        _hud->update(delta, *_game,
+                     _inGame && _notifiedStarted && (_game->isPlaying() || _game->gameOver() != nullptr));
         // ui.ts createPing / mapSprite.ts: minimap ping sprites over the baked
         // map texture (EmoteManager owns their lifetimes).
         if (_world) {

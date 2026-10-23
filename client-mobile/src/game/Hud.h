@@ -25,6 +25,13 @@ namespace surv {
 
 class Game;
 
+// ui.ts updateGasDisplay: gas countdown shown under the minimap.
+struct GasHudState {
+    bool active = false;
+    bool moving = false;
+    float secondsLeft = 0.0f;
+};
+
 class Hud {
 public:
     // Web sizes (client/css/game.css).
@@ -41,6 +48,13 @@ public:
 
     // Per-frame repaint (only the widgets whose value changed are touched).
     void update(float dt, const Game& game, bool visible);
+    void setGasState(const GasHudState& gas);
+
+    // ui.ts displayStats: result screen (victory/defeat, rank, team kills and
+    // the local player's kills/damage/time). Called with GameOverMsg data.
+    void showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t localPlayerId);
+    bool gameOverShown() const { return _overShown; }
+    static std::string formatTime(uint16_t seconds);
 
     // map.ts renderMap(): show the baked minimap texture under the frame.
     void setMinimap(pix::RenderTexture* texture, float mapWidth, float mapHeight);
@@ -75,6 +89,10 @@ public:
     // Diagnostics for the host tests (map.ts renderMap / ui.ts createPing).
     const MapView& minimap() const { return _miniMap; }
     const MapView& bigMap() const { return _bigMap; }
+    const pix::Text* gasText() const { return _gasText; }
+    const pix::Text* gameOverTitleText() const { return _overTitle; }
+    const pix::Text* gameOverRankText() const { return _overRank; }
+    const pix::Text* gameOverStatsText() const { return _overStats; }
 
 private:
     void layout(pix::Graphics* g, float w, float h) const;
@@ -104,6 +122,18 @@ private:
     pix::Text* _killsText = nullptr;
     pix::Text* _killLeaderText = nullptr;
     std::string _lastKillLeader;
+
+    // Gas countdown (ui.ts #ui-gas-timer) and the result screen.
+    pix::Text* _gasText = nullptr;
+    GasHudState _gas;
+    std::string _lastGasText;
+
+    pix::Graphics* _overBackdrop = nullptr;
+    pix::Graphics* _overPanel = nullptr;
+    pix::Text* _overTitle = nullptr;
+    pix::Text* _overRank = nullptr;
+    pix::Text* _overStats = nullptr;
+    bool _overShown = false;
 
     pix::Container* _weaponBox = nullptr;
     pix::Graphics* _weaponBoxBg = nullptr;

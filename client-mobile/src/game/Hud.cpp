@@ -112,6 +112,58 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _killLeaderText->setAnchor(0.5f, 1.0f);
     _root->addChild(_killLeaderText);
 
+    // #ui-gas-timer: countdown under the minimap (ui.ts updateGasDisplay).
+    _gasText = _factory->createText();
+    _gasText->setFontSize(14.0f);
+    _gasText->setColor(0xffffff, 0x000000, 2.0f, true);
+    _gasText->setAnchor(1.0f, 0.0f);
+    _gasText->setVisible(false);
+    _root->addChild(_gasText);
+
+    // Result screen (ui.ts displayStats): dim backdrop + centred panel.
+    _overBackdrop = _factory->createGraphics();
+    _overBackdrop->beginFill(0x000000, 0.55f);
+    _overBackdrop->drawRect(-_design.x * 0.5f, -_design.y * 0.5f, _design.x, _design.y);
+    _overBackdrop->endFill();
+    _overBackdrop->setLocalZOrder(950);
+    _overBackdrop->setVisible(false);
+    _root->addChild(_overBackdrop);
+    const float panelW = 460.0f;
+    const float panelH = 230.0f;
+    _overPanel = _factory->createGraphics();
+    _overPanel->beginFill(0x101010, 0.85f);
+    _overPanel->drawRect(-panelW * 0.5f, -panelH * 0.5f, panelW, panelH);
+    _overPanel->endFill();
+    _overPanel->lineStyle(2.0f, 0xffffff, 0.6f);
+    _overPanel->drawRect(-panelW * 0.5f, -panelH * 0.5f, panelW, panelH);
+    _overPanel->setLocalZOrder(951);
+    _overPanel->setVisible(false);
+    _root->addChild(_overPanel);
+    _overTitle = _factory->createText();
+    _overTitle->setFontSize(30.0f);
+    _overTitle->setColor(0xffffff, 0x000000, 2.0f, true);
+    _overTitle->setAnchor(0.5f, 1.0f);
+    _overTitle->setPosition(0.0f, panelH * 0.5f - 18.0f);
+    _overTitle->setLocalZOrder(952);
+    _overTitle->setVisible(false);
+    _root->addChild(_overTitle);
+    _overRank = _factory->createText();
+    _overRank->setFontSize(20.0f);
+    _overRank->setColor(0xffd060, 0x000000, 2.0f, true);
+    _overRank->setAnchor(0.5f, 1.0f);
+    _overRank->setPosition(0.0f, panelH * 0.5f - 58.0f);
+    _overRank->setLocalZOrder(952);
+    _overRank->setVisible(false);
+    _root->addChild(_overRank);
+    _overStats = _factory->createText();
+    _overStats->setFontSize(16.0f);
+    _overStats->setColor(0xffffff, 0x000000, 1.0f, false);
+    _overStats->setAnchor(0.5f, 1.0f);
+    _overStats->setPosition(0.0f, panelH * 0.5f - 96.0f);
+    _overStats->setLocalZOrder(952);
+    _overStats->setVisible(false);
+    _root->addChild(_overStats);
+
     // #ui-bottom-right: four weapon cards.
     _weaponBoxBg = _factory->createGraphics();
     _root->addChild(_weaponBoxBg);
@@ -176,6 +228,8 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _killsText->setPosition(X(mmX - 8.0f), Y(vh - 36.0f));
     _killLeaderText->setAnchor(0.5f, 1.0f);
     _killLeaderText->setPosition(X(vw * 0.5f), Y(vh - 8.0f));
+    _gasText->setAnchor(1.0f, 0.0f);
+    _gasText->setPosition(X(mmX + mm), Y(mmY - 18.0f));
 
     // #ui-bottom-right: four weapon cards, bottom right.
     const float boxW = kWeaponSlotWidth + 16.0f;
@@ -288,6 +342,9 @@ void Hud::setVisible(bool visible) {
     show(_aliveText);
     show(_killsText);
     show(_killLeaderText);
+    if (_gasText) {
+        _gasText->setVisible(visible && _gas.active);
+    }
     show(_weaponBoxBg);
     show(_killFeedText);
     for (auto* seg : _boostSegments) {
@@ -316,6 +373,22 @@ void Hud::setVisible(bool visible) {
     }
     if (_mapExpandIcon) {
         _mapExpandIcon->setVisible(visible && !big);
+    }
+    const bool over = visible && _overShown;
+    if (_overBackdrop) {
+        _overBackdrop->setVisible(over);
+    }
+    if (_overPanel) {
+        _overPanel->setVisible(over);
+    }
+    if (_overTitle) {
+        _overTitle->setVisible(over);
+    }
+    if (_overRank) {
+        _overRank->setVisible(over);
+    }
+    if (_overStats) {
+        _overStats->setVisible(over);
     }
 }
 
@@ -397,6 +470,64 @@ bool Hud::bigMapCloseHit(float designX, float designY) const {
     return dx * dx + dy * dy <= 24.0f * 24.0f;
 }
 
+void Hud::setGasState(const GasHudState& gas) {
+    _gas = gas;
+    if (!_built || !_gasText) {
+        return;
+    }
+    std::string text;
+    if (gas.active) {
+        const int sec = gas.secondsLeft > 0.0f ? static_cast<int>(gas.secondsLeft) : 0;
+        text = formatTime(static_cast<uint16_t>(sec));
+    }
+    if (text != _lastGasText) {
+        _lastGasText = text;
+        _gasText->setText(text);
+        _gasText->setColor(gas.moving ? 0xff6060 : 0xffffff, 0x000000, 2.0f, true);
+    }
+    _gasText->setVisible(_visible && gas.active);
+}
+
+std::string Hud::formatTime(uint16_t seconds) {
+    const uint16_t minutes = seconds / 60;
+    const uint16_t secs = seconds % 60;
+    std::string out = std::to_string(minutes) + ":";
+    if (secs < 10) {
+        out += "0";
+    }
+    out += std::to_string(secs);
+    return out;
+}
+
+void Hud::showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t localPlayerId) {
+    if (!_built) {
+        return;
+    }
+    const bool victory = localTeamId != 0 && over.winningTeamId == localTeamId;
+    _overTitle->setText(victory ? "VICTORY" : "DEFEAT");
+    _overTitle->setColor(victory ? 0x8fff6a : 0xff6a6a, 0x000000, 2.0f, true);
+    _overRank->setText("Rank #" + std::to_string(over.teamRank));
+
+    int teamKills = 0;
+    const PlayerStatsMsg* local = nullptr;
+    for (const auto& stats : over.playerStats) {
+        teamKills += stats.kills;
+        if (stats.playerId == localPlayerId) {
+            local = &stats;
+        }
+    }
+    std::string text = "Team kills: " + std::to_string(teamKills);
+    if (local) {
+        text += "\nKills: " + std::to_string(local->kills) + "   Damage: " + std::to_string(local->damageDealt);
+        text += "\nSurvived: " + formatTime(local->timeAlive);
+    }
+    _overStats->setText(text);
+
+    _overShown = true;
+    _bigMapVisible = false;
+    setVisible(_visible);
+}
+
 void Hud::displayPickupMessage(const std::string& text) {
     _lastPickup = text;
     _pickupTicker = text.empty() ? 0.0f : 3.0f;
@@ -411,6 +542,17 @@ void Hud::update(float dt, const Game& game, bool visible) {
         return;
     }
     setVisible(visible);
+
+    // Result screen (ui.ts displayStats): GameOverMsg latches until the next
+    // match resets the HUD.
+    if (const GameOverMsg* over = game.gameOver()) {
+        if (!_overShown) {
+            showGameOver(*over, game.teamIdForPlayer(game.getLocalPlayerId()), game.getLocalPlayerId());
+        }
+    } else if (_overShown) {
+        _overShown = false;
+        setVisible(_visible);
+    }
 
     // Transient messages fade on their own timer, even while hidden (the web
     // client keeps the state and only hides the DOM).

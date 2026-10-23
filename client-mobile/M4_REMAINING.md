@@ -1470,3 +1470,43 @@ flare now expects `+PI/2`, not `-PI/2`).
 
 - Visual check of a plane flyover and a ping edge indicator on device.
 - Particle/smoke rotations are random-angle cosmetics and were left alone.
+
+---
+
+## 26. Session 21 - gas timer and game-over overlay (2026-10-23)
+
+### 26.1 Gas timer
+
+Added the live HUD `#ui-gas-timer` counterpart: `GasHudState { active, moving,
+secondsLeft }` is pushed from `GameScene` (`Gas::duration * (1 - circleT)`) and
+`Hud::setGasState` formats it as `m:ss` under the minimap (white while waiting,
+red while moving, hidden while the gas is inactive), mirroring
+`ui.ts updateGasDisplay`.
+
+### 26.2 Result overlay
+
+`Hud::showGameOver(GameOverMsg, localTeamId, localPlayerId)` builds the
+`ui.ts displayStats` summary: VICTORY/DEFEAT, `Rank #N`, total team kills, and
+the local player's kills/damage/survival (`Hud::formatTime`). It renders a dim
+backdrop + centred panel above the HUD.
+
+The HUD was previously hidden as soon as `Game::_playing` went false, i.e. the
+frame `GameOverMsg` arrived, so the result could never be seen. `GameScene` now
+keeps the HUD visible while `_game->gameOver()` is set (`isPlaying() ||
+gameOver()`), and the overlay latches until the next match.
+
+### Verification
+
+- `surv_tests`: **133 tests, 2,219 assertions, 0 failures** (new:
+  `hud_gas_timer_and_result_overlay` covering `m:ss` formatting, gas
+  visibility and the defeat/victory result texts).
+- x86_64 native lib + APK built and launched into a live match; the gas was
+  still inactive during the short solo session so the timer stayed hidden (as
+  intended) and no crash occurred. The result overlay needs a match-over event
+  to be seen on device.
+
+### Still open
+
+- See the gas timer and result overlay in a match on device; decide whether the
+  result should wait for a tap before returning to the Java menu (today the
+  back button leaves).
