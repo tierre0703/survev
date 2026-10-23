@@ -15,8 +15,10 @@
 // NullPixi.
 #include "../core/Vec2.h"
 #include "../render/PixiLike.h"
+#include "EmoteManager.h"
 
 #include <string>
+#include <vector>
 
 namespace surv {
 
@@ -41,6 +43,11 @@ public:
     // Per-frame repaint (only the widgets whose value changed are touched).
     void update(float dt, const Game& game, bool visible);
 
+    // map.ts renderMap(): show the baked minimap texture under the frame.
+    void setMinimap(pix::RenderTexture* texture);
+    // ui.ts createPing / mapSprite.ts: draw the active minimap ping sprites.
+    void updateMapPings(const std::vector<MapPing>& pings, float mapWidth, float mapHeight);
+
     // #ui-pickup-message: shows 	ext for 3s (ui2.ts pickup duration).
     void displayPickupMessage(const std::string& text);
 
@@ -50,6 +57,13 @@ public:
     // Health fraction/colour as the web HUD interpolates them (ui2.ts
     // healthColourSteps); exposed for the host tests.
     static uint32_t healthColor(float health, bool downed);
+
+    // Diagnostics for the host tests (map.ts renderMap / ui.ts createPing).
+    const pix::Sprite* minimapSprite() const { return _minimap; }
+    const pix::Sprite* mapPingSprite(int idx) const {
+        return (idx >= 0 && idx < kMapPingPool) ? _mapPingSprites[idx] : nullptr;
+    }
+    const Vec2& minimapPos() const { return _minimapPos; }
 
 private:
     void layout(pix::Graphics* g, float w, float h) const;
@@ -65,6 +79,13 @@ private:
 
     pix::Container* _mapBox = nullptr;
     pix::Graphics* _mapFrame = nullptr;
+    pix::Sprite* _minimap = nullptr;
+    // Map ping sprites live in a container clipped to the minimap rect (the
+    // web's mapSpriteBarn sits inside the minimap container).
+    pix::Container* _mapPingLayer = nullptr;
+    pix::Graphics* _mapPingMask = nullptr;
+    static constexpr int kMapPingPool = 32;
+    pix::Sprite* _mapPingSprites[kMapPingPool] = {};
     pix::Text* _aliveText = nullptr;
     pix::Text* _killsText = nullptr;
 
@@ -76,6 +97,8 @@ private:
     pix::Text* _killFeedText = nullptr;
 
     Vec2 _design = Vec2(1280.0f, 720.0f);
+    // Bottom-left of the minimap frame in the centred HUD container.
+    Vec2 _minimapPos;
     bool _visible = false;
     bool _built = false;
 

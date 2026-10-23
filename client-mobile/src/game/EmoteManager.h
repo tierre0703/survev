@@ -52,6 +52,22 @@ struct PingIndicator {
     pix::Sprite* indSpriteInner = nullptr;
 };
 
+// A minimap ping sprite (client/src/ui/ui.ts createPing + objects/mapSprite.ts):
+// the ping def's map texture plus the expanding pulse ring. Hud draws these over
+// the baked minimap; EmoteManager owns the lifetimes.
+struct MapPing {
+    bool active = true;
+    bool pulse = false;
+    std::string texture;
+    Vec2 pos;
+    uint16_t playerId = 0;
+    uint32_t tint = 0xffffff;
+    float scale = 0.2f;
+    float life = 0.0f;
+    float maxLife = 0.0f;
+    float ticker = 0.0f;
+};
+
 class EmoteManager {
 public:
     EmoteManager();
@@ -83,6 +99,8 @@ public:
     const PingIndicator* indicator(int idx) const {
         return (idx >= 0 && idx < kPingIndicatorCount) ? &_indicators[static_cast<size_t>(idx)] : nullptr;
     }
+    // Active minimap ping sprites, drawn by game/Hud.
+    const std::vector<MapPing>& mapPings() const { return _mapPings; }
 
 private:
     static constexpr int kPingIndicatorCount = 6; // 4 team + airdrop + airstrike
@@ -98,6 +116,7 @@ private:
 
     std::vector<EmoteSprite> _emotePool;
     std::array<PingIndicator, kPingIndicatorCount> _indicators{};
+    std::vector<MapPing> _mapPings;
     int _zIdxNext = 0;
 
     // Outgoing queue

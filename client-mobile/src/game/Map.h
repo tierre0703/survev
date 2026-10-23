@@ -64,20 +64,14 @@ public:
     void setDecalBarn(DecalBarn* barn) { decalBarn = barn; }
 
     // minimap texture methods.
+    static constexpr float kMinimapTextureSize = 256.0f;
     void generateMinimapTexture(pix::Factory* factory, const Camera& camera);
     pix::RenderTexture* getMinimapTexture() const { return _mapTexture; }
     float getMinimapScale() const;
     void onFactoryReset();
 
-    // Back-pointer to the pix::Renderer for baking the minimap texture.
-    // Shared via GameWorld::loadMap. Using std::function to avoid a direct
-    // dependency on the engine-specific pix::Renderer class.
-    std::function<void(pix::Container*, pix::RenderTexture*, bool)> _minimapRenderFn;
-
     // Minimap texture (generated once on loadMap).
     pix::RenderTexture* _mapTexture = nullptr;
-    // Scratch graphics for minimap rendering.
-    pix::Graphics* _mapGfx = nullptr;
 
     // biome camera particle emitter (map.ts cameraEmitter), driven per frame.
     Emitter* cameraEmitter = nullptr;

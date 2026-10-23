@@ -971,7 +971,7 @@ with `pix::Graphics` at the screen centre (64 px art: 32 px long, 4 px thick).
 ### Still open from this area (as of session 11)
 
 - ~~Team-ping wheel input, ammo-specific ping emotes~~ — closed in §17.
-- Minimap ping sprites (still open; see §17 for the minimap blocker).
+- Minimap ping sprites (closed in §18; the minimap is now baked and displayed).
 - Crosshair style/colour from the loadout (only the default style is drawn).
 - `ui/FguiHud.*` remains unused (the live HUD is `game/Hud`); its gear/perk
   panels are not on screen yet.
@@ -1052,14 +1052,90 @@ fade-in branch re-asserts container alpha 1. Host test:
 
 ### Still open from this area
 
-- **Minimap ping sprites** (`ui.ts createPing` → `ping-map-*.img` +
-  `ping-map-pulse.img`). Blocked on the live HUD minimap: the top-right frame is
-  empty because `Map::generateMinimapTexture` is never baked
-  (`_minimapRenderFn` is unset, and `generateMinimapTexture` also mixes world
-  space terrain with minimap-space objects) and `Hud::build` receives no
-  minimap node. This should be its own session: wire a pix renderer for the
-  bake, fix the projection, add a render-texture sprite to `Hud`, then draw
-  `MapSprite` pings over it.
+- ~~**Minimap ping sprites**~~ — closed in §18 (the minimap is baked and the pings
+  are drawn over it).
 - Airstrike ping falloff in non-faction mode (`emote.ts rangeMult: 20`).
 - Faction-leader ping sound (`pingDef.soundLeader`): the def is codegen'd, but
   `GameWorld` does not receive `PlayerStatus.role` yet.
+
+---
+
+## 18. Session 13 - live minimap + map ping sprites (2026-10-23)
+
+Closes the minimap blocker from §17 and finishes the emote/ping feature set.
+
+### 18.1 RenderTexture adapter gaps
+
+The port already had `pix::RenderTexture`/`pix::Renderer`, but nothing had ever
+baked or displayed one. Two axmol details were required:
+
+- `AxRenderTexture::resize()` must **recreate** the framebuffer
+  (`ax::RenderTexture::create(w,h)`); axmol's `setContentSize` leaves the
+  texture at its constructor size (1×1 here), so every bake came out blank.
+- `AxSprite::setRenderTexture()` uses `Sprite::setTexture()` (a `SpriteFrame`
+  is not created for RenderTextures and `setSpriteFrame(nullptr)` crashes) and
+  must set the **texture rect** to the target size, otherwise the quad stays
+  zero-sized and draws nothing.
+
+`Factory::createRenderer()` was added (Ax/Null implementations) and
+`Sprite::setRenderTexture` / `RenderTexture::width()/height()` joined
+`PixiLike.h`.
+
+### 18.2 Minimap bake (`Map::generateMinimapTexture`)
+
+Ports `map.ts renderMap()` into a 256×256 texture:
+
+- Terrain is rendered at world scale into a node flipped around `y = height`
+  (`position.y = height; scale.y = -1`), with the grid thickness set to
+  `1 / mapScale` world units so it lands on ~1 texture pixel, plus the 2px map
+  border.
+- Obstacles/buildings use `MapObjectDef::mapShapes` (or the collision/bounding
+  fallback) through `colliderTransform(def collider, pos, oriToRad(ori),
+  objScale)`, sorted by `zIdx` (`def.img.zIdx` for obstacles, `750 + zIdx` for
+  buildings). The old code double-applied `shape.scale` and mixed texture-space
+  and world-space coordinates; both are fixed.
+- The whole graph is scaled by `256 / max(width, height)` and rendered by the
+  factory's `pix::Renderer`.
+
+`Hud::setMinimap()` displays the texture under the top-right frame (scale
+`kMinimapSize / 256`), called from the MapMsg callback after `loadMap`.
+
+### 18.3 Minimap ping sprites
+
+`EmoteManager` now keeps `MapPing` entries (the `ui.ts createPing` data):
+
+- Every ping spawns the def's `mapTexture` icon (`mapLife`) plus a
+  `ping-map-pulse.img` ring (`pingLife`, growing at `dt / 2.5`).
+- Player pings cancel that player's previous map sprites; map events
+  (airdrop/airstrike) stack. Tint is the group colour for our group and the
+  def tint for map events.
+- `Hud::updateMapPings()` draws them in `_mapPingLayer`, anchored at the
+  minimap corner and **masked to the 140×140 frame** (the 512px pulse art
+  otherwise spills across the screen), with the `mapSprite.ts` 0.1s fade-in /
+  0.5s fade-out.
+
+The world ping indicator also had two fixes while verifying: map-event pings
+apply their `worldDisplay` visibility immediately (a doomed world sprite could
+flash for a frame), and the indicator scales divide by `camera.m_z()` (the
+camera root's actual scale) instead of `m_ppu`.
+
+### Verification
+
+- `surv_tests`: **125 tests, 2,098 assertions, 0 failures** (new:
+  `map_minimap_texture_is_baked`, `map_pings_spawn_on_minimap_and_expire`,
+  `hud_minimap_positions_ping_sprites`).
+- x86_64 native lib + APK on the emulator: the top-right frame now shows the
+  baked map (water/beach/grass, rivers, buildings, grid); a locally injected
+  map-event + player ping (the dev server in this session stopped echoing
+  emotes entirely, including `emote_happyface`) drew the clipped icon/pulse in
+  the minimap and the world indicator without spilling. `logcat -b crash` empty.
+- Server echo of pings/emotes could not be re-verified after the mid-session
+  server restart (it also dropped ordinary emotes); the client-side add/send
+  path and the host tests are green.
+
+### Still open
+
+- Player/teammate dots and the gas ring on the minimap (`ui.ts` player map
+  sprites / `getMinimapRender` name labels).
+- Big map (full-screen) view.
+- Airstrike ping falloff and faction-leader ping sounds (see §17).

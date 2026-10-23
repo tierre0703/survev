@@ -1,6 +1,7 @@
 #include "Hud.h"
 
 #include "Game.h"
+#include "EmoteManager.h"
 
 #include <algorithm>
 #include <cmath>
@@ -162,6 +163,7 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design,
     const float mm = kMinimapSize;
     const float mmX = vw - mm - 12.0f;
     const float mmY = vh - mm - 12.0f;
+    _minimapPos = Vec2(X(mmX), Y(mmY));
     _mapFrame->clear();
     _mapFrame->lineStyle(2.0f, 0xffffff, 0.6f);
     _mapFrame->drawRect(X(mmX), Y(mmY), mm, mm);
@@ -241,10 +243,111 @@ void Hud::setVisible(bool visible) {
     if (!visible) {
         show(_pickupText);
     }
+    if (_minimap) {
+        _minimap->setVisible(visible);
+    }
+    if (_mapPingLayer) {
+        _mapPingLayer->setVisible(visible);
+    }
+    for (auto* ping : _mapPingSprites) {
+        if (ping) {
+            ping->setVisible(visible);
+        }
+    }
 }
 
-void Hud::displayPickupMessage(const std::string& text) {
-    _lastPickup = text;
+void Hud::setMinimap(pix::RenderTexture* texture) {
+    if (!_built || !_root || !texture) {
+        return;
+    }
+    if (!_minimap) {
+        _minimap = _factory->createSprite();
+        _minimap->setAnchor(0.0f, 0.0f);
+        // Under the frame border (map.ts's minimap sits inside #ui-map-wrapper).
+        int idx = _mapFrame ? _root->getChildIndex(_mapFrame) : -1;
+        if (idx < 0) {
+            idx = static_cast<int>(_root->childCount());
+        }
+        _root->addChildAt(_minimap, idx);
+    }
+    _minimap->setRenderTexture(texture);
+    const float texW = texture->width();
+    const float scale = texW > 0.0f ? kMinimapSize / texW : 1.0f;
+    _minimap->setScale(scale, scale);
+    _minimap->setPosition(_minimapPos.x, _minimapPos.y);
+    _minimap->setLocalZOrder(0);
+    _minimap->setVisible(_visible);
+}
+
+void Hud::updateMapPings(const std::vector<MapPing>& pings, float mapWidth, float mapHeight) {
+    if (!_built || !_root) {
+        return;
+    }
+    if (!_mapPingLayer) {
+        _mapPingLayer = _factory->createContainer();
+        int idx = _mapFrame ? _root->getChildIndex(_mapFrame) : -1;
+        if (idx < 0) {
+            idx = static_cast<int>(_root->childCount());
+        }
+        _root->addChildAt(_mapPingLayer, idx);
+        _mapPingLayer->setPosition(_minimapPos.x, _minimapPos.y);
+        _mapPingMask = _factory->createGraphics();
+        _mapPingMask->beginFill(0xffffff, 1.0f);
+        _mapPingMask->drawRect(0.0f, 0.0f, kMinimapSize, kMinimapSize);
+        _mapPingMask->endFill();
+        // The pulse art is 512px and grows past the frame; the web clips
+        // mapSpriteBarn to the minimap container.
+        _mapPingLayer->setMask(_mapPingMask);
+        _mapPingLayer->setVisible(_visible);
+    }
+    int used = 0;
+    if (_visible && _minimap && mapWidth > 0.0f && mapHeight > 0.0f) {
+        // The map ping sprites are authored for map.ts's screenScale texture
+        // (map.ts renderMap uses device screen height); the HUD minimap is
+        // kMinimapSize, so scale the ping art by the texture ratio.
+        const float pingScale = kMinimapSize / 256.0f;
+        for (const auto& ping : pings) {
+            if (!ping.active || ping.texture.empty() || used >= kMapPingPool) {
+                continue;
+            }
+            pix::Sprite* sprite = _mapPingSprites[used];
+            if (!sprite) {
+                sprite = _factory->createSprite();
+                sprite->setAnchor(0.5f, 0.5f);
+                _mapPingLayer->addChild(sprite);
+                _mapPingSprites[used] = sprite;
+            }
+            const float x = (ping.pos.x / mapWidth) * kMinimapSize;
+            const float y = (ping.pos.y / mapHeight) * kMinimapSize;
+            sprite->setPosition(x, y);
+            sprite->setFrame(ping.texture);
+            const float s = ping.scale * pingScale;
+            sprite->setScale(s, s);
+            sprite->setTint(ping.tint);
+
+            // mapSprite.ts: fade in over 0.1s, then fade out over the last 0.5s.
+            float alpha = 1.0f;
+            if (ping.ticker < 0.1f) {
+                alpha = ping.ticker / 0.1f;
+            }
+            if (ping.life < 0.5f) {
+                alpha = std::min(alpha, std::max(ping.life / 0.5f, 0.0f));
+            }
+            sprite->setAlpha(alpha);
+            // Pulses under their icon (mapSprite.zOrder 99 vs 100).
+            sprite->setLocalZOrder(ping.pulse ? 0 : 1);
+            sprite->setVisible(true);
+            ++used;
+        }
+    }
+    for (int i = used; i < kMapPingPool; ++i) {
+        if (_mapPingSprites[i]) {
+            _mapPingSprites[i]->setVisible(false);
+        }
+    }
+}
+
+void Hud::displayPickupMessage(const std::string& text) {    _lastPickup = text;
     _pickupTicker = text.empty() ? 0.0f : 3.0f;
     if (_pickupText) {
         _pickupText->setText(text);

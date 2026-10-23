@@ -6,6 +6,8 @@
 #include "../render/PixiLike.h"
 #include "objects/Barns.h"
 
+#include <algorithm>
+
 namespace surv {
 
 // Pull in the DefProvider for game object lookups at runtime.
@@ -19,6 +21,7 @@ EmoteManager::~EmoteManager() = default;
 void EmoteManager::reset() {
     _outgoing.clear();
     _emotePool.clear();
+    _mapPings.clear();
     _zIdxNext = 0;
     for (auto& ind : _indicators) {
         ind.displayed = false;
@@ -161,6 +164,39 @@ void EmoteManager::addPing(const Emote& msg, bool factionMode, GameWorld& ctx) {
         ? pingDef->tint
         : (indicatorIdx >= 0 && indicatorIdx < 4 ? kGroupColors[indicatorIdx] : 0xffffff);
 
+    // Minimap ping sprites (ui.ts createPing / mapSprite.ts). A new ping from
+    // the same player cancels that player's previous ping; map events can stack.
+    if (pingDef->pingMap && !pingDef->mapTexture.empty()) {
+        if (!pingDef->mapEvent) {
+            for (auto& mp : _mapPings) {
+                if (mp.active && mp.playerId == msg.playerId) {
+                    mp.active = false;
+                }
+            }
+        }
+        const Vec2 pos = msg.hasPos ? msg.pos : Vec2(0, 0);
+        MapPing icon;
+        icon.texture = pingDef->mapTexture;
+        icon.pos = pos;
+        icon.playerId = msg.playerId;
+        icon.tint = tint;
+        icon.scale = pingDef->mapEvent ? 0.3f : 0.2f;
+        icon.life = pingDef->mapLife;
+        icon.maxLife = pingDef->mapLife;
+        _mapPings.push_back(icon);
+
+        MapPing pulse;
+        pulse.pulse = true;
+        pulse.texture = "ping-map-pulse.img";
+        pulse.pos = pos;
+        pulse.playerId = msg.playerId;
+        pulse.tint = tint;
+        pulse.scale = 0.0f;
+        pulse.life = pingDef->pingLife;
+        pulse.maxLife = pingDef->pingLife;
+        _mapPings.push_back(pulse);
+    }
+
     if (indicatorIdx >= 0 && indicatorIdx < kPingIndicatorCount) {
         PingIndicator* ind = &_indicators[indicatorIdx];
 
@@ -210,6 +246,11 @@ void EmoteManager::addPing(const Emote& msg, bool factionMode, GameWorld& ctx) {
         ind->mapEvent = pingDef->mapEvent;
         ind->worldDisplay = pingDef->worldDisplay;
         ind->displayed = false;
+        // Apply visibility now: the indicator is added to the renderer on the
+        // next update, and the web's map-event pings (worldDisplay=false) must
+        // never flash their world sprite for a frame.
+        ind->pingContainer->setVisible(pingDef->worldDisplay);
+        ind->indContainer->setVisible(!(msg.playerId == ctx.activePlayerId()) || pingDef->mapEvent);
         // A reused slot may still carry the previous ping's fade-out alpha;
         // without this every ping after a faded-out one was nearly invisible.
         ind->pingContainer->setAlpha(1.0f);
@@ -352,8 +393,11 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             // The indicator nodes live under the camera-transformed world root,
             // so the web's screen-space positions/scales are converted here.
             const Vec2 worldPos = camera.m_screenToPoint(screenPos);
-            float borderScale = camera.m_pixels(0.4f) / camera.m_ppu;
-            float pingScale = camera.m_pixels(0.4f) / camera.m_ppu;
+            // The web scales indicators in screen space with camera.m_pixels;
+            // these nodes live under the camera-transformed world root, whose
+            // scale is m_z = m_ppu * m_zoom, so divide by m_z.
+            float borderScale = camera.m_pixels(0.4f) / camera.m_z();
+            float pingScale = camera.m_pixels(0.4f) / camera.m_z();
 
             ind.borderSprite->setScale(borderScale, borderScale);
             ind.pingSprite->setScale(pingScale, pingScale);
@@ -383,7 +427,7 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             // Pulse effect on border
             float pulseAlpha = ind.borderSprite->getAlpha() <= 0 ? 1 : ind.borderSprite->getAlpha() - dt;
             ind.borderSprite->setAlpha(pulseAlpha);
-            float pulseScale = camera.m_pixels(0.4f * (2 - pulseAlpha)) / camera.m_ppu;
+            float pulseScale = camera.m_pixels(0.4f * (2 - pulseAlpha)) / camera.m_z();
             ind.borderSprite->setScale(pulseScale, pulseScale);
 
             // Fade in/out
@@ -421,6 +465,25 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             ind.displayed = false;
         }
     }
+
+    // Minimap ping sprites (mapSprite.ts MapSpriteBarn.update): the icon fades
+    // in/out with its mapLife, and the pulse ring grows at dt/2.5.
+    for (auto& mp : _mapPings) {
+        if (!mp.active) {
+            continue;
+        }
+        mp.ticker += dt;
+        mp.life -= dt;
+        if (mp.pulse) {
+            mp.scale += dt / 2.5f;
+        }
+        if (mp.life <= 0.0f) {
+            mp.active = false;
+        }
+    }
+    _mapPings.erase(
+        std::remove_if(_mapPings.begin(), _mapPings.end(), [](const MapPing& mp) { return !mp.active; }),
+        _mapPings.end());
 }
 
 } // namespace surv

@@ -397,6 +397,8 @@ public:
             _sprite->setTexture(frameName);
         }
     }
+    // PIXI.Sprite.from(renderTexture): share the RenderTexture's texture.
+    void setRenderTexture(RenderTexture* rt) override;
     // Point size of the frame. axmol's getContentSize() is the sprite frame's
     // rect divided by its texture's content scale, i.e. exactly PIXI's
     // `sheet.resolution`-corrected width; world objects are sized from it and
@@ -536,6 +538,8 @@ public:
         if (_rt) {
             _rt->retain();
         }
+        _w = w;
+        _h = h;
     }
     ~AxRenderTexture() override {
         if (_rt) {
@@ -543,13 +547,49 @@ public:
         }
     }
     void resize(float width, float height) override {
-        _rt->setContentSize(ax::Size(width, height));
+        const int w = width > 1.0f ? static_cast<int>(width) : 1;
+        const int h = height > 1.0f ? static_cast<int>(height) : 1;
+        if (_rt && _w == w && _h == h) {
+            return;
+        }
+        // setContentSize() does not reallocate the framebuffer; recreate the
+        // render target at the requested size.
+        if (_rt) {
+            _rt->release();
+        }
+        _rt = ax::RenderTexture::create(w, h);
+        if (_rt) {
+            _rt->retain();
+        }
+        _w = w;
+        _h = h;
     }
+    float width() const override { return static_cast<float>(_w); }
+    float height() const override { return static_cast<float>(_h); }
     ax::RenderTexture* get() const { return _rt; }
 
 private:
     ax::RenderTexture* _rt = nullptr;
+    int _w = 1;
+    int _h = 1;
 };
+
+inline void AxSprite::setRenderTexture(RenderTexture* rt) {
+    auto* axRt = dynamic_cast<AxRenderTexture*>(rt);
+    if (!axRt || !axRt->get()) {
+        return;
+    }
+    // setTexture replaces the current SpriteFrame (the RenderTexture's own
+    // sprite carries the captured texture). Sprite::setTexture does not resize
+    // the quad, so set the texture rect to the render target's size; otherwise
+    // the sprite keeps a zero-size rect and draws nothing.
+    auto* tex = axRt->get()->getSprite()->getTexture();
+    _sprite->setTexture(tex);
+    if (tex) {
+        const ax::Size size = tex->getContentSize();
+        _sprite->setTextureRect(ax::Rect(0.0f, 0.0f, size.width, size.height));
+    }
+}
 
 class AxRenderer : public Renderer {
 public:
@@ -637,6 +677,12 @@ public:
         _textures.emplace_back(rt);
         return rt;
     }
+    Renderer* createRenderer() override {
+        if (!_renderer) {
+            _renderer = std::make_unique<AxRenderer>();
+        }
+        return _renderer.get();
+    }
 
 private:
     template <class T>
@@ -646,6 +692,7 @@ private:
     }
     std::vector<std::unique_ptr<Node>> _nodes;
     std::vector<std::unique_ptr<RenderTexture>> _textures;
+    std::unique_ptr<AxRenderer> _renderer;
 };
 
 } // namespace pix

@@ -218,13 +218,18 @@ class NullSprite : public NullNodeImpl<Sprite> {
 public:
     int kind() const override { return kKindSprite; }
     std::string frame;
+    RenderTexture* texture = nullptr;
     void setFrame(const std::string& f) override { frame = f; }
+    void setRenderTexture(RenderTexture* rt) override {
+        texture = rt;
+        frame.clear();
+    }
     const std::string& getFrame() const { return frame; }
     uint getTint() const { return tint; }
     float getScaleX() const { return sx; }
     float getScaleY() const { return sy; }
-    float sourceWidth() const override { return 1.0f; }
-    float sourceHeight() const override { return 1.0f; }
+    float sourceWidth() const override { return texture ? texture->width() : 1.0f; }
+    float sourceHeight() const override { return texture ? texture->height() : 1.0f; }
 };
 
 class NullText : public NullNodeImpl<Text> {
@@ -258,11 +263,13 @@ public:
 
 class NullRenderTexture : public RenderTexture {
 public:
-    float width = 1.0f, height = 1.0f;
+    float texWidth = 1.0f, texHeight = 1.0f;
     void resize(float w, float h) override {
-        width = w;
-        height = h;
+        texWidth = w;
+        texHeight = h;
     }
+    float width() const override { return texWidth; }
+    float height() const override { return texHeight; }
 };
 
 class NullRenderer : public Renderer {
@@ -287,6 +294,13 @@ public:
         _textures.emplace_back(rt);
         return rt;
     }
+    Renderer* createRenderer() override {
+        if (!_renderer) {
+            _renderer = std::make_unique<NullRenderer>();
+        }
+        return _renderer.get();
+    }
+    NullRenderer* renderer() const { return _renderer.get(); }
     void clearNodes() override {
         for (auto& node : _nodes) {
             delete node.release();
@@ -307,6 +321,7 @@ private:
     }
     std::vector<std::unique_ptr<Node>> _nodes;
     std::vector<std::unique_ptr<RenderTexture>> _textures;
+    std::unique_ptr<NullRenderer> _renderer;
 };
 
 } // namespace pix

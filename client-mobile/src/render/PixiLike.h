@@ -22,6 +22,8 @@ namespace pix {
 
 using uint = uint32_t;
 
+class RenderTexture;
+
 enum class BlendMode {
     Normal,
     Add,
@@ -112,6 +114,8 @@ public:
 class Sprite : public virtual Node {
 public:
     virtual void setFrame(const std::string& frameName) = 0;
+    // PIXI.Sprite.from(renderTexture): show a baked texture (the minimap).
+    virtual void setRenderTexture(RenderTexture* rt) = 0;
     // Source size in pixels (PIXI sprite.width/height), used to convert a
     // world-space radius into a sprite scale.
     virtual float sourceWidth() const = 0;
@@ -144,6 +148,8 @@ class RenderTexture {
 public:
     virtual ~RenderTexture() = default;
     virtual void resize(float width, float height) = 0;
+    virtual float width() const = 0;
+    virtual float height() const = 0;
 };
 
 // PIXI.IRenderer equivalent.
@@ -163,6 +169,9 @@ public:
     virtual Text* createText() = 0;
     virtual Container* createContainer() = 0;
     virtual RenderTexture* createRenderTexture() = 0;
+    // PIXI.IRenderer equivalent, owned by the factory. Used by the minimap
+    // bake (map.ts renderMap). Never null.
+    virtual Renderer* createRenderer() = 0;
 
     // Releases every node this factory created. A factory that keeps its nodes
     // in a member list must destroy them from here (which its destructor

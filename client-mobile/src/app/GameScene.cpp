@@ -327,6 +327,10 @@ bool GameScene::init() {
             // The world (and its terrain node) was attached by resetWorld()
             // before this MapMsg arrived; loadMap renders the terrain in place.
             _world->loadMap(msg);
+            // map.ts renderMap(): the minimap texture is baked during loadMap.
+            if (_hud) {
+                _hud->setMinimap(_world->map().getMinimapTexture());
+            }
         }
     });
     _game->setUpdateCallback([this](const UpdateMsg& msg) {
@@ -801,6 +805,12 @@ void GameScene::update(float delta) {
     // web client's stale flag.
     if (_hud) {
         _hud->update(delta, *_game, _inGame && _notifiedStarted && _game->isPlaying());
+        // ui.ts createPing / mapSprite.ts: minimap ping sprites over the baked
+        // map texture (EmoteManager owns their lifetimes).
+        if (_world) {
+            _hud->updateMapPings(_world->emoteManager().mapPings(),
+                                 _world->map().width, _world->map().height);
+        }
     }
     // Emote wheel: same visibility rule as the HUD; refresh the loadout each
     // frame (cheap, it only rebuilds when the JoinedMsg emotes changed).

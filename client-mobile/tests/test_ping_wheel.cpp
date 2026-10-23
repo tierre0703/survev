@@ -5,6 +5,7 @@
 #include "game/PingWheel.h"
 #include "game/GameWorld.h"
 #include "game/EmoteManager.h"
+#include "game/Hud.h"
 #include "net/Messages.h"
 #include "render/Defs.h"
 #include "render/GeneratedDefs.h"
@@ -216,4 +217,143 @@ TEST(ping_manager_resets_indicator_alpha_on_reuse) {
     CHECK_NEAR(ind->pingContainer->getAlpha(), 1.0f, 0.001f);
     CHECK_NEAR(ind->indContainer->getAlpha(), 1.0f, 0.001f);
     CHECK_NEAR(ind->pingSprite->getAlpha(), 1.0f, 0.001f);
+}
+
+namespace {
+
+MapMsg minimapMap() {
+    MapMsg msg;
+    msg.mapName = "main";
+    msg.seed = 123456;
+    msg.width = 512.0f;
+    msg.height = 512.0f;
+    msg.shoreInset = 4.0f;
+    msg.grassInset = 2.0f;
+    return msg;
+}
+
+} // namespace
+
+TEST(map_minimap_texture_is_baked) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(minimapMap());
+
+    pix::RenderTexture* tex = world.map().getMinimapTexture();
+    CHECK(tex != nullptr);
+    CHECK_NEAR(tex->width(), 256.0f, 0.001f);
+    CHECK_NEAR(tex->height(), 256.0f, 0.001f);
+    CHECK_NEAR(world.map().getMinimapScale(), 0.5f, 0.001f);
+    // The bake must actually reach the adapter renderer.
+    CHECK(factory.renderer() != nullptr);
+    CHECK(factory.renderer()->renderCount >= 1);
+}
+
+TEST(map_pings_spawn_on_minimap_and_expire) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(minimapMap());
+    EmoteManager& manager = world.emoteManager();
+
+    Emote playerPing;
+    playerPing.isPing = true;
+    playerPing.type = "ping_danger";
+    playerPing.hasPos = true;
+    playerPing.playerId = 7;
+    playerPing.pos = Vec2(100.0f, 100.0f);
+    manager.addPing(playerPing, false, world);
+
+    CHECK_EQ(manager.mapPings().size(), size_t(2)); // icon + pulse
+    const MapPing& icon = manager.mapPings()[0];
+    const MapPing& pulse = manager.mapPings()[1];
+    CHECK(!icon.pulse);
+    CHECK_EQ(icon.texture, std::string("ping-map-danger.img"));
+    CHECK_NEAR(icon.life, 4.0f, 0.001f);
+    CHECK_NEAR(icon.scale, 0.2f, 0.001f);
+    CHECK_EQ(icon.tint, 0xffffffu);
+    CHECK(pulse.pulse);
+    CHECK_EQ(pulse.texture, std::string("ping-map-pulse.img"));
+    CHECK_NEAR(pulse.life, 4.0f, 0.001f);
+
+    // A newer ping from the same player replaces the older map sprites.
+    playerPing.type = "ping_help";
+    manager.addPing(playerPing, false, world);
+    int active = 0;
+    for (const auto& mp : manager.mapPings()) {
+        active += mp.active ? 1 : 0;
+    }
+    CHECK_EQ(active, 2);
+    manager.update(0.1f, world);
+    CHECK_EQ(manager.mapPings().size(), size_t(2));
+    CHECK_EQ(manager.mapPings()[0].texture, std::string("ping-map-help.img"));
+
+    // Map events (airdrop) keep the def tint and stack with player pings.
+    Emote airdrop;
+    airdrop.isPing = true;
+    airdrop.type = "ping_airdrop";
+    airdrop.hasPos = true;
+    airdrop.playerId = 7;
+    airdrop.pos = Vec2(200.0f, 200.0f);
+    manager.addPing(airdrop, false, world);
+    bool sawAirdrop = false;
+    for (const auto& mp : manager.mapPings()) {
+        if (!mp.pulse && mp.texture == "ping-map-airdrop.img") {
+            sawAirdrop = true;
+            CHECK_EQ(mp.tint, 0xff6600u);
+            CHECK_NEAR(mp.scale, 0.3f, 0.001f);
+            CHECK_NEAR(mp.life, 10.0f, 0.001f);
+        }
+    }
+    CHECK(sawAirdrop);
+
+    // Everything expires (mapLife <= 10s).
+    manager.update(11.0f, world);
+    CHECK(manager.mapPings().empty());
+}
+
+TEST(hud_minimap_positions_ping_sprites) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    auto* rt = static_cast<pix::NullRenderTexture*>(factory.createRenderTexture());
+    rt->resize(256.0f, 256.0f);
+    hud.setMinimap(rt);
+    hud.setVisible(true);
+
+    const auto* mini = static_cast<const pix::NullSprite*>(hud.minimapSprite());
+    CHECK(mini != nullptr);
+    CHECK(mini->texture == rt);
+    CHECK_NEAR(mini->sx, Hud::kMinimapSize / 256.0f, 0.001f);
+    // Bottom-left of the top-right 140px frame (design 1280x720, centred).
+    CHECK_NEAR(mini->x, (1280.0f - Hud::kMinimapSize - 12.0f) - 640.0f, 0.01f);
+    CHECK_NEAR(mini->y, (720.0f - Hud::kMinimapSize - 12.0f) - 360.0f, 0.01f);
+
+    std::vector<MapPing> pings(1);
+    pings[0].texture = "ping-map-danger.img";
+    pings[0].pos = Vec2(256.0f, 256.0f); // map centre
+    pings[0].tint = 0xffff00;
+    pings[0].scale = 0.2f;
+    pings[0].life = 4.0f;
+    pings[0].maxLife = 4.0f;
+    pings[0].ticker = 1.0f;
+    hud.updateMapPings(pings, 512.0f, 512.0f);
+
+    const auto* sprite = static_cast<const pix::NullSprite*>(hud.mapPingSprite(0));
+    CHECK(sprite != nullptr);
+    CHECK(sprite->visible);
+    CHECK_EQ(sprite->frame, std::string("ping-map-danger.img"));
+    // Positions are local to the clipped layer anchored at the minimap corner.
+    CHECK_NEAR(sprite->x, Hud::kMinimapSize * 0.5f, 0.01f);
+    CHECK_NEAR(sprite->y, Hud::kMinimapSize * 0.5f, 0.01f);
+    CHECK_NEAR(sprite->sx, 0.2f * Hud::kMinimapSize / 256.0f, 0.001f);
+    CHECK_EQ(sprite->getTint(), 0xffff00u);
+
+    // Hidden HUD hides the map ping sprites again.
+    hud.setVisible(false);
+    hud.updateMapPings(pings, 512.0f, 512.0f);
+    CHECK(!sprite->visible);
 }

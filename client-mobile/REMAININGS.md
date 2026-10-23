@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 12 (`M4_REMAINING.md` §17) implemented the team-ping wheel end to end: `PingDefs` are codegen'd (`PingRenderDef`), an on-screen ping button opens the six-selector wheel (danger/coming/help pings + medical/ammo team emotes), ammo emotes follow the equipped weapon's ammo type, and ping indicators use the def's texture/tint/lifetimes/sound. It also fixed a reused indicator inheriting the previous ping's fade-out alpha. **122 host tests pass, 0 fail.** Remaining gap in this area: map ping sprites (they need the live HUD minimap display, which is still not wired — see §3).
+Latest recorded state: **2026-10-23** — Session 13 (`M4_REMAINING.md` §18) closed the minimap gap: `Map::generateMinimapTexture` now bakes the real map (terrain + object shapes) into a 256×256 RenderTexture, `Hud` displays it under the top-right frame, and `EmoteManager` map pings (`ping-map-*.img` + `ping-map-pulse.img`) are drawn in a container clipped to the minimap. Session 12 (`M4_REMAINING.md` §17) added the team-ping wheel (`PingRenderDef` codegen, six selectors, ammo-specific emotes) and fixed a reused-indicator fade bug. **125 host tests pass, 0 fail.**
 
 ---
 
@@ -46,7 +46,7 @@ Latest recorded state: **2026-10-23** — Session 12 (`M4_REMAINING.md` §17) im
 | `shared/defs/*` → `render/GeneratedDefs.cpp` (codegen) | ✅ generated |
 | `client/src/camera.ts` → `render/Camera.h` | ✅ |
 | `client/src/renderer.ts` → `render/Renderer.*` | ✅ |
-| `client/src/map.ts` → `game/Map.*` | ✅ terrain, surfaces, pools, camera emitter; **minimap/big map not ported** |
+| `client/src/map.ts` → `game/Map.*` | ✅ terrain, surfaces, pools, camera emitter, baked minimap texture; **big map (full-screen) not ported** |
 | `client/src/gas.ts` → `game/Gas.*` | ✅ |
 | `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | ✅ |
 | `client/src/objects/objectPool.ts` → `game/objects/GameObject.h` | ✅ |
@@ -80,7 +80,7 @@ Latest recorded state: **2026-10-23** — Session 12 (`M4_REMAINING.md` §17) im
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | ✅ |
 | `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | ✅ health/boost, weapon cards, ammo, alive/kills, kill feed, pickup message |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
-| `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) | **map ping sprites remain** (needs the live HUD minimap display) |
+| `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | ❌ **not ported** |
 | `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | ❌ **not ported** (BT keyboard/controller) |
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ❌ **not wired** — `Player` lacks surface/step/action state |
@@ -151,7 +151,7 @@ Latest recorded state: **2026-10-23** — Session 12 (`M4_REMAINING.md` §17) im
   - Centered semi-transparent panel
   - Rank #N + local player kills + damage
   - Toggled via `Game::gameOver()` presence
-- [x] **Minimap** (render from `RenderTexture`)
+- [x] **Minimap** (render from `RenderTexture`) — live HUD: baked 256×256 map texture under the top-right frame (`Map::generateMinimapTexture` + `Hud::setMinimap`)
 - [x] **Squad health bars** (4 team member health bars with status indicators)
 - [x] **FguiPadGraphics touch pads** — real pad sprites (FGUI GGraph circles):
   - Center ring (GGraph drawEllipse, blue for move, orange for aim, semi-transparent)
@@ -216,10 +216,9 @@ Latest recorded state: **2026-10-23** — Session 12 (`M4_REMAINING.md` §17) im
         soundLeader/lifetimes/worldDisplay/mapEvent/tint from `pingDefs.ts`;
         `EmoteManager::addPing` now resolves the group indicator slot, group
         tint, edge indicator visibility, and resets fade-out alpha on reuse
-  - [ ] Map ping sprites (minimap dot from ping sprite barn) — blocked on the
-        live HUD minimap display: `Map::generateMinimapTexture` is not baked
-        (`_minimapRenderFn` is never set) and `Hud` is built without a minimap
-        node, so the top-right frame is empty. Track that as its own task.
+  - [x] **Map ping sprites** (minimap dot from ping sprite barn) — `EmoteManager`
+        stores def map textures + pulse rings, `Hud` draws them in a container
+        clipped to the minimap (session 13)
   - [x] Emote sound playback on addEmote
 
 - [x] **FairyGUI touch pads** (`FguiPadGraphics.*`) — implement:
@@ -266,7 +265,7 @@ Latest recorded state: **2026-10-23** — Session 12 (`M4_REMAINING.md` §17) im
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (122 tests, 0 failures expected)
+# host tests (125 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -297,3 +296,6 @@ node tools/build-gui-icons.mjs
 - Layer-index clamping (`0..3`)
 - Quoted `-DANDROID_ABI` in `build-native.ps1`
 - `src/app/UiBridge.cpp` excluded from host build
+- `AxRenderTexture::resize` recreates the framebuffer (axmol `setContentSize` does not)
+- `AxSprite::setRenderTexture` sets the texture rect (axmol `setTexture` keeps a zero-size quad)
+- Minimap ping sprites stay in the masked layer (the 512px pulse ring spills otherwise)
