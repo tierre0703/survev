@@ -10,9 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 23 added gear/perk icons to the live HUD (`Hud::setGearState`, top-left helmet/chest/backpack + perk frames). Device testing exposed a **new high-priority bug**: the active player's full-object fields arrive misaligned (`outfit=usas`, `backpack=emote_pumpkin`, `weapon=helmet04_...`), so the initial gear cannot be read; a dump/decode of a server `UpdateMsg` is the next step. Earlier: §22 squad bars, §21 gas/result, §20 rotations. **135 host tests pass, 0 fail.**
-
-> **Next priority: fix the player full-object desync** (see §3, Priority 1). It likely also affects outfit/skin/held-weapon/role/perk rendering.
+Latest recorded state: **2026-10-23** — Session 24 fixed a **stale `src/net/generatedDefs.inc`**: it contained 757 game types while the server registry has 676, so every game-type id (outfit, backpack, weapon, loot, emotes, roles, perks) decoded to the wrong name. Regenerating it (and the TS reference fixtures) restored correct ids; the gear/perk HUD now shows the default backpack and loot renders as the right items. Earlier: §23 gear HUD, §22 squad bars, §21 gas/result. **135 host tests pass, 0 fail.**
 
 ---
 
@@ -105,13 +103,13 @@ Latest recorded state: **2026-10-23** — Session 23 added gear/perk icons to th
 
 ### Priority 1 — Core gameplay gaps (most noticeable)
 
-- [ ] **Active player full-object desync** — the first `UpdateMsg` player object is
-      decoded with shifted fields (`outfit=usas`, `backpack=emote_pumpkin`,
-      `helmet=""`, `activeWeapon=helmet04_last_man_red` on a normal outfit).
-      Positions/IDs are correct; only the full stream looks off. This blocks
-      initial gear/perk/outfit/held-weapon/role data (gear HUD only updates after
-      part-update pickups). Next step: dump a server `UpdateMsg` frame and decode
-      it with `shared/net/updateMsg.ts` to compare byte/bit offsets.
+- [x] **Active player full-object desync** — cause was a stale
+      `src/net/generatedDefs.inc` (757 game types vs the server's 676), so every
+      `gameType` id mapped to a different name. Regenerated with
+      `node --experimental-transform-types tools/codegen_defs.mjs
+      src/net/generatedDefs.inc` and refreshed `tests/ReferenceData.h`; ids now
+      match `GameObjectDefs.typeToId` exactly (e.g. outfitBase 409, backpack00
+      253). Loot/gear/outfit/weapon/emote decoding verified on device.
 
 - [x] **Player action sounds** — extend `Player` struct with:
   - `surface` type (from `Map::getGroundSurface`)

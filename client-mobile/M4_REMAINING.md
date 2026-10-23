@@ -1565,6 +1565,9 @@ frames are the codegen'd gear/perk frames (`loot-helmet-*`, `loot-pack-*`,
 
 ### 28.2 New bug: player full-object fields are misaligned
 
+> **Fixed in §29:** the cause was the stale `generatedDefs.inc` type table, not
+> the bit offsets. Regenerating it restored the ids.
+
 On device the gear row stayed empty. A temporary log of the active player's
 `fullObjects` entry showed:
 
@@ -1595,3 +1598,59 @@ the offset.
   the active-player gear extraction assertions).
 - x86_64 APK built/installed; the HUD change is inert when gear is empty and the
   desync remains the blocker for the initial icons.
+
+---
+
+## 29. Session 24 - stale game-type ids fixed (2026-10-23)
+
+### 29.1 Diagnosis
+
+The §28 "full-object desync" was not a bit-offset bug: `UpdateMsg` positions,
+IDs, sections and the partial stream were all correct. Dumping the packed
+`Joined+Map+AliveCounts+Update` frame and decoding it with the **shared TS**
+code showed the server's player object was correct
+(`outfitBase`, `backpack00`, `fists`, ...), while the native parser produced
+`outfit=usas`, `backpack=emote_pumpkin`, `activeWeapon=helmet04_...`.
+
+The cause was `src/net/generatedDefs.inc`: it contained **757** game types while
+`GameObjectDefs.getAllTypes()` has **676**. Every `readGameType()` id therefore
+resolved to a different name:
+
+```
+outfitBase   server 409   native 489
+backpack00   server 253   native 333
+fists        server 362   native 442
+usas         server 329   native 409   <- why outfitBase became "usas"
+```
+
+This silently affected every game type: loot, weapons, outfits, skins, emotes,
+roles and perks. Map types were still aligned, which is why terrain/obstacles
+looked right.
+
+### 29.2 Fix
+
+```sh
+cd client-mobile
+node --experimental-transform-types tools/codegen_defs.mjs src/net/generatedDefs.inc
+node --experimental-transform-types tools/gen_reference.mjs
+```
+
+The regenerated table has 676 game types (check: `outfitBase=409`,
+`backpack00=253`, `fists=362`, `usas=329`) and the reference fixtures were
+regenerated from the shared TS code. No parser changes were needed (the
+`handleJoined` active-id seeding/fallback from §28 stays as hardening).
+
+### Verification
+
+- `surv_tests`: **135 tests, 2,244 assertions, 0 failures**. The protocol
+  fixtures fail against the stale table and pass after regeneration.
+- x86_64 APK on the emulator: the default backpack icon now appears in the
+  gear HUD, and world loot renders as the correct items (previously mapped to
+  unrelated defs). `logcat -b crash` empty.
+
+### Still open
+
+- Verify loot/weapon/emote/role UI against the web client in a longer match;
+  the id mapping itself now matches the server exactly.
+- Keep `codegen_defs.mjs` in the build/verification checklist whenever
+  `shared/defs` changes (a stale inc is silent but broad).
