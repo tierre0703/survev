@@ -1258,5 +1258,52 @@ Ports `ui.ts bigmapCollision` + `triggerPing`:
 
 ### Still open
 
-- Role-specific map icons (`roleDef.mapIcon`), airstrike zone visuals on device
-  (host-only so far), and a big-map spectator/player markers for other teams.
+- ~~Role-specific map icons (`roleDef.mapIcon`)~~ — closed in §21.
+- Airstrike zone visuals on device (host-only so far).
+- Other-team spectator markers on the big map.
+
+---
+
+## 21. Session 16 - role-specific map icons (2026-10-23)
+
+### 21.1 `RoleRenderDef` codegen
+
+`tools/codegen_render_defs.mjs` now imports `shared/defs/gameObjects/roleDefs.ts`
+and emits `RoleRenderDef { mapIconAlive, mapIconDead }` plus
+`DefProvider::role(type)`. Only four shipped roles have icons — leader
+(`player-star.img` / `skull-leader.img`), captain (`player-captain.img`), medic
+(`player-medic.img` / `skull-leader.img`) and last man (`player-last-man.img`);
+the other roles resolve to empty icon strings.
+
+### 21.2 Dot style parity (`mapDotStyle`)
+
+`MapView::mapDotStyle(sameGroup, dead, downed, aliveIcon, deadIcon, dotScale)`
+is a pure helper porting `ui.ts updatePlayerMapSprites`:
+
+- Texture priority: `skull-outlined` (or the role's dead icon) → group/map
+  downed art → role alive icon → `player-map-inner`.
+- Scale: `dotScale` (0.2) × (same group: dead 1.5, role 1.25, else 1;
+  other: dead/downed/role 1.25, else 0.75).
+- The white `player-map-outer` ring is hidden for custom role icons and drawn
+  one z below otherwise.
+- Role icons get `zBump = 65535` (the web's `zOrder += 65535`).
+
+`GameScene` applies it to both the live active player (role from
+`ActivePlayerData.role`, downed from negative health) and every visible
+`PlayerStatus` (`status.role`). In faction mode custom icons use the team
+colour, otherwise group colour inside our group and team colour outside.
+
+### Verification
+
+- `surv_tests`: **130 tests, 2,167 assertions, 0 failures** (new:
+  `role_defs_provider`, `map_dot_style_matches_web`).
+- x86_64 native lib + APK smoke-tested on the emulator: the normal minimap dot
+  path (inner + outer, group colour, place names, expand button) is unchanged
+  and `logcat -b crash` is empty. A leader/captain role was not available in
+  the solo test match, so the icon branch is currently host-tested only.
+
+### Still open
+
+- Verify role icons on device in a faction/role match.
+- Airstrike zone visuals on device (host-only) and other-team spectator
+  markers on the big map.

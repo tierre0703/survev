@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 15 (`M4_REMAINING.md` §20) completed the map UI: airstrike warning zones draw on both maps, place names overlay the map (MapMsg places are normalized 0..1), and tapping the big map opens the team-ping wheel so the ping is sent at the tapped map position (10s idle timeout). Session 14 added player/team dots, gas/safe-zone circles and the big map; Session 13 baked/displayed the minimap and ping sprites. **128 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-23** — Session 16 (`M4_REMAINING.md` §21) added role-specific map icons: `roleDefs.ts` map icons are codegen'd (`RoleRenderDef`), and the player/team dot style now matches `ui.ts updatePlayerMapSprites` for role icons, dead/downed art, scale and z-order. Earlier: §20 added map airstrikes, place names and big-map tap-to-ping; §19 dots/gas/big map; §18 minimap bake/pings; §17 team-ping wheel. **130 host tests pass, 0 fail.**
 
 ---
 
@@ -190,6 +190,8 @@ Latest recorded state: **2026-10-23** — Session 15 (`M4_REMAINING.md` §20) co
   - Map::getMinimapTexture() / getMinimapScale() for runtime access
   - Hud::setMinimap() displays it under the top-right frame
   - Player/team dots + gas/safe-zone circles (`updateMapOverlay`)
+  - Role-specific icons from `roleDefs.ts` (leader star, captain, medic, last
+    man; dead variants) and the web dead/downed scale/z matrix
   - Minimap ping sprites (`ping-map-*` + pulse) clipped to the frame
 - [x] **Big map** (`game/MapView`, 640×640 centred):
   - Minimap expand button opens it; X or tapping outside closes it
@@ -273,7 +275,7 @@ Latest recorded state: **2026-10-23** — Session 15 (`M4_REMAINING.md` §20) co
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (128 tests, 0 failures expected)
+# host tests (130 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -311,3 +313,4 @@ node tools/build-gui-icons.mjs
 - `Hud` hit tests (`minimapExpandHit`, `bigMapContains/CloseHit`) take design-space coords; widget positions are centred HUD coords
 - `MapMsg` place positions are normalized (0..1); do not divide by map width/height again
 - Place names are drawn as HUD text in `MapView`, not baked into the RenderTexture (text-in-RT did not show on device)
+- Map dot styles (role icon/dead/downed scale + outer ring + z bump) come from `mapDotStyle`; keep it in sync with `ui.ts updatePlayerMapSprites`

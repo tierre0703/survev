@@ -854,10 +854,38 @@ void GameScene::update(float delta) {
             };
 
             Player* me = _world->activePlayer();
+            const DefProvider* provider = getDefProvider();
+            const bool factionMode = _world->map().mapDef.factionMode;
+            const auto addStyledDot = [&](const Vec2& pos, bool sameGroup, bool dead, bool downed,
+                                          const std::string& roleType, uint32_t groupTint,
+                                          uint32_t teamTint, int zBase) {
+                std::string aliveIcon;
+                std::string deadIcon;
+                if (!roleType.empty() && provider) {
+                    const RoleRenderDef* roleDef = provider->role(roleType);
+                    if (roleDef) {
+                        aliveIcon = roleDef->mapIconAlive;
+                        deadIcon = roleDef->mapIconDead;
+                    }
+                }
+                const MapDotStyle style = mapDotStyle(sameGroup, dead, downed, aliveIcon, deadIcon);
+                uint32_t tint = sameGroup ? groupTint : teamTint;
+                if (factionMode && style.custom) {
+                    tint = teamTint;
+                }
+                const int z = zBase + style.zBump;
+                if (style.outer) {
+                    addDot(pos, 0.3f, "player-map-outer.img", 0xffffff, z - 1);
+                }
+                addDot(pos, style.scale, style.texture, tint, z);
+            };
+
             if (me) {
-                const int z = 60000;
-                addDot(me->pos, 0.3f, "player-map-outer.img", 0xffffff, z);
-                addDot(me->pos, 0.2f, "player-map-inner.img", groupColor(activeId), z + 1);
+                const auto meInfo = infos.find(activeId);
+                const uint8_t meTeam = meInfo != infos.end() ? meInfo->second.teamId : 0;
+                const bool downed = _game->activePlayerData().health < 0.0f;
+                addStyledDot(me->pos, true, false, downed, _game->activePlayerData().role,
+                             groupColor(activeId), teamColor(meTeam), 60000);
             }
             for (const auto& entry : _game->allPlayerStatus()) {
                 const uint16_t id = entry.first;
@@ -871,20 +899,8 @@ void GameScene::update(float delta) {
                 }
                 const PlayerInfo& info = infoIt->second;
                 const bool sameGroup = info.groupId == activeGroup;
-                std::string texture = "player-map-inner.img";
-                if (status.dead) {
-                    texture = "skull-outlined.img";
-                } else if (status.downed) {
-                    texture = sameGroup ? "player-group-downed.img" : "player-map-downed.img";
-                }
-                const uint32_t tint = sameGroup ? groupColor(id) : teamColor(info.teamId);
-                const float scale = sameGroup ? (status.dead ? 0.3f : 0.2f)
-                                              : (status.dead || status.downed ? 0.25f : 0.15f);
-                const int z = 500 + static_cast<int>(id) * 2;
-                if (sameGroup && !status.dead) {
-                    addDot(status.pos, 0.3f, "player-map-outer.img", 0xffffff, z - 1);
-                }
-                addDot(status.pos, scale, texture, tint, z);
+                addStyledDot(status.pos, sameGroup, status.dead, status.downed, status.role,
+                             groupColor(id), teamColor(info.teamId), 500 + static_cast<int>(id) * 2);
             }
 
             MapGas gas;

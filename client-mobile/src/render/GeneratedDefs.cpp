@@ -76,6 +76,7 @@ struct RawPing {
     const char* type; const char* texture; const char* mapTexture; const char* sound; const char* soundLeader;
     int pingMap; float pingLife, mapLife; int worldDisplay; int mapEvent; unsigned tint;
 };
+struct RawRole { const char* type; const char* mapIconAlive; const char* mapIconDead; };
 
 static PlaneDef toPlane(const RawPlane& r) {
     PlaneDef d;
@@ -4021,6 +4022,27 @@ static const RawPing kPings[] = {
     {"ping_airstrike","ping-team-airstrike.img","ping-map-airstrike.img","ping_airstrike_01","",1,2,2,1,1,15400704},
     {"ping_woodsking","player-king-woods.img","ping-map-woods-king.img","helmet03_forest_pickup_01","",1,4,10,0,1,1244928},
     {"ping_unlock","ping-team-unlock.img","ping-map-unlock.img","ping_unlock_01","",1,4,10,0,1,55551},
+};
+static const RawRole kRoles[] = {
+    {"leader","player-star.img","skull-leader.img"},
+    {"captain","player-captain.img",""},
+    {"lieutenant","",""},
+    {"medic","player-medic.img","skull-leader.img"},
+    {"marksman","",""},
+    {"recon","",""},
+    {"grenadier","",""},
+    {"bugler","",""},
+    {"last_man","player-last-man.img",""},
+    {"woods_king","",""},
+    {"kill_leader","",""},
+    {"the_hunted","",""},
+    {"healer","",""},
+    {"tank","",""},
+    {"sniper","",""},
+    {"scout","",""},
+    {"demo","",""},
+    {"assault","",""},
+    {"classless","",""},
 };
 static const RawGameObj kGameObjs[] = {
     {"bullet_mp5","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0,0,0,0,0,0,"","",0,"",0.0f,"",16777215,0,16777215},
@@ -11920,6 +11942,12 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
             d.tint = r.tint;
             _pings[r.type] = std::move(d);
         }
+        for (const auto& r : kRoles) {
+            RoleRenderDef d;
+            d.mapIconAlive = r.mapIconAlive ? r.mapIconAlive : "";
+            d.mapIconDead = r.mapIconDead ? r.mapIconDead : "";
+            _roles[r.type] = std::move(d);
+        }
         _planes.reserve(2);
         for (const auto& r : kPlanes) _planes.push_back(toPlane(r));
         for (int i = 0; i < 13; ++i) {
@@ -11978,6 +12006,10 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
         auto it = _pings.find(type);
         return it == _pings.end() ? nullptr : &it->second;
     }
+    const RoleRenderDef* role(const std::string& type) const override {
+        auto it = _roles.find(type);
+        return it == _roles.end() ? nullptr : &it->second;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
@@ -11988,6 +12020,7 @@ private:
     std::unordered_map<std::string, BulletRenderDef> _bullets;
     std::unordered_map<std::string, EmoteRenderDef> _emotes;
     std::unordered_map<std::string, PingRenderDef> _pings;
+    std::unordered_map<std::string, RoleRenderDef> _roles;
     std::unordered_map<std::string, EmitterDef> _emitters;
     std::unordered_map<std::string, PlayerPose> _poses;
     std::unordered_map<std::string, PlayerAnimationDef> _animations;

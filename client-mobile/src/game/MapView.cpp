@@ -5,6 +5,26 @@
 
 namespace surv {
 
+MapDotStyle mapDotStyle(bool sameGroup, bool dead, bool downed, const std::string& aliveIcon,
+                        const std::string& deadIcon, float dotScale) {
+    MapDotStyle style;
+    style.custom = !aliveIcon.empty();
+    if (dead) {
+        style.texture = deadIcon.empty() ? "skull-outlined.img" : deadIcon;
+    } else if (downed) {
+        style.texture = sameGroup ? "player-group-downed.img" : "player-map-downed.img";
+    } else if (style.custom) {
+        style.texture = aliveIcon;
+    }
+    const float factor = sameGroup
+        ? (dead ? 1.5f : style.custom ? 1.25f : 1.0f)
+        : (dead || downed || style.custom ? 1.25f : 0.75f);
+    style.scale = dotScale * factor;
+    style.outer = sameGroup && !style.custom;
+    style.zBump = style.custom ? 65535 : 0;
+    return style;
+}
+
 void MapView::build(pix::Factory* factory, pix::Container* parent, const Vec2& pos, float size) {
     _factory = factory;
     _pos = pos;

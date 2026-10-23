@@ -43,6 +43,19 @@ struct MapAirstrike {
     float alpha = 1.0f;
 };
 
+// ui.ts updatePlayerMapSprites addSprite style for one player.
+struct MapDotStyle {
+    std::string texture = "player-map-inner.img";
+    float scale = 0.2f;
+    bool outer = false; // same-group white ring (hidden for custom role icons)
+    int zBump = 0;      // role icons draw above normal dots
+    bool custom = false;
+};
+
+// Pure style selection (dead/downed/role priority + scale, dotScale=0.2).
+MapDotStyle mapDotStyle(bool sameGroup, bool dead, bool downed, const std::string& aliveIcon,
+                        const std::string& deadIcon, float dotScale = 0.2f);
+
 class MapView {
 public:
     static constexpr float kTextureSize = 256.0f;

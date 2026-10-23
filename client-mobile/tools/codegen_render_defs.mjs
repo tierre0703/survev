@@ -21,6 +21,7 @@ const { MapObjectDefs, GameObjectDefs } = await import(pathToFile(sharedDir, "de
 const { DecalDefs } = await import(pathToFile(sharedDir, "defs/mapObjects/decalDefs.ts"));
 const { EmotesDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/emoteDefs.ts"));
 const { PingDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/pingDefs.ts"));
+const { RoleDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/roleDefs.ts"));
 const { MapDefs } = await import(pathToFile(sharedDir, "defs/mapDefs.ts"));
 const { util } = await import(pathToFile(sharedDir, "utils/util.ts"));
 const { math } = await import(pathToFile(sharedDir, "utils/math.ts"));
@@ -682,6 +683,15 @@ for (const type of Object.keys(PingDefs)) {
     }},\n`;
 }
 
+// Role defs (shared/defs/gameObjects/roleDefs.ts): role-specific map icons
+// (leader/captain/medic/last-man) used by the minimap/big-map player dots.
+let roleEntries = "";
+for (const type of Object.keys(RoleDefs)) {
+    const d = RoleDefs[type] || {};
+    const icon = d.mapIcon || {};
+    roleEntries += `    {${str(type)},${str(icon.alive || "")},${str(icon.dead || "")}},\n`;
+}
+
 // GameConfig plane tuning + bullet tracer colours (plane.ts / flare.ts / shot.ts).
 const { GameConfig } = await import(pathToFile(sharedDir, "gameConfig.ts"));
 const { BulletDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/bulletDefs.ts"));
@@ -836,6 +846,7 @@ struct RawPing {
     const char* type; const char* texture; const char* mapTexture; const char* sound; const char* soundLeader;
     int pingMap; float pingLife, mapLife; int worldDisplay; int mapEvent; unsigned tint;
 };
+struct RawRole { const char* type; const char* mapIconAlive; const char* mapIconDead; };
 
 static PlaneDef toPlane(const RawPlane& r) {
     PlaneDef d;
@@ -916,6 +927,8 @@ static const RawEmote kEmotes[] = {
 ${emoteEntries}};
 static const RawPing kPings[] = {
 ${pingEntries}};
+static const RawRole kRoles[] = {
+${roleEntries}};
 static const RawGameObj kGameObjs[] = {
 ${gameEntries}};
 static const RawParticle kParticles[] = {
@@ -1160,6 +1173,12 @@ ${
             d.tint = r.tint;
             _pings[r.type] = std::move(d);
         }
+        for (const auto& r : kRoles) {
+            RoleRenderDef d;
+            d.mapIconAlive = r.mapIconAlive ? r.mapIconAlive : "";
+            d.mapIconDead = r.mapIconDead ? r.mapIconDead : "";
+            _roles[r.type] = std::move(d);
+        }
         _planes.reserve(2);
         for (const auto& r : kPlanes) _planes.push_back(toPlane(r));
         for (int i = 0; i < ${tracerCount}; ++i) {
@@ -1218,6 +1237,10 @@ ${
         auto it = _pings.find(type);
         return it == _pings.end() ? nullptr : &it->second;
     }
+    const RoleRenderDef* role(const std::string& type) const override {
+        auto it = _roles.find(type);
+        return it == _roles.end() ? nullptr : &it->second;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
@@ -1228,6 +1251,7 @@ private:
     std::unordered_map<std::string, BulletRenderDef> _bullets;
     std::unordered_map<std::string, EmoteRenderDef> _emotes;
     std::unordered_map<std::string, PingRenderDef> _pings;
+    std::unordered_map<std::string, RoleRenderDef> _roles;
     std::unordered_map<std::string, EmitterDef> _emitters;
     std::unordered_map<std::string, PlayerPose> _poses;
     std::unordered_map<std::string, PlayerAnimationDef> _animations;

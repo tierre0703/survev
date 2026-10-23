@@ -206,6 +206,13 @@ struct PingRenderDef {
     uint32_t tint = 0xffffff;
 };
 
+// shared/defs/gameObjects/roleDefs.ts. Role-specific minimap icons (leader,
+// captain, medic, last man) used by the player/team dots.
+struct RoleRenderDef {
+    std::string mapIconAlive; // e.g. "player-star.img"
+    std::string mapIconDead;  // e.g. "skull-leader.img" (optional)
+};
+
 struct BiomeColors {
     uint32_t background = 0x2b2b2b;
     uint32_t beach = 0xd9c38a;
@@ -444,6 +451,8 @@ public:
     virtual const EmoteRenderDef* emote(const std::string& /*type*/) const { return nullptr; }
     // shared/defs/gameObjects/pingDefs.ts (team pings + minimap markers).
     virtual const PingRenderDef* ping(const std::string& /*type*/) const { return nullptr; }
+    // shared/defs/gameObjects/roleDefs.ts (role map icons).
+    virtual const RoleRenderDef* role(const std::string& /*type*/) const { return nullptr; }
 };
 
 // Process-wide provider, installed by the app/generated code. May be null.

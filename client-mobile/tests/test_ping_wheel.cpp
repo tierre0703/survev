@@ -235,6 +235,74 @@ MapMsg minimapMap() {
 
 } // namespace
 
+TEST(role_defs_provider) {
+    installGeneratedDefs();
+    const DefProvider* provider = getDefProvider();
+    CHECK(provider != nullptr);
+
+    const RoleRenderDef* leader = provider->role("leader");
+    CHECK(leader != nullptr);
+    CHECK_EQ(leader->mapIconAlive, std::string("player-star.img"));
+    CHECK_EQ(leader->mapIconDead, std::string("skull-leader.img"));
+
+    const RoleRenderDef* captain = provider->role("captain");
+    CHECK(captain != nullptr);
+    CHECK_EQ(captain->mapIconAlive, std::string("player-captain.img"));
+    CHECK(captain->mapIconDead.empty());
+
+    // Roles without custom icons still resolve (empty alive means "no icon").
+    const RoleRenderDef* marksman = provider->role("marksman");
+    CHECK(marksman != nullptr);
+    CHECK(marksman->mapIconAlive.empty());
+
+    CHECK(provider->role("not_a_role") == nullptr);
+}
+
+TEST(map_dot_style_matches_web) {
+    // ui.ts updatePlayerMapSprites texture/scale/outer/z matrix.
+    MapDotStyle style = mapDotStyle(true, false, false, "", "");
+    CHECK_EQ(style.texture, std::string("player-map-inner.img"));
+    CHECK_NEAR(style.scale, 0.2f, 0.001f);
+    CHECK(style.outer);
+    CHECK_EQ(style.zBump, 0);
+
+    style = mapDotStyle(true, true, false, "", "");
+    CHECK_EQ(style.texture, std::string("skull-outlined.img"));
+    CHECK_NEAR(style.scale, 0.3f, 0.001f); // dotScale * 1.5
+    CHECK(style.outer);
+
+    style = mapDotStyle(true, false, true, "", "");
+    CHECK_EQ(style.texture, std::string("player-group-downed.img"));
+    CHECK_NEAR(style.scale, 0.2f, 0.001f);
+
+    style = mapDotStyle(true, false, false, "player-star.img", "skull-leader.img");
+    CHECK(style.custom);
+    CHECK_EQ(style.texture, std::string("player-star.img"));
+    CHECK_NEAR(style.scale, 0.25f, 0.001f); // dotScale * 1.25
+    CHECK(!style.outer);
+    CHECK_EQ(style.zBump, 65535);
+
+    style = mapDotStyle(true, true, false, "player-star.img", "skull-leader.img");
+    CHECK_EQ(style.texture, std::string("skull-leader.img"));
+    CHECK_NEAR(style.scale, 0.3f, 0.001f);
+
+    style = mapDotStyle(true, true, false, "player-captain.img", "");
+    CHECK_EQ(style.texture, std::string("skull-outlined.img"));
+
+    style = mapDotStyle(false, false, false, "", "");
+    CHECK_NEAR(style.scale, 0.15f, 0.001f); // dotScale * 0.75
+    CHECK(!style.outer);
+
+    style = mapDotStyle(false, false, true, "", "");
+    CHECK_EQ(style.texture, std::string("player-map-downed.img"));
+    CHECK_NEAR(style.scale, 0.25f, 0.001f);
+
+    style = mapDotStyle(false, false, false, "player-captain.img", "");
+    CHECK_EQ(style.texture, std::string("player-captain.img"));
+    CHECK_NEAR(style.scale, 0.25f, 0.001f);
+    CHECK(!style.outer);
+}
+
 TEST(map_minimap_texture_is_baked) {
     installGeneratedDefs();
     pix::NullPixiFactory factory;
