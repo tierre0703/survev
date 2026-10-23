@@ -2,9 +2,12 @@
 // ax::AudioEngine implementation of the audio backend (app build only; not
 // compiled by the host tests).
 #include "AudioBackend.h"
+#include "ReverbModel.h"
+#include "SoundDefs.h"
 #include "axmol.h"
 #include "audio/AudioEngine.h"
 
+#include <cmath>
 #include <string>
 #include <unordered_map>
 
@@ -13,12 +16,13 @@ namespace audio {
 
 class AxmolAudioBackend : public AudioBackend {
 public:
-    // Tracks the current reverb volume per name so we can avoid redundant
-    // axmol API calls and reduce log noise.
+    // Current reverb target per name (AudioManager recomputes it every frame).
     std::unordered_map<std::string, float> _reverbVolumes;
-
-    // The dedicated global reverb instance (created at init, nullptr until then).
-    SoundHandle _reverbHandle = kInvalidSound;
+    // Last applied target; avoids re-setting EAX properties on every sound and
+    // every frame. axmol has no global reverb bus, so the model is applied to
+    // each active AudioPlayer (OpenAL EAX).
+    float _appliedReverb = -1.0f;
+    std::string _reverbName = "cathedral";
 
     bool load(const std::string& id, const std::string& path) override {
         _paths[id] = path;
@@ -52,6 +56,9 @@ public:
             ax::AudioEngine::setPan(handle, opts.pan);
         }
         _handles[handle] = volume;
+        if (_appliedReverb > 0.001f) {
+            applyReverb(handle);
+        }
         return handle;
     }
 
@@ -100,96 +107,81 @@ public:
         _reverbVolumes[reverbName] = volume;
     }
 
-    void initReverbInstance() {
-        if (_reverbHandle == kInvalidSound) {
-            // Create a silent looping reverb instance.  We use the first loaded
-            // path as a carrier; axmol's reverb is applied per-AudioPlayer and
-            // cannot exist without a playing track.  A near-silent loop at
-            // volume 0 lets us toggle reverb properties on it without audible
-            // side effects.
-            for (const auto& kv : _paths) {
-                ax::AudioPlayerSettings settings;
-                settings.loop = true;
-                settings.volume = 0.0f;
-                const int h = ax::AudioEngine::play2d(kv.second, settings);
-                if (h != ax::AudioEngine::INVALID_AUDIO_ID) {
-                    _reverbHandle = h;
-                    break;
-                }
-            }
-        }
-    }
-
+    // axmol exposes per-AudioPlayer EAX reverb, not a convolution bus. Apply
+    // the mapped cathedral/cave properties to every active handle (the web's
+    // CreateJS convolver is global), and to new handles in play().
     void update(float dt) override {
-        // Apply reverb properties on the dedicated reverb instance when the
-        // target volume changes (the AudioManager calls setReverbVolume once
-        // per frame, so we don't need per-instance tracking here).
-
-        // Ensure the reverb carrier exists.  If we don't have any loaded paths
-        // yet, skip — there is nothing to attach reverb to.
-        if (_reverbHandle == kInvalidSound) {
-            if (!_paths.empty()) {
-                initReverbInstance();
-            }
-            if (_reverbHandle == kInvalidSound) {
-                return;
+        (void)dt;
+        // Drop finished handles so reverb updates never touch dead players.
+        for (auto it = _handles.begin(); it != _handles.end();) {
+            if (!isPlaying(it->first)) {
+                it = _handles.erase(it);
+            } else {
+                ++it;
             }
         }
 
-        // Pick the largest non-zero reverb volume (typically "cathedral").
         float targetVolume = 0.0f;
+        std::string targetName = "cathedral";
         for (const auto& kv : _reverbVolumes) {
             if (kv.second > targetVolume) {
                 targetVolume = kv.second;
+                targetName = kv.first;
             }
         }
-
-        // The ReverbDef for "cathedral" provides the source-path impulse
-        // response, but axmol's setReverbProperties uses a parameterised EAX
-        // model, not a convolution IR.  We map the web's volume-only signal
-        // to a generic small-room/underground cathedral reverb by adjusting
-        // the core EAX gain/decay from the target volume.
-
-        // Build a ReverbProperties struct that mirrors the web's "cathedral"
-        // feel scaled by the target volume.
-        ax::ReverbProperties props{};
-        props.flDensity = 1.0f;                 // dense
-        props.flDiffusion = 0.8f;               // moderately diffused
-        props.flGain = 0.3f * targetVolume;     // master reverb gain
-        props.flGainHF = 0.5f;                  // high-frequency damping
-        props.flGainLF = 1.0f;                  // low-frequency pass
-        props.flDecayTime = 1.5f * targetVolume + 0.2f;  // 0.2–1.7 s
-        props.flDecayHFRatio = 0.3f;
-        props.flDecayLFRatio = 1.0f;
-        props.flReflectionsGain = 0.2f * targetVolume;
-        props.flReflectionsDelay = 0.02f;
-        props.flReflectionsPan[0] = 0.0f;
-        props.flReflectionsPan[1] = 0.0f;
-        props.flReflectionsPan[2] = 0.0f;
-        props.flLateReverbGain = 0.5f * targetVolume;
-        props.flLateReverbDelay = 0.03f;
-        props.flLateReverbPan[0] = 0.0f;
-        props.flLateReverbPan[1] = 0.0f;
-        props.flLateReverbPan[2] = 0.0f;
-        props.flEchoTime = 0.1f;
-        props.flEchoDepth = 0.0f;
-        props.flModulationTime = 0.0f;
-        props.flModulationDepth = 0.0f;
-        props.flAirAbsorptionGainHF = 0.9f;
-        props.flHFReference = 5000.0f;
-        props.flLFReference = 250.0f;
-        props.flRoomRolloffFactor = 0.0f;
-        props.iDecayHFLimit = 1;
-
-        if (targetVolume > 0.001f) {
-            ax::AudioEngine::setReverbProperties(_reverbHandle, &props);
-        } else {
-            // Disable reverb (pass nullptr).
-            ax::AudioEngine::setReverbProperties(_reverbHandle, nullptr);
+        if (std::fabs(targetVolume - _appliedReverb) < 0.01f && targetName == _reverbName) {
+            return;
+        }
+        _appliedReverb = targetVolume;
+        _reverbName = targetName;
+        for (const auto& kv : _handles) {
+            applyReverb(kv.first);
         }
     }
 
 private:
+    void applyReverb(SoundHandle handle) {
+        if (handle == kInvalidSound) {
+            return;
+        }
+        const ReverbModel model = reverbModel(
+            _appliedReverb,
+            getSoundDefProvider() ? getSoundDefProvider()->reverb(_reverbName) : nullptr);
+        if (!model.active) {
+            ax::AudioEngine::setReverbProperties(handle, nullptr);
+            return;
+        }
+        ax::ReverbProperties props{};
+        props.flDensity = model.density;
+        props.flDiffusion = model.diffusion;
+        props.flGain = model.gain;
+        props.flGainHF = model.gainHF;
+        props.flGainLF = model.gainLF;
+        props.flDecayTime = model.decayTime;
+        props.flDecayHFRatio = model.decayHFRatio;
+        props.flDecayLFRatio = model.decayLFRatio;
+        props.flReflectionsGain = model.reflectionsGain;
+        props.flReflectionsDelay = model.reflectionsDelay;
+        props.flReflectionsPan[0] = 0.0f;
+        props.flReflectionsPan[1] = 0.0f;
+        props.flReflectionsPan[2] = 0.0f;
+        props.flLateReverbGain = model.lateReverbGain;
+        props.flLateReverbDelay = model.lateReverbDelay;
+        props.flLateReverbPan[0] = 0.0f;
+        props.flLateReverbPan[1] = 0.0f;
+        props.flLateReverbPan[2] = 0.0f;
+        props.flEchoTime = model.echoTime;
+        props.flEchoDepth = model.echoDepth;
+        props.flModulationTime = model.modulationTime;
+        props.flModulationDepth = model.modulationDepth;
+        props.flAirAbsorptionGainHF = model.airAbsorptionGainHF;
+        props.flHFReference = model.hfReference;
+        props.flLFReference = model.lfReference;
+        props.flRoomRolloffFactor = 0.0f;
+        props.iDecayHFLimit = 1;
+        ax::AudioEngine::setReverbProperties(handle, &props);
+    }
+
     std::unordered_map<std::string, std::string> _paths;
     std::unordered_map<std::string, bool> _loaded;
     std::unordered_map<SoundHandle, float> _handles;

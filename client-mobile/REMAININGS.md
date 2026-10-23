@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 16 (`M4_REMAINING.md` §21) added role-specific map icons: `roleDefs.ts` map icons are codegen'd (`RoleRenderDef`), and the player/team dot style now matches `ui.ts updatePlayerMapSprites` for role icons, dead/downed art, scale and z-order. Earlier: §20 added map airstrikes, place names and big-map tap-to-ping; §19 dots/gas/big map; §18 minimap bake/pings; §17 team-ping wheel. **130 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-23** — Session 17 (`M4_REMAINING.md` §22) finished reverb: `audio/ReverbModel.h` maps the cathedral/cave `ReverbDef` to EAX parameters and `AxmolAudioBackend` applies them to every active sound handle (the old silent-carrier stub made reverb inaudible), including new sounds. Earlier: §21 role map icons, §20 map airstrikes/place names/big-map tap-to-ping, §19 dots/gas/big map, §18 minimap/pings, §17 team-ping wheel. **131 host tests pass, 0 fail.**
 
 ---
 
@@ -24,7 +24,7 @@ Latest recorded state: **2026-10-23** — Session 16 (`M4_REMAINING.md` §21) ad
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
 | M4 | Rendering | **done, latest verified** | terrain/island hole, obstacles, buildings + ceilings, particles, decals, gas, skeletal player. |
 | M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired; emote + team-ping wheels own their touches. |
-| M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + reverb volume computation. Player action sounds and UI sounds still unwired (see §2). |
+| M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb (cathedral/cave model). Player action sounds and UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
 | M8 | Accounts / API | **not started** | login/profile/team-link/quests/pass. |
 | M9 | Polish & release | **not started** | lifecycle, perf, soak, store-ready AAB. |
@@ -85,7 +85,7 @@ Latest recorded state: **2026-10-23** — Session 16 (`M4_REMAINING.md` §21) ad
 | `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | ❌ **not ported** (BT keyboard/controller) |
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ❌ **not wired** — `Player` lacks surface/step/action state |
 | UI sounds (ambient lab, pickup pings, notifications) | ❌ **not wired** — UI is Java |
-| Reverb convolution (`setReverbProperties`) | 🔶 volume computed + stored; axmol API not called |
+| Reverb (`setReverbProperties`) | ✅ `ReverbModel` maps cathedral/cave to EAX props; applied to every active handle (web convolver is global) |
 | `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ weapons/ammo in `game/Hud`, gear/perks in `ui/FguiHud` (not built by the live scene yet) |
 | `client/src/emote.ts` (emote/ping system) | ✅ see the emote row above |
 | `client/src/ui/pieTimer.ts` (action progress circle) | ✅ `ui/FguiPieTimer` driven by `ActivePlayerData.actionTime` |
@@ -243,9 +243,10 @@ Latest recorded state: **2026-10-23** — Session 16 (`M4_REMAINING.md` §21) ad
 
 ### Priority 3 — Audio polish
 
-- [x] **Reverb volume computation** — done; `AxmolAudioBackend::update` stub remains for the actual `setReverbProperties` call
+- [x] **Reverb volume computation** — done in `AudioManager::update` (layer/underground)
+- [x] **Reverb mapping** — `audio/ReverbModel.h` maps the cathedral/cave `ReverbDef` to EAX params; `AxmolAudioBackend` applies them to all active handles (and new ones in `play()`), replacing the old silent-carrier stub
 - [x] **UI/pickup sounds** — wired: `Game::handlePickup` → `GameScene::onPickupSound` plays `item + "_pickup_01"` on `"ui"`; emote/ping sounds play on `"ui"` via `EmoteManager`
-- [ ] **Reverb convolution** — call `ax::AudioEngine::setReverbProperties()` from `AxmolAudioBackend::update()` with proper parameter mapping from `ReverbDef` data (cathedral/cave)
+- [x] **Reverb** — mapped and applied per active sound handle (see §3); audible check underground is the remaining verification
 - [ ] **Kill leader / notification sounds** — wire into the FairyGUI/Java UI layer
 
 ### Priority 4 — Minor simulation/render parity
@@ -275,7 +276,7 @@ Latest recorded state: **2026-10-23** — Session 16 (`M4_REMAINING.md` §21) ad
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (130 tests, 0 failures expected)
+# host tests (131 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -314,3 +315,4 @@ node tools/build-gui-icons.mjs
 - `MapMsg` place positions are normalized (0..1); do not divide by map width/height again
 - Place names are drawn as HUD text in `MapView`, not baked into the RenderTexture (text-in-RT did not show on device)
 - Map dot styles (role icon/dead/downed scale + outer ring + z bump) come from `mapDotStyle`; keep it in sync with `ui.ts updatePlayerMapSprites`
+- Reverb is per-source OpenAL EAX: `AxmolAudioBackend` iterates active handles (no global convolver bus); `ReverbModel` is the host-tested mapping

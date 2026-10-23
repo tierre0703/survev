@@ -5,6 +5,7 @@
 #include "audio/Ambiance.h"
 #include "audio/AudioManager.h"
 #include "audio/GeneratedSoundDefs.h"
+#include "audio/ReverbModel.h"
 #include "audio/SoundDefs.h"
 
 #include <string>
@@ -108,6 +109,58 @@ TEST(audio_defs_provider) {
 
     CHECK(provider->reverb("cathedral") != nullptr);
     CHECK(provider->registeredSounds().size() > 100u);
+}
+
+TEST(reverb_model_matches_cathedral_and_cave) {
+    audio::installGeneratedSoundDefs();
+    const audio::SoundDefProvider* provider = audio::getSoundDefProvider();
+    CHECK(provider != nullptr);
+    if (!provider) {
+        return;
+    }
+
+    const audio::ReverbDef* cathedral = provider->reverb("cathedral");
+    CHECK(cathedral != nullptr);
+    if (cathedral) {
+        CHECK_NEAR(cathedral->volume, 0.7f, 1e-4f);
+        CHECK_NEAR(cathedral->echoVolume, 0.0f, 1e-4f);
+    }
+
+    // Layer 0 underground is silent; the model reports inactive.
+    audio::ReverbModel off = audio::reverbModel(0.0f, cathedral);
+    CHECK(!off.active);
+    CHECK_NEAR(off.gain, 0.0f, 1e-6f);
+
+    // audioManager.ts cathedral: gain = 0.3 * IR volume, decay 0.2..1.7s.
+    audio::ReverbModel half = audio::reverbModel(0.5f, cathedral);
+    CHECK(half.active);
+    CHECK_NEAR(half.gain, 0.3f * 0.5f * 0.7f, 1e-5f);
+    CHECK_NEAR(half.decayTime, 0.2f + 1.5f * 0.5f, 1e-5f);
+    CHECK_NEAR(half.reflectionsGain, 0.2f * 0.5f, 1e-5f);
+    CHECK_NEAR(half.lateReverbGain, 0.5f * 0.5f, 1e-5f);
+    CHECK_NEAR(half.echoDepth, 0.0f, 1e-6f);
+
+    audio::ReverbModel full = audio::reverbModel(1.0f, cathedral);
+    CHECK_NEAR(full.gain, 0.21f, 1e-5f);
+    CHECK_NEAR(full.decayTime, 1.7f, 1e-5f);
+
+    // Volumes above 1 clamp to the full model.
+    audio::ReverbModel over = audio::reverbModel(2.0f, cathedral);
+    CHECK_NEAR(over.gain, full.gain, 1e-6f);
+
+    // Cave adds the def's echo (echoVolume/echoDelay).
+    const audio::ReverbDef* cave = provider->reverb("cave");
+    CHECK(cave != nullptr);
+    if (cave) {
+        audio::ReverbModel c = audio::reverbModel(1.0f, cave);
+        CHECK_NEAR(c.echoTime, 0.25f, 1e-5f);
+        CHECK_NEAR(c.echoDepth, 0.5f, 1e-5f);
+    }
+
+    // No def: default IR volume 1.
+    audio::ReverbModel d = audio::reverbModel(1.0f, nullptr);
+    CHECK_NEAR(d.gain, 0.3f, 1e-5f);
+    CHECK_NEAR(d.decayTime, 1.7f, 1e-5f);
 }
 
 // ---------------------------------------------------------------------------

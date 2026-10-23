@@ -1307,3 +1307,44 @@ colour, otherwise group colour inside our group and team colour outside.
 - Verify role icons on device in a faction/role match.
 - Airstrike zone visuals on device (host-only) and other-team spectator
   markers on the big map.
+
+---
+
+## 22. Session 17 - reverb convolution mapping (2026-10-23)
+
+### 22.1 Why the old code was silent
+
+`AudioManager` already computed the web's cathedral volume
+(`underground ? layerVolumeMap[activeLayer] : 0`) and called
+`AudioBackend::setReverbVolume`. `AxmolAudioBackend` attached the EAX
+properties to a **silent looping carrier at volume 0**, so nothing audible ever
+got reverb. The web instead mixes every sound through one global
+`CreateJS.Sound.setReverbs` convolver; axmol only exposes per-source EAX reverb.
+
+### 22.2 `ReverbModel` + per-handle application
+
+- New `audio/ReverbModel.h` (engine-independent, host-tested) maps the
+  `cathedral`/`cave` `ReverbDef` and the 0..1 layer amount to EAX parameters:
+  gain `0.3 * v * def.volume`, decay `0.2 + 1.5v` s, reflections `0.2v`, late
+  reverb `0.5v`, and the cave echo (`echoVolume`/`echoDelay`).
+- `AxmolAudioBackend` now applies those properties to **every active
+  `AudioEngine` handle**, prunes finished handles in `update`, re-applies only
+  when the target changes by >0.01, and applies to new sounds in `play()` while
+  underground. The silent carrier was removed.
+
+### Verification
+
+- `surv_tests`: **131 tests, 2,187 assertions, 0 failures** (new:
+  `reverb_model_matches_cathedral_and_cave` covering inactive/off, half/full
+  scaling, clamping, the cave echo and a missing def).
+- x86_64 native lib + APK built and launched to a live match: OpenAL
+  initialises normally, no reverb/openal errors and `logcat -b crash` empty.
+  An audible underground comparison was not possible in this session (the test
+  match never enters a bunker), so that remains the verification follow-up.
+
+### Still open
+
+- Audible reverb check in a bunker/underground layer on device.
+- Kill leader/notification sounds and remaining UI sounds (Java UI layer).
+- The web's true IR convolution cannot be reproduced by axmol's EAX reverb;
+  the parameter model is the closest available.
