@@ -421,7 +421,9 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             float rot = std::atan2(dir.y, -dir.x) + 3.14159f * 0.5f;
             const Vec2 edgeWorld = camera.m_screenToPoint(Vec2(leftConstrain, topConstrain));
             ind.indSpriteOuter->setPosition(edgeWorld.x, edgeWorld.y);
-            ind.indSpriteOuter->setRotation(rot);
+            // emote.ts computes this in PIXI (y-down) space; the world root is
+            // positive-Y now, so the rendered rotation is negated.
+            ind.indSpriteOuter->setRotation(-rot);
             ind.indSpriteInner->setPosition(edgeWorld.x, edgeWorld.y);
 
             // Pulse effect on border

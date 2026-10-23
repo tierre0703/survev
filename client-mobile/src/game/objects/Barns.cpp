@@ -1709,7 +1709,9 @@ void FlareBarn::addFlare(GameWorld& ctx, const Bullet& bullet) {
     b->speed = defSpeed * variance;
     b->distance = distance * variance + distAdj;
 
-    b->container->setRotation(std::atan2(b->dir.x, b->dir.y) - pi / 2.0f);
+    // flare.ts: atan2(b.dir.x, b.dir.y) - PI/2 is a PIXI (y-down) rotation;
+    // the world root is positive-Y, so negate it for the axmol y-up scene.
+    b->container->setRotation(-(std::atan2(b->dir.x, b->dir.y) - pi / 2.0f));
 
     Player* player = ctx.playerBarn().getPlayerById(b->playerId);
     if (player && (player->layer & 2) != 0) {
@@ -1843,7 +1845,9 @@ void PlaneObj::init(GameWorld& ctx, const PlaneData& data, const Map& map) {
     }
     sprite->setFrame(spriteName);
     sprite->setVisible(true);
-    sprite->setRotation(std::atan2(planeDir.x, planeDir.y));
+    // plane.ts uses atan2(planeDir.x, planeDir.y) in PIXI (y-down) space;
+    // negate for the positive-Y axmol world.
+    sprite->setRotation(-std::atan2(planeDir.x, planeDir.y));
 }
 void PlaneBarn::updatePlanes(GameWorld& ctx, const std::vector<PlaneData>& data) {
     for (auto* p : planes) {

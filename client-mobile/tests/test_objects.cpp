@@ -174,6 +174,8 @@ TEST(plane_reconcile_and_elevate) {
     CHECK_NEAR(plane->pos.x, 10.0f, 1e-4f);
     if (plane->sprite) {
         CHECK_EQ(asSprite(plane->sprite)->getFrame(), std::string("map-plane-01.img"));
+        // plane.ts rotation is PIXI (y-down); negated for the positive-Y world.
+        CHECK_NEAR(asSprite(plane->sprite)->rotation, -std::atan2(1.0f, 0.0f), 1e-4f);
     }
 
     // Each frame advances along planeDir at planeVel.
@@ -227,7 +229,7 @@ TEST(flare_bullet_visual) {
     b.playerId = 1;
     b.bulletType = "bullet_flare";
     b.pos = Vec2(100.0f, 100.0f);
-    b.dir = Vec2(1.0f, 0.0f);
+    b.dir = Vec2(0.0f, 1.0f);
     b.layer = 0;
     b.distAdjIdx = 16;
     b.varianceT = 0.0f;
@@ -238,6 +240,9 @@ TEST(flare_bullet_visual) {
     FlareVisual* f = world.flareBarn().bullets[0];
     CHECK(f->alive);
     CHECK(f->container != nullptr);
+    // flare.ts rotation is PIXI (y-down); negated for the positive-Y world.
+    CHECK_NEAR(static_cast<pix::NullContainer*>(f->container)->rotation,
+               -(std::atan2(0.0f, 1.0f) - 3.14159265358979f / 2.0f), 1e-4f);
     CHECK(f->flare != nullptr);
     CHECK(f->trail != nullptr);
     CHECK(f->speed > 0.0f);

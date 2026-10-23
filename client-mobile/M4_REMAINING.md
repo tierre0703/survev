@@ -1440,3 +1440,33 @@ and the player's forward pose).
 
 - Hear/see a role assignment and kill-leader label in a real (faction/role)
   match on device; spooky-map kill-leader sound group; role announcement text.
+
+---
+
+## 25. Session 20 - remaining world rotations (2026-10-23)
+
+Follow-up to §23: world nodes are now positive-Y, so every rotation copied from
+PIXI (y-down, clockwise) must be negated. Most sites already were (`-renderRot`,
+`-rot`, `-atan2`); three were still positive:
+
+- `flare.ts` flare container: `atan2(dir.x, dir.y) - PI/2`
+- `plane.ts` plane sprite: `atan2(planeDir.x, planeDir.y)`
+- `emote.ts` ping edge indicator: `atan2(dir.y, -dir.x) + PI/2`
+
+All three are negated now, with comments pointing at the web source. Host tests
+extended: `plane_reconcile_and_elevate` asserts the plane's rendered rotation
+and `flare_bullet_visual` asserts the flare container's rotation (a northbound
+flare now expects `+PI/2`, not `-PI/2`).
+
+### Verification
+
+- `surv_tests`: **132 tests, 2,203 assertions, 0 failures**.
+- x86_64 native lib + APK built and launched into a live match; no crash and the
+  world still matches the minimap. A plane was not on screen in that match, so
+  the plane rotation is host-tested; the ping edge indicator still needs a
+  visible ping on device.
+
+### Still open
+
+- Visual check of a plane flyover and a ping edge indicator on device.
+- Particle/smoke rotations are random-angle cosmetics and were left alone.

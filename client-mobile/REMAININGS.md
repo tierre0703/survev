@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 19 added role announcements and the kill-leader HUD: `RoleAnnouncementMsg` is queued by `Game` and played through the role's codegen'd `soundAssign`/`soundDead`; `UpdateMsg.killLeaderDirty` drives a top-centre "Kill Leader: name (N)" label in the live HUD. Earlier: §18 world orientation, §17 reverb, §16 role icons, §15 map airstrikes/names/big-map pings. **132 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-23** — Session 20 negated the remaining PIXI rotations for the positive-Y world (flare container, airdrop/strike plane, ping edge indicator) and extended the plane/flare host tests. Earlier: §19 role announcements/kill leader, §18 world orientation, §17 reverb, §16 role icons. **132 host tests pass, 0 fail.**
 
 ---
 
@@ -317,3 +317,4 @@ node tools/build-gui-icons.mjs
 - Map dot styles (role icon/dead/downed scale + outer ring + z bump) come from `mapDotStyle`; keep it in sync with `ui.ts updatePlayerMapSprites`
 - Reverb is per-source OpenAL EAX: `AxmolAudioBackend` iterates active handles (no global convolver bus); `ReverbModel` is the host-tested mapping
 - The camera root is **positive-Y** (`Renderer::applyCamera`): axmol y-up origin = `screenH - pointToScreen(0,0).y`; world +y is screen-up. World labels do not `setFlipY`
+- Web/PIXI rotations on **world** nodes must be negated for the positive-Y root (obstacle/dead-body/flare/plane/bullet-ping sites already do)
