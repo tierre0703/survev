@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 21 added the live HUD gas countdown (`#ui-gas-timer`) and the game-over result overlay (victory/defeat, rank, team kills, local kills/damage/time); the HUD now stays visible while `GameOverMsg` is pending so the result can render. Earlier: §20 world rotations, §19 role announcements/kill leader, §18 world orientation, §17 reverb. **133 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-23** — Session 22 added live squad/team health bars: `GameScene` builds up to 4 `SquadMember` rows from `getTeamPlayerIds`/`groupStatus`/`allPlayerStatus`, and `Hud::setSquadState` draws names, colour-coded health bars and Dead/Down/DC labels (hidden in solo). Earlier: §21 gas timer + result overlay, §20 rotations, §19 role announcements. **134 host tests pass, 0 fail.**
 
 ---
 
@@ -78,7 +78,7 @@ Latest recorded state: **2026-10-23** — Session 21 added the live HUD gas coun
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ |
 | `client/src/ui/teamMenu.ts` → `ui/TeamMenu.*`, Java `TeamFragment.java` + `TeamSocket.java` | ✅ |
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | ✅ |
-| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | ✅ health/boost, weapon cards, ammo, alive/kills, kill feed, pickup message, kill leader, gas timer, game-over result overlay |
+| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | ✅ health/boost, weapon cards, ammo, alive/kills, kill feed, pickup message, kill leader, gas timer, game-over result overlay, squad health bars |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | ❌ **not ported** |
@@ -155,7 +155,7 @@ Latest recorded state: **2026-10-23** — Session 21 added the live HUD gas coun
     (`Hud::showGameOver`), shown while `GameOverMsg` is pending
 - [x] **Minimap** (render from `RenderTexture`) — live HUD: baked 256×256 map texture under the top-right frame (`Map::generateMinimapTexture` + `Hud::setMinimap`)
 - [x] **Gas timer** (`#ui-gas-timer`) — countdown under the minimap from `Gas::duration`/`circleT`, red while moving, hidden when inactive
-- [x] **Squad health bars** (4 team member health bars with status indicators)
+- [x] **Squad health bars** (4 team member health bars with status indicators) — live HUD: `Hud::setSquadState`, names, colour bars, Dead/Down/DC; hidden in solo
 - [x] **FguiPadGraphics touch pads** — real pad sprites (FGUI GGraph circles):
   - Center ring (GGraph drawEllipse, blue for move, orange for aim, semi-transparent)
   - Touch dot (GGraph drawEllipse solid fill, white/light orange)
@@ -170,7 +170,7 @@ Latest recorded state: **2026-10-23** — Session 21 added the live HUD gas coun
   - Driven by ActivePlayerData.actionTime/actionDuration
   - Wired into GameScene::update() per frame
   - Stops when action completes
-- [x] **Squad health bars** (4 team member health bars with status indicators):
+- [x] **Squad health bars** (4 team member health bars with status indicators) — live HUD: `Hud::setSquadState`, names, colour bars, Dead/Down/DC; hidden in solo:
   - FguiHud.buildSquadBars() builds 4 slots with name, health bar, status text
   - Driven by Game::getTeamPlayerIds() + groupStatus() + playerStatus
   - Shows green/amber/grey bar based on health, "Dead"/"Down"/"DC" status labels
@@ -279,7 +279,7 @@ Latest recorded state: **2026-10-23** — Session 21 added the live HUD gas coun
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (133 tests, 0 failures expected)
+# host tests (134 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe

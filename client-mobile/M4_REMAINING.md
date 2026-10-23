@@ -1510,3 +1510,37 @@ gameOver()`), and the overlay latches until the next match.
 - See the gas timer and result overlay in a match on device; decide whether the
   result should wait for a tap before returning to the Java menu (today the
   back button leaves).
+
+---
+
+## 27. Session 22 - live squad health bars (2026-10-23)
+
+Ported the `ui.ts` team health display (previously only in the unused
+`ui/FguiHud`) into the live `game/Hud`:
+
+- `SquadMember { name, health, dead, downed, disconnected, active }` is built
+  each frame by `GameScene` from `getTeamPlayerIds()` (sorted ascending, like
+  `groupInfo.playerIds`), `groupStatus()` (health/DC) and `allPlayerStatus()`
+  (dead/downed).
+- `Hud::setSquadState` draws up to four rows at the top-left: name, a 120px
+  colour-coded bar (grey dead / orange downed / green alive) and a
+  `DC` > `Dead` > `Down` status label. Rows are hidden in solo or while the HUD
+  is hidden, and repaint only when the name/health/status key changes.
+- The layout reuses the HUD's design-space `X/Y` helpers (squad rows are built
+  after the static layout pass).
+
+### Verification
+
+- `surv_tests`: **134 tests, 2,231 assertions, 0 failures** (new:
+  `hud_squad_health_bars` covering the four rows, names, Dead/Down/DC and
+  hiding for solo/hidden HUD).
+- x86_64 native lib + APK built and a **Duo** match joined on the emulator
+  (`playerCount=2, gameModeIdx=1`); the server had not added the auto-fill
+  teammate yet during the short session, so `teamIds.size() > 1` was false and
+  the bars correctly stayed hidden. A teammate is needed for a visual check.
+
+### Still open
+
+- See the bars with a real/auto-filled teammate; render the active-player
+  highlight (`SquadMember.active` is populated but not styled yet).
+- Role icons (`local`, `medic`, ...) next to squad names.

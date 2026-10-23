@@ -573,6 +573,51 @@ TEST(hud_gas_timer_and_result_overlay) {
     CHECK_EQ(title->text, std::string("VICTORY"));
 }
 
+TEST(hud_squad_health_bars) {
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.setVisible(true);
+
+    std::vector<SquadMember> squad(4);
+    squad[0].name = "Alice";
+    squad[0].health = 100.0f;
+    squad[1].name = "Bob";
+    squad[1].health = 0.0f;
+    squad[1].dead = true;
+    squad[2].name = "Cara";
+    squad[2].health = 0.0f;
+    squad[2].downed = true;
+    squad[3].name = "Dan";
+    squad[3].health = 50.0f;
+    squad[3].disconnected = true;
+    hud.setSquadState(squad);
+
+    const auto* n0 = static_cast<const pix::NullText*>(hud.squadNameText(0));
+    const auto* n1 = static_cast<const pix::NullText*>(hud.squadNameText(1));
+    const auto* n2 = static_cast<const pix::NullText*>(hud.squadNameText(2));
+    const auto* n3 = static_cast<const pix::NullText*>(hud.squadNameText(3));
+    CHECK(n0 && n1 && n2 && n3);
+    CHECK_EQ(n0->text, std::string("Alice"));
+    CHECK_EQ(n1->text, std::string("Bob"));
+    CHECK_EQ(n2->text, std::string("Cara"));
+    CHECK_EQ(n3->text, std::string("Dan"));
+    CHECK(n0->visible && n3->visible);
+
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(0))->text, std::string(""));
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(1))->text, std::string("Dead"));
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(2))->text, std::string("Down"));
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(3))->text, std::string("DC"));
+
+    // Solo / hidden HUD: rows disappear.
+    hud.setSquadState({});
+    CHECK(!n0->visible);
+    hud.setSquadState(squad);
+    hud.setVisible(false);
+    CHECK(!n0->visible);
+}
+
 TEST(hud_big_map_toggle_and_hits) {
     installGeneratedDefs();
     pix::NullPixiFactory factory;

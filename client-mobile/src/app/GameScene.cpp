@@ -835,6 +835,38 @@ void GameScene::update(float delta) {
             gasHud.secondsLeft = std::max(0.0f, gas.duration * (1.0f - gas.circleT));
             _hud->setGasState(gasHud);
         }
+        // Squad bars (ui.ts team health / FguiHud::buildSquadBars).
+        {
+            std::vector<SquadMember> squad;
+            if (_game->teamMode() != 1) {
+                std::vector<uint16_t> ids = _game->getTeamPlayerIds();
+                std::sort(ids.begin(), ids.end());
+                if (ids.size() > 1) {
+                    const auto& infos = _game->allPlayerInfo();
+                    const auto& statuses = _game->allPlayerStatus();
+                    const auto& groupStatus = _game->groupStatus();
+                    for (size_t i = 0; i < ids.size() && i < 4; ++i) {
+                        SquadMember member;
+                        const auto info = infos.find(ids[i]);
+                        if (info != infos.end()) {
+                            member.name = info->second.name;
+                        }
+                        if (i < groupStatus.size()) {
+                            member.health = groupStatus[i].health;
+                            member.disconnected = groupStatus[i].disconnected;
+                        }
+                        const auto status = statuses.find(ids[i]);
+                        if (status != statuses.end()) {
+                            member.dead = status->second.dead;
+                            member.downed = status->second.downed;
+                        }
+                        member.active = ids[i] == _game->getActivePlayerId();
+                        squad.push_back(member);
+                    }
+                }
+            }
+            _hud->setSquadState(squad);
+        }
         _hud->update(delta, *_game,
                      _inGame && _notifiedStarted && (_game->isPlaying() || _game->gameOver() != nullptr));
         // ui.ts createPing / mapSprite.ts: minimap ping sprites over the baked

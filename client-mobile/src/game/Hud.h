@@ -18,12 +18,23 @@
 #include "EmoteManager.h"
 #include "MapView.h"
 
+#include <array>
 #include <string>
 #include <vector>
 
 namespace surv {
 
 class Game;
+
+// ui.ts team squad bars / FguiHud::buildSquadBars input.
+struct SquadMember {
+    std::string name;
+    float health = 100.0f;
+    bool dead = false;
+    bool downed = false;
+    bool disconnected = false;
+    bool active = false;
+};
 
 // ui.ts updateGasDisplay: gas countdown shown under the minimap.
 struct GasHudState {
@@ -49,6 +60,8 @@ public:
     // Per-frame repaint (only the widgets whose value changed are touched).
     void update(float dt, const Game& game, bool visible);
     void setGasState(const GasHudState& gas);
+    // Team modes: up to 4 members (name, health bar, Dead/Down/DC).
+    void setSquadState(const std::vector<SquadMember>& members);
 
     // ui.ts displayStats: result screen (victory/defeat, rank, team kills and
     // the local player's kills/damage/time). Called with GameOverMsg data.
@@ -93,6 +106,12 @@ public:
     const pix::Text* gameOverTitleText() const { return _overTitle; }
     const pix::Text* gameOverRankText() const { return _overRank; }
     const pix::Text* gameOverStatsText() const { return _overStats; }
+    const pix::Text* squadNameText(int idx) const {
+        return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].name : nullptr;
+    }
+    const pix::Text* squadStatusText(int idx) const {
+        return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].status : nullptr;
+    }
 
 private:
     void layout(pix::Graphics* g, float w, float h) const;
@@ -134,6 +153,17 @@ private:
     pix::Text* _overRank = nullptr;
     pix::Text* _overStats = nullptr;
     bool _overShown = false;
+
+    // Squad bars (top-left, team modes).
+    struct SquadRow {
+        pix::Text* name = nullptr;
+        pix::Graphics* barBg = nullptr;
+        pix::Graphics* barFill = nullptr;
+        pix::Text* status = nullptr;
+        std::string key;
+    };
+    std::array<SquadRow, 4> _squad{};
+    std::vector<SquadMember> _squadState;
 
     pix::Container* _weaponBox = nullptr;
     pix::Graphics* _weaponBoxBg = nullptr;

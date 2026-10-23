@@ -316,6 +316,39 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_bigMapCloseText);
     setBigMapVisible(false);
 
+    // Squad bars (#ui-top-left / FguiHud::buildSquadBars): name, health bar,
+    // Dead/Down/DC. Shown only when GameScene supplies team members.
+    const float squadX = 12.0f;
+    const float squadTop = vh - 16.0f;
+    for (int i = 0; i < 4; ++i) {
+        SquadRow& row = _squad[static_cast<size_t>(i)];
+        const float rowY = squadTop - static_cast<float>(i) * 26.0f;
+        row.name = _factory->createText();
+        row.name->setFontSize(12.0f);
+        row.name->setColor(0xffffff, 0x000000, 1.0f, false);
+        row.name->setAnchor(0.0f, 1.0f);
+        row.name->setPosition(X(squadX), Y(rowY));
+        _root->addChild(row.name);
+        row.barBg = _factory->createGraphics();
+        row.barBg->beginFill(0x000000, 0.4f);
+        row.barBg->drawRect(X(squadX), Y(rowY - 14.0f), 120.0f, 8.0f);
+        row.barBg->endFill();
+        _root->addChild(row.barBg);
+        row.barFill = _factory->createGraphics();
+        row.barFill->setPosition(X(squadX), Y(rowY - 14.0f));
+        _root->addChild(row.barFill);
+        row.status = _factory->createText();
+        row.status->setFontSize(11.0f);
+        row.status->setColor(0xffd060, 0x000000, 1.0f, false);
+        row.status->setAnchor(0.0f, 1.0f);
+        row.status->setPosition(X(squadX + 124.0f), Y(rowY));
+        _root->addChild(row.status);
+        row.name->setVisible(false);
+        row.barBg->setVisible(false);
+        row.barFill->setVisible(false);
+        row.status->setVisible(false);
+    }
+
     _built = true;
     setVisible(false);
 }
@@ -373,6 +406,22 @@ void Hud::setVisible(bool visible) {
     }
     if (_mapExpandIcon) {
         _mapExpandIcon->setVisible(visible && !big);
+    }
+    for (size_t i = 0; i < _squad.size(); ++i) {
+        const bool showRow = visible && i < _squadState.size();
+        SquadRow& row = _squad[i];
+        if (row.name) {
+            row.name->setVisible(showRow);
+        }
+        if (row.barBg) {
+            row.barBg->setVisible(showRow);
+        }
+        if (row.barFill) {
+            row.barFill->setVisible(showRow && _squadState[i].health > 0.0f);
+        }
+        if (row.status) {
+            row.status->setVisible(showRow);
+        }
     }
     const bool over = visible && _overShown;
     if (_overBackdrop) {
@@ -468,6 +517,55 @@ bool Hud::bigMapCloseHit(float designX, float designY) const {
     const float dx = p.x - c.x;
     const float dy = p.y - c.y;
     return dx * dx + dy * dy <= 24.0f * 24.0f;
+}
+
+void Hud::setSquadState(const std::vector<SquadMember>& members) {
+    _squadState = members;
+    if (!_built) {
+        return;
+    }
+    for (size_t i = 0; i < _squad.size(); ++i) {
+        SquadRow& row = _squad[i];
+        if (i >= members.size()) {
+            row.name->setVisible(false);
+            row.barBg->setVisible(false);
+            row.barFill->setVisible(false);
+            row.status->setVisible(false);
+            row.key.clear();
+            continue;
+        }
+        const SquadMember& m = members[i];
+        std::string status;
+        if (m.disconnected) {
+            status = "DC";
+        } else if (m.dead) {
+            status = "Dead";
+        } else if (m.downed) {
+            status = "Down";
+        }
+        const int health = static_cast<int>(std::clamp(m.health, 0.0f, 100.0f));
+        const std::string key = m.name + "|" + std::to_string(health) + "|" + status +
+                                "|" + (m.active ? "1" : "0");
+        if (key == row.key) {
+            continue;
+        }
+        row.key = key;
+        row.name->setText(m.name.empty() ? "Player" : m.name);
+        row.status->setText(status);
+        const uint32_t color = m.dead ? 0x444444 : (m.downed ? 0xffaa00 : 0x4caf50);
+        const float fillWidth = 120.0f * static_cast<float>(health) / 100.0f;
+        row.barFill->clear();
+        if (fillWidth > 0.0f) {
+            row.barFill->beginFill(color, 1.0f);
+            row.barFill->drawRect(0.0f, 0.0f, fillWidth, 8.0f);
+            row.barFill->endFill();
+        }
+        const bool showRow = _visible;
+        row.name->setVisible(showRow);
+        row.barBg->setVisible(showRow);
+        row.barFill->setVisible(showRow && fillWidth > 0.0f);
+        row.status->setVisible(showRow);
+    }
 }
 
 void Hud::setGasState(const GasHudState& gas) {
