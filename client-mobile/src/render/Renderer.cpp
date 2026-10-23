@@ -127,10 +127,16 @@ void Renderer::applyCamera(pix::Node* root, const Camera& camera) {
     // the viewport centre). Using m_pointToScreen(m_pos) pinned world (0,0) to
     // the centre and the camera never scrolled. map.ts does the same:
     // `p0 = camera.m_pointToScreen(v2.create(0, 0))`.
+    //
+    // m_pointToScreen returns web/PIXI screen coordinates (y down); axmol's
+    // scene graph is y up, so the origin is mirrored vertically and the world
+    // keeps a POSITIVE y scale. (The old `scale(s, -s)` made north point down,
+    // which was visible once the minimap showed the real map orientation and
+    // inverted the joystick's up/down.)
     const float s = camera.m_z();
     const Vec2 p = camera.m_pointToScreen(Vec2(0.0f, 0.0f));
-    root->setScale(s, -s);
-    root->setPosition(p.x, p.y);
+    root->setScale(s, s);
+    root->setPosition(p.x, camera.m_screenHeight - p.y);
 }
 
 // drawGround draws the snap-to-underground-colour rect that fills the floor of a

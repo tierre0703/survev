@@ -940,6 +940,9 @@ scale 0.25 (`kDotBaseRadius = 104`). Both pads now match the web's footprint.
 
 ### 16.4 World-space text was vertically mirrored (closes �15's follow-up)
 
+> **Superseded by §23:** the camera root is now positive-Y, so world labels are
+> upright without a counter-flip. This section records the earlier state only.
+
 The camera root carries `scale(s, -s)`, which mirrors y-up glyphs (sprite art
 is authored y-down, text is not). `pix::Text::setFlipY(true)` draws the glyph
 sprite with `scaleY = -1`; because the flip happens about the anchor line, the
@@ -1348,3 +1351,55 @@ got reverb. The web instead mixes every sound through one global
 - Kill leader/notification sounds and remaining UI sounds (Java UI layer).
 - The web's true IR convolution cannot be reproduced by axmol's EAX reverb;
   the parameter model is the closest available.
+
+---
+
+## 23. Session 18 - world was vertically mirrored (2026-10-23)
+
+### 23.1 Symptom
+
+With the baked minimap in place it became obvious that the game world was
+vertically mirrored: the minimap had north up, the world had north down, and
+pushing the move pad up moved the player **down** on screen.
+
+### 23.2 Cause
+
+`Renderer::applyCamera` put the camera root at `m_pointToScreen(0,0)` and
+scaled it `(z, -z)`. `m_pointToScreen` returns **PIXI screen coordinates (y
+down)**, but axmol's scene graph is **y up**, so the transform mapped world +y
+to screen down. The old text counter-flip (`setFlipY(true)`) hid only the glyph
+symptom, not the world mirror.
+
+### 23.3 Fix
+
+```cpp
+root->setScale(s, s);
+root->setPosition(p.x, camera.m_screenHeight - p.y);
+```
+
+The origin is converted to axmol's y-up space and the world keeps a positive
+scale. This makes world +y screen-up, matching the minimap and
+`Camera::m_pointToScreen`, so the joystick/aim directions are no longer
+inverted. Player/dead-body name labels no longer enable `Text::setFlipY`
+(world text is upright), and the `Renderer.h`/`PixiLike.h` comments were
+updated. Rotations that the port already negated for the web's y-down
+convention render correctly with the positive root (verified with the aim line
+and the player's forward pose).
+
+### Verification
+
+- `surv_tests`: **131 tests, 2,189 assertions, 0 failures**
+  (`renderer_world_root_transform` now asserts `sy > 0` and that world +y maps
+  to a smaller visual y; `player_skin_and_equipment` asserts labels are not
+  flipped).
+- x86_64 native lib + APK on the emulator: world terrain now matches the
+  minimap/big-map orientation; an up swipe on the move pad moves the minimap
+  dot up and the world scrolls accordingly; the aim line points up when the
+  aim pad is pushed up; player names read upright; `logcat -b crash` empty.
+
+### Still open
+
+- Re-check world **rotations** on less-common sprites (doors/planes/particles)
+  now that the camera is positive-Y; the player aim and buildings look correct.
+- Ping edge-indicator `rot` was tuned under the old mirror; verify when a ping
+  is visible on device.

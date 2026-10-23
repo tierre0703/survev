@@ -129,10 +129,10 @@ public:
     virtual void setFontSize(float size) = 0;
     virtual void setFontFamily(const std::string& family) = 0;
     virtual void setColor(uint fill, uint stroke, float strokeThickness, bool bold) = 0;
-    // The world content container carries the camera transform with a negative
-    // Y scale (Renderer::applyCamera), which mirrors glyphs authored y-up. The
-    // web client keeps world labels upright, so world-space text counters the
-    // parent flip about its anchor. Screen-space/HUD text leaves this false.
+    // Optional counter-flip about the anchor. World text no longer needs it
+    // (the camera root is positive-Y since the §23 orientation fix); kept for
+    // any y-down parent that mirrors glyphs. Screen-space/HUD text leaves it
+    // false.
     virtual void setFlipY(bool flip) = 0;
 };
 

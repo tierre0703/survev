@@ -306,8 +306,8 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
         nameText->setAnchor(0.5f, -1.0f);
         nameText->setScale(0.5f, 0.5f);
         nameText->setColor(0xffffff, 0x000000, 1.0f, true);
-        // The player container lives under the camera root's negative-Y scale.
-        nameText->setFlipY(true);
+        // World text is y-up like the camera root now (no counter-flip).
+        nameText->setFlipY(false);
         container->addChild(nameText);
     }
     if (isNew || data.animSeq != animSeq) playAnim(data.animType, data.animSeq);

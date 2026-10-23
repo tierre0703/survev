@@ -43,7 +43,7 @@ public:
     // `pixiContainers`, i.e. the node GameWorld::attachTo() receives). Every
     // per-object draw already works in world/point space, so the camera lives
     // here instead of inside each object's projection.
-    //   root.scale = camera.m_z(), y flipped
+    //   root.scale = camera.m_z(), world y up
     //   root.position = camera.m_pointToScreen(0, 0)
     void applyCamera(pix::Node* root, const Camera& camera);
     // Re-apply the view transform after the zoom changed (ground rect, layer

@@ -170,19 +170,29 @@ TEST(renderer_world_root_transform) {
     camera.m_zoom = 1.5f;
 
     // renderer.ts: the container's origin is world (0,0), so it goes to
-    // pointToScreen(0,0) and carries scale (z, -z); objects stay in world
-    // space. m_pointToScreen(m_pos) would pin the world origin to the centre
-    // and the camera would never scroll.
+    // pointToScreen(0,0) and carries a POSITIVE y scale in axmol's y-up scene
+    // graph (m_pointToScreen is PIXI y-down, so the origin is mirrored).
+    // m_pointToScreen(m_pos) would pin the world origin to the centre and the
+    // camera would never scroll.
     renderer.applyCamera(root, camera);
     CHECK_NEAR(root->sx, 24.0f, 1e-4f);
-    CHECK_NEAR(root->sy, -24.0f, 1e-4f);
+    CHECK_NEAR(root->sy, 24.0f, 1e-4f);
     CHECK_NEAR(root->x, 400.0f - 100.0f * 24.0f, 1e-4f);
-    CHECK_NEAR(root->y, 300.0f + 100.0f * 24.0f, 1e-4f);
+    CHECK_NEAR(root->y, 600.0f - (300.0f + 100.0f * 24.0f), 1e-4f);
+
+    // World +y must be UP on screen (the old negative scale mirrored the map
+    // and made the joystick's up/down feel inverted). Convert the root's
+    // y-up scene position to a y-down visual coordinate.
+    const auto visualY = [&](float worldY) {
+        return camera.m_screenHeight - (root->y + root->sy * worldY);
+    };
+    CHECK_NEAR(visualY(camera.m_pos.y), 300.0f, 1e-4f); // camera y -> centre
+    CHECK(visualY(camera.m_pos.y + 10.0f) < visualY(camera.m_pos.y));
 
     camera.m_zoom = 0.75f;
     renderer.applyCamera(root, camera);
     CHECK_NEAR(root->sx, 12.0f, 1e-4f);
-    CHECK_NEAR(root->sy, -12.0f, 1e-4f);
+    CHECK_NEAR(root->sy, 12.0f, 1e-4f);
 }
 
 // ---------------------------------------------------------------------------
@@ -700,10 +710,10 @@ TEST(player_skin_and_equipment) {
     CHECK_NEAR(container(p.container)->rotation, 0, 1e-4f); // name stays upright
     CHECK_EQ(p.activeWeapon, std::string("ak47"));
     CHECK_EQ(p.container->getSortOrd(), 18);
-    // World-space labels counter the camera's negative-Y flip (they used to
-    // render vertically mirrored; M4_REMAINING 15 follow-up).
+    // World-space labels are y-up like the corrected camera root (no
+    // counter-flip; the old negative-Y camera needed one).
     CHECK(p.nameText != nullptr);
-    CHECK(text(p.nameText)->flipY);
+    CHECK(!text(p.nameText)->flipY);
 }
 
 TEST(player_animation_sequence_and_interpolation) {

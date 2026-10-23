@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 17 (`M4_REMAINING.md` §22) finished reverb: `audio/ReverbModel.h` maps the cathedral/cave `ReverbDef` to EAX parameters and `AxmolAudioBackend` applies them to every active sound handle (the old silent-carrier stub made reverb inaudible), including new sounds. Earlier: §21 role map icons, §20 map airstrikes/place names/big-map tap-to-ping, §19 dots/gas/big map, §18 minimap/pings, §17 team-ping wheel. **131 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-23** — Session 18 fixed the world's vertical orientation: the camera root now uses a positive Y scale with an axmol y-up origin (`screenH - p.y`), so the world matches the minimap and the joystick's up/down; world name labels no longer counter-flip. Earlier: §17 reverb, §16 role icons, §15 map airstrikes/names/big-map pings, §14 dots/gas/big map, §13 minimap, §12 ping wheel. **131 host tests pass, 0 fail.**
 
 ---
 
@@ -316,3 +316,4 @@ node tools/build-gui-icons.mjs
 - Place names are drawn as HUD text in `MapView`, not baked into the RenderTexture (text-in-RT did not show on device)
 - Map dot styles (role icon/dead/downed scale + outer ring + z bump) come from `mapDotStyle`; keep it in sync with `ui.ts updatePlayerMapSprites`
 - Reverb is per-source OpenAL EAX: `AxmolAudioBackend` iterates active handles (no global convolver bus); `ReverbModel` is the host-tested mapping
+- The camera root is **positive-Y** (`Renderer::applyCamera`): axmol y-up origin = `screenH - pointToScreen(0,0).y`; world +y is screen-up. World labels do not `setFlipY`

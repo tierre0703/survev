@@ -488,9 +488,8 @@ private:
         // anchor (HUD code passes CSS-style anchors, e.g. (0,1) = top-left).
         sprite->setAnchorPoint(ax::Vec2(_anchorX, _anchorY));
         sprite->setPosition(ax::Vec2::ZERO);
-        // World labels sit under the camera's negative-Y root scale, which
-        // mirrors y-up glyphs; counter-flip about the anchor line so the label
-        // reads upright while keeping its anchor position.
+        // Optional counter-flip about the anchor line (kept for y-down
+        // parents; the world camera is positive-Y since the §23 fix).
         if (_flipY) {
             sprite->setScaleY(-1.0f);
         }
