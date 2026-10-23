@@ -6,6 +6,7 @@
 #include "game/GameWorld.h"
 #include "game/EmoteManager.h"
 #include "game/Hud.h"
+#include "game/MapView.h"
 #include "net/Messages.h"
 #include "render/Defs.h"
 #include "render/GeneratedDefs.h"
@@ -321,16 +322,17 @@ TEST(hud_minimap_positions_ping_sprites) {
     hud.build(&factory, root, Vec2(1280.0f, 720.0f));
     auto* rt = static_cast<pix::NullRenderTexture*>(factory.createRenderTexture());
     rt->resize(256.0f, 256.0f);
-    hud.setMinimap(rt);
+    hud.setMinimap(rt, 512.0f, 512.0f);
     hud.setVisible(true);
 
-    const auto* mini = static_cast<const pix::NullSprite*>(hud.minimapSprite());
-    CHECK(mini != nullptr);
-    CHECK(mini->texture == rt);
-    CHECK_NEAR(mini->sx, Hud::kMinimapSize / 256.0f, 0.001f);
+    const MapView& mini = hud.minimap();
+    const auto* map = static_cast<const pix::NullSprite*>(mini.mapSprite());
+    CHECK(map != nullptr);
+    CHECK(map->texture == rt);
+    CHECK_NEAR(map->sx, Hud::kMinimapSize / 256.0f, 0.001f);
     // Bottom-left of the top-right 140px frame (design 1280x720, centred).
-    CHECK_NEAR(mini->x, (1280.0f - Hud::kMinimapSize - 12.0f) - 640.0f, 0.01f);
-    CHECK_NEAR(mini->y, (720.0f - Hud::kMinimapSize - 12.0f) - 360.0f, 0.01f);
+    CHECK_NEAR(mini.pos().x, (1280.0f - Hud::kMinimapSize - 12.0f) - 640.0f, 0.01f);
+    CHECK_NEAR(mini.pos().y, (720.0f - Hud::kMinimapSize - 12.0f) - 360.0f, 0.01f);
 
     std::vector<MapPing> pings(1);
     pings[0].texture = "ping-map-danger.img";
@@ -340,20 +342,117 @@ TEST(hud_minimap_positions_ping_sprites) {
     pings[0].life = 4.0f;
     pings[0].maxLife = 4.0f;
     pings[0].ticker = 1.0f;
-    hud.updateMapPings(pings, 512.0f, 512.0f);
+    hud.updateMapPings(pings);
 
-    const auto* sprite = static_cast<const pix::NullSprite*>(hud.mapPingSprite(0));
+    const auto* sprite = static_cast<const pix::NullSprite*>(mini.pingSprite(0));
     CHECK(sprite != nullptr);
     CHECK(sprite->visible);
     CHECK_EQ(sprite->frame, std::string("ping-map-danger.img"));
-    // Positions are local to the clipped layer anchored at the minimap corner.
     CHECK_NEAR(sprite->x, Hud::kMinimapSize * 0.5f, 0.01f);
     CHECK_NEAR(sprite->y, Hud::kMinimapSize * 0.5f, 0.01f);
     CHECK_NEAR(sprite->sx, 0.2f * Hud::kMinimapSize / 256.0f, 0.001f);
     CHECK_EQ(sprite->getTint(), 0xffff00u);
 
-    // Hidden HUD hides the map ping sprites again.
+    // Hidden HUD hides the minimap view (and its pings).
     hud.setVisible(false);
-    hud.updateMapPings(pings, 512.0f, 512.0f);
-    CHECK(!sprite->visible);
+    hud.updateMapPings(pings);
+    CHECK(!mini.visible());
+}
+
+TEST(map_view_dots_gas_and_pings) {
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    MapView view;
+    view.build(&factory, root, Vec2(10.0f, 20.0f), 256.0f);
+    auto* rt = static_cast<pix::NullRenderTexture*>(factory.createRenderTexture());
+    rt->resize(256.0f, 256.0f);
+    view.setTexture(rt);
+    view.setMapSize(512.0f, 512.0f);
+
+    std::vector<MapDot> dots(2);
+    dots[0].pos = Vec2(256.0f, 256.0f);
+    dots[0].scale = 0.3f;
+    dots[0].texture = "player-map-outer.img";
+    dots[0].tint = 0xffffff;
+    dots[0].zOrder = 10;
+    dots[1].pos = Vec2(512.0f, 512.0f);
+    dots[1].scale = 0.2f;
+    dots[1].texture = "player-map-inner.img";
+    dots[1].tint = 0xffff00;
+    dots[1].zOrder = 11;
+    view.setDots(dots);
+
+    const auto* outer = static_cast<const pix::NullSprite*>(view.dotSprite(0));
+    const auto* inner = static_cast<const pix::NullSprite*>(view.dotSprite(1));
+    CHECK(outer != nullptr && inner != nullptr);
+    CHECK_NEAR(outer->x, 128.0f, 0.01f);
+    CHECK_NEAR(outer->y, 128.0f, 0.01f);
+    CHECK_NEAR(inner->x, 256.0f, 0.01f);
+    CHECK_NEAR(inner->y, 256.0f, 0.01f);
+    CHECK_NEAR(inner->sx, 0.2f, 0.001f); // 256px view / 256px texture
+    CHECK_EQ(inner->getTint(), 0xffff00u);
+    CHECK(view.dotSprite(2) == nullptr); // pool grows lazily
+
+    MapGas gas;
+    gas.active = true;
+    gas.pos = Vec2(256.0f, 256.0f);
+    gas.rad = 128.0f;
+    gas.hasSafe = true;
+    gas.safePos = Vec2(256.0f, 256.0f);
+    gas.safeRad = 64.0f;
+    gas.playerPos = Vec2(0.0f, 0.0f);
+    view.setGas(gas);
+    CHECK(view.gasGraphics() != nullptr);
+    CHECK(!static_cast<pix::NullGraphics*>(view.gasGraphics())->commands.empty());
+
+    // Inverse projection (big-map taps): local centre -> world centre.
+    const Vec2 world = view.unproject(Vec2(128.0f, 128.0f));
+    CHECK_NEAR(world.x, 256.0f, 0.01f);
+    CHECK_NEAR(world.y, 256.0f, 0.01f);
+}
+
+TEST(hud_big_map_toggle_and_hits) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    auto* rt = static_cast<pix::NullRenderTexture*>(factory.createRenderTexture());
+    rt->resize(256.0f, 256.0f);
+    hud.setMinimap(rt, 512.0f, 512.0f);
+    hud.setVisible(true);
+
+    CHECK(!hud.bigMapVisible());
+    CHECK(hud.minimap().visible());
+
+    // Expand affordance sits inside the minimap's bottom-right corner. Hit
+    // tests take design-space coordinates; the view positions are centred.
+    const Vec2 designOrigin(640.0f, 360.0f);
+    const Vec2 expand = v2Add(v2Add(hud.minimap().pos(), designOrigin),
+                              Vec2(Hud::kMinimapSize - Hud::kMinimapExpandSize - 4.0f + 11.0f, 15.0f));
+    CHECK(hud.minimapExpandHit(expand.x, expand.y));
+    CHECK(!hud.minimapExpandHit(expand.x - 100.0f, expand.y));
+
+    hud.setBigMapVisible(true);
+    CHECK(hud.bigMapVisible());
+    CHECK(!hud.minimap().visible());
+    CHECK(!hud.minimapExpandHit(expand.x, expand.y));
+
+    const Vec2 center = v2Add(v2Add(hud.bigMap().pos(), designOrigin),
+                              Vec2(Hud::kBigMapSize * 0.5f, Hud::kBigMapSize * 0.5f));
+    CHECK(hud.bigMapContains(center.x, center.y));
+    CHECK(!hud.bigMapContains(center.x - Hud::kBigMapSize, center.y));
+    const Vec2 close = v2Add(v2Add(hud.bigMap().pos(), designOrigin),
+                             Vec2(Hud::kBigMapSize + 10.0f, Hud::kBigMapSize - 10.0f));
+    CHECK(hud.bigMapCloseHit(close.x, close.y));
+    CHECK(!hud.bigMapCloseHit(center.x, center.y));
+
+    hud.setBigMapVisible(false);
+    CHECK(!hud.bigMapVisible());
+    CHECK(hud.minimap().visible());
+
+    // Hiding the HUD also closes the big map.
+    hud.setBigMapVisible(true);
+    hud.setVisible(false);
+    CHECK(!hud.bigMapVisible());
 }

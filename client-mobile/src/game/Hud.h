@@ -16,6 +16,7 @@
 #include "../core/Vec2.h"
 #include "../render/PixiLike.h"
 #include "EmoteManager.h"
+#include "MapView.h"
 
 #include <string>
 #include <vector>
@@ -36,17 +37,27 @@ public:
     static constexpr float kWeaponSlotHeight = 30.0f;
 
     // Builds every node under `root`; `design` is the design-space rect.
-    // `minimapDisplay`, when given, is adopted as the minimap contents.
-    void build(pix::Factory* factory, pix::Container* root, const Vec2& design,
-               const pix::Node* minimapDisplay = nullptr);
+    void build(pix::Factory* factory, pix::Container* root, const Vec2& design);
 
     // Per-frame repaint (only the widgets whose value changed are touched).
     void update(float dt, const Game& game, bool visible);
 
     // map.ts renderMap(): show the baked minimap texture under the frame.
-    void setMinimap(pix::RenderTexture* texture);
+    void setMinimap(pix::RenderTexture* texture, float mapWidth, float mapHeight);
     // ui.ts createPing / mapSprite.ts: draw the active minimap ping sprites.
-    void updateMapPings(const std::vector<MapPing>& pings, float mapWidth, float mapHeight);
+    void updateMapPings(const std::vector<MapPing>& pings);
+    // ui.ts updatePlayerMapSprites + m_render: player/team dots and gas.
+    void updateMapOverlay(const std::vector<MapDot>& dots, const MapGas& gas);
+
+    // Full-screen map (#big-map): toggled from the minimap's expand button.
+    static constexpr float kBigMapSize = 640.0f;
+    static constexpr float kMinimapExpandSize = 22.0f;
+    bool bigMapVisible() const { return _bigMapVisible; }
+    void setBigMapVisible(bool visible);
+    void toggleBigMap() { setBigMapVisible(!_bigMapVisible); }
+    bool minimapExpandHit(float designX, float designY) const;
+    bool bigMapContains(float designX, float designY) const;
+    bool bigMapCloseHit(float designX, float designY) const;
 
     // #ui-pickup-message: shows 	ext for 3s (ui2.ts pickup duration).
     void displayPickupMessage(const std::string& text);
@@ -59,11 +70,8 @@ public:
     static uint32_t healthColor(float health, bool downed);
 
     // Diagnostics for the host tests (map.ts renderMap / ui.ts createPing).
-    const pix::Sprite* minimapSprite() const { return _minimap; }
-    const pix::Sprite* mapPingSprite(int idx) const {
-        return (idx >= 0 && idx < kMapPingPool) ? _mapPingSprites[idx] : nullptr;
-    }
-    const Vec2& minimapPos() const { return _minimapPos; }
+    const MapView& minimap() const { return _miniMap; }
+    const MapView& bigMap() const { return _bigMap; }
 
 private:
     void layout(pix::Graphics* g, float w, float h) const;
@@ -79,13 +87,16 @@ private:
 
     pix::Container* _mapBox = nullptr;
     pix::Graphics* _mapFrame = nullptr;
-    pix::Sprite* _minimap = nullptr;
-    // Map ping sprites live in a container clipped to the minimap rect (the
-    // web's mapSpriteBarn sits inside the minimap container).
-    pix::Container* _mapPingLayer = nullptr;
-    pix::Graphics* _mapPingMask = nullptr;
-    static constexpr int kMapPingPool = 32;
-    pix::Sprite* _mapPingSprites[kMapPingPool] = {};
+    MapView _miniMap;
+    MapView _bigMap;
+    pix::Graphics* _bigMapBackdrop = nullptr;
+    pix::Graphics* _bigMapCloseBg = nullptr;
+    pix::Text* _bigMapCloseText = nullptr;
+    pix::Graphics* _mapExpandBg = nullptr;
+    pix::Graphics* _mapExpandIcon = nullptr;
+    Vec2 _bigMapPos;
+    Vec2 _expandPos;
+    bool _bigMapVisible = false;
     pix::Text* _aliveText = nullptr;
     pix::Text* _killsText = nullptr;
 

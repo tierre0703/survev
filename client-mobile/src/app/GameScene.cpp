@@ -329,7 +329,8 @@ bool GameScene::init() {
             _world->loadMap(msg);
             // map.ts renderMap(): the minimap texture is baked during loadMap.
             if (_hud) {
-                _hud->setMinimap(_world->map().getMinimapTexture());
+                _hud->setMinimap(_world->map().getMinimapTexture(),
+                                 _world->map().width, _world->map().height);
             }
         }
     });
@@ -377,6 +378,7 @@ void GameScene::resetWorld() {
     _emoteTouchId = -1;
     _pingWheel.reset();
     _pingTouchId = -1;
+    _bigMapTouchId = -1;
     _hud.reset();
     _world.reset();
     _worldRoot = nullptr;
@@ -808,8 +810,94 @@ void GameScene::update(float delta) {
         // ui.ts createPing / mapSprite.ts: minimap ping sprites over the baked
         // map texture (EmoteManager owns their lifetimes).
         if (_world) {
-            _hud->updateMapPings(_world->emoteManager().mapPings(),
-                                 _world->map().width, _world->map().height);
+            _hud->updateMapPings(_world->emoteManager().mapPings());
+
+            // ui.ts updatePlayerMapSprites + m_render: player/team dots and the
+            // gas/safe-zone circles on both the minimap and the big map.
+            std::vector<MapDot> dots;
+            const auto& infos = _game->allPlayerInfo();
+            const uint16_t activeId = _game->getActivePlayerId();
+            const auto activeIt = infos.find(activeId);
+            const uint8_t activeGroup = activeIt != infos.end() ? activeIt->second.groupId : 0;
+
+            std::vector<uint16_t> groupMembers;
+            for (const auto& entry : infos) {
+                if (entry.second.groupId == activeGroup) {
+                    groupMembers.push_back(entry.first);
+                }
+            }
+            std::sort(groupMembers.begin(), groupMembers.end());
+            static const uint32_t kGroupColors[4] = { 0xffff00, 0xff00ff, 0x0000ff, 0xff5400 };
+            static const uint32_t kTeamColors[2] = { 0xcc0000, 0x007eff };
+            const auto groupColor = [&](uint16_t id) -> uint32_t {
+                for (size_t i = 0; i < groupMembers.size() && i < 4; ++i) {
+                    if (groupMembers[i] == id) {
+                        return kGroupColors[i];
+                    }
+                }
+                return 0xffffff;
+            };
+            const auto teamColor = [&](uint8_t teamId) -> uint32_t {
+                return teamId >= 1 && teamId <= 2 ? kTeamColors[teamId - 1] : 0xffffff;
+            };
+            const auto addDot = [&](const Vec2& pos, float scale, const std::string& texture,
+                                    uint32_t tint, int zOrder) {
+                MapDot dot;
+                dot.pos = pos;
+                dot.scale = scale;
+                dot.texture = texture;
+                dot.tint = tint;
+                dot.zOrder = zOrder;
+                dots.push_back(dot);
+            };
+
+            Player* me = _world->activePlayer();
+            if (me) {
+                const int z = 60000;
+                addDot(me->pos, 0.3f, "player-map-outer.img", 0xffffff, z);
+                addDot(me->pos, 0.2f, "player-map-inner.img", groupColor(activeId), z + 1);
+            }
+            for (const auto& entry : _game->allPlayerStatus()) {
+                const uint16_t id = entry.first;
+                const PlayerStatus& status = entry.second;
+                if (id == activeId || !status.hasData || !status.visible) {
+                    continue;
+                }
+                const auto infoIt = infos.find(id);
+                if (infoIt == infos.end()) {
+                    continue;
+                }
+                const PlayerInfo& info = infoIt->second;
+                const bool sameGroup = info.groupId == activeGroup;
+                std::string texture = "player-map-inner.img";
+                if (status.dead) {
+                    texture = "skull-outlined.img";
+                } else if (status.downed) {
+                    texture = sameGroup ? "player-group-downed.img" : "player-map-downed.img";
+                }
+                const uint32_t tint = sameGroup ? groupColor(id) : teamColor(info.teamId);
+                const float scale = sameGroup ? (status.dead ? 0.3f : 0.2f)
+                                              : (status.dead || status.downed ? 0.25f : 0.15f);
+                const int z = 500 + static_cast<int>(id) * 2;
+                if (sameGroup && !status.dead) {
+                    addDot(status.pos, 0.3f, "player-map-outer.img", 0xffffff, z - 1);
+                }
+                addDot(status.pos, scale, texture, tint, z);
+            }
+
+            MapGas gas;
+            const Gas& g = _world->gas();
+            gas.active = g.isActive();
+            const Gas::Circle current = g.getCircle(1.0f);
+            gas.pos = current.pos;
+            gas.rad = current.rad;
+            if (g.circleNew.rad > 0.0f) {
+                gas.hasSafe = true;
+                gas.safePos = g.circleNew.pos;
+                gas.safeRad = g.circleNew.rad;
+            }
+            gas.playerPos = me ? me->pos : Vec2(0.0f, 0.0f);
+            _hud->updateMapOverlay(dots, gas);
         }
     }
     // Emote wheel: same visibility rule as the HUD; refresh the loadout each
@@ -934,6 +1022,24 @@ void GameScene::onTouchBegan(float x, float y, int id) {
     // S6: _overlay is never created; the Java GamePauseDialog is the
     // actual pause. Don't block touches because of a null overlay.
     if (!_inGame || !_notifiedStarted) return;
+    // Big map: swallow the touch; tapping outside (or the close button) closes.
+    if (_hud && _hud->bigMapVisible()) {
+        const Vec2 design = screenToDesign(x, y);
+        if (_hud->bigMapCloseHit(design.x, design.y) || !_hud->bigMapContains(design.x, design.y)) {
+            _hud->setBigMapVisible(false);
+        }
+        _bigMapTouchId = id;
+        return;
+    }
+    // Minimap expand button (#ui-map-expand-mobile) opens the big map.
+    if (_hud && _game->isPlaying()) {
+        const Vec2 design = screenToDesign(x, y);
+        if (_hud->minimapExpandHit(design.x, design.y)) {
+            _hud->setBigMapVisible(true);
+            _bigMapTouchId = id;
+            return;
+        }
+    }
     // Emote wheel trigger (#ui-emote-button): the touch drives the wheel and is
     // kept away from the pads so opening it never moves or fires.
     if (_emoteWheel && _game->isPlaying()) {
@@ -962,6 +1068,9 @@ void GameScene::onTouchBegan(float x, float y, int id) {
 }
 
 void GameScene::onTouchMoved(float x, float y, int id) {
+    if (id == _bigMapTouchId) {
+        return;
+    }
     if (id == _emoteTouchId && _emoteWheel) {
         std::string type;
         const Vec2 design = screenToDesign(x, y);
@@ -1006,6 +1115,10 @@ void GameScene::onTouchMoved(float x, float y, int id) {
 }
 
 void GameScene::onTouchEnded(int id) {
+    if (id == _bigMapTouchId) {
+        _bigMapTouchId = -1;
+        return;
+    }
     if (id == _pingTouchId) {
         if (_pingWheel) {
             _pingWheel->close();

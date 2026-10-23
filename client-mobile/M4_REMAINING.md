@@ -1139,3 +1139,70 @@ camera root's actual scale) instead of `m_ppu`.
   sprites / `getMinimapRender` name labels).
 - Big map (full-screen) view.
 - Airstrike ping falloff and faction-leader ping sounds (see §17).
+
+---
+
+## 19. Session 14 - minimap dots/gas + big map (2026-10-23)
+
+Finished the map UI on top of §18's baked minimap.
+
+### 19.1 Shared `MapView` (`game/MapView.{h,cpp}`)
+
+One clipped square view of the whole map, used by the 140px minimap and the
+640px big map:
+
+- The baked texture sprite plus gas, dots and pings, projected from world
+  units (`project`/`unproject`), with `contains()` for hit tests.
+- `MapDot` mirrors `ui.ts updatePlayerMapSprites` (pos/scale/tint/texture/
+  alpha/z), `MapGas` mirrors `ui.ts m_render` (current + safe circle, player
+  line).
+- The ping layer is created lazily and masked to the square (the 512px pulse
+  art grows past it). **A ClippingNode created during `Hud::build` crashed
+  axmol's GL renderer when the HUD became visible; creating the same mask from
+  the first `setPings()` call is safe.** Also `clear()` the gas DrawNode at
+  creation so a contentless DrawNode never submits an empty command.
+
+### 19.2 Player/team dots + gas
+
+`GameScene` builds the dots each frame from `Game::allPlayerInfo` +
+`allPlayerStatus` (the web's `playerBarn.playerStatus`):
+
+- Own dot is drawn from the live active `Player` position, with the
+  `player-map-outer.img` ring and `player-map-inner.img` dot (group colour).
+- Other statuses use `status.visible`: `skull-outlined.img` when dead,
+  `player-group-downed.img` / `player-map-downed.img` when downed, team colour
+  outside our group (`GameConfig.teamColors`), group colour inside it
+  (`GameConfig.groupColors` by sorted group index).
+- Gas: `Gas::getCircle(1)` fills the map red with a circular hole (the web's
+  GasRenderer), `circleNew` draws the white safe-zone circle, and a line runs
+  from the player to it.
+
+### 19.3 Big map
+
+- A small expand affordance sits in the minimap's bottom-right corner
+  (`#ui-map-expand-mobile`); tapping it opens a 640×640 centred map over a dim
+  backdrop, hiding the minimap/expand button.
+- Same texture, dots, gas and pings as the minimap (`Hud::updateMapOverlay` /
+  `updateMapPings` push to both views).
+- Closes from the X button or by tapping outside the map; `GameScene` swallows
+  the whole touch so it never moves/fires. Hit tests convert the design-space
+  touch into the centred HUD space (they previously compared the wrong spaces,
+  so the expand tap did nothing).
+
+### Verification
+
+- `surv_tests`: **127 tests, 2,124 assertions, 0 failures** (new:
+  `map_view_dots_gas_and_pings`, `hud_big_map_toggle_and_hits`; the minimap
+  ping/dot test now goes through `MapView`).
+- x86_64 native lib + APK on the emulator: minimap shows the baked map, player
+  dot and expand button (plus the white safe-zone ring when gas is active); the
+  expand tap opens the big map with the dot, terrain and X; both the X and a
+  tap outside close it and restore the minimap. `logcat -b crash` empty.
+
+### Still open
+
+- Role-specific map icons (`roleDef.mapIcon` alive/dead) — the role def table
+  is not codegen'd into the native render defs.
+- Big-map tap-to-ping (web `bigmapCollision` → team ping at the tapped map
+  position), and airstrike zone drawing on the map.
+- Map place name labels in the baked texture (`map.ts renderMap` nameContainer).

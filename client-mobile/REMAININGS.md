@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 13 (`M4_REMAINING.md` §18) closed the minimap gap: `Map::generateMinimapTexture` now bakes the real map (terrain + object shapes) into a 256×256 RenderTexture, `Hud` displays it under the top-right frame, and `EmoteManager` map pings (`ping-map-*.img` + `ping-map-pulse.img`) are drawn in a container clipped to the minimap. Session 12 (`M4_REMAINING.md` §17) added the team-ping wheel (`PingRenderDef` codegen, six selectors, ammo-specific emotes) and fixed a reused-indicator fade bug. **125 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-23** — Session 14 (`M4_REMAINING.md` §19) finished the map UI: player/team dots and the gas/safe-zone circles draw on the minimap, and the minimap expand button opens a full-screen big map (clipped, with dots/gas/pings) closable by its X or by tapping outside. Shared by a new `game/MapView` used for both views. Session 13 baked/displayed the minimap and added minimap ping sprites; Session 12 added the team-ping wheel and `PingRenderDef` codegen. **127 host tests pass, 0 fail.**
 
 ---
 
@@ -46,7 +46,7 @@ Latest recorded state: **2026-10-23** — Session 13 (`M4_REMAINING.md` §18) cl
 | `shared/defs/*` → `render/GeneratedDefs.cpp` (codegen) | ✅ generated |
 | `client/src/camera.ts` → `render/Camera.h` | ✅ |
 | `client/src/renderer.ts` → `render/Renderer.*` | ✅ |
-| `client/src/map.ts` → `game/Map.*` | ✅ terrain, surfaces, pools, camera emitter, baked minimap texture; **big map (full-screen) not ported** |
+| `client/src/map.ts` → `game/Map.*` | ✅ terrain, surfaces, pools, camera emitter, baked minimap texture, big map (`game/MapView`) |
 | `client/src/gas.ts` → `game/Gas.*` | ✅ |
 | `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | ✅ |
 | `client/src/objects/objectPool.ts` → `game/objects/GameObject.h` | ✅ |
@@ -184,12 +184,17 @@ Latest recorded state: **2026-10-23** — Session 13 (`M4_REMAINING.md` §18) cl
 - [x] **World-space name labels** — player/dead-body labels were vertically
   mirrored under the camera's negative-Y root; `pix::Text::setFlipY()` counters
   the flip about the anchor (`M4_REMAINING` §16)
-- [x] **Minimap** (baked RenderTexture + FGUI overlay):
+- [x] **Minimap** (baked RenderTexture + live HUD `MapView`):
   - Map::generateMinimapTexture() renders terrain + obstacles + buildings
-    into a pix::RenderTexture using the PIXI adapter
+    into a 256×256 pix::RenderTexture
   - Map::getMinimapTexture() / getMinimapScale() for runtime access
-  - FguiHud::buildMinimap() FGUI frame + gas ring + player dot overlays
-  - onFactoryReset() clears minimap texture on map reload
+  - Hud::setMinimap() displays it under the top-right frame
+  - Player/team dots + gas/safe-zone circles (`updateMapOverlay`)
+  - Minimap ping sprites (`ping-map-*` + pulse) clipped to the frame
+- [x] **Big map** (`game/MapView`, 640×640 centred):
+  - Minimap expand button opens it; X or tapping outside closes it
+  - Same texture/dots/gas/pings as the minimap, with the HUD dimmed behind
+  - `displayMapLarge`/`#big-map` port; touch is swallowed by the view
 - [x] **Inventory UI v2** (`ui2.ts` features — weapon cards, gear slots, perk slots, scope inventory, loot counts, pickup/kill messages, interaction prompt) — implemented 2026-10-17
 - [x] **Emote/ping system** (`client/src/emote.ts`) — **emote wheel landed 2026-10-22**:
   - [x] Game::sendEmote() wire → server (MsgType_Emote); wheel output is queued
@@ -265,7 +270,7 @@ Latest recorded state: **2026-10-23** — Session 13 (`M4_REMAINING.md` §18) cl
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (125 tests, 0 failures expected)
+# host tests (127 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -299,3 +304,5 @@ node tools/build-gui-icons.mjs
 - `AxRenderTexture::resize` recreates the framebuffer (axmol `setContentSize` does not)
 - `AxSprite::setRenderTexture` sets the texture rect (axmol `setTexture` keeps a zero-size quad)
 - Minimap ping sprites stay in the masked layer (the 512px pulse ring spills otherwise)
+- The masked ping layer must be created **lazily** (`MapView::setPings`, not HUD build): a ClippingNode created at build time crashed axmol's GL renderer on device
+- `Hud` hit tests (`minimapExpandHit`, `bigMapContains/CloseHit`) take design-space coords; widget positions are centred HUD coords

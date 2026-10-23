@@ -56,7 +56,7 @@ uint32_t Hud::healthColor(float health, bool downed) {
            static_cast<uint32_t>(mix(a.b, b.b));
 }
 
-void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design, const pix::Node* minimapDisplay) {
+void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design) {
     _factory = factory;
     _root = root;
     _design = design;
@@ -91,11 +91,7 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design,
     _root->addChild(_ammoText);
 
     // #ui-map-wrapper: minimap frame + alive / kill counters (top right).
-    // The baked map texture (map.ts minimap) goes under the frame when the call
-    // site can hand it over (plain pix nodes cannot carry a texture yet).
-    if (minimapDisplay) {
-        _root->addChild(const_cast<pix::Node*>(minimapDisplay));
-    }
+    // The baked map texture is attached by setMinimap() once the MapMsg lands.
     _mapFrame = _factory->createGraphics();
     _root->addChild(_mapFrame);
     _aliveText = _factory->createText();
@@ -167,10 +163,6 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design,
     _mapFrame->clear();
     _mapFrame->lineStyle(2.0f, 0xffffff, 0.6f);
     _mapFrame->drawRect(X(mmX), Y(mmY), mm, mm);
-    if (minimapDisplay) {
-        // The baked minimap is a square texture anchored bottom-left.
-        const_cast<pix::Node*>(minimapDisplay)->setPosition(X(mmX), Y(mmY));
-    }
     _aliveText->setAnchor(1.0f, 1.0f);
     _aliveText->setPosition(X(mmX - 8.0f), Y(vh - 12.0f));
     _killsText->setAnchor(1.0f, 1.0f);
@@ -210,6 +202,57 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design,
         }
     }
 
+    // --- Minimap contents (map.ts renderMap + ui.ts map sprites) ---
+    _miniMap.build(_factory, _root, _minimapPos, kMinimapSize);
+    // #ui-map-expand-mobile: small expand affordance inside the frame.
+    _expandPos = Vec2(X(mmX + mm - kMinimapExpandSize - 4.0f), Y(mmY + 4.0f));
+    _mapExpandBg = _factory->createGraphics();
+    _mapExpandBg->beginFill(0x000000, 0.45f);
+    _mapExpandBg->drawRect(0.0f, 0.0f, kMinimapExpandSize, kMinimapExpandSize);
+    _mapExpandBg->endFill();
+    _mapExpandBg->setPosition(_expandPos.x, _expandPos.y);
+    _mapExpandBg->setLocalZOrder(20);
+    _root->addChild(_mapExpandBg);
+    _mapExpandIcon = _factory->createGraphics();
+    _mapExpandIcon->lineStyle(2.0f, 0xffffff, 0.9f);
+    _mapExpandIcon->drawRect(5.0f, 5.0f, 12.0f, 12.0f);
+    _mapExpandIcon->drawRect(8.0f, 8.0f, 6.0f, 6.0f);
+    _mapExpandIcon->setPosition(_expandPos.x, _expandPos.y);
+    _mapExpandIcon->setLocalZOrder(21);
+    _root->addChild(_mapExpandIcon);
+
+    // --- Full-screen big map (#big-map) ---
+    _bigMapPos = Vec2(X((_design.x - kBigMapSize) * 0.5f), Y((_design.y - kBigMapSize) * 0.5f));
+    _bigMapBackdrop = _factory->createGraphics();
+    _bigMapBackdrop->beginFill(0x000000, 0.62f);
+    _bigMapBackdrop->drawRect(-_design.x * 0.5f, -_design.y * 0.5f, _design.x, _design.y);
+    _bigMapBackdrop->endFill();
+    _bigMapBackdrop->setLocalZOrder(900);
+    _root->addChild(_bigMapBackdrop);
+    _bigMap.build(_factory, _root, _bigMapPos, kBigMapSize);
+    if (_bigMap.root()) {
+        _bigMap.root()->setLocalZOrder(901);
+    }
+    const Vec2 closePos = Vec2(_bigMapPos.x + kBigMapSize + 10.0f, _bigMapPos.y + kBigMapSize - 10.0f);
+    _bigMapCloseBg = _factory->createGraphics();
+    _bigMapCloseBg->beginFill(0x000000, 0.7f);
+    _bigMapCloseBg->drawCircle(0.0f, 0.0f, 18.0f);
+    _bigMapCloseBg->endFill();
+    _bigMapCloseBg->lineStyle(2.0f, 0xffffff, 0.8f);
+    _bigMapCloseBg->drawCircle(0.0f, 0.0f, 18.0f);
+    _bigMapCloseBg->setPosition(closePos.x, closePos.y);
+    _bigMapCloseBg->setLocalZOrder(902);
+    _root->addChild(_bigMapCloseBg);
+    _bigMapCloseText = _factory->createText();
+    _bigMapCloseText->setFontSize(22.0f);
+    _bigMapCloseText->setColor(0xffffff, 0x000000, 0.0f, true);
+    _bigMapCloseText->setAnchor(0.5f, 0.5f);
+    _bigMapCloseText->setText("X");
+    _bigMapCloseText->setPosition(closePos.x, closePos.y);
+    _bigMapCloseText->setLocalZOrder(903);
+    _root->addChild(_bigMapCloseText);
+    setBigMapVisible(false);
+
     _built = true;
     setVisible(false);
 }
@@ -220,6 +263,9 @@ void Hud::setVisible(bool visible) {
         return;
     }
     _visible = visible;
+    if (!visible) {
+        _bigMapVisible = false;
+    }
     const auto show = [visible](pix::Node* node) {
         if (node) {
             node->setVisible(visible);
@@ -243,111 +289,95 @@ void Hud::setVisible(bool visible) {
     if (!visible) {
         show(_pickupText);
     }
-    if (_minimap) {
-        _minimap->setVisible(visible);
+    const bool big = visible && _bigMapVisible;
+    _miniMap.setVisible(visible && !big);
+    _bigMap.setVisible(big);
+    if (_bigMapBackdrop) {
+        _bigMapBackdrop->setVisible(big);
     }
-    if (_mapPingLayer) {
-        _mapPingLayer->setVisible(visible);
+    if (_bigMapCloseBg) {
+        _bigMapCloseBg->setVisible(big);
     }
-    for (auto* ping : _mapPingSprites) {
-        if (ping) {
-            ping->setVisible(visible);
-        }
+    if (_bigMapCloseText) {
+        _bigMapCloseText->setVisible(big);
+    }
+    if (_mapExpandBg) {
+        _mapExpandBg->setVisible(visible && !big);
+    }
+    if (_mapExpandIcon) {
+        _mapExpandIcon->setVisible(visible && !big);
     }
 }
 
-void Hud::setMinimap(pix::RenderTexture* texture) {
-    if (!_built || !_root || !texture) {
+void Hud::setMinimap(pix::RenderTexture* texture, float mapWidth, float mapHeight) {
+    if (!_built || !texture) {
         return;
     }
-    if (!_minimap) {
-        _minimap = _factory->createSprite();
-        _minimap->setAnchor(0.0f, 0.0f);
-        // Under the frame border (map.ts's minimap sits inside #ui-map-wrapper).
-        int idx = _mapFrame ? _root->getChildIndex(_mapFrame) : -1;
-        if (idx < 0) {
-            idx = static_cast<int>(_root->childCount());
-        }
-        _root->addChildAt(_minimap, idx);
-    }
-    _minimap->setRenderTexture(texture);
-    const float texW = texture->width();
-    const float scale = texW > 0.0f ? kMinimapSize / texW : 1.0f;
-    _minimap->setScale(scale, scale);
-    _minimap->setPosition(_minimapPos.x, _minimapPos.y);
-    _minimap->setLocalZOrder(0);
-    _minimap->setVisible(_visible);
+    _miniMap.setMapSize(mapWidth, mapHeight);
+    _miniMap.setTexture(texture);
+    _bigMap.setMapSize(mapWidth, mapHeight);
+    _bigMap.setTexture(texture);
+    _miniMap.setVisible(_visible && !_bigMapVisible);
 }
 
-void Hud::updateMapPings(const std::vector<MapPing>& pings, float mapWidth, float mapHeight) {
-    if (!_built || !_root) {
+void Hud::updateMapPings(const std::vector<MapPing>& pings) {
+    if (!_built) {
         return;
     }
-    if (!_mapPingLayer) {
-        _mapPingLayer = _factory->createContainer();
-        int idx = _mapFrame ? _root->getChildIndex(_mapFrame) : -1;
-        if (idx < 0) {
-            idx = static_cast<int>(_root->childCount());
-        }
-        _root->addChildAt(_mapPingLayer, idx);
-        _mapPingLayer->setPosition(_minimapPos.x, _minimapPos.y);
-        _mapPingMask = _factory->createGraphics();
-        _mapPingMask->beginFill(0xffffff, 1.0f);
-        _mapPingMask->drawRect(0.0f, 0.0f, kMinimapSize, kMinimapSize);
-        _mapPingMask->endFill();
-        // The pulse art is 512px and grows past the frame; the web clips
-        // mapSpriteBarn to the minimap container.
-        _mapPingLayer->setMask(_mapPingMask);
-        _mapPingLayer->setVisible(_visible);
-    }
-    int used = 0;
-    if (_visible && _minimap && mapWidth > 0.0f && mapHeight > 0.0f) {
-        // The map ping sprites are authored for map.ts's screenScale texture
-        // (map.ts renderMap uses device screen height); the HUD minimap is
-        // kMinimapSize, so scale the ping art by the texture ratio.
-        const float pingScale = kMinimapSize / 256.0f;
-        for (const auto& ping : pings) {
-            if (!ping.active || ping.texture.empty() || used >= kMapPingPool) {
-                continue;
-            }
-            pix::Sprite* sprite = _mapPingSprites[used];
-            if (!sprite) {
-                sprite = _factory->createSprite();
-                sprite->setAnchor(0.5f, 0.5f);
-                _mapPingLayer->addChild(sprite);
-                _mapPingSprites[used] = sprite;
-            }
-            const float x = (ping.pos.x / mapWidth) * kMinimapSize;
-            const float y = (ping.pos.y / mapHeight) * kMinimapSize;
-            sprite->setPosition(x, y);
-            sprite->setFrame(ping.texture);
-            const float s = ping.scale * pingScale;
-            sprite->setScale(s, s);
-            sprite->setTint(ping.tint);
-
-            // mapSprite.ts: fade in over 0.1s, then fade out over the last 0.5s.
-            float alpha = 1.0f;
-            if (ping.ticker < 0.1f) {
-                alpha = ping.ticker / 0.1f;
-            }
-            if (ping.life < 0.5f) {
-                alpha = std::min(alpha, std::max(ping.life / 0.5f, 0.0f));
-            }
-            sprite->setAlpha(alpha);
-            // Pulses under their icon (mapSprite.zOrder 99 vs 100).
-            sprite->setLocalZOrder(ping.pulse ? 0 : 1);
-            sprite->setVisible(true);
-            ++used;
-        }
-    }
-    for (int i = used; i < kMapPingPool; ++i) {
-        if (_mapPingSprites[i]) {
-            _mapPingSprites[i]->setVisible(false);
-        }
-    }
+    _miniMap.setPings(pings);
+    _bigMap.setPings(pings);
 }
 
-void Hud::displayPickupMessage(const std::string& text) {    _lastPickup = text;
+void Hud::updateMapOverlay(const std::vector<MapDot>& dots, const MapGas& gas) {
+    if (!_built) {
+        return;
+    }
+    _miniMap.setDots(dots);
+    _bigMap.setDots(dots);
+    _miniMap.setGas(gas);
+    _bigMap.setGas(gas);
+}
+
+void Hud::setBigMapVisible(bool visible) {
+    _bigMapVisible = visible;
+    if (!_built) {
+        return;
+    }
+    // Re-run the visibility pass so the minimap/expand button swap with the
+    // big map and its backdrop.
+    setVisible(_visible);
+}
+
+bool Hud::minimapExpandHit(float designX, float designY) const {
+    if (!_visible || _bigMapVisible || !_miniMap.visible()) {
+        return false;
+    }
+    // Callers pass design-space coordinates (0..design); the widget positions
+    // are in the centred HUD container.
+    const Vec2 p(designX - _design.x * 0.5f, designY - _design.y * 0.5f);
+    const float pad = 4.0f;
+    return p.x >= _expandPos.x - pad && p.x <= _expandPos.x + kMinimapExpandSize + pad &&
+           p.y >= _expandPos.y - pad && p.y <= _expandPos.y + kMinimapExpandSize + pad;
+}
+
+bool Hud::bigMapContains(float designX, float designY) const {
+    return _bigMapVisible &&
+           _bigMap.contains(Vec2(designX - _design.x * 0.5f, designY - _design.y * 0.5f));
+}
+
+bool Hud::bigMapCloseHit(float designX, float designY) const {
+    if (!_bigMapVisible) {
+        return false;
+    }
+    const Vec2 p(designX - _design.x * 0.5f, designY - _design.y * 0.5f);
+    const Vec2 c(_bigMapPos.x + kBigMapSize + 10.0f, _bigMapPos.y + kBigMapSize - 10.0f);
+    const float dx = p.x - c.x;
+    const float dy = p.y - c.y;
+    return dx * dx + dy * dy <= 24.0f * 24.0f;
+}
+
+void Hud::displayPickupMessage(const std::string& text) {
+    _lastPickup = text;
     _pickupTicker = text.empty() ? 0.0f : 3.0f;
     if (_pickupText) {
         _pickupText->setText(text);

@@ -36,6 +36,7 @@ add_executable(surv_tests
     ${SURV_SRC}/game/Hud.cpp
     ${SURV_SRC}/game/EmoteWheel.cpp
     ${SURV_SRC}/game/PingWheel.cpp
+    ${SURV_SRC}/game/MapView.cpp
     ${SURV_SRC}/render/Terrain.cpp
     ${SURV_SRC}/render/Renderer.cpp
     ${SURV_SRC}/render/Defs.cpp

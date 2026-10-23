@@ -257,6 +257,7 @@ private:
     // that touch so opening the wheel does not also move/aim.
     int _emoteTouchId = -1;
     int _pingTouchId = -1;
+    int _bigMapTouchId = -1;
 };
 
 } // namespace surv
