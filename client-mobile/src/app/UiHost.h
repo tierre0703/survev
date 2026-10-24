@@ -41,6 +41,8 @@ public:
     // key is one of "master"/"sound"/"music"/"mute" (audio.ts volume tiers).
     virtual void setAudio(const std::string& key, float value) = 0;
     virtual void setLanguage(const std::string& locale) = 0;
+    // Engine stats overlay (fps/draw calls), persisted as `showFps`.
+    virtual void setShowFps(bool show) { (void)show; }
 
     // --- read-only snapshots ------------------------------------------------
     // Flattened table for the current locale ({"key": "text"}).

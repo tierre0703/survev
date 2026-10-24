@@ -2266,3 +2266,49 @@ leaving the match.
   `uiautomator dump`); BACK in a match opens the pause dialog ("Return to Game",
   volume/sensitivity), BACK again closes it and play continues; `logcat -b crash`
   empty.
+
+## 38. Session 37 - find_game retry + FPS overlay (2026-10-24)
+
+### 38.1 Menu find_game retry
+
+`client/src/main.ts findGameImpl()` retries the discovery request on a network
+error (two attempts, 500 ms apart) before surfacing the failure. The Java menu
+used to give up after one request, so a single flaky packet showed "Failed to
+find game". `MenuFragment.onPlay` now delegates to `findGameAttempt(body, n)`:
+a `null` response (transport failure - `SurvApi` logs
+`POST ... failed`) retries once after 500 ms, keeping "Finding game..." up;
+server-reported errors (`{"type":"error"}`) are not retried, matching the web.
+
+### 38.2 Working "Show FPS" toggle
+
+The pause dialog's "Show FPS" button only toggled its own label. It now calls
+`SurvBridge.setShowFps(bool)` -> `UiBridge::setShowFps` ->
+`Director::setStatsDisplay` (axmol's fps/draw-call/vertex overlay) and persists
+`showFps` in the config; `seedFromConfig()` restores the button state from it, so
+the choice survives dialog reopen and app restarts. The persisted value is applied
+at startup by `AndroidUiBridge::setScenes` (the config is one JSON blob behind the
+bridge, so `UserDefault::getBoolForKey` cannot read it), and the dev switch
+(`debug.surv_debug=1`) forces the overlay on for profiling. Both the toggle and
+startup log the applied state (`[perf] stats display on/off`) so the path is
+verifiable from logcat.
+
+The "Low GFX" button is still a visual stub: a real battery/resolution tier needs
+an EGL surface scale (`GLSurfaceView.holder.setFixedSize`), not just a smaller
+design resolution, and is left for the next perf session.
+
+### 38.3 Verification
+
+- `surv_tests`: **163 tests, 2,599 assertions, 0 failures** (unchanged; the work
+  is Java + app wiring).
+- `build-native.ps1 -Abis x86_64` + `build-apk.ps1 -Abis x86_64`: green.
+- Device, API stopped: Play Solo logs
+  `find_game transport failure, retrying after 500ms (attempt 2/2)` with two
+  `POST ... failed` lines, then "Failed to find game"; with the API back up the
+  first attempt succeeds.
+- Device, pause dialog: tapping "Show FPS" logs `[perf] stats display on` and
+  marks the button as checked; tapping again logs `stats display off`. The value
+  persists: reopening the dialog re-seeds it, and a restart logs
+  `[perf] stats overlay enabled at startup` only when it is on.
+- `adb shell setprop debug.surv_debug 1` + restart logs
+  `[perf] stats overlay enabled by debug.surv_debug`. `logcat -b crash` stays
+  empty.

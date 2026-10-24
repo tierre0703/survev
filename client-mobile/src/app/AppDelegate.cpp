@@ -46,6 +46,13 @@ bool AppDelegate::applicationDidFinishLaunching() {
     }
 
     director->setStatsDisplay(false);
+    // Diagnostics: the pause dialog's "Show FPS" persists `showFps` in the config
+    // JSON (applied by the bridge in setScenes); the dev switch also enables the
+    // engine stats overlay for profiling.
+    director->setStatsDisplay(surv::isDevLogEnabled());
+    if (surv::isDevLogEnabled()) {
+        AXLOGI("[perf] stats overlay enabled by debug.surv_debug");
+    }
     director->setAnimationInterval(1.0f / 60);
 
     // The app is permanently landscape: the design resolution is a fixed

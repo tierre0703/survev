@@ -22,6 +22,7 @@
 #include "MenuScene.h"
 #include "UiHost.h"
 #include "../audio/AudioManager.h"
+#include "../net/Api.h"
 #include "../ui/Config.h"
 #include "../ui/L10nJson.h"
 #include "../ui/Loadout.h"
@@ -99,6 +100,16 @@ public:
     void setScenes(MenuScene* menu, GameScene* game) {
         _menu = menu;
         _game = game;
+        // Diagnostics owned by the engine, not a scene: `showFps` (pause dialog)
+        // lives in the config JSON blob behind this bridge, so it cannot be read
+        // with UserDefault::getBoolForKey in AppDelegate.
+        if (auto* director = ax::Director::getInstance()) {
+            const bool show = config().getBool("showFps", false) || isDevLogEnabled();
+            director->setStatsDisplay(show);
+            if (show) {
+                AXLOGI("[perf] stats overlay enabled at startup");
+            }
+        }
     }
 
     // Android has no C++ MenuScene (AppDelegate passes nullptr), but the Java
@@ -186,6 +197,18 @@ public:
 
     void setLanguage(const std::string& locale) override {
         config().setString("language", locale);
+    }
+
+    void setShowFps(bool show) override {
+        // Visual diagnostics only; safe to apply from the game thread.
+        runOnGameThread([this, show] {
+            if (auto* director = ax::Director::getInstance()) {
+                director->setStatsDisplay(show);
+                AXLOGI("[perf] stats display {}", director->isStatsDisplay() ? "on" : "off");
+            }
+            config().setBool("showFps", show);
+            config().save();
+        });
     }
 
     std::string l10nJson() override {
@@ -379,6 +402,10 @@ JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setAudio(JNIEnv* env, jclas
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setLanguage(JNIEnv* env, jclass, jstring locale) {
     surv::uiBridge()->setLanguage(surv::fromJstring(env, locale));
+}
+
+JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setShowFps(JNIEnv*, jclass, jboolean show) {
+    surv::uiBridge()->setShowFps(show == JNI_TRUE);
 }
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getConfigJson(JNIEnv* env, jclass) {

@@ -10,15 +10,13 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-24** — Session 36 hardened the app lifecycle:
-backgrounding (or opening the pause dialog) no longer closes the game socket -
-join tokens are single-use server-side, so the old "close + rejoin" always lost
-the match. The socket is kept, a 12 s liveness watchdog turns a half-open mobile
-connection into the normal "connection lost" path, and the WebSocket event queue
-is capped (4096 frames) so a long background cannot grow without bound.
-Earlier in M8: §35 error reporting, §34 region latency test. Also: §33 minimap
-zoom/clip + baked obstacles, §32 door anchors, §31 crosshair loadout. **163 host
-tests pass, 0 fail.**
+Latest recorded state: **2026-10-24** — Session 37 finished the lifecycle
+network item and started perf tooling: `find_game` now retries transport
+failures once after 500 ms (main.ts `findGameImpl` parity), and the pause
+dialog's "Show FPS" drives the engine stats overlay (persisted as `showFps`,
+also enabled by `debug.surv_debug=1`). Earlier: §36 background/pause socket
+continuity + watchdog + BACK pause, §35 error reporting, §34 region latency
+test, §33 minimap zoom/clip. **163 host tests pass, 0 fail.**
 
 ---
 
@@ -344,8 +342,14 @@ tests pass, 0 fail.**
         leaving the match.
 - [ ] **Lifecycle hardening (remaining)**: reconnecting to a live match needs a
       server-side rejoin token (the API only issues single-use join tokens);
-      menu-side `find_game` retries on flaky networks are not wired yet
-- [ ] **Perf/polish**: 60 fps on mid-range devices, notch/insets, battery/resolution tiers, crash-free soak
+      menu-side `find_game` retries now match `main.ts` (see below)
+- [x] **Perf tooling (start of Perf/polish)**: the pause dialog's "Show FPS"
+      now toggles the engine stats overlay (`Director::setStatsDisplay`), persists
+      `showFps` in the config JSON, applies it at startup in
+      `AndroidUiBridge::setScenes` and is also enabled by `debug.surv_debug=1`;
+      the "Low GFX" toggle is still a stub (a resolution tier needs an EGL
+      surface scale)
+- [ ] **Perf/polish (rest)**: 60 fps on mid-range devices, notch/insets, battery/resolution tiers, crash-free soak
 - [ ] **Store-ready APK/AAB**
 
 ### Out of scope (deliberately not ported)

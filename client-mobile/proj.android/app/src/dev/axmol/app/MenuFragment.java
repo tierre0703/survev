@@ -688,13 +688,35 @@ public class MenuFragment {
                 + "}";
         Log.i(TAG, "onPlay find_game body=" + bodyStr);
 
+        findGameAttempt(bodyStr, 0);
+    }
+
+    /** main.ts findGame(): 2 attempts, 500 ms apart, transport failures only. */
+    private static final int FIND_GAME_MAX_ATTEMPTS = 2;
+    private static final long FIND_GAME_RETRY_DELAY_MS = 500;
+
+    private void findGameAttempt(final String bodyStr, final int attempt) {
         SurvApi.findGame(mApiBaseUrl, bodyStr, new SurvApi.Callback() {
             @Override public void onResult(String json) {
-                mFindingGame = false;
                 if (json == null) {
+                    // Transport failure: retry like `findGameImpl`'s catch()
+                    // before surfacing the error to the player.
+                    if (attempt + 1 < FIND_GAME_MAX_ATTEMPTS) {
+                        Log.i(TAG, "find_game transport failure, retrying after "
+                                + FIND_GAME_RETRY_DELAY_MS + "ms (attempt " + (attempt + 2) + "/"
+                                + FIND_GAME_MAX_ATTEMPTS + ")");
+                        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                            @Override public void run() {
+                                findGameAttempt(bodyStr, attempt + 1);
+                            }
+                        }, FIND_GAME_RETRY_DELAY_MS);
+                        return;
+                    }
+                    mFindingGame = false;
                     setStatus("Failed to find game");
                     return;
                 }
+                mFindingGame = false;
                 String type = Json.peekString(json, "type");
                 if ("success".equals(type)) {
                     List<String> urls = parseUrls(json);

@@ -66,6 +66,7 @@ public class GamePauseDialog {
 
     // --- state ---
     private boolean mMuted = false;
+    private boolean mShowFps = false;
     private boolean mIsDead = false; // Set externally when player dies
 
     public GamePauseDialog(Activity activity, JavaUiHost host) {
@@ -215,7 +216,7 @@ public class GamePauseDialog {
 
         mShowFpsBtn = makeToggleButton("Show FPS");
         mShowFpsBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { toggleStyle(v); }
+            @Override public void onClick(View v) { toggleShowFps(); }
         });
         togglesRow.addView(mShowFpsBtn, halfParams());
 
@@ -364,6 +365,18 @@ public class GamePauseDialog {
         }
     }
 
+    /** "Show FPS": drives the engine stats overlay (persisted as `showFps`). */
+    private void toggleShowFps() {
+        mShowFps = !mShowFps;
+        applyShowFps();
+        SurvBridge.setShowFps(mShowFps);
+    }
+
+    private void applyShowFps() {
+        mShowFpsBtn.setText(mShowFps ? "Show FPS \u2713" : "Show FPS");
+        mShowFpsBtn.setBackgroundColor(mShowFps ? GREEN : GREY);
+    }
+
     private void toggleMute() {
         mMuted = !mMuted;
         SurvBridge.setAudio("mute", mMuted ? 0.0f : 1.0f);
@@ -396,8 +409,11 @@ public class GamePauseDialog {
         String config = SurvBridge.getConfigJson();
         if (config == null || config.isEmpty()) return;
 
-        mMuted = "true".equals(Json.peekString(config, "muteAudio"));
+        mMuted = Json.peekBool(config, "muteAudio", false);
         updateMuteButton();
+
+        mShowFps = Json.peekBool(config, "showFps", false);
+        applyShowFps();
 
         String master = Json.peekString(config, "masterVolume");
         if (master != null) {

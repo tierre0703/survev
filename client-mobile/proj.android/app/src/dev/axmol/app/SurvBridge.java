@@ -70,6 +70,9 @@ public final class SurvBridge {
 
     public static native void setLanguage(String locale);
 
+    /** Engine stats overlay (fps/draw calls); persisted as `showFps`. */
+    public static native void setShowFps(boolean show);
+
     public static native void saveConfig();
 
     /**
