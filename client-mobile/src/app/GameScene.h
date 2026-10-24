@@ -2,6 +2,7 @@
 #include "axmol.h"
 #include "../game/Game.h"
 #include "../game/TouchInput.h"
+#include "../net/ErrorLog.h"
 #include "../net/Net.h"
 #include "../net/PingTest.h"
 #include "../render/PixiLike.h"
@@ -159,6 +160,15 @@ public:
     void startRegionPingTest();
     void stopPingTest();
 
+    // M8: client error reporting (client/src/errorLogs.ts). `dataJson` is an
+    // optional JSON value; the report goes through net/ErrorLog's sampled/
+    // throttled /api/report_error writer. Used by the Java bridge for errors
+    // that are not fatal (fatal ones are posted by the Java crash handler).
+    void reportError(const std::string& loc, const std::string& dataJson);
+
+    // API origin for `/api/*` calls (UserDefault override, else DevConfig).
+    static std::string resolveApiBaseUrl();
+
     // Aborts any join in progress and notifies the menu that the match should
     // re-open. Used by the matchmaking overlay's "Back to Main Menu".
     void returnToMenu();
@@ -255,6 +265,9 @@ private:
     // M8 region latency test (pingTest.ts). Created lazily by startRegionPingTest().
     std::unique_ptr<PingTest> _pingTest;
     bool _pingReported = false;
+    // M8 client error reporting (client/src/errorLogs.ts), ticked at 1 Hz.
+    std::unique_ptr<ErrorLog> _errorLog;
+    float _errorLogTick = 0.0f;
 
     TouchInput _touchInput;
     float _inputMsgTimeout = 0.0f;

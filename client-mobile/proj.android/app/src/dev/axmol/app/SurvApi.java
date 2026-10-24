@@ -27,7 +27,21 @@ public final class SurvApi {
     private static final String TAG = "SurvApi";
     private static final int TIMEOUT_MS = 15000;
 
+    /** Default API origin (mirrors the C++ DevConfig.h `kApiBaseUrl`). */
+    public static final String DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
+
     private SurvApi() {}
+
+    /**
+     * Synchronously POSTs `/api/report_error` (client/src/errorLogs.ts). Used by
+     * the crash handler, where the process may die before a queued report could
+     * run; call it off the UI thread.
+     */
+    public static void reportError(String apiBaseUrl, String loc, String dataJson) {
+        String body = "{\"loc\":\"" + escapeJson(loc) + "\",\"data\":"
+                + (dataJson == null || dataJson.isEmpty() ? "null" : dataJson) + "}";
+        httpPost(apiBaseUrl + "/api/report_error", body);
+    }
 
     /**
      * Fetches GET /api/site_info and calls `callback` with the JSON response
@@ -195,7 +209,7 @@ public final class SurvApi {
         }
     }
 
-    private static String escapeJson(String s) {
+    public static String escapeJson(String s) {
         if (s == null) return "";
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < s.length(); i++) {
@@ -205,7 +219,14 @@ public final class SurvApi {
                 case '\\': out.append("\\\\"); break;
                 case '\n': out.append("\\n"); break;
                 case '\r': out.append("\\r"); break;
-                default: out.append(c); break;
+                case '\t': out.append("\\t"); break;
+                default:
+                    if (c < 0x20) {
+                        out.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        out.append(c);
+                    }
+                    break;
             }
         }
         return out.toString();

@@ -201,6 +201,14 @@ public:
 
     std::string newsJson() override { return _menu ? _menu->newsJson() : std::string("[]"); }
 
+    void reportError(const std::string& loc, const std::string& dataJson) override {
+        runOnGameThread([this, loc, dataJson] {
+            if (_game) {
+                _game->reportError(loc, dataJson);
+            }
+        });
+    }
+
     bool isInGame() override { return _game && _game->isInGame(); }
 
     void quickStart(int teamMode) override {
@@ -395,6 +403,11 @@ JNIEXPORT jboolean JNICALL Java_dev_axmol_app_SurvBridge_isInGame(JNIEnv*, jclas
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_saveConfig(JNIEnv*, jclass) {
     surv::uiBridge()->saveConfig();
+}
+
+JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_reportError(JNIEnv* env, jclass, jstring loc,
+                                                                jstring data) {
+    surv::uiBridge()->reportError(surv::fromJstring(env, loc), surv::fromJstring(env, data));
 }
 
 } // extern "C"

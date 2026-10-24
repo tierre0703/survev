@@ -2,6 +2,7 @@
 #include "UiHost.h"
 #include "DevConfig.h"
 #include "../net/Api.h"
+#include "../net/ErrorLog.h"
 #include "../net/Messages.h"
 #include "../net/Regions.h"
 #include "../net/WebSocketConnection.h"
@@ -366,11 +367,46 @@ bool GameScene::init() {
 
     this->scheduleUpdate();
 
+    // M8: client error reporting (client/src/errorLogs.ts). Reports go to the
+    // same API origin find_game uses; the poster is the axmol HTTP client.
+    _errorLog = std::make_unique<ErrorLog>(
+        [](const std::string& url, const std::string& body) { postJson(url, body); },
+        resolveApiBaseUrl());
+    // Dev smoke test for the whole reporting path: with `debug.surv_debug=1`
+    // (the EQ trace switch) send one tagged report at startup; the API log must
+    // show `POST /api/report_error`. Nothing is sent in normal runs.
+    if (isDevLogEnabled()) {
+        _errorLog->logError("startup_probe", "{\"client\":\"android\"}");
+    }
+
     // M8: start the pre-game region latency probes right away (pingTest.ts runs
     // them from main.ts init too). The web sorts `PING_TEST_URLS`; the native
     // list is generated from the same `Config.regions` (net/Regions.h).
     startRegionPingTest();
     return true;
+}
+
+std::string GameScene::resolveApiBaseUrl() {
+    // Same resolution as AppDelegate's find_game wiring.
+    std::string apiUrl(ax::UserDefault::getInstance()->getStringForKey(dev::kKeyApiUrl, ""));
+    if (apiUrl.rfind("http://", 0) != 0 && apiUrl.rfind("https://", 0) != 0) {
+        apiUrl = dev::kApiBaseUrl;
+    }
+    return apiUrl;
+}
+
+void GameScene::reportError(const std::string& loc, const std::string& dataJson) {
+    if (!_errorLog) {
+        return;
+    }
+    // The bridge forwards non-fatal Java errors: a worker-thread crash is a
+    // "windowOnError" report (dataJson carries message/stacktrace/thread),
+    // everything else becomes a plain errorLog entry named after `loc`.
+    if (loc == "windowOnError") {
+        _errorLog->logWindowOnError(dataJson);
+        return;
+    }
+    _errorLog->logError(loc, dataJson);
 }
 
 void GameScene::startRegionPingTest() {
@@ -771,6 +807,14 @@ void GameScene::update(float delta) {
             if (UiHost* host = uiHost()) {
                 host->pingResults(results);
             }
+        }
+    }
+    // M8: errorLogs.ts runs its budget update from a 1 s interval.
+    if (_errorLog) {
+        _errorLogTick += delta;
+        while (_errorLogTick >= 1.0f) {
+            _errorLogTick -= 1.0f;
+            _errorLog->tick();
         }
     }
     if (_findInFlight) {

@@ -49,4 +49,9 @@ bool isDevLogEnabled();
 // configured; the native client should pass a full origin).
 void findGame(const std::string& apiBaseUrl, const FindGameBody& body, FindGameCallback cb);
 
+// POSTs an already-encoded JSON document to `url` (used by net/ErrorLog's
+// /api/report_error writer). Fire and forget: transport failures are logged
+// only in debug builds, like errorLogs.ts ignoring the fetch result.
+void postJson(const std::string& url, const std::string& bodyJson);
+
 } // namespace surv

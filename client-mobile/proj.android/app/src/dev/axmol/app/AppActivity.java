@@ -28,6 +28,7 @@ package dev.axmol.app;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Build;
+import android.os.Looper;
 import dev.axmol.lib.AxmolActivity;
 import dev.axmol.lib.SharedLoader;
 import android.view.KeyEvent;
@@ -68,6 +69,7 @@ public class AppActivity extends AxmolActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.setEnableVirtualButton(false);
+        installCrashReporter();
         super.onCreate(savedInstanceState);
         // Workaround in https://stackoverflow.com/questions/16283079/re-launch-of-activity-on-home-button-but-only-the-first-time/16447508
         if (!isTaskRoot()) {
@@ -96,6 +98,59 @@ public class AppActivity extends AxmolActivity {
             sCurrent = null;
         }
         super.onDestroy();
+    }
+
+    // ===================== Crash reporting (M8) ============================
+
+    /**
+     * Port of `client/src/errorLogs.ts logWindowOnError` for native crashes: a
+     * report goes to `/api/report_error` before the default handler tears the
+     * process down. A main-thread crash posts synchronously (the game thread
+     * will never run the budgeted C++ reporter), a worker crash queues it
+     * through the bridge and the app keeps running.
+     */
+    private void installCrashReporter() {
+        final Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread thread, Throwable error) {
+                try {
+                    reportCrash(thread, error);
+                } catch (Throwable ignored) {
+                    // Never mask the original crash with a reporting failure.
+                }
+                if (previous != null) {
+                    previous.uncaughtException(thread, error);
+                }
+            }
+        });
+    }
+
+    private void reportCrash(Thread thread, Throwable error) {
+        final String data = "{\"message\":\"" + SurvApi.escapeJson(String.valueOf(error))
+                + "\",\"stacktrace\":\"" + SurvApi.escapeJson(Log.getStackTraceString(error))
+                + "\",\"thread\":\"" + SurvApi.escapeJson(thread.getName()) + "\"}";
+
+        boolean mainThread = Looper.myLooper() == Looper.getMainLooper();
+        if (!mainThread) {
+            // App survives: use the budgeted C++ reporter on the game thread.
+            SurvBridge.reportError("windowOnError", data);
+            return;
+        }
+        // Main thread: the process is about to die, so send it here and wait
+        // (briefly) for the request to leave.
+        final String apiBase = SurvApi.DEFAULT_API_BASE_URL;
+        Thread sender = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                SurvApi.reportError(apiBase, "windowOnError", data);
+            }
+        }, "surv-crash-reporter");
+        sender.start();
+        try {
+            sender.join(1500);
+        } catch (InterruptedException ignored) {
+        }
     }
 
     @Override

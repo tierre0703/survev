@@ -105,7 +105,7 @@ public class MenuFragment {
     private boolean mRegionChosen = false;
     private boolean mMuted = false;
     private boolean mFindingGame = false;
-    private String mApiBaseUrl = "http://127.0.0.1:8000";
+    private String mApiBaseUrl = SurvApi.DEFAULT_API_BASE_URL;
     private boolean mNewsExpanded = false;
     private boolean mRegionDropdownOpen = false;
     private final LinearLayout mRegionDropdown;

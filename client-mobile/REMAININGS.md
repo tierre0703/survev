@@ -10,15 +10,15 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-24** — Session 34 started M8 with the pre-game
-**region latency test**: `net/PingTest` ports `pingTest.ts` (1-byte `/ptc` echo,
-6 replies, 1 retry), its probe list is generated from `Config.regions` by
-`tools/codegen_regions.mjs` (the native `PING_TEST_URLS`, no server change), and
-the Java menu shows `· 29 ms` next to every region, auto-selects the fastest one
-for new players and sends its zones with `find_game`. Earlier: §33 minimap
-zoom/clip + baked obstacles, §32 door anchors/open state/open speed, §31
-crosshair loadout + standalone Java bridge config, §30 leader ping
-sounds/airstrike falloff. **155 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-24** — Session 35 added **client error reporting**
+(`client/src/errorLogs.ts`): `net/ErrorLog` reproduces the web's 1% sampling,
+five-request budget and 180 s throttle, the Java crash handler reports uncaught
+exceptions (main-thread crashes post synchronously, worker crashes go through the
+bridge), and `debug.surv_debug=1` sends a tagged startup probe for verification.
+Earlier in M8: §34 region latency test (generated probe list, server untouched).
+Also: §33 minimap zoom/clip + baked obstacles, §32 door anchors/open state/open
+speed, §31 crosshair loadout + standalone Java bridge config. **161 host tests
+pass, 0 fail.**
 
 ---
 
@@ -34,7 +34,7 @@ sounds/airstrike falloff. **155 host tests pass, 0 fail.**
 | M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired; emote + team-ping wheels own their touches. |
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb + per-source EFX low-pass EQ (muffled/club) + structure interior ambience + building `soundEmitters`. UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
-| M8 | Accounts / API | **started** | region latency test (`net/PingTest` + `net/Regions` codegen + Java menu); login/profile/quests/pass still to do. |
+| M8 | Accounts / API | **started** | region latency test (`net/PingTest` + `net/Regions` codegen) and client error reporting (`net/ErrorLog` + Java crash handler); login/profile/quests/pass still to do. |
 | M9 | Polish & release | **not started** | lifecycle, perf, soak, store-ready AAB. |
 
 ---
@@ -100,7 +100,8 @@ sounds/airstrike falloff. **155 host tests pass, 0 fail.**
 | `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ❌ **not ported** (M8) |
 | `client/src/crosshair.ts` (custom crosshair) | ✅ screen-space crosshair sprite from the loadout style/colour/size/stroke (rasterized `crosshairDefs` styles, 0/1/2 stroke buckets) |
 | `client/src/pingTest.ts` (pre-game latency check) | ✅ `net/PingTest` (echo cadence/retry/complete + `bestRegion`/zones, host-tested); the probe list comes from `net/Regions` (`tools/codegen_regions.mjs`, the native `PING_TEST_URLS`), and the Java menu shows the ms and auto-selects the closest region |
-| `client/src/account.ts` / `proxy.ts` / `errorLogs.ts` | ❌ **not ported** |
+| `client/src/errorLogs.ts` (client error reporting) | ✅ `net/ErrorLog` (sample/budget/throttle host-tested) + `SurvApi.reportError` crash handler in `AppActivity`; `debug.surv_debug=1` sends a startup probe |
+| `client/src/account.ts` / `proxy.ts` | ❌ **not ported** (M8 accounts; `proxy.ts` is web-only) |
 | `client/src/sdk/*` (ad/partner SDK) | ❌ out of scope |
 | `client/src/debug/*` | ❌ **not ported** (dev tooling) |
 | `client/stats/*` (leaderboard web pages) | ❌ separate app |
@@ -305,9 +306,24 @@ sounds/airstrike falloff. **155 host tests pass, 0 fail.**
       - Regenerate after changing `regions` in `survev-config.hjson`:
         `node --experimental-transform-types tools/codegen_regions.mjs --production`
         (omit `--production` for the dev defaults used by `pnpm dev`).
+- [x] **Error reporting** (`client/src/errorLogs.ts`):
+      - `net/ErrorLog.{h,cpp}` ports the policy exactly: 1% sampling for
+        `storeGeneric` (with `parent == "account"` always dropped), five reports
+        per budget with a 180 s throttle that every suppressed report re-arms,
+        and at most two `windowOnError` reports per process. Poster/clock/random
+        are injected; `tests/test_error_log.cpp` covers body shape, budget decay,
+        throttle/re-arm, sampling and the two-error cap.
+      - `net/Api::postJson` posts through the existing axmol `HttpClient`
+        (fire-and-forget, like the web `fetch`).
+      - `AppActivity` installs a default uncaught-exception handler: a main-thread
+        crash posts `windowOnError` synchronously via `SurvApi.reportError`
+        (1.5 s join, because the process is about to die); a worker-thread crash
+        uses the budgeted C++ reporter through `SurvBridge.reportError`.
+      - `debug.surv_debug=1` (the EQ trace switch) sends one `startup_probe`
+        error at launch, which is how the pipeline is verified on device.
 - [ ] **M8 Accounts/API** (rest): login/profile, team links, quests/pass
       (`PassFragment` is still static), proxy detection (not applicable to
-      native), error reporting
+      native)
 - [ ] **Lifecycle hardening**: background pause/resume rejoin, reconnect/backoff on flaky mobile networks, back-button handling
 - [ ] **Perf/polish**: 60 fps on mid-range devices, notch/insets, battery/resolution tiers, crash-free soak
 - [ ] **Store-ready APK/AAB**
@@ -327,7 +343,7 @@ sounds/airstrike falloff. **155 host tests pass, 0 fail.**
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (155 tests, 0 failures expected)
+# host tests (161 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -410,3 +426,11 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - `UiBridge::setRegion` also persists `regionSelected = true` (main.ts config
   listener), so the ping auto-selection does not override an explicit choice on
   the next launch.
+- Error reporting is `net/ErrorLog` (client/src/errorLogs.ts): do not send
+  reports ad hoc, and keep the web's budget semantics (five reports, 180 s
+  re-armed throttle, 1% `storeGeneric`, two `windowOnError`). The main-thread
+  crash handler deliberately bypasses it (`SurvApi.reportError`, synchronous)
+  because the game thread dies with the process.
+- `debug.surv_debug=1` (`adb shell setprop debug.surv_debug 1`) sends one
+  `startup_probe` report at launch and enables the find_game/audio dev traces;
+  it must not send anything in normal runs.

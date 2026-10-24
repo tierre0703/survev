@@ -72,6 +72,14 @@ public final class SurvBridge {
 
     public static native void saveConfig();
 
+    /**
+     * M8 error reporting (client/src/errorLogs.ts): a non-fatal report from the
+     * Java half. `loc` is "windowOnError", "errorLog" or "storeGeneric";
+     * `dataJson` is the payload. The C++ side samples/throttles it. The main
+     * thread's crash handler bypasses this and posts directly (the process dies).
+     */
+    public static native void reportError(String loc, String dataJson);
+
     // --- read-only queries, answered synchronously from a C++ snapshot ------
 
     /** The whole config blob ({"playerName": ..., "loadout": {...}, ...}). */

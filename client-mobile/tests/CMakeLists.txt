@@ -31,10 +31,12 @@ add_executable(surv_tests
     test_emote_wheel.cpp
     test_ping_wheel.cpp
     test_ping_test.cpp
+    test_error_log.cpp
     ${SURV_SRC}/net/Net.cpp
     ${SURV_SRC}/net/WsUrl.cpp
     ${SURV_SRC}/net/PingTest.cpp
     ${SURV_SRC}/net/Regions.cpp
+    ${SURV_SRC}/net/ErrorLog.cpp
     ${SURV_SRC}/game/Game.cpp
     ${SURV_SRC}/game/Hud.cpp
     ${SURV_SRC}/game/EmoteWheel.cpp

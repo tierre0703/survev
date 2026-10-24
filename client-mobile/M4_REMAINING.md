@@ -2157,3 +2157,60 @@ I/MenuFragment: pingTest results {"complete":true,...,"pingMs":32,...}
   (`Connected to game server`, `Receiving game updates`).
 - Results are reported once per start (a `stop()` after a completed test no
   longer re-reports it), and `logcat -b crash` stays empty.
+
+## 36. Session 35 - client error reporting (M8, 2026-10-24)
+
+### 36.1 Why this slice
+
+The rest of M8 (login/profile/team links/quests/pass) needs OAuth, account
+screens and database round-trips, and the server must stay untouched, so the
+last client-only M8 item was `client/src/errorLogs.ts` - unported, which meant
+native crashes and client errors were invisible to the server.
+
+### 36.2 net/ErrorLog - the policy port
+
+`src/net/ErrorLog.{h,cpp}` reproduces `errorLogs.ts` exactly:
+
+- five reports per budget, then a 180 s throttle; `store()` re-arms the window
+  on every suppressed report (the web behaves the same way);
+- `update()` decays one request per second, or lifts an expired throttle;
+- `storeGeneric(parent, child)` is 1% sampled and always drops
+  `parent == "account"` (those only mean a request failed);
+- `logWindowOnError()` sends at most two per process;
+- body is `{"loc": ..., "data": ...}` (`data` omitted when absent).
+
+Poster, clock and random are injected, so `tests/test_error_log.cpp` covers the
+document shape, budget decay, throttle/re-arm, sampling and the two-error cap.
+
+### 36.3 Wiring
+
+- `net/Api::postJson` posts through axmol's `HttpClient` (fire and forget, like
+  `fetch`). `isDevLogEnabled()` now also reads the `debug.surv_debug` system
+  property, the same switch as the audio trace, so no rebuild is needed.
+- `GameScene` owns the `ErrorLog`, ticks it at 1 Hz, resolves the API origin like
+  find_game (`surv_apiUrl` UserDefault else `DevConfig::kApiBaseUrl`) and with
+  `debug.surv_debug=1` sends one `startup_probe` report at launch. Nothing is
+  sent in normal runs.
+- `SurvBridge.reportError(loc, dataJson)` -> `UiBridge::reportError` ->
+  `GameScene::reportError` for non-fatal Java errors (`windowOnError` goes
+  through the two-report cap, anything else becomes an `errorLog` entry).
+- `AppActivity` installs a default uncaught-exception handler. A main-thread
+  crash posts `windowOnError` synchronously through `SurvApi.reportError` (a
+  short-lived sender thread joined for 1.5 s) because the process - and the
+  game-thread reporter - is about to die. A worker-thread crash leaves the app
+  alive, so it uses the budgeted bridge path instead.
+- `SurvApi.DEFAULT_API_BASE_URL` is now the single Java copy of the dev API
+  origin (`MenuFragment` uses it too).
+
+### 36.4 Verification
+
+- `surv_tests`: **161 tests, 2,588 assertions, 0 failures** (6 new error-log
+  tests).
+- Debug probe: `adb shell setprop debug.surv_debug 1` + relaunch logs
+  `[dev] POST http://127.0.0.1:8000/api/report_error` and the API log gains one
+  `start: /api/report_error`; with `debug.surv_debug=0` no request is sent.
+- Crash handler: a temporary `throw` in `AppActivity.onCreate` (removed again)
+  produced the `FATAL EXCEPTION ... surv crash test` and exactly one
+  `/api/report_error` request before the process died.
+- `build-native.ps1 -Abis x86_64` + `build-apk.ps1 -Abis x86_64`: green; the
+  final APK boots to the menu with `logcat -b crash` empty.

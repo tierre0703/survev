@@ -64,6 +64,14 @@ public:
     virtual void saveConfig() {}
     // The bundled news entries as JSON (the Java menu's news column).
     virtual std::string newsJson() { return "[]"; }
+
+    // M8 error reporting (client/src/errorLogs.ts): a non-fatal report from the
+    // Java half. `loc` is "windowOnError" for worker-thread crashes, otherwise
+    // the error name; `dataJson` is the payload. Budgeted by net/ErrorLog.
+    virtual void reportError(const std::string& loc, const std::string& dataJson) {
+        (void)loc;
+        (void)dataJson;
+    }
 };
 
 // The C++ side of the bridge: the app installs one host at startup and the

@@ -9,11 +9,23 @@
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
+#if defined(__ANDROID__)
+#    include <sys/system_properties.h>
+#endif
+
 #include <utility>
 
 namespace surv {
 
 bool isDevLogEnabled() {
+#if defined(__ANDROID__)
+    // Same switch as audio::audioTraceEnabled(): `adb shell setprop
+    // debug.surv_debug 1` enables the dev traces without a rebuild.
+    char value[PROP_VALUE_MAX] = {0};
+    if (__system_property_get("debug.surv_debug", value) > 0) {
+        return std::string(value) == "1";
+    }
+#endif
     return ax::UserDefault::getInstance()->getStringForKey("surv_debug", "0") == "1";
 }
 
@@ -153,6 +165,27 @@ void findGame(const std::string& apiBaseUrl, const FindGameBody& body, FindGameC
             }
         });
 
+    HttpClient::getInstance()->send(request);
+    request->release();
+}
+
+void postJson(const std::string& url, const std::string& bodyJson) {
+    if (isDevLogEnabled()) {
+        AXLOGI("[dev] POST {}", url);
+    }
+    auto* request = new HttpRequest();
+    request->setRequestType(HttpRequest::Type::POST);
+    request->setUrl(url);
+    request->setRequestData(bodyJson.data(), bodyJson.size());
+    request->setHeaders({"Content-Type: application/json; charset=utf-8"});
+    request->setCompleteCallback([](HttpClient* /*client*/, HttpResponse* response) {
+        if (!response || !response->isSucceed()) {
+            if (isDevLogEnabled()) {
+                const int code = response ? response->getResponseCode() : 0;
+                AXLOGE("[dev] POST failed (http code={})", code);
+            }
+        }
+    });
     HttpClient::getInstance()->send(request);
     request->release();
 }
