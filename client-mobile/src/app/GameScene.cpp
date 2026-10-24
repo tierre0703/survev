@@ -382,7 +382,9 @@ void GameScene::resetWorld() {
     if (_worldRoot) {
         static_cast<ax::Node*>(_worldRoot->native())->removeFromParent();
     }
-    _crosshair = nullptr; // owned (and freed) by the factory
+    _crosshairSprite = nullptr; // owned (and freed) by the factory
+    _crosshairFallback = nullptr;
+    _crosshairFrame.clear();
     _emoteWheel.reset();
     _emoteTouchId = -1;
     _pingWheel.reset();
@@ -525,7 +527,8 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
         _world->replayMap(_game->map());
     }
     _touch->display = false;
-    _game->setJoinInfo(_joinInfo);
+    // Keep the menu/UiBridge JoinInfo (mirrors main.ts setConfigFromDOM before
+    // JoinMsg). GameScene must not overwrite the name/loadout with its default.
     _awaitingJoin = true;
     _joinRetryUrls.clear();
     tryJoinUrls(urls, joinToken, 0);
@@ -570,8 +573,11 @@ void GameScene::leaveGame() {
     if (_hud) {
         _hud->setVisible(false);
     }
-    if (_crosshair) {
-        _crosshair->setVisible(false);
+    if (_crosshairSprite) {
+        _crosshairSprite->setVisible(false);
+    }
+    if (_crosshairFallback) {
+        _crosshairFallback->setVisible(false);
     }
     if (_audio) {
         _audio->stopAll();
@@ -1105,24 +1111,66 @@ void GameScene::update(float delta) {
     // crosshairDefs.ts, not an atlas frame, so it is drawn as two bars here
     // (64 px art: 32 px long, 4 px thick).
     if (_world && _pixiFactory && isStarted() && _game->isPlaying() && _game->hasJoined()) {
-        if (!_crosshair) {
-            _crosshair = _pixiFactory->createGraphics();
-            _crosshair->beginFill(0xffffff, 0.85f);
-            _crosshair->drawRect(-2.0f, -16.0f, 4.0f, 32.0f);
-            _crosshair->drawRect(-16.0f, -2.0f, 32.0f, 4.0f);
-            _crosshair->endFill();
-            // The crosshair is a screen-space overlay: parent it to the game
-            // root (the world root carries the camera transform).
-            _gameRoot->addChild(static_cast<ax::Node*>(_crosshair->native()));
+        const Game::JoinInfo& join = _game->getJoinInfo();
+        const int strokeBucket =
+            std::clamp(static_cast<int>(std::lround(join.crosshairStroke)), 0, 2);
+        const std::string frame = "gui/crosshair/" + join.crosshairType + "_s" +
+            std::to_string(strokeBucket) + ".png";
+        const bool hasFrame = ax::FileUtils::getInstance()->isFileExist(frame);
+        if (hasFrame && _crosshairFrame != frame) {
+            if (audio::audioTraceEnabled()) {
+                AXLOGI("[ui] crosshair type={} color={:06x} size={} stroke={} frame={} found={}",
+                       join.crosshairType, join.crosshairColor, join.crosshairSize,
+                       join.crosshairStroke, frame, hasFrame ? 1 : 0);
+            }
+            if (_crosshairSprite) {
+                _crosshairSprite->setVisible(false);
+            }
+            _crosshairSprite = _pixiFactory->createSprite(frame);
+            _crosshairSprite->setAnchor(0.5f, 0.5f);
+            _crosshairSprite->setAlpha(0.85f);
+            _crosshairSprite->setTint(join.crosshairColor);
+            _gameRoot->addChild(static_cast<ax::Node*>(_crosshairSprite->native()));
+            _crosshairFrame = frame;
         }
-        if (_crosshair) {
-            // Position at screen center each frame (camera independent).
-            const auto size = ax::Director::getInstance()->getVisibleSize();
-            _crosshair->setPosition(size.width * 0.5f, size.height * 0.5f);
-            _crosshair->setVisible(true);
+        const auto screen = ax::Director::getInstance()->getVisibleSize();
+        if (hasFrame && _crosshairSprite) {
+            const float designScale = screen.height > 0.0f ? screen.height / 720.0f : 1.0f;
+            const float pixelSize = 64.0f * join.crosshairSize * designScale;
+            const float source = _crosshairSprite->sourceWidth();
+            const float scale = source > 0.0f ? pixelSize / source : 1.0f;
+            _crosshairSprite->setPosition(screen.width * 0.5f, screen.height * 0.5f);
+            _crosshairSprite->setScale(scale, scale);
+            _crosshairSprite->setTint(join.crosshairColor);
+            _crosshairSprite->setVisible(true);
+            if (_crosshairFallback) {
+                _crosshairFallback->setVisible(false);
+            }
+        } else {
+            if (!_crosshairFallback) {
+                _crosshairFallback = _pixiFactory->createGraphics();
+                _crosshairFallback->beginFill(0xffffff, 0.85f);
+                _crosshairFallback->drawRect(-2.0f, -16.0f, 4.0f, 32.0f);
+                _crosshairFallback->drawRect(-16.0f, -2.0f, 32.0f, 4.0f);
+                _crosshairFallback->endFill();
+                _gameRoot->addChild(static_cast<ax::Node*>(_crosshairFallback->native()));
+            }
+            _crosshairFallback->setPosition(screen.width * 0.5f, screen.height * 0.5f);
+            const float designScale = screen.height > 0.0f ? screen.height / 720.0f : 1.0f;
+            const float fallbackScale = designScale * join.crosshairSize;
+            _crosshairFallback->setScale(fallbackScale, fallbackScale);
+            _crosshairFallback->setVisible(true);
+            if (_crosshairSprite) {
+                _crosshairSprite->setVisible(false);
+            }
         }
-    } else if (_crosshair) {
-        _crosshair->setVisible(false);
+    } else {
+        if (_crosshairSprite) {
+            _crosshairSprite->setVisible(false);
+        }
+        if (_crosshairFallback) {
+            _crosshairFallback->setVisible(false);
+        }
     }
 
     // S6: the pause menu is now Java (GamePauseDialog).

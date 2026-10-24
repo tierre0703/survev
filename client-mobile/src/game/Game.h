@@ -63,6 +63,11 @@ public:
         std::string heal = "heal_basic";
         std::string boost = "boost_basic";
         std::vector<std::string> emotes;
+        // Local-only cosmetics from loadout.crosshair (not serialized in JoinMsg).
+        std::string crosshairType = "crosshair_default";
+        uint32_t crosshairColor = 0xffffff;
+        float crosshairSize = 1.0f;
+        float crosshairStroke = 0.0f;
     };
     void setJoinInfo(const JoinInfo& info);
     const JoinInfo& getJoinInfo() const { return _joinInfo; }

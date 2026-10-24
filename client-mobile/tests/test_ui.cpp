@@ -135,6 +135,74 @@ TEST(ui_loadout_available_validation_and_persistence) {
     CHECK_EQ(restored.joinInfo().outfit, std::string("outfitBase"));
 }
 
+// Crosshair settings arrive from the Java editor (nested shape after the
+// 2026-10-24 fix) or from the web config; the validator must keep valid
+// types/colours and migrate the old flat editor shape.
+TEST(ui_loadout_crosshair_validation) {
+    installGeneratedDefs();
+    ui::MemoryConfigStorage storage;
+    ui::Config config(&storage);
+    config.load();
+
+    ui::JsonValue parsed;
+    CHECK(ui::JsonParser::parse(
+        R"({"crosshair":{"type":"crosshair_001","color":"#FF0000","size":1.4,"stroke":2}})",
+        parsed));
+    config.setJson("loadout", parsed);
+
+    ui::Loadout loadout(&config);
+    const auto join = loadout.joinInfo();
+    CHECK_EQ(join.crosshairType, std::string("crosshair_001"));
+    CHECK_EQ(join.crosshairColor, 0xFF0000u);
+    CHECK_NEAR(join.crosshairSize, 1.4f, 1e-4f);
+    CHECK_NEAR(join.crosshairStroke, 2.0f, 1e-4f);
+
+    // Invalid type/size/stroke fall back to the default style and clamp.
+    CHECK(ui::JsonParser::parse(
+        R"({"crosshair":{"type":"crosshair_nope","color":255,"size":99,"stroke":-4}})",
+        parsed));
+    config.setJson("loadout", parsed);
+    ui::Loadout invalid(&config);
+    const auto invalidJoin = invalid.joinInfo();
+    CHECK_EQ(invalidJoin.crosshairType, std::string("crosshair_default"));
+    CHECK_EQ(invalidJoin.crosshairColor, 0xFFu);
+    CHECK_NEAR(invalidJoin.crosshairSize, 4.0f, 1e-4f);
+    CHECK_NEAR(invalidJoin.crosshairStroke, 0.0f, 1e-4f);
+
+    // A nested object wins over stale flat keys left by the old editor.
+    CHECK(ui::JsonParser::parse(
+        R"({"crosshair":{"type":"crosshair_001","color":"#123456","size":1.0,"stroke":1.0},
+            "crosshairColor":"#FFFFFF","crosshairSize":2,"crosshairStroke":2})",
+        parsed));
+    config.setJson("loadout", parsed);
+    ui::Loadout nestedWins(&config);
+    const auto nestedJoin = nestedWins.joinInfo();
+    CHECK_EQ(nestedJoin.crosshairColor, 0x123456u);
+    CHECK_NEAR(nestedJoin.crosshairSize, 1.0f, 1e-4f);
+    CHECK_NEAR(nestedJoin.crosshairStroke, 1.0f, 1e-4f);
+
+    // Legacy flat editor shape (crosshair:"custom" + indices) is migrated.
+    CHECK(ui::JsonParser::parse(
+        R"({"crosshair":"custom","crosshairColor":"#00FF00","crosshairSize":0,"crosshairStroke":2})",
+        parsed));
+    config.setJson("loadout", parsed);
+    ui::Loadout legacy(&config);
+    const auto legacyJoin = legacy.joinInfo();
+    CHECK_EQ(legacyJoin.crosshairType, std::string("crosshair_default"));
+    CHECK_EQ(legacyJoin.crosshairColor, 0x00FF00u);
+    CHECK_NEAR(legacyJoin.crosshairSize, 0.7f, 1e-4f);
+    CHECK_NEAR(legacyJoin.crosshairStroke, 2.0f, 1e-4f);
+
+    // The validated JSON keeps the nested shape for the Java editor.
+    const ui::JsonValue validatedLegacy = legacy.validated();
+    const ui::JsonValue* crosshair = validatedLegacy.get("crosshair");
+    CHECK(crosshair != nullptr && crosshair->isObject());
+    CHECK_EQ(crosshair->getString("type"), std::string("crosshair_default"));
+    CHECK(crosshair->get("color") != nullptr && crosshair->get("color")->isNumber());
+    CHECK_EQ(crosshair->get("size")->asString(), std::string("0.70"));
+    CHECK_EQ(crosshair->get("stroke")->asString(), std::string("2.00"));
+}
+
 TEST(ui_json_parses_values) {
     const std::string text = R"({
         "s": "hello\nworld",

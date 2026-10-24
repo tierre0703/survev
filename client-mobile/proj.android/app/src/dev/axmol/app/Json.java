@@ -34,8 +34,7 @@ public final class Json {
     }
 
     /** Returns the integer value of a top-level key, or 0 on error. */
-    public static int peekInt(String json, String key) {
-        if (json == null || key == null) return 0;
+    public static int peekInt(String json, String key) {        if (json == null || key == null) return 0;
         try {
             JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
             JsonElement el = obj.get(key);
@@ -61,6 +60,42 @@ public final class Json {
             Log.w(TAG, "peekDouble failed for key=" + key + ": " + e.getMessage());
         }
         return 0.0;
+    }
+
+    /** String value of a field inside a nested object, or null. */
+    public static String peekNestedString(String json, String parent, String key) {
+        if (json == null || parent == null || key == null) return null;
+        try {
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            JsonObject obj = root.getAsJsonObject(parent);
+            if (obj == null) return null;
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                JsonPrimitive p = el.getAsJsonPrimitive();
+                if (p.isString()) return p.getAsString();
+                if (p.isNumber()) return p.getAsString();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "peekNestedString failed for " + parent + "." + key + ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    /** Number value of a field inside a nested object, or fallback. */
+    public static double peekNestedDouble(String json, String parent, String key, double fallback) {
+        if (json == null || parent == null || key == null) return fallback;
+        try {
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            JsonObject obj = root.getAsJsonObject(parent);
+            if (obj == null) return fallback;
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                return el.getAsDouble();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "peekNestedDouble failed for " + parent + "." + key + ": " + e.getMessage());
+        }
+        return fallback;
     }
 
     /** Number of keys in a flat JSON object (0 when the text is not an object). */

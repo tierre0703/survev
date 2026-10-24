@@ -19,6 +19,12 @@ Write-Host 'Rasterizing GUI icons (Content/gui)...'
 & node (Join-Path $PSScriptRoot 'build-gui-icons.mjs') --scale 4
 if ($LASTEXITCODE -ne 0) { throw "build-gui-icons.mjs failed ($LASTEXITCODE)" }
 
+# Crosshair styles are inline SVG in shared/defs (not public/img); rasterize
+# each style's three stroke buckets for the screen-space crosshair sprite.
+Write-Host 'Rasterizing crosshair icons (Content/gui/crosshair)...'
+& node --experimental-transform-types (Join-Path $PSScriptRoot 'build-crosshair-icons.mjs')
+if ($LASTEXITCODE -ne 0) { throw "build-crosshair-icons.mjs failed ($LASTEXITCODE)" }
+
 # The web client ships Roboto Condensed as woff2, which axmol cannot load; keep
 # a TTF copy under Content/fonts (requires Python + fontTools/brotli).
 if (Test-Path (Join-Path $source 'fonts\roboto-condensed-latin-400-normal.woff2')) {

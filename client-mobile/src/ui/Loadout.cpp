@@ -2,6 +2,8 @@
 #include "../net/WsUrl.h"
 #include <algorithm>
 #include <cctype>
+#include <cmath>
+#include <cstdio>
 
 namespace ui {
 namespace {
@@ -17,8 +19,31 @@ JsonValue stringValue(const std::string& text) {
     v.string = text;
     return v;
 }
+JsonValue numberValue(double value) {
+    JsonValue v;
+    v.kind = JsonValue::Kind::Number;
+    v.number = value;
+    return v;
 }
-
+// loadout.ts crosshair.color is a number, but the Java editor writes #RRGGBB.
+uint32_t parseColour(const JsonValue* value, uint32_t fallback) {
+    if (!value) return fallback;
+    if (value->isNumber()) return static_cast<uint32_t>(value->number);
+    std::string text = value->asString();
+    if (!text.empty() && text[0] == '#') text.erase(0, 1);
+    if (text.size() != 6 && text.size() != 8) return fallback;
+    try {
+        return static_cast<uint32_t>(std::stoul(text, nullptr, 16));
+    } catch (...) {
+        return fallback;
+    }
+}
+std::string formatFloat(float value) {
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "%.2f", value);
+    return buffer;
+}
+} // namespace
 std::string sanitizePlayerName(const std::string& input) {
     std::string out;
     for (size_t i = 0; i < input.size();) {
@@ -100,6 +125,42 @@ JsonValue Loadout::validated() const {
             if (std::find(available.begin(), available.end(), type) != available.end()) slots[i] = stringValue(type);
         }
     }
+
+    // crosshair: nested object (loadout.ts shape). Keep the default when a
+    // field is absent or invalid.
+    JsonValue& crosshair = result.object["crosshair"];
+    const auto* storedCrosshair = stored->get("crosshair");    if (storedCrosshair && storedCrosshair->isObject()) {
+        const auto type = storedCrosshair->getString("type", crosshair.getString("type"));
+        const auto* provider = surv::getDefProvider();
+        const auto* def = provider ? provider->gameObject(type) : nullptr;
+        if (def && def->category == "crosshair") {
+            crosshair.object["type"] = stringValue(type);
+        }
+        crosshair.object["color"] = numberValue(
+            parseColour(storedCrosshair->get("color"),
+                        static_cast<uint32_t>(crosshair.getFloat("color", 0xffffff))));
+        const float size = std::clamp(storedCrosshair->getFloat("size", 1.0f), 0.25f, 4.0f);
+        const float stroke = std::clamp(storedCrosshair->getFloat("stroke", 0.0f), 0.0f, 8.0f);
+        crosshair.object["size"] = stringValue(formatFloat(size));
+        crosshair.object["stroke"] = stringValue(formatFloat(stroke));
+    }
+    // Legacy Java editor shape: {"crosshair":"custom","crosshairColor":"#...",
+    // "crosshairSize":0..2,"crosshairStroke":0..2}. Migrate it so existing
+    // installs keep their settings (and their loadout, which the old bridge
+    // replaced wholesale). A nested object always wins over stale flat keys.
+    const bool hasNestedCrosshair = storedCrosshair && storedCrosshair->isObject();
+    if (!hasNestedCrosshair && (stored->get("crosshairColor") ||
+                                stored->get("crosshairSize") ||
+                                stored->get("crosshairStroke"))) {
+        crosshair.object["color"] = numberValue(
+            parseColour(stored->get("crosshairColor"), 0xffffff));
+        static const float kSizes[] = {0.7f, 1.0f, 1.4f};
+        static const float kStrokes[] = {0.0f, 1.0f, 2.0f};
+        const int sizeIdx = std::clamp(stored->getInt("crosshairSize", 1), 0, 2);
+        const int strokeIdx = std::clamp(stored->getInt("crosshairStroke", 0), 0, 2);
+        crosshair.object["size"] = stringValue(formatFloat(kSizes[sizeIdx]));
+        crosshair.object["stroke"] = stringValue(formatFloat(kStrokes[strokeIdx]));
+    }
     return result;
 }
 
@@ -113,6 +174,12 @@ surv::Game::JoinInfo Loadout::joinInfo() const {
     info.heal = value.getString("heal");
     info.boost = value.getString("boost");
     for (const auto& slot : value.get("emotes")->array) info.emotes.push_back(slot.asString());
+    if (const auto* crosshair = value.get("crosshair")) {
+        info.crosshairType = crosshair->getString("type", info.crosshairType);
+        info.crosshairColor = parseColour(crosshair->get("color"), info.crosshairColor);
+        info.crosshairSize = std::clamp(crosshair->getFloat("size", 1.0f), 0.25f, 4.0f);
+        info.crosshairStroke = std::clamp(crosshair->getFloat("stroke", 0.0f), 0.0f, 8.0f);
+    }
     return info;
 }
 

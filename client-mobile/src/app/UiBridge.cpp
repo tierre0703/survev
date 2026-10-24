@@ -30,6 +30,7 @@
 
 #include <jni.h>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -100,35 +101,62 @@ public:
         _game = game;
     }
 
-    std::string configJson() override {
-        // Without a C++ menu scene, return the config from SharedPreferences.
-        if (!_menu) {
-            // Fall back to reading from SharedPreferences directly.
-            return std::string("{}");
+    // Android has no C++ MenuScene (AppDelegate passes nullptr), but the Java
+    // menu still needs the same persisted config (name/region/loadout/crosshair/
+    // volumes). Keep a standalone Config over the UserDefault storage in that
+    // case instead of silently dropping every bridge write.
+    uikit::Config& config() {
+        if (_menu) {
+            return _menu->config();
         }
-        return uikit::jsonToString(_menu->config().root());
+        if (!_standaloneStorage) {
+            _standaloneStorage = std::make_unique<uikit::UserDefaultConfigStorage>();
+            _standaloneConfig = std::make_unique<uikit::Config>(_standaloneStorage.get());
+            _standaloneConfig->load();
+        }
+        return *_standaloneConfig;
+    }
+
+    std::string configJson() override {
+        return uikit::jsonToString(config().root());
     }
 
     void setPlayerName(const std::string& name) override {
-        if (_menu) _menu->config().setString("playerName", name);
+        config().setString("playerName", name);
     }
 
     void setRegion(const std::string& region) override {
-        if (_menu) _menu->config().setString("region", region);
+        config().setString("region", region);
     }
 
     bool setLoadoutJson(const std::string& json) override {
-        if (!_menu) return false;
         uikit::JsonValue parsed;
         if (!uikit::JsonParser::parse(json, parsed) || !parsed.isObject()) {
             return false;
         }
         // Store the selection, then let the C++ validator normalise it: Java
         // must not be able to bypass the checks `ui::Loadout` performs before
-        // the loadout reaches the JoinMsg.
-        _menu->config().setJson("loadout", parsed);
-        uikit::Loadout loadout(&_menu->config());
-        _menu->config().setJson("loadout", loadout.validated());
+        // the loadout reaches the JoinMsg. Java may send a partial update (the
+        // crosshair editor does), so merge into the current loadout instead of
+        // replacing it wholesale.
+        uikit::JsonValue merged = config().getJson("loadout") &&
+                config().getJson("loadout")->isObject()
+            ? *config().getJson("loadout")
+            : uikit::Config::defaultLoadout();
+        for (const auto& entry : parsed.object) {
+            if (entry.first == "crosshair" && entry.second.isObject() &&
+                merged.object["crosshair"].isObject()) {
+                for (const auto& field : entry.second.object) {
+                    merged.object["crosshair"].object[field.first] = field.second;
+                }
+            } else {
+                merged.object[entry.first] = entry.second;
+            }
+        }
+        config().setJson("loadout", merged);
+        uikit::Loadout loadout(&config());
+        config().setJson("loadout", loadout.validated());
+        config().save();
         return true;
     }
 
@@ -136,24 +164,24 @@ public:
         runOnGameThread([this, key, value] {
             audio::AudioManager* audio = _game ? _game->audioManager() : nullptr;
             if (key == "master") {
-                if (_menu) _menu->config().setFloat("masterVolume", value);
+                config().setFloat("masterVolume", value);
                 if (audio) audio->setMasterVolume(value);
             } else if (key == "sound") {
-                if (_menu) _menu->config().setFloat("soundVolume", value);
+                config().setFloat("soundVolume", value);
                 if (audio) audio->setSoundVolume(value);
             } else if (key == "music") {
-                if (_menu) _menu->config().setFloat("musicVolume", value);
+                config().setFloat("musicVolume", value);
                 if (audio) audio->setMusicVolume(value);
             } else if (key == "mute") {
                 const bool mute = value != 0.0f;
-                if (_menu) _menu->config().setBool("muteAudio", mute);
+                config().setBool("muteAudio", mute);
                 if (audio) audio->setMute(mute);
             }
         });
     }
 
     void setLanguage(const std::string& locale) override {
-        if (_menu) _menu->config().setString("language", locale);
+        config().setString("language", locale);
     }
 
     std::string l10nJson() override {
@@ -161,8 +189,7 @@ public:
     }
 
     std::string loadoutJson() override {
-        if (!_menu) return "{}";
-        uikit::Loadout loadout(&_menu->config());
+        uikit::Loadout loadout(&config());
         return uikit::jsonToString(loadout.validated());
     }
 
@@ -185,7 +212,10 @@ public:
             // Keep the loadout the Java UI settled on in the join parcel,
             // exactly like main.ts sets the config fields before
             // Game.enterWithJoin().
-            _game->setJoinInfo(_menu ? uikit::Loadout(&_menu->config()).joinInfo() : Game::JoinInfo{});
+            const Game::JoinInfo info = uikit::Loadout(&config()).joinInfo();
+            if (Game* game = _game->getGame()) {
+                game->setJoinInfo(info);
+            }
             _game->enterWithJoin(urls, joinToken);
         });
     }
@@ -215,12 +245,18 @@ public:
     }
 
     void saveConfig() override {
-        if (_menu) _menu->saveConfig();
+        if (_menu) {
+            _menu->saveConfig();
+        } else {
+            config().save();
+        }
     }
 
 private:
     MenuScene* _menu = nullptr;
     GameScene* _game = nullptr;
+    std::unique_ptr<uikit::UserDefaultConfigStorage> _standaloneStorage;
+    std::unique_ptr<uikit::Config> _standaloneConfig;
 };
 
 namespace {

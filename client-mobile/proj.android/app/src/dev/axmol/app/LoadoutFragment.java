@@ -410,11 +410,16 @@ public class LoadoutFragment {
         mEmoteSlotBtn.setVisibility(View.GONE);
 
         if (isCrosshair) {
-            // Update crosshair editor state from loadout
-            String chColor = Json.peekString(loadoutJson, "crosshairColor");
-            String chSize = Json.peekString(loadoutJson, "crosshairSize");
-            String chStroke = Json.peekString(loadoutJson, "crosshairStroke");
-            
+            // Update crosshair editor state from the validated loadout
+            // ({"crosshair":{"color":0xRRGGBB,"size":"1.00","stroke":"0.00"}}).
+            String chColor = Json.peekNestedString(loadoutJson, "crosshair", "color");
+            if (chColor == null) {
+                int colorInt = (int) Json.peekNestedDouble(loadoutJson, "crosshair", "color", 0xFFFFFF);
+                chColor = String.format("#%06X", colorInt & 0xFFFFFF);
+            }
+            double chSize = Json.peekNestedDouble(loadoutJson, "crosshair", "size", 1.0);
+            double chStroke = Json.peekNestedDouble(loadoutJson, "crosshair", "stroke", 0.0);
+
             if (chColor != null) {
                 for (int i = 0; i < CROSSHAIR_COLORS.length; i++) {
                     if (CROSSHAIR_COLORS[i].equalsIgnoreCase(chColor)) {
@@ -423,13 +428,15 @@ public class LoadoutFragment {
                     }
                 }
             }
-            if (chSize != null) {
-                try { mCrosshairSize = Integer.parseInt(chSize); } catch (Exception e) {}
-                if (mCrosshairSize < 0 || mCrosshairSize > 2) mCrosshairSize = 1;
+            double[] sizes = {0.7, 1.0, 1.4};
+            double[] strokes = {0.0, 1.0, 2.0};
+            mCrosshairSize = 1;
+            for (int i = 0; i < sizes.length; i++) {
+                if (Math.abs(chSize - sizes[i]) < 0.2) mCrosshairSize = i;
             }
-            if (chStroke != null) {
-                try { mCrosshairStroke = Integer.parseInt(chStroke); } catch (Exception e) {}
-                if (mCrosshairStroke < 0 || mCrosshairStroke > 2) mCrosshairStroke = 1;
+            mCrosshairStroke = 1;
+            for (int i = 0; i < strokes.length; i++) {
+                if (Math.abs(chStroke - strokes[i]) < 0.5) mCrosshairStroke = i;
             }
             
             mSizeBtn.setText(SIZE_LABELS[mCrosshairSize]);
@@ -657,12 +664,16 @@ public class LoadoutFragment {
     }
     
     private void saveCrosshairSettings() {
+        // Send only the crosshair object; the C++ bridge merges it into the
+        // current loadout (outfit/emotes/etc. must not be replaced) and maps
+        // the editor's 0..2 indices to the web's float size/stroke.
+        float sizeValues[] = {0.7f, 1.0f, 1.4f};
+        float strokeValues[] = {0.0f, 1.0f, 2.0f};
         StringBuilder json = new StringBuilder();
-        json.append("{\"crosshair\":\"custom\"");
-        json.append(",\"crosshairColor\":\"").append(CROSSHAIR_COLORS[mCrosshairColorIdx]).append("\"");
-        json.append(",\"crosshairSize\":").append(mCrosshairSize);
-        json.append(",\"crosshairStroke\":").append(mCrosshairStroke);
-        json.append("}");
+        json.append("{\"crosshair\":{\"color\":\"").append(CROSSHAIR_COLORS[mCrosshairColorIdx]).append("\"");
+        json.append(",\"size\":").append(sizeValues[mCrosshairSize]);
+        json.append(",\"stroke\":").append(strokeValues[mCrosshairStroke]);
+        json.append("}}");
         SurvBridge.setLoadout(json.toString());
     }
 

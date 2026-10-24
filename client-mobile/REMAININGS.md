@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-24** — Session 30 closed the last ping parity items: leader/captain/last-man pings use `pingDef.soundLeader` (`GameWorld` now exposes a `PlayerStatus.role` lookup), and non-faction airstrike pings attenuate with distance (`rangeMult 20`, `fallOff 1`). Earlier: §29 per-source EQ + audio trace, §28 soundEmitters + thread-safe JNI bridge, §27 interior tracks. **145 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-24** — Session 31 wired the crosshair loadout end to end: the Java Customize editor’s colour/size/stroke now persist through a standalone bridge `Config` (Android has no C++ MenuScene), partial loadouts merge instead of replacing, and `GameScene` renders the selected `crosshairDefs` style as a tinted/scaled screen-space sprite (30 styles × 3 stroke buckets generated into `Content/gui/crosshair`). This also restores the Java player name/loadout reaching the JoinMsg. Earlier: §30 leader ping sounds/airstrike falloff, §29 per-source EQ, §28 soundEmitters + thread-safe bridge. **146 host tests pass, 0 fail.**
 
 ---
 
@@ -90,7 +90,7 @@ Latest recorded state: **2026-10-24** — Session 30 closed the last ping parity
 | `client/src/emote.ts` (emote/ping system) | ✅ see the emote row above |
 | `client/src/ui/pieTimer.ts` (action progress circle) | ✅ `ui/FguiPieTimer` driven by `ActivePlayerData.actionTime` |
 | `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ❌ **not ported** (M8) |
-| `client/src/crosshair.ts` (custom crosshair) | ✅ screen-space crosshair overlay (default style; loadout-specific art is a follow-up) |
+| `client/src/crosshair.ts` (custom crosshair) | ✅ screen-space crosshair sprite from the loadout style/colour/size/stroke (rasterized `crosshairDefs` styles, 0/1/2 stroke buckets) |
 | `client/src/pingTest.ts` (pre-game latency check) | ❌ **not ported** |
 | `client/src/account.ts` / `proxy.ts` / `errorLogs.ts` | ❌ **not ported** |
 | `client/src/sdk/*` (ad/partner SDK) | ❌ out of scope |
@@ -184,12 +184,11 @@ Latest recorded state: **2026-10-24** — Session 30 closed the last ping parity
   - Shows green/amber/grey bar based on health, "Dead"/"Down"/"DC" status labels
   - Panel hidden in solo mode, shown top-left in team/squad modes
   - Wired into FguiHud::update() per frame
-- [x] **Crosshair** (`crosshair.ts` — custom crosshair rendering):
-  - Screen-space overlay drawn at the screen centre above the world
-  - Default crosshair art is an inline SVG in `crosshairDefs.ts` (not an atlas
-    frame), so it is drawn as two white bars via `pix::Graphics`
-  - Created once in `GameScene::update()`, shown during gameplay
-  - Future: read the crosshair type/color/size from the Config loadout
+- [x] **Crosshair** (`crosshair.ts` - custom crosshair rendering):
+  - Screen-space sprite at the viewport centre above the world
+  - Loadout style (`crosshair_*`), colour, size and stroke (0/1/2 buckets)
+    from the Java Customize editor via the persisted config
+  - Styles rasterized from `crosshairDefs.ts` to `Content/gui/crosshair/`
 - [x] **Touch pad sizing** — `PadGraphicsAxmol` was 4x too small; the ring is
   now sized to the web's `pad.img` (208 px * 0.6) and the dot to 208 px * 0.25
 - [x] **World-space name labels** — player/dead-body labels were vertically
@@ -295,7 +294,7 @@ Latest recorded state: **2026-10-24** — Session 30 closed the last ping parity
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (145 tests, 0 failures expected)
+# host tests (146 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -346,6 +345,8 @@ node tools/build-gui-icons.mjs
 - `SurvBridge` JNI methods run on the Java UI thread: scene/world/audio mutations must go through `UiBridge::runOnGameThread` (`Scheduler::runOnAxmolThread`); calling `enterWithJoin`/`leaveGame` inline races the GL thread and crashes in the player pool
 - Building `soundEmitters` are owned by `Building`: created on `isNew`, stopped in `m_free()` via the cached `audioOwner`, and updated at 10 Hz with `setVolume(..., "sound")`
 - Per-source EQ is an axmol patch: re-vendoring **must** run `tools/vendor-axmol.ps1` (which calls `patch-axmol-audio-filter.ps1`) or `AudioEngine::setFilterProperties` disappears; `audio/AudioFilter.h` maps muffled/club to the EFX low-pass
+- Android has **no C++ MenuScene** (`installUiBridge(nullptr, gameScene)`): bridge config/name/loadout/crosshair writes use the standalone `UserDefaultConfigStorage` Config, and `joinUrls` must set the `Game` join info via `_game->getGame()`; `GameScene::enterWithJoin` must not overwrite it
+- Crosshair sprites come from `Content/gui/crosshair/<type>_s<0|1|2>.png` (`build-crosshair-icons.mjs`, staged by `sync-content.ps1`); the nested `crosshair` config shape wins over stale flat keys
 - `AudioManager` resolves `filter` like the web (different layer or `forceFilter` → EQ, otherwise `reverb`); the app-only backend trace is enabled with `debug.surv_debug=1` and prints `[audio] play ... filter=...`
 - `SurvevMobile-debug.apk.idsig` is a tracked build artifact refreshed by every
   `build-apk.ps1` run; commit the refreshed file along with the build.

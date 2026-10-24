@@ -975,7 +975,8 @@ with `pix::Graphics` at the screen centre (64 px art: 32 px long, 4 px thick).
 
 - ~~Team-ping wheel input, ammo-specific ping emotes~~ — closed in §17.
 - Minimap ping sprites (closed in §18; the minimap is now baked and displayed).
-- Crosshair style/colour from the loadout (only the default style is drawn).
+- ~~Crosshair style/colour from the loadout (only the default style is drawn)~~ -
+  closed in §32.
 - `ui/FguiHud.*` remains unused (the live HUD is `game/Hud`); its gear/perk
   panels are not on screen yet.
 
@@ -1904,3 +1905,72 @@ comes from `UpdateMsg.playerStatus`).
   backtrack) stayed connected and `logcat -b crash` was empty. The leader sound
   needs a faction/role match and the airstrike needs a plane event, so those
   remain host-tested until such a match is available.
+
+---
+
+## 32. Session 31 - crosshair loadout pipeline (2026-10-24)
+
+Closes the "crosshair style/colour from loadout" item from §16 and fixes the
+Java config bridge that silently dropped every loadout write.
+
+### 32.1 The bridge had no config (Java writes were discarded)
+
+`AppDelegate` installs the bridge as `installUiBridge(nullptr, gameScene)` (Java
+owns the menu), so every `AndroidUiBridge` method guarded by `if (_menu)` was a
+no-op: name, region, loadout, crosshair and volume writes never persisted.
+
+- `AndroidUiBridge` now owns a standalone `ui::Config` over
+  `UserDefaultConfigStorage` when `_menu` is null, and all config reads/writes
+  (`configJson`, name/region/loadout/language/audio, `saveConfig`) go through
+  `config()`. Loadout edits persist and reach the `JoinMsg`.
+- `joinUrls` sets the **Game** join info via `_game->getGame()->setJoinInfo()`
+  (`_game` is a `GameScene*`, not a `Game*`); `GameScene::enterWithJoin` no
+  longer overwrites it with its default. This also restores the player name and
+  outfit/heal/boost/emote selection from the Java menu.
+
+### 32.2 Crosshair config shape + validation
+
+The Java editor sent `{"crosshair":"custom","crosshairColor":...}` (flat,
+partial), which replaced the whole loadout and was ignored by the validator.
+
+- `UiBridge::setLoadoutJson` merges partial documents into the current loadout
+  (nested `crosshair` fields merge, other categories survive) before
+  validating/storing them.
+- `ui::Loadout::validated` validates the nested
+  `crosshair.{type,color,size,stroke}` shape, accepts `#RRGGBB` or a number for
+  the colour, clamps size/stroke, and migrates the legacy flat
+  `crosshairColor/crosshairSize/crosshairStroke` shape (0..2 indices ->
+  0.7/1.0/1.4 and 0/1/2). A nested object always wins over stale flat keys.
+- `Game::JoinInfo` gained the local-only crosshair fields; `Loadout::joinInfo`
+  fills them. The Java editor now sends the nested shape with float size/stroke
+  and merges into the full loadout.
+
+### 32.3 Crosshair rendering
+
+- `tools/build-crosshair-icons.mjs` rasterizes all 30 `CrosshairDefs` styles
+  into `Content/gui/crosshair/<type>_s<0|1|2>.png` (the three stroke buckets),
+  wired into `tools/sync-content.ps1`.
+- `GameScene` draws the selected style as a screen-space sprite at the viewport
+  centre, tinted by `crosshairColor`, scaled from `size` (64px * size *
+  screenHeight/720), with the old two-bar `Graphics` fallback when the icon is
+  missing. Hidden whenever the HUD is not playing.
+
+### Verification
+
+- `surv_tests`: **146 tests, 2,438 assertions, 0 failures** (new
+  `ui_loadout_crosshair_validation`: nested type/colour/size/stroke, invalid
+  type/limits, legacy migration, nested-wins-over-flat, and the validated JSON
+  shape).
+- Device (x86_64 emulator): the Java Customize -> Scope editor changed the
+  colour to green and size to small; the next match logged/rendered
+  `crosshair_default`, `color=00ff00`, `size=0.7` (screenshot-verified), with an
+  empty `logcat -b crash`.
+- `Content/` is gitignored; run `node --experimental-transform-types
+  tools/build-crosshair-icons.mjs` (or `sync-content.ps1`) before packaging.
+
+### Still open
+
+- The Java editor has colour/size/stroke but no style picker (native config can
+  carry any `crosshair_*` type; the style grid is empty because `SurvBridge`
+  does not expose the available crosshair items yet).
+- Stroke is bucketed to 0/1/2; the web accepts arbitrary float widths.
