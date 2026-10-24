@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-24** — Session 32 fixed doors: PIXI top-left sprite anchors are converted to axmol bottom-left (`y' = 1 - y`) so a `(0.5, 1)` door pivots at the hinge instead of one door-length away, open doors/casings now seed from `data.pos` exactly like `obstacle.ts`, and position/rotation interpolation uses `def.door.openSpeed` (generated as `doorOpenSpeed`) instead of a hardcoded 15. Earlier: §31 crosshair loadout + standalone Java bridge config, §30 leader ping sounds/airstrike falloff, §29 per-source EQ. **146 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-24** — Session 33 fixed the minimap: it is now a clipped, player-centred, zoomed window (the web's 25.6%-of-map view) instead of the whole map squeezed into 140px, and the baked texture uses the static `MapMsg.objects`, so obstacles/buildings are visible. The big map still fits the whole map and also shows them. Earlier: §32 door anchors/open state/open speed, §31 crosshair loadout + standalone Java bridge config, §30 leader ping sounds/airstrike falloff. **147 host tests pass, 0 fail.**
 
 ---
 
@@ -161,7 +161,7 @@ Latest recorded state: **2026-10-24** — Session 32 fixed doors: PIXI top-left 
   - Toggled via `Game::gameOver()` presence
   - Live HUD: victory/defeat, rank, team kills, local kills/damage/survival
     (`Hud::showGameOver`), shown while `GameOverMsg` is pending
-- [x] **Minimap** (render from `RenderTexture`) — live HUD: baked 256×256 map texture under the top-right frame (`Map::generateMinimapTexture` + `Hud::setMinimap`)
+- [x] **Minimap** (render from `RenderTexture`) — live HUD: baked 1024×1024 map texture under the top-right frame (`Map::generateMinimapTexture` + `Hud::setMinimap`)
 - [x] **Gas timer** (`#ui-gas-timer`) — countdown under the minimap from `Gas::duration`/`circleT`, red while moving, hidden when inactive
 - [x] **Squad health bars** (4 team member health bars with status indicators) — live HUD: `Hud::setSquadState`, names, colour bars, Dead/Down/DC; hidden in solo
 - [x] **FguiPadGraphics touch pads** — real pad sprites (FGUI GGraph circles):
@@ -195,10 +195,12 @@ Latest recorded state: **2026-10-24** — Session 32 fixed doors: PIXI top-left 
   mirrored under the camera's negative-Y root; `pix::Text::setFlipY()` counters
   the flip about the anchor (`M4_REMAINING` §16)
 - [x] **Minimap** (baked RenderTexture + live HUD `MapView`):
-  - Map::generateMinimapTexture() renders terrain + obstacles + buildings
-    into a 256×256 pix::RenderTexture
+  - Map::generateMinimapTexture() renders terrain + static `MapMsg.objects` (obstacles/buildings)
+    into a 1024×1024 pix::RenderTexture
   - Map::getMinimapTexture() / getMinimapScale() for runtime access
   - Hud::setMinimap() displays it under the top-right frame
+  - Zoomed to the web client's 25.6%-of-map view, centred on the active player
+    and clipped to the 140px frame (big map still fits the whole map)
   - Player/team dots + gas/safe-zone circles (`updateMapOverlay`)
   - Role-specific icons from `roleDefs.ts` (leader star, captain, medic, last
     man; dead variants) and the web dead/downed scale/z matrix
@@ -329,7 +331,8 @@ node tools/build-gui-icons.mjs
 - `AxRenderTexture::resize` recreates the framebuffer (axmol `setContentSize` does not)
 - `AxSprite::setRenderTexture` sets the texture rect (axmol `setTexture` keeps a zero-size quad)
 - Minimap ping sprites stay in the masked layer (the 512px pulse ring spills otherwise)
-- The masked ping layer must be created **lazily** (`MapView::setPings`, not HUD build): a ClippingNode created at build time crashed axmol's GL renderer on device
+- The masked ping layer and the minimap clip must be created **lazily** (`MapView::setPings` / `setCenter`, not HUD build): a ClippingNode created at build time crashed axmol's GL renderer on device
+- The minimap bakes the **static** `MapMsg.objects` (not the live pools, which are empty during `loadMap`); the big map uses the same texture fitted to 640px
 - `Hud` hit tests (`minimapExpandHit`, `bigMapContains/CloseHit`) take design-space coords; widget positions are centred HUD coords
 - `MapMsg` place positions are normalized (0..1); do not divide by map width/height again
 - Place names are drawn as HUD text in `MapView`, not baked into the RenderTexture (text-in-RT did not show on device)

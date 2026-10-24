@@ -529,27 +529,20 @@ void Map::generateMinimapTexture(pix::Factory* factory, const Camera& camera) {
         }
     };
 
-    for (auto* obstacle : obstaclePool.m_getPool()) {
-        if (!obstacle->active || obstacle->dead || !obstacle->collidable) {
-            continue;
-        }
-        const MapObjectDef* def = provider ? provider->mapObject(obstacle->type) : nullptr;
+    // map.ts renderMap() bakes the *static* MapMsg.objects, not the live
+    // obstacle/building pools. The pools are empty here (loadMap runs before
+    // the first UpdateMsg), so using them left the minimap with terrain only.
+    // Static objects also match the web client: destroyed obstacles stay on
+    // the minimap for the rest of the match.
+    for (const auto& obj : objects) {
+        const MapObjectDef* def = provider ? provider->mapObject(obj.type) : nullptr;
         if (!def) {
             continue;
         }
-        addShapes(def, obstacle->pos, obstacle->ori, obstacle->scale,
-                  static_cast<float>(def->img.zIdx), false);
-    }
-    for (auto* building : buildingPool.m_getPool()) {
-        if (!building->active) {
-            continue;
-        }
-        const MapObjectDef* def = provider ? provider->mapObject(building->type) : nullptr;
-        if (!def) {
-            continue;
-        }
-        addShapes(def, building->pos, building->ori, building->scale,
-                  750.0f + static_cast<float>(def->zIdx), true);
+        const bool building = def->type == "building";
+        const float zIdx = building ? 750.0f + static_cast<float>(def->zIdx)
+                                    : static_cast<float>(def->img.zIdx);
+        addShapes(def, obj.pos, obj.ori, obj.scale, zIdx, building);
     }
 
     std::sort(renderList.begin(), renderList.end(),

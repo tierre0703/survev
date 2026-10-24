@@ -74,11 +74,62 @@ void MapView::setTexture(pix::RenderTexture* texture) {
     if (!_map || !texture) {
         return;
     }
+    _texture = texture;
     _map->setRenderTexture(texture);
-    const float texW = texture->width();
-    const float scale = texW > 0.0f ? _size / texW : 1.0f;
-    _map->setScale(scale, scale);
-    _map->setPosition(0.0f, 0.0f);
+    updateViewTransform();
+}
+
+void MapView::setZoomed(bool zoomed) {
+    _zoomed = zoomed;
+    updateViewTransform();
+}
+
+void MapView::setCenter(const Vec2& worldPos) {
+    _center = worldPos;
+    updateViewTransform();
+    // The minimap needs to clip the oversized map texture / overlays. Do this
+    // lazily (during gameplay) rather than in build(): creating a ClippingNode
+    // while the HUD is being built then rendering it later crashed axmol.
+    if (_zoomed) {
+        ensureClip();
+    }
+}
+
+void MapView::updateViewTransform() {
+    // ui.ts: the minimap mapSprite is `screenScaleFactor * 1600 / 1.2` pixels
+    // (~1000px desktop) inside a 256px window, i.e. it shows 25.6% of the map.
+    // Use the same fraction for the 140px native window; the big map fits.
+    _mapScale = _zoomed ? _size / kMinimapViewFraction : _size;
+    if (_zoomed && _mapW > 0.0f && _mapH > 0.0f) {
+        _mapOffset = Vec2(_size * 0.5f - (_center.x / _mapW) * _mapScale,
+                          _size * 0.5f - (_center.y / _mapH) * _mapScale);
+    } else {
+        _mapOffset = Vec2(0.0f, 0.0f);
+    }
+
+    if (_map && _texture) {
+        const float texW = _texture->width();
+        const float texH = _texture->height();
+        _map->setScale(texW > 0.0f ? _mapScale / texW : 1.0f,
+                       texH > 0.0f ? _mapScale / texH : 1.0f);
+        _map->setPosition(_mapOffset.x, _mapOffset.y);
+        // ui.ts displayMiniMap: mapSprite.alpha = 0.8 on the minimap.
+        _map->setAlpha(_zoomed ? 0.8f : 1.0f);
+    }
+}
+
+void MapView::ensureClip() {
+    if (_clipMask || !_factory || !_root) {
+        return;
+    }
+    _clipMask = _factory->createGraphics();
+    _clipMask->beginFill(0xffffff, 1.0f);
+    _clipMask->drawRect(0.0f, 0.0f, _size, _size);
+    _clipMask->endFill();
+    // The stencil lives in the clipper's parent space; the view root is at
+    // _pos, so the clip rect must be offset to match it.
+    _clipMask->setPosition(_pos.x, _pos.y);
+    _root->setMask(_clipMask);
 }
 
 void MapView::setVisible(bool visible) {
@@ -92,17 +143,19 @@ void MapView::setVisible(bool visible) {
 }
 
 Vec2 MapView::project(const Vec2& worldPos) const {
-    if (_mapW <= 0.0f || _mapH <= 0.0f) {
+    if (_mapW <= 0.0f || _mapH <= 0.0f || _mapScale <= 0.0f) {
         return Vec2(0.0f, 0.0f);
     }
-    return Vec2(worldPos.x / _mapW * _size, worldPos.y / _mapH * _size);
+    return Vec2(_mapOffset.x + worldPos.x / _mapW * _mapScale,
+                _mapOffset.y + worldPos.y / _mapH * _mapScale);
 }
 
 Vec2 MapView::unproject(const Vec2& localPos) const {
-    if (_size <= 0.0f) {
+    if (_mapW <= 0.0f || _mapH <= 0.0f || _mapScale <= 0.0f) {
         return Vec2(0.0f, 0.0f);
     }
-    return Vec2(localPos.x / _size * _mapW, localPos.y / _size * _mapH);
+    return Vec2((localPos.x - _mapOffset.x) / _mapScale * _mapW,
+                (localPos.y - _mapOffset.y) / _mapScale * _mapH);
 }
 
 bool MapView::contains(const Vec2& parentPos) const {
@@ -156,6 +209,8 @@ void MapView::ensurePingLayer() {
     mask->beginFill(0xffffff, 1.0f);
     mask->drawRect(0.0f, 0.0f, _size, _size);
     mask->endFill();
+    // Stencil coordinates are in the clipper's parent space, not the layer's.
+    mask->setPosition(_pos.x, _pos.y);
     _pingLayer->setMask(mask);
     _pingLayer->setVisible(_visible);
 }
@@ -226,7 +281,8 @@ void MapView::setLabels(const std::vector<MapPlace>& places) {
         }
         // MapMsg places are normalized (0..1), like map.ts renderMap.
         text->setFontSize(fontSize);
-        text->setPosition(place.pos.x * _size, place.pos.y * _size);
+        text->setPosition(_mapOffset.x + place.pos.x * _mapScale,
+                          _mapOffset.y + place.pos.y * _mapScale);
         text->setText(place.name);
         text->setVisible(true);
         ++used;
@@ -246,7 +302,7 @@ void MapView::setAirstrikes(const std::vector<MapAirstrike>& strikes) {
     if (_mapW <= 0.0f || _mapH <= 0.0f) {
         return;
     }
-    const float radScale = _size / std::max(_mapW, _mapH);
+    const float radScale = _mapScale / std::max(_mapW, _mapH);
     for (const auto& strike : strikes) {
         if (strike.alpha <= 0.001f || strike.rad <= 0.0f) {
             continue;
@@ -272,7 +328,7 @@ void MapView::setGas(const MapGas& gas) {    if (!_gasGfx) {
         return;
     }
     const float mapSize = std::max(_mapW, _mapH);
-    const float radScale = _size / mapSize;
+    const float radScale = _mapScale / mapSize;
     const Vec2 c = project(gas.pos);
     const float r = gas.rad * radScale;
 

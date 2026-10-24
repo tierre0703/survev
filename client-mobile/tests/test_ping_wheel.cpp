@@ -324,9 +324,9 @@ TEST(map_minimap_texture_is_baked) {
 
     pix::RenderTexture* tex = world.map().getMinimapTexture();
     CHECK(tex != nullptr);
-    CHECK_NEAR(tex->width(), 256.0f, 0.001f);
-    CHECK_NEAR(tex->height(), 256.0f, 0.001f);
-    CHECK_NEAR(world.map().getMinimapScale(), 0.5f, 0.001f);
+    CHECK_NEAR(tex->width(), 1024.0f, 0.001f);
+    CHECK_NEAR(tex->height(), 1024.0f, 0.001f);
+    CHECK_NEAR(world.map().getMinimapScale(), 2.0f, 0.001f);
     // The bake must actually reach the adapter renderer.
     CHECK(factory.renderer() != nullptr);
     CHECK(factory.renderer()->renderCount >= 1);
@@ -410,7 +410,16 @@ TEST(hud_minimap_positions_ping_sprites) {
     const auto* map = static_cast<const pix::NullSprite*>(mini.mapSprite());
     CHECK(map != nullptr);
     CHECK(map->texture == rt);
-    CHECK_NEAR(map->sx, Hud::kMinimapSize / 256.0f, 0.001f);
+    CHECK(mini.zoomed());
+    // ui.ts: map sprite = window / 0.256 (~3.9x), centred on the player.
+    const float display = Hud::kMinimapSize / MapView::kMinimapViewFraction;
+    CHECK_NEAR(map->sx, display / 256.0f, 0.001f);
+    hud.setMapCenter(Vec2(256.0f, 256.0f));
+    CHECK_NEAR(map->x, Hud::kMinimapSize * 0.5f - display * 0.5f, 0.01f);
+    CHECK_NEAR(map->y, Hud::kMinimapSize * 0.5f - display * 0.5f, 0.01f);
+    CHECK_NEAR(map->getAlpha(), 0.8f, 0.001f);
+    const auto* clip = static_cast<const pix::NullContainer*>(mini.root());
+    CHECK(clip != nullptr && clip->maskNode != nullptr);
     // Bottom-left of the top-right 140px frame (design 1280x720, centred).
     CHECK_NEAR(mini.pos().x, (1280.0f - Hud::kMinimapSize - 12.0f) - 640.0f, 0.01f);
     CHECK_NEAR(mini.pos().y, (720.0f - Hud::kMinimapSize - 12.0f) - 360.0f, 0.01f);
@@ -511,6 +520,42 @@ TEST(map_view_dots_gas_and_pings) {
     CHECK_EQ(label->text, std::string("Bank"));
     CHECK_NEAR(label->x, 128.0f, 0.01f);
     CHECK_NEAR(label->y, 128.0f, 0.01f);
+}
+
+TEST(map_view_minimap_is_zoom_centred_and_clipped) {
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    MapView view;
+    view.build(&factory, root, Vec2(10.0f, 20.0f), 140.0f);
+    auto* rt = static_cast<pix::NullRenderTexture*>(factory.createRenderTexture());
+    rt->resize(1024.0f, 1024.0f);
+    view.setZoomed(true);
+    view.setTexture(rt);
+    view.setMapSize(512.0f, 512.0f);
+    view.setCenter(Vec2(128.0f, 384.0f));
+
+    const float display = 140.0f / MapView::kMinimapViewFraction;
+    const auto* map = static_cast<const pix::NullSprite*>(view.mapSprite());
+    CHECK(map != nullptr);
+    CHECK_NEAR(map->sx, display / 1024.0f, 1e-4f);
+    CHECK_NEAR(map->x, 70.0f - (128.0f / 512.0f) * display, 0.01f);
+    CHECK_NEAR(map->y, 70.0f - (384.0f / 512.0f) * display, 0.01f);
+    CHECK_NEAR(map->getAlpha(), 0.8f, 0.001f);
+
+    // The active player is at the centre; points outside the 140px window
+    // project outside (the ClippingNode hides them).
+    const Vec2 centre = view.project(Vec2(128.0f, 384.0f));
+    CHECK_NEAR(centre.x, 70.0f, 0.01f);
+    CHECK_NEAR(centre.y, 70.0f, 0.01f);
+    const Vec2 corner = view.project(Vec2(0.0f, 0.0f));
+    CHECK(corner.x < 0.0f);
+    CHECK(corner.y < 0.0f);
+    const Vec2 back = view.unproject(centre);
+    CHECK_NEAR(back.x, 128.0f, 0.01f);
+    CHECK_NEAR(back.y, 384.0f, 0.01f);
+
+    const auto* clip = static_cast<const pix::NullContainer*>(view.root());
+    CHECK(clip != nullptr && clip->maskNode != nullptr);
 }
 
 TEST(ping_wheel_idle_timeout_closes) {

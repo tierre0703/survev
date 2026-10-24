@@ -82,6 +82,8 @@ public:
                           const std::vector<MapAirstrike>& strikes);
     // map.ts renderMap place names, over both map views.
     void setMapLabels(const std::vector<MapPlace>& places);
+    // ui.ts: keep the player-centred minimap scrolled to the active player.
+    void setMapCenter(const Vec2& worldPos);
 
     // Full-screen map (#big-map): toggled from the minimap's expand button.
     static constexpr float kBigMapSize = 640.0f;

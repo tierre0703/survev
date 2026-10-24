@@ -1048,6 +1048,9 @@ void GameScene::update(float delta) {
                                (1.0f - math::smoothstep(zone->ticker, zone->duration - 0.5f, zone->duration));
                 strikes.push_back(strike);
             }
+            // ui.ts m_render: the small minimap is centred on the active
+            // player's world position (the big map stays fitted to the box).
+            _hud->setMapCenter(me ? me->pos : gas.playerPos);
             _hud->updateMapOverlay(dots, gas, strikes);
         }
     }

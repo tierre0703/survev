@@ -1,10 +1,12 @@
 #pragma once
-// One minimap-style view of the whole map (client/src/ui/ui.ts + mapSprite.ts):
-// the baked map texture, gas overlay/safe zone, player/team dots and map ping
-// sprites, all projected from world units into a square design-space box and
-// clipped to it.
+// One map view (client/src/ui/ui.ts + mapSprite.ts): the baked map texture, gas
+// overlay/safe zone, player/team dots and map ping sprites, all projected from
+// world units into a square design-space box.
 //
-// Used twice by game/Hud: the 140px in-game minimap and the full-screen big map.
+// Used twice by game/Hud:
+//  - the 140px in-game minimap: zoomed in (web mapSprite is ~3.9x the window)
+//    and centred on the player, clipped to the window;
+//  - the full-screen big map: the whole map fitted to the box.
 #include "../core/Vec2.h"
 #include "../render/PixiLike.h"
 #include "EmoteManager.h"
@@ -59,6 +61,9 @@ MapDotStyle mapDotStyle(bool sameGroup, bool dead, bool downed, const std::strin
 class MapView {
 public:
     static constexpr float kTextureSize = 256.0f;
+    // ui.ts: minimap window / map sprite size (256 / (0.75 * 1600 / 1.2)).
+    // The minimap shows ~25.6% of the map width, centred on the player.
+    static constexpr float kMinimapViewFraction = 0.256f;
     static constexpr int kDotPool = 40;
     static constexpr int kPingPool = 32;
     static constexpr int kLabelPool = 16;
@@ -73,12 +78,22 @@ public:
     void setMapSize(float width, float height) {
         _mapW = width;
         _mapH = height;
+        updateViewTransform();
     }
+
+    // Minimap mode (zoomed + player-centred + clipped) vs big-map mode (whole
+    // map fitted). The big map never needs the clip because the texture fits.
+    void setZoomed(bool zoomed);
+    bool zoomed() const { return _zoomed; }
+    // World position that should appear at the minimap centre (small map).
+    void setCenter(const Vec2& worldPos);
+    const Vec2& center() const { return _center; }
 
     void setVisible(bool visible);
     bool visible() const { return _visible; }
 
-    // World -> local (0..size) minimap coordinates.
+    // World -> local view coordinates. The minimap is zoomed, so these can be
+    // outside [0,size] (the view is clipped); the big map stays inside.
     Vec2 project(const Vec2& worldPos) const;
     // Inverse, used by the big map for a tapped position.
     Vec2 unproject(const Vec2& localPos) const;
@@ -113,10 +128,12 @@ private:
     pix::Factory* _factory = nullptr;
     pix::Container* _parent = nullptr;
     pix::Container* _root = nullptr;
+    pix::Graphics* _clipMask = nullptr;
     pix::Container* _dotLayer = nullptr;
     pix::Container* _labelLayer = nullptr;
     pix::Container* _pingLayer = nullptr;
     pix::Sprite* _map = nullptr;
+    pix::RenderTexture* _texture = nullptr;
     pix::Graphics* _gasGfx = nullptr;
     pix::Graphics* _strikeGfx = nullptr;
     std::array<pix::Sprite*, kDotPool> _dotSprites{};
@@ -126,7 +143,15 @@ private:
     float _size = 140.0f;
     float _mapW = 0.0f;
     float _mapH = 0.0f;
+    // World -> view: local = _mapOffset + world/map * _mapScale.
+    float _mapScale = 140.0f;
+    Vec2 _mapOffset;
+    Vec2 _center;
+    bool _zoomed = false;
     bool _visible = true;
+
+    void updateViewTransform();
+    void ensureClip();
 };
 
 } // namespace surv

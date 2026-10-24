@@ -2020,3 +2020,48 @@ interpolation. `def.door.openSpeed` is now generated into
 (`moveSpd = openSpeed`, `rotSpd = PI * openSpeed`, no scale factor), so house
 doors/hinged doors/lab doors animate at their configured speeds instead of
 snapping at a fixed rate.
+
+---
+
+## 34. Session 33 - clipped/zoomed minimap + obstacles (2026-10-24)
+
+### 34.1 The minimap squeezed the whole map into 140px
+
+`MapView::setTexture` scaled the whole baked map to the view size, so the
+in-game minimap showed the entire map in a 140px square. Web `ui.ts` does the
+opposite: its map sprite is `screenScaleFactor * 1600 / 1.2` (~1000px) inside a
+256px (`Sm`: 192px) window, centred on the player and clipped by
+`container.mask` - i.e. it shows ~25.6% of the map.
+
+`MapView` now has two modes:
+
+- `setZoomed(true)` (Hud's `_miniMap`): map sprite = `size / 0.256`, local
+  offset `size/2 - player/map * mapScale`; `setCenter()` (called every frame
+  from `GameScene` with the active player position) keeps the player centred.
+  A ClippingNode clips the view to the `size x size` window; it is created
+  lazily in `setCenter()` because creating a ClippingNode during HUD build
+  crashes axmol.
+- `setZoomed(false)` (Hud's `_bigMap`): the matrix is unchanged (whole map
+  fitted to 640px, no clip).
+
+`project`/`unproject`, dots, pings, gas/safe-zone, airstrikes and place labels
+all use the view transform. The ping-layer stencil is offset to the view origin
+too (it previously sat at 0,0 while the layer was at `_pos`).
+
+### 34.2 Obstacles were missing from the baked texture
+
+`Map::generateMinimapTexture` walked `obstaclePool`/`buildingPool`, but the
+texture is baked during `loadMap()`, before the first `UpdateMsg` spawns the
+pools, so the map had terrain only. It now walks the static `MapMsg.objects`
+like `map.ts renderMap()` (`getMinimapRender`), using the def's
+`map.shapes`/collision/bounding collider and z-order. The texture is 1024x1024
+(was 256) so the zoomed minimap is not blurry; the big map benefits too.
+
+### Verification
+
+- `surv_tests`: **147 tests, 2,470 assertions, 0 failures** (new
+  `map_view_minimap_is_zoom_centred_and_clipped`; updated baked-texture size and
+  minimap centre/scale/mask checks).
+- Device (x86_64 emulator): minimap shows a zoomed player-centred window with
+  trees/rocks/buildings and a clean clipped border; the big map still shows the
+  whole map with the same obstacles; `logcat -b crash` empty.

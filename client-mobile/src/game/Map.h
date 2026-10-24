@@ -64,7 +64,9 @@ public:
     void setDecalBarn(DecalBarn* barn) { decalBarn = barn; }
 
     // minimap texture methods.
-    static constexpr float kMinimapTextureSize = 256.0f;
+    // High enough for the zoomed (≈25.6% of the map) minimap window; the web
+    // client bakes at screen resolution (~1000-2000px) for the same reason.
+    static constexpr float kMinimapTextureSize = 1024.0f;
     void generateMinimapTexture(pix::Factory* factory, const Camera& camera);
     pix::RenderTexture* getMinimapTexture() const { return _mapTexture; }
     float getMinimapScale() const;

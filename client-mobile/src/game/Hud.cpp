@@ -267,6 +267,7 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
 
     // --- Minimap contents (map.ts renderMap + ui.ts map sprites) ---
     _miniMap.build(_factory, _root, _minimapPos, kMinimapSize);
+    _miniMap.setZoomed(true);
     // #ui-map-expand-mobile: small expand affordance inside the frame.
     _expandPos = Vec2(X(mmX + mm - kMinimapExpandSize - 4.0f), Y(mmY + 4.0f));
     _mapExpandBg = _factory->createGraphics();
@@ -495,6 +496,13 @@ void Hud::setMapLabels(const std::vector<MapPlace>& places) {
     }
     _miniMap.setLabels(places);
     _bigMap.setLabels(places);
+}
+
+void Hud::setMapCenter(const Vec2& worldPos) {
+    if (!_built) {
+        return;
+    }
+    _miniMap.setCenter(worldPos);
 }
 
 void Hud::setBigMapVisible(bool visible) {
