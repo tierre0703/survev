@@ -161,6 +161,19 @@ public final class SurvBridge {
         });
     }
 
+    /** Every region probe finished; `json` is PingTest::resultsJson() (C++). */
+    static void onNativePingResults(final String json) {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.pingResults(json);
+                }
+            }
+        });
+    }
+
     private static void post(Runnable runnable) {
         AppActivity activity = AppActivity.current();
         if (activity == null) {

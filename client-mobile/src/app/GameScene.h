@@ -3,6 +3,7 @@
 #include "../game/Game.h"
 #include "../game/TouchInput.h"
 #include "../net/Net.h"
+#include "../net/PingTest.h"
 #include "../render/PixiLike.h"
 #include "../ui/Touch.h"
 #include <atomic>
@@ -151,6 +152,13 @@ public:
     // Called from Game::handlePickup to play the item pickup sound.
     void onPickupSound(const std::string& item);
 
+    // M8: pre-game region latency test (client/src/pingTest.ts). The probe
+    // targets come from the generated `Config.regions` table (net/Regions.h),
+    // the native counterpart of the web's PING_TEST_URLS. Results are pushed
+    // back through UiHost::pingResults() once every test finished.
+    void startRegionPingTest();
+    void stopPingTest();
+
     // Aborts any join in progress and notifies the menu that the match should
     // re-open. Used by the matchmaking overlay's "Back to Main Menu".
     void returnToMenu();
@@ -244,6 +252,9 @@ private:
     std::vector<std::string> _joinRetryUrls;
     std::string _joinRetryToken;
     size_t _joinRetryIndex = 0;
+    // M8 region latency test (pingTest.ts). Created lazily by startRegionPingTest().
+    std::unique_ptr<PingTest> _pingTest;
+    bool _pingReported = false;
 
     TouchInput _touchInput;
     float _inputMsgTimeout = 0.0f;

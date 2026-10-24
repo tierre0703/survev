@@ -127,6 +127,10 @@ public:
 
     void setRegion(const std::string& region) override {
         config().setString("region", region);
+        // main.ts: the config `region` listener marks the choice as explicit, so
+        // the latency test stops auto-selecting on later launches. Auto-select
+        // also goes through here (pingTest.getRegion() -> config.set("region")).
+        config().setBool("regionSelected", true);
     }
 
     bool setLoadoutJson(const std::string& json) override {
@@ -279,6 +283,9 @@ public:
         ax::JniHelper::callStaticVoidMethod(kBridgeClass, "onNativeMatchEnded", errorL10nKey);
     }
     void showResult() override { notify("onNativePlayerDead"); }
+    void pingResults(const std::string& json) override {
+        ax::JniHelper::callStaticVoidMethod(kBridgeClass, "onNativePingResults", json);
+    }
 
 private:
     void notify(const char* method) {

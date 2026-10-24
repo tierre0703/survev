@@ -3,6 +3,7 @@
 #include "DevConfig.h"
 #include "../net/Api.h"
 #include "../net/Messages.h"
+#include "../net/Regions.h"
 #include "../net/WebSocketConnection.h"
 #include "../game/GameWorld.h"
 #include "../game/Map.h"
@@ -364,7 +365,30 @@ bool GameScene::init() {
     _eventDispatcher->addEventListenerWithSceneGraphPriority(keyListener, this);
 
     this->scheduleUpdate();
+
+    // M8: start the pre-game region latency probes right away (pingTest.ts runs
+    // them from main.ts init too). The web sorts `PING_TEST_URLS`; the native
+    // list is generated from the same `Config.regions` (net/Regions.h).
+    startRegionPingTest();
     return true;
+}
+
+void GameScene::startRegionPingTest() {
+    std::vector<PingTestEntry> regions = pingTestRegions();
+    if (regions.empty()) {
+        return;
+    }
+    if (!_pingTest) {
+        // The `/ptc` echo socket uses the same binary axmol WebSocket transport
+        // as the game connection (the team channel uses
+        // createWebSocketConnectionTo, which sends text frames; `/ptc` mirrors
+        // the web's ArrayBuffer probe).
+        _pingTest = std::make_unique<PingTest>(createWebSocketConnection);
+    }
+    AXLOGI("[ping] start region probes: {} entries", regions.size());
+    _pingTest->setEntries(std::move(regions));
+    _pingTest->start(_pingTest->regionList());
+    _pingReported = false;
 }
 
 void GameScene::resetWorld() {
@@ -504,6 +528,9 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
         return;
     }
     clearError();
+    // No menu is visible any more: drop the region latency sockets, like the web
+    // client stops updating the ping test while a match runs.
+    stopPingTest();
     // Every join rebuilds the match world (and its adapter nodes) from
     // scratch, like game.ts free() + init(); resetWorld() below does the
     // teardown. _game itself survives across matches (free() resets it).
@@ -661,6 +688,10 @@ void GameScene::pauseGame() {
     if (_audio) {
         _audio->stopAll();
     }
+    // Backgrounded: the OS may freeze the process, so release the latency
+    // sockets instead of leaving half-open probes behind (the Java menu asks
+    // for a fresh test when it comes back).
+    stopPingTest();
 }
 
 void GameScene::onPickupSound(const std::string& item) {
@@ -699,6 +730,19 @@ void GameScene::resumeGame() {
     if (_game) {
         _game->resume();
     }
+    // pauseGame() released the latency sockets; re-run the probes that never
+    // finished (completed tests keep their measurements).
+    if (_pingTest && !_pingTest->tests().empty() && !_pingTest->isComplete()) {
+        _pingTest->start(_pingTest->regionList());
+    }
+}
+
+void GameScene::stopPingTest() {
+    if (_pingTest) {
+        _pingTest->stop();
+    }
+    // Keep `_pingReported` as-is: a finished test stays finished, and re-reporting
+    // it after every stop (match start, background) spammed the Java menu.
 }
 
 void GameScene::update(float delta) {
@@ -716,6 +760,19 @@ void GameScene::update(float delta) {
         }
     }
     _game->update(delta);
+    // M8: region latency test (client/src/pingTest.ts). Echo every region's
+    // `/ptc` socket while the Java menu is up, then hand the results back once.
+    if (_pingTest) {
+        _pingTest->update(delta);
+        if (!_pingReported && _pingTest->isComplete()) {
+            _pingReported = true;
+            const std::string results = _pingTest->resultsJson();
+            AXLOGI("[ping] results {}", results);
+            if (UiHost* host = uiHost()) {
+                host->pingResults(results);
+            }
+        }
+    }
     if (_findInFlight) {
         _findTime += delta;
         if (_findTime > 30) {

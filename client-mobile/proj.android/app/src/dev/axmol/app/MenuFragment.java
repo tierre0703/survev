@@ -96,7 +96,13 @@ public class MenuFragment {
 
     // --- state ---
     private List<PopEntry> mPops = new ArrayList<PopEntry>();
+    // M8 region latency test results (client/src/pingTest.ts port), one entry per
+    // site_info pop; empty until the probes finish.
+    private List<Json.PingEntry> mPings = new ArrayList<Json.PingEntry>();
     private int mSelectedRegionIdx = 0;
+    // The web's config `regionSelected`: once the user picked a region, the ping
+    // test must not override it.
+    private boolean mRegionChosen = false;
     private boolean mMuted = false;
     private boolean mFindingGame = false;
     private String mApiBaseUrl = "http://127.0.0.1:8000";
@@ -466,7 +472,7 @@ public class MenuFragment {
         if (region != null && !region.isEmpty()) {
             mRegionLabel.setText(regionText(region, 0));
         }
-        mMuted = "true".equals(Json.peekString(config, "muteAudio"));
+        mMuted = Json.peekBool(config, "muteAudio", false);
         updateMuteButton();
     }
 
@@ -474,7 +480,37 @@ public class MenuFragment {
         String name = region.length() > 0
                 ? Character.toUpperCase(region.charAt(0)) + region.substring(1)
                 : region;
-        return name + " [" + players + (players == 1 ? " player]" : " players]") + "";
+        String text = name + " [" + players + (players == 1 ? " player]" : " players]") + "";
+        int ping = pingFor(region);
+        if (ping >= 0) {
+            text += " \u00B7 " + ping + " ms";
+        }
+        return text;
+    }
+
+    /** Latency of `region` from the last ping test, or -1 when it did not answer. */
+    private int pingFor(String region) {
+        // A region may have several zones; rank it by its fastest one, like the
+        // web sorting every test and taking the best (pingTest.getRegion()).
+        int best = -1;
+        for (Json.PingEntry p : mPings) {
+            if (!p.region.equals(region) || p.pingMs < 0) {
+                continue;
+            }
+            if (best < 0 || p.pingMs < best) {
+                best = p.pingMs;
+            }
+        }
+        return best;
+    }
+
+    private int indexOfRegion(String region) {
+        for (int i = 0; i < mPops.size(); i++) {
+            if (mPops.get(i).region.equals(region)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private void showRegion() {
@@ -532,7 +568,15 @@ public class MenuFragment {
                     mPops.add(myP);
                 }
                 if (mPops.size() > 0) {
+                    // Keep the persisted choice (web `config.regionSelected`) so
+                    // the latency test only auto-selects for new players.
+                    mRegionChosen = Json.peekBool(SurvBridge.getConfigJson(), "regionSelected", false);
                     mSelectedRegionIdx = 0;
+                    String saved = Json.peekString(SurvBridge.getConfigJson(), "region");
+                    if (mRegionChosen && saved != null) {
+                        int idx = indexOfRegion(saved);
+                        if (idx >= 0) mSelectedRegionIdx = idx;
+                    }
                     showRegion();
                     buildRegionDropdown();
                     setStatus("");
@@ -551,6 +595,77 @@ public class MenuFragment {
         });
     }
 
+    // ===================== Region latency (M8) =============================
+
+    /** C++ finished every probe: show the latencies and pick the closest region. */
+    public void onPingResults(String json) {
+        List<Json.PingEntry> pings = Json.parsePings(json);
+        if (pings.isEmpty()) {
+            return;
+        }
+        mPings = pings;
+        Log.i(TAG, "pingTest results " + json);
+
+        if (!mRegionChosen) {
+            // pingTest.ts getRegion(): the lowest latency wins, ties keep the
+            // earlier region (the C++ side already ordered bestRegion, but the
+            // menu needs the index).
+            int bestIdx = -1;
+            int bestMs = Integer.MAX_VALUE;
+            for (int i = 0; i < mPops.size(); i++) {
+                int ms = pingFor(mPops.get(i).region);
+                if (ms >= 0 && ms < bestMs) {
+                    bestMs = ms;
+                    bestIdx = i;
+                }
+            }
+            if (bestIdx >= 0) {
+                mSelectedRegionIdx = bestIdx;
+                SurvBridge.setRegion(mPops.get(bestIdx).region);
+            }
+        }
+        showRegion();
+        if (mRegionDropdownOpen) {
+            buildRegionDropdown();
+        }
+    }
+
+    /** Zones of `region`, fastest first (pingTest.getZones); "[]" when unknown. */
+    private String zonesJson(String region) {
+        List<Json.PingEntry> matches = new ArrayList<Json.PingEntry>();
+        for (Json.PingEntry p : mPings) {
+            if (p.region.equals(region)) {
+                matches.add(p);
+            }
+        }
+        // Insertion sort by measured latency; unmeasured (-1) goes last.
+        for (int i = 1; i < matches.size(); i++) {
+            Json.PingEntry cur = matches.get(i);
+            int key = cur.pingMs < 0 ? Integer.MAX_VALUE : cur.pingMs;
+            int j = i - 1;
+            while (j >= 0) {
+                int other = matches.get(j).pingMs < 0 ? Integer.MAX_VALUE : matches.get(j).pingMs;
+                if (other <= key) break;
+                matches.set(j + 1, matches.get(j));
+                j--;
+            }
+            matches.set(j + 1, cur);
+        }
+        StringBuilder sb = new StringBuilder("[");
+        int count = 0;
+        for (Json.PingEntry p : matches) {
+            if (p.zone == null || p.zone.isEmpty()) {
+                continue;
+            }
+            if (count++ > 0) {
+                sb.append(',');
+            }
+            sb.append('"').append(escapeJson(p.zone)).append('"');
+        }
+        sb.append(']');
+        return sb.toString();
+    }
+
     // ===================== Play ============================================
 
     private void onPlay(final int teamMode) {
@@ -565,7 +680,7 @@ public class MenuFragment {
 
         int gameModeIdx = teamMode == 1 ? 0 : teamMode == 2 ? 1 : 2;
         final String bodyStr = "{\"region\":\"" + escapeJson(region) + "\""
-                + ",\"zones\":[]"
+                + ",\"zones\":" + zonesJson(region)
                 + ",\"version\":1028"
                 + ",\"playerCount\":" + teamMode
                 + ",\"autoFill\":true"
@@ -640,6 +755,7 @@ public class MenuFragment {
     private void selectRegion(int idx) {
         if (idx < 0 || idx >= mPops.size()) return;
         mSelectedRegionIdx = idx;
+        mRegionChosen = true;
         showRegion();
         SurvBridge.setRegion(mPops.get(idx).region);
         // Close dropdown
@@ -666,7 +782,7 @@ public class MenuFragment {
         if (name != null && !name.isEmpty() && !mName.hasFocus()) {
             mName.setText(name);
         }
-        mMuted = "true".equals(Json.peekString(config, "muteAudio"));
+        mMuted = Json.peekBool(config, "muteAudio", false);
         updateMuteButton();
     }
 

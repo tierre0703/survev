@@ -75,7 +75,8 @@ SiteInfo parse(const std::string& json) {
                 pop.playerCount = pc->value.GetInt();
             }
             pop.l10n = rjString(entry.value, "l10n");
-            info.pops.push_back(std::move(pop));        }
+            info.pops.push_back(std::move(pop));
+        }
     }
     return info;
 }

@@ -79,6 +79,9 @@ public:
     virtual void returnToMenu(const std::string& errorL10nKey) = 0;
     // Java: the active player died (result panel / spectate prompt).
     virtual void showResult() = 0;
+    // Java: every region probe finished; `json` is PingTest::resultsJson()
+    // ({"complete","bestRegion","tests":[{"region","zone","pingMs",...}]}).
+    virtual void pingResults(const std::string& json) { (void)json; }
 };
 
 // No-op host: used by the host tests and by any build without Java.

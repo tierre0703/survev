@@ -33,6 +33,23 @@ public final class Json {
         return null;
     }
 
+    /** Returns the boolean value of a top-level key, or `fallback` on error. */
+    public static boolean peekBool(String json, String key, boolean fallback) {
+        if (json == null || key == null) return fallback;
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                JsonPrimitive p = el.getAsJsonPrimitive();
+                if (p.isBoolean()) return p.getAsBoolean();
+                if (p.isString()) return "true".equals(p.getAsString());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "peekBool failed for key=" + key + ": " + e.getMessage());
+        }
+        return fallback;
+    }
+
     /** Returns the integer value of a top-level key, or 0 on error. */
     public static int peekInt(String json, String key) {        if (json == null || key == null) return 0;
         try {
@@ -172,5 +189,43 @@ public final class Json {
         public String region;
         public int playerCount;
         public String l10n;
+    }
+
+    /**
+     * Parses the C++ PingTest snapshot ({"complete","bestRegion","tests":[...]})
+     * into the entries the menu shows next to each region. `pingMs` is -1 when
+     * the region never answered.
+     */
+    public static List<PingEntry> parsePings(String json) {
+        List<PingEntry> pings = new ArrayList<>();
+        if (json == null) return pings;
+        try {
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            JsonElement testsEl = root.get("tests");
+            if (testsEl == null || !testsEl.isJsonArray()) return pings;
+            JsonArray tests = testsEl.getAsJsonArray();
+            for (int i = 0; i < tests.size(); i++) {
+                JsonElement el = tests.get(i);
+                if (el == null || !el.isJsonObject()) continue;
+                JsonObject obj = el.getAsJsonObject();
+                PingEntry p = new PingEntry();
+                p.region = obj.has("region") ? obj.get("region").getAsString() : "";
+                p.zone = obj.has("zone") ? obj.get("zone").getAsString() : p.region;
+                p.pingMs = obj.has("pingMs") ? obj.get("pingMs").getAsInt() : -1;
+                p.complete = obj.has("complete") && obj.get("complete").getAsBoolean();
+                if (!p.region.isEmpty()) pings.add(p);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "parsePings failed: " + e.getMessage());
+        }
+        return pings;
+    }
+
+    public static class PingEntry {
+        public String region;
+        public String zone;
+        /** Round-trip in ms, -1 when the region did not answer. */
+        public int pingMs = -1;
+        public boolean complete = false;
     }
 }

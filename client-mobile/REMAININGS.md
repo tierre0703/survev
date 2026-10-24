@@ -10,7 +10,15 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-24** — Session 33 fixed the minimap: it is now a clipped, player-centred, zoomed window (the web's 25.6%-of-map view) instead of the whole map squeezed into 140px, and the baked texture uses the static `MapMsg.objects`, so obstacles/buildings are visible. The big map still fits the whole map and also shows them. Earlier: §32 door anchors/open state/open speed, §31 crosshair loadout + standalone Java bridge config, §30 leader ping sounds/airstrike falloff. **147 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-24** — Session 34 started M8 with the pre-game
+**region latency test**: `net/PingTest` ports `pingTest.ts` (1-byte `/ptc` echo,
+6 replies, 1 retry), its probe list is generated from `Config.regions` by
+`tools/codegen_regions.mjs` (the native `PING_TEST_URLS`, no server change), and
+the Java menu shows `· 29 ms` next to every region, auto-selects the fastest one
+for new players and sends its zones with `find_game`. Earlier: §33 minimap
+zoom/clip + baked obstacles, §32 door anchors/open state/open speed, §31
+crosshair loadout + standalone Java bridge config, §30 leader ping
+sounds/airstrike falloff. **155 host tests pass, 0 fail.**
 
 ---
 
@@ -26,7 +34,7 @@ Latest recorded state: **2026-10-24** — Session 33 fixed the minimap: it is no
 | M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired; emote + team-ping wheels own their touches. |
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb + per-source EFX low-pass EQ (muffled/club) + structure interior ambience + building `soundEmitters`. UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
-| M8 | Accounts / API | **not started** | login/profile/team-link/quests/pass. |
+| M8 | Accounts / API | **started** | region latency test (`net/PingTest` + `net/Regions` codegen + Java menu); login/profile/quests/pass still to do. |
 | M9 | Polish & release | **not started** | lifecycle, perf, soak, store-ready AAB. |
 
 ---
@@ -91,7 +99,7 @@ Latest recorded state: **2026-10-24** — Session 33 fixed the minimap: it is no
 | `client/src/ui/pieTimer.ts` (action progress circle) | ✅ `ui/FguiPieTimer` driven by `ActivePlayerData.actionTime` |
 | `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ❌ **not ported** (M8) |
 | `client/src/crosshair.ts` (custom crosshair) | ✅ screen-space crosshair sprite from the loadout style/colour/size/stroke (rasterized `crosshairDefs` styles, 0/1/2 stroke buckets) |
-| `client/src/pingTest.ts` (pre-game latency check) | ❌ **not ported** |
+| `client/src/pingTest.ts` (pre-game latency check) | ✅ `net/PingTest` (echo cadence/retry/complete + `bestRegion`/zones, host-tested); the probe list comes from `net/Regions` (`tools/codegen_regions.mjs`, the native `PING_TEST_URLS`), and the Java menu shows the ms and auto-selects the closest region |
 | `client/src/account.ts` / `proxy.ts` / `errorLogs.ts` | ❌ **not ported** |
 | `client/src/sdk/*` (ad/partner SDK) | ❌ out of scope |
 | `client/src/debug/*` | ❌ **not ported** (dev tooling) |
@@ -276,7 +284,30 @@ Latest recorded state: **2026-10-24** — Session 33 fixed the minimap: it is no
 
 ### Priority 5 — Platform / release (M8 + M9)
 
-- [ ] **M8 Accounts/API**: login, profile, team links, quests/pass, proxy detection, region ping test, error reporting
+- [x] **Region latency test** (`client/src/pingTest.ts`, the first M8 slice):
+      - `net/Regions.{h,cpp}` + `generatedRegions.inc`: the probe list is
+        generated from the server deployment's `regions` config by
+        `tools/codegen_regions.mjs` — the native counterpart of the web's
+        `PING_TEST_URLS` (`client/vite.config.mts`). **No server change**: the
+        client never asks the API for addresses.
+      - `net/PingTest.{h,cpp}`: `ConnectionFactory`-injected port of the echo
+        probe (1 byte on `/ptc`, 6 replies, 1 retry, 8 Hz cadence), with
+        `bestRegion()`/`zones()` and a `resultsJson()` snapshot. Host-tested
+        against `FakeConnection` (`tests/test_ping_test.cpp`).
+      - `GameScene` starts the probes from the generated table on init and ticks
+        them while the menu is up; results go back through
+        `UiHost::pingResults` → `SurvBridge.onNativePingResults` →
+        `MenuFragment.onPingResults` (no Java→C++ command needed).
+      - Java menu: renders `· 29 ms` in the region label + dropdown,
+        auto-selects the fastest region when the player has not chosen one
+        (`config.regionSelected`), and passes the region's zones (fastest first)
+        to `find_game`.
+      - Regenerate after changing `regions` in `survev-config.hjson`:
+        `node --experimental-transform-types tools/codegen_regions.mjs --production`
+        (omit `--production` for the dev defaults used by `pnpm dev`).
+- [ ] **M8 Accounts/API** (rest): login/profile, team links, quests/pass
+      (`PassFragment` is still static), proxy detection (not applicable to
+      native), error reporting
 - [ ] **Lifecycle hardening**: background pause/resume rejoin, reconnect/backoff on flaky mobile networks, back-button handling
 - [ ] **Perf/polish**: 60 fps on mid-range devices, notch/insets, battery/resolution tiers, crash-free soak
 - [ ] **Store-ready APK/AAB**
@@ -296,7 +327,7 @@ Latest recorded state: **2026-10-24** — Session 33 fixed the minimap: it is no
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (146 tests, 0 failures expected)
+# host tests (155 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -316,6 +347,11 @@ node --experimental-transform-types tools/codegen_sound_defs.mjs
 node tools/gen_reference.mjs
 node tools/build-atlas.mjs --res low
 node tools/build-gui-icons.mjs
+```
+
+Regenerate the latency-test targets after changing `regions`:
+```powershell
+node --experimental-transform-types tools/codegen_regions.mjs --production
 ```
 
 **Do NOT regress:**
@@ -358,3 +394,19 @@ node tools/build-gui-icons.mjs
   atlases load (the wheels exist before the first `MapMsg`), and `Content/atlas`
   must be restaged (`build-atlas.mjs`) after `client/atlas-builder/defs/*.ts`
   changes or new icons render blank.
+- The region latency test is C++ (`net/PingTest`) and ticked by `GameScene`
+  (`update()`), not Java: the menu is Java-only, so results come back
+  asynchronously through `UiHost::pingResults` ->
+  `SurvBridge.onNativePingResults`. Do not create probe sockets on the UI thread.
+- `GameScene::init()` starts the probes from `net/Regions` (`generatedRegions.inc`,
+  produced by `tools/codegen_regions.mjs` from `Config.regions` — the native
+  `PING_TEST_URLS`). Do not fetch region addresses from `site_info`: the server
+  does not expose them and must not be changed for this.
+- Regenerate `src/net/generatedRegions.inc` after editing `regions` in
+  `survev-config.hjson` (`--production`) or when the dev defaults change; the
+  host test `ping_regions_generated_table` guards the output.
+- `PingTest` must never handle a close/error by destroying its own `Connection`
+  inside the callback (`needReopen` defers it to after `pump()`).
+- `UiBridge::setRegion` also persists `regionSelected = true` (main.ts config
+  listener), so the ping auto-selection does not override an explicit choice on
+  the next launch.

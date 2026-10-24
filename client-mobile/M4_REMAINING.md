@@ -938,7 +938,7 @@ world emote comes back through the server like a remote player's.
 `124.8 / (0.6 * 832) = 0.25`; the touch dot likewise needs a 26 px radius at
 scale 0.25 (`kDotBaseRadius = 104`). Both pads now match the web's footprint.
 
-### 16.4 World-space text was vertically mirrored (closes �15's follow-up)
+### 16.4 World-space text was vertically mirrored (closes §15's follow-up)
 
 > **Superseded by §23:** the camera root is now positive-Y, so world labels are
 > upright without a counter-flip. This section records the earlier state only.
@@ -2065,3 +2065,95 @@ like `map.ts renderMap()` (`getMinimapRender`), using the def's
 - Device (x86_64 emulator): minimap shows a zoomed player-centred window with
   trees/rocks/buildings and a clean clipped border; the big map still shows the
   whole map with the same obstacles; `logcat -b crash` empty.
+
+## 35. Session 34 - region latency test, the first M8 slice (2026-10-24)
+
+### 35.1 What was missing
+
+`REMAININGS.md` §3 Priority 5 opens with M8 (accounts/API). Of its list
+(login/profile/team links/quests/pass/proxy/region ping test/error reporting),
+the only piece that needs neither OAuth, a Java account screen nor a database
+round-trip is the pre-game latency check - `client/src/pingTest.ts` was still
+unported and the Java menu picked the first region in `site_info.pops`.
+
+### 35.2 The probe targets are generated, not fetched
+
+The web client bakes `Config.regions` into the bundle (`PING_TEST_URLS` in
+`client/vite.config.mts`). The native build does the same:
+`tools/codegen_regions.mjs` imports the repo's `config.ts` (`getConfig`), writes
+`src/net/generatedRegions.inc`, and `net/Regions.{h,cpp}` exposes it as
+`std::vector<PingTestEntry>` (`zone == region`, like `PING_TEST_URLS`).
+
+**The server is untouched.** `site_info` still only carries populations; the
+native client never asks the API for region addresses (the first iteration of
+this session added `pops[].address` to `getSiteInfo`, which was reverted).
+
+```sh
+# deployment config (survev-config.hjson), matching `vite build`
+node --experimental-transform-types tools/codegen_regions.mjs --production
+# dev defaults (adds the `local` region), matching `pnpm dev`
+node --experimental-transform-types tools/codegen_regions.mjs
+```
+
+### 35.3 net/PingTest - the engine-independent port
+
+`src/net/PingTest.{h,cpp}` mirrors `pingTest.ts` exactly:
+
+- one probe per region: `ws(s)://<address>/ptc`, one byte in flight at a time,
+  8 Hz, `recvCountMax = 6`, `retryCountMax = 1` (retries exhausted -> the test
+  completes with no measurement);
+- `ping = min(elapsed)`; the native port keeps **milliseconds** (the web stores
+  seconds because it only logs the value);
+- `bestRegion()` reproduces the web's `sort(a.ping - b.ping)[0]` (stable: ties
+  keep the earlier entry, unanswered regions only win when nothing answered);
+- `zones(region)` returns the region's zones fastest-first for `find_game`;
+- `resultsJson()` is the `{"complete","bestRegion","tests":[...]}` snapshot the
+  Java menu consumes.
+
+The transport is injected (`ConnectionFactory`), so `tests/test_ping_test.cpp`
+drives the whole state machine with `FakeConnection` + an injected clock
+(cadence, minimum, completion, retry, stop, JSON shape, `entriesFromJson`).
+
+A close/error callback must not destroy its own `Connection` (`PingTestEntry::
+needReopen` defers the reset to after `pump()` returns) - destroying it inside
+the callback frees the object whose member function is running.
+
+### 35.4 Wiring (Android)
+
+- `GameScene` (the only always-ticking C++ owner while the Java menu is up)
+  starts the probes from `pingTestRegions()` in `init()` and owns the
+  `PingTest`, ticked from `update()`; it stops when a match starts
+  (`enterWithJoin`) or the app backgrounds (`pauseGame`), and `resumeGame()`
+  restarts the probes that never finished.
+- Results are pushed through `UiHost::pingResults` ->
+  `SurvBridge.onNativePingResults` -> `JavaUiHost.pingResults` ->
+  `MenuFragment.onPingResults` (never polled). There is no Java -> C++ start
+  command, so nothing races the engine startup.
+- `MenuFragment` renders `Region [N players] · 32 ms` in the label and the
+  dropdown, auto-selects the fastest region when the player has not chosen one
+  (`config.regionSelected`; `UiBridge::setRegion` now persists it like main.ts's
+  config listener), and sends the selected region's zones with `find_game`
+  instead of `"zones":[]`.
+
+### 35.5 Verification
+
+- `surv_tests`: **155 tests, 2,546 assertions, 0 failures** (7 ping tests,
+  including `ping_regions_generated_table`, which guards the codegen output).
+- `build-native.ps1 -Abis x86_64`: links.
+- `build-apk.ps1 -Abis x86_64`: packages (javac + JNI symbols resolve).
+
+### 35.6 On-device check (x86_64 emulator, unchanged bundle server)
+
+```
+I/axmol:       [ping] start region probes: 1 entries
+I/axmol:       [ping] results {"complete":true,"bestRegion":"local","tests":[{...,"pingMs":32,...}]}
+I/MenuFragment: pingTest results {"complete":true,...,"pingMs":32,...}
+```
+
+- The region row/dropdown renders `Local [0 players] · 32 ms` (verified with
+  `uiautomator dump`) against the stock bundled API, i.e. without the reverted
+  `site_info` change.
+- Play Solo sends `"zones":["local"]` (fastest-first zones), joins the match
+  (`Connected to game server`, `Receiving game updates`).
+- Results are reported once per start (a `stop()` after a completed test no
+  longer re-reports it), and `logcat -b crash` stays empty.

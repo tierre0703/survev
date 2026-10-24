@@ -129,6 +129,15 @@ public class JavaUiHost {
         Log.i(TAG, "showResult");
     }
 
+    /** Every region probe finished (M8 pingTest): hand it to the menu. */
+    public void pingResults(String json) {
+        if (mMenu != null) {
+            mMenu.onPingResults(json);
+        } else {
+            Log.w(TAG, "ping results before the menu existed");
+        }
+    }
+
     // Back arrow button helpers
     private void showBackBtn() {
         if (mBackBtn != null) mBackBtn.setVisibility(View.VISIBLE);
