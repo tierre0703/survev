@@ -1055,11 +1055,12 @@ fade-in branch re-asserts container alpha 1. Host test:
 
 ### Still open from this area
 
-- ~~**Minimap ping sprites**~~ — closed in §18 (the minimap is baked and the pings
+- ~~**Minimap ping sprites**~~ - closed in §18 (the minimap is baked and the pings
   are drawn over it).
-- Airstrike ping falloff in non-faction mode (`emote.ts rangeMult: 20`).
-- Faction-leader ping sound (`pingDef.soundLeader`): the def is codegen'd, but
-  `GameWorld` does not receive `PlayerStatus.role` yet.
+- ~~Airstrike ping falloff in non-faction mode (`emote.ts rangeMult: 20`)~~ -
+  closed in §31.
+- ~~Faction-leader ping sound (`pingDef.soundLeader`)~~ - closed in §31
+  (`GameWorld` now exposes a `PlayerStatus.role` lookup).
 
 ---
 
@@ -1141,7 +1142,7 @@ camera root's actual scale) instead of `m_ppu`.
 - Player/teammate dots and the gas ring on the minimap (`ui.ts` player map
   sprites / `getMinimapRender` name labels).
 - Big map (full-screen) view.
-- Airstrike ping falloff and faction-leader ping sounds (see §17).
+- ~~Airstrike ping falloff and faction-leader ping sounds~~ - closed in §31.
 
 ---
 
@@ -1871,3 +1872,35 @@ native port only plumbed the filter name and dropped it.
 - Structure interior tracks and building `soundEmitters` were not reachable in
   the short device runs, so their on-device trace lines remain unobserved
   (host tests cover the selection/volume).
+
+---
+
+## 31. Session 30 - leader ping sounds + airstrike falloff (2026-10-24)
+
+Closes the last two ping parity items from §17/§20.
+
+### 31.1 `PlayerStatus.role` lookup
+
+`GameWorld` now exposes `setPlayerRoleLookup(fn)` / `playerRole(playerId)`.
+`GameScene::resetWorld()` binds it to `Game::allPlayerStatus()`, so `EmoteManager`
+can read the sender's role without importing `Game` (the status table already
+comes from `UpdateMsg.playerStatus`).
+
+### 31.2 `EmoteManager::addPing`
+
+- Leader/captain/last-man pings use `pingDef.soundLeader` when it is set;
+  everyone else uses `pingDef.sound`.
+- Non-faction `ping_airstrike` sounds use `rangeMult 20` + `fallOff 1` +
+  `soundPos = ping.pos` (distance-attenuated/ panned); faction mode and all other
+  pings play at full volume, matching `emote.ts addPing`.
+
+### Verification
+
+- `surv_tests`: **145 tests, 2,414 assertions, 0 failures** (new
+  `ping_sound_leader_and_airstrike_falloff`: leader/captain/last-man soundLeader,
+  normal sender sound, attenuated/panned airstrike and full-volume faction
+  airstrike).
+- x86_64 native lib + APK built and installed; two Play Solo joins (with a
+  backtrack) stayed connected and `logcat -b crash` was empty. The leader sound
+  needs a faction/role match and the airstrike needs a plane event, so those
+  remain host-tested until such a match is available.

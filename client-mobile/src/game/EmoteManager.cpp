@@ -261,14 +261,31 @@ void EmoteManager::addPing(const Emote& msg, bool factionMode, GameWorld& ctx) {
         ind->indSpriteOuter->setAlpha(0.0f);
     }
 
-    // Play the ping sound on the UI channel. Pings always play at full volume
-    // (emote.ts addPing); airstrike falloff in non-faction mode is a follow-up.
-    (void)factionMode;
-    if (ctx.audio() && !pingDef->sound.empty()) {
+    // Play the ping sound on the UI channel (emote.ts addPing).
+    // Leader/captain/last-man senders use pingDef.soundLeader; airstrike pings
+    // in non-faction mode attenuate with distance (rangeMult 20, fallOff 1).
+    std::string pingSound = pingDef->sound;
+    if (msg.type != "ping_airdrop" && msg.type != "ping_airstrike") {
+        const std::string role = ctx.playerRole(msg.playerId);
+        if ((role == "leader" || role == "captain" || role == "last_man") &&
+            !pingDef->soundLeader.empty()) {
+            pingSound = pingDef->soundLeader;
+        }
+    }
+    if (ctx.audio() && !pingSound.empty()) {
         audio::PlaySoundOptions opts;
         opts.channel = "ui";
-        opts.rangeMult = 48.0f;
-        ctx.audio()->playSound(pingDef->sound, opts);
+        if (factionMode || msg.type != "ping_airstrike") {
+            // Pings always play at full volume.
+            opts.rangeMult = 48.0f;
+        } else {
+            // Too far from an airstrike ping in non-faction mode -> quieter.
+            opts.rangeMult = 20.0f;
+            opts.fallOff = 1.0f;
+            opts.hasSoundPos = true;
+            opts.soundPos = msg.hasPos ? msg.pos : Vec2(0.0f, 0.0f);
+        }
+        ctx.audio()->playSound(pingSound, opts);
     }
 }
 

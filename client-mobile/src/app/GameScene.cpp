@@ -399,6 +399,16 @@ void GameScene::resetWorld() {
     _pixiFactory = std::make_unique<pix::AxPixiFactory>();
     _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
     _world->setAudio(_audio.get(), _ambiance.get());
+    // emote.ts reads playerBarn.getPlayerStatus(playerId).role for the
+    // leader/captain/last-man ping sound; Game owns the status table.
+    _world->setPlayerRoleLookup([this](uint16_t playerId) {
+        if (!_game) {
+            return std::string();
+        }
+        const auto& statuses = _game->allPlayerStatus();
+        auto it = statuses.find(playerId);
+        return it == statuses.end() ? std::string() : it->second.role;
+    });
     _world->setDeviceScale(::ui2::kDeviceScale);
     // view.ts resizeGame callbacks: the new layers must follow the camera.
     _world->setSizeCallbacks(

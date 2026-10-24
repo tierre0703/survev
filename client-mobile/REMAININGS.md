@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-24** — Session 29 replaced the "reverb-only" EQ gap: the vendored axmol engine now exposes an EFX low-pass per source (reproducible via `tools/patch-axmol-audio-filter.ps1`), `AudioManager` resolves the web's muffled/club filter routing, and `debug.surv_debug=1` emits an `[audio] play ... filter=...` trace that makes footsteps/EQ verifiable from `adb logcat`. Host tests also assert the tile-footstep group by simulation. Earlier: §28 building soundEmitters + thread-safe JNI bridge, §27 interior tracks, §26 ceiling reveal, §25 surfaces/bounds. **144 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-24** — Session 30 closed the last ping parity items: leader/captain/last-man pings use `pingDef.soundLeader` (`GameWorld` now exposes a `PlayerStatus.role` lookup), and non-faction airstrike pings attenuate with distance (`rangeMult 20`, `fallOff 1`). Earlier: §29 per-source EQ + audio trace, §28 soundEmitters + thread-safe JNI bridge, §27 interior tracks. **145 host tests pass, 0 fail.**
 
 ---
 
@@ -295,7 +295,7 @@ Latest recorded state: **2026-10-24** — Session 29 replaced the "reverb-only" 
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (144 tests, 0 failures expected)
+# host tests (145 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe

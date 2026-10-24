@@ -129,6 +129,15 @@ public:
     // slot + group tint, exactly like playerBarn.getGroupInfo() on the web.
     uint8_t playerGroupId(uint16_t playerId) const;
     bool hasPlayerGroup(uint16_t playerId) const;
+    // Player role lookup (playerBarn.getPlayerStatus().role in emote.ts): used
+    // to pick pingDef.soundLeader for leader/captain/last-man pings. GameScene
+    // supplies it from Game::allPlayerStatus().
+    void setPlayerRoleLookup(std::function<std::string(uint16_t)> lookup) {
+        _playerRoleLookup = std::move(lookup);
+    }
+    std::string playerRole(uint16_t playerId) const {
+        return _playerRoleLookup ? _playerRoleLookup(playerId) : std::string();
+    }
     uint8_t activeGroupId() const;
     // Group member ids sorted ascending (player.ts sorts groupInfo.playerIds).
     std::vector<uint16_t> groupMembers(uint8_t groupId) const;
@@ -198,6 +207,7 @@ public:
     std::unordered_map<uint16_t, std::string> _playerNames;
     std::unordered_map<uint16_t, uint8_t> _playerGroups;
     std::string _emptyName;
+    std::function<std::string(uint16_t)> _playerRoleLookup;
     audio::AudioManager* _audio = nullptr;
     audio::Ambiance* _ambiance = nullptr;
     bool _touchAiming = false;

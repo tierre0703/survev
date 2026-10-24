@@ -7,6 +7,8 @@
 #include "game/EmoteManager.h"
 #include "game/Hud.h"
 #include "game/MapView.h"
+#include "audio/AudioManager.h"
+#include "audio/GeneratedSoundDefs.h"
 #include "net/Messages.h"
 #include "render/Defs.h"
 #include "render/GeneratedDefs.h"
@@ -192,8 +194,7 @@ TEST(ping_wheel_solo_gating_and_throttle_grey) {
     CHECK_EQ(sel.ping, std::string("ping_danger"));
 }
 
-TEST(ping_manager_resets_indicator_alpha_on_reuse) {
-    // A reused indicator slot must not inherit the previous ping's fade-out
+TEST(ping_manager_resets_indicator_alpha_on_reuse) {    // A reused indicator slot must not inherit the previous ping's fade-out
     // alpha (device bug: the second ping on a slot was nearly invisible).
     installGeneratedDefs();
     pix::NullPixiFactory factory;
@@ -703,4 +704,102 @@ TEST(hud_big_map_toggle_and_hits) {
     hud.setBigMapVisible(true);
     hud.setVisible(false);
     CHECK(!hud.bigMapVisible());
+}
+
+// ---------------------------------------------------------------------------
+TEST(ping_sound_leader_and_airstrike_falloff) {
+    installGeneratedDefs();
+    audio::installGeneratedSoundDefs();
+
+    class PingBackend : public audio::AudioBackend {
+    public:
+        struct Played {
+            std::string id;
+            float volume = 0.0f;
+            float pan = 0.0f;
+        };
+        std::vector<Played> played;
+        audio::SoundHandle next = 1;
+
+        bool load(const std::string&, const std::string&) override { return true; }
+        bool isLoaded(const std::string&) const override { return true; }
+        audio::SoundHandle play(const std::string& id, const audio::PlayOptions& opts) override {
+            played.push_back({id, opts.volume, opts.pan});
+            return next++;
+        }
+        void stop(audio::SoundHandle) override {}
+        void stopAll() override {}
+        void setVolume(audio::SoundHandle, float) override {}
+        float getVolume(audio::SoundHandle) const override { return 0.0f; }
+        void setPan(audio::SoundHandle, float) override {}
+        void setMute(bool) override {}
+        bool isPlaying(audio::SoundHandle) const override { return true; }
+    };
+
+    PingBackend backend;
+    audio::AudioManager audioManager(&backend);
+    audioManager.cameraPos = Vec2(0.0f, 0.0f);
+    audioManager.activeLayer = 0;
+
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.setAudio(&audioManager, nullptr);
+    world.setPlayerRoleLookup([](uint16_t playerId) {
+        return playerId == 2 ? std::string("leader")
+            : playerId == 3 ? std::string("captain")
+            : playerId == 4 ? std::string("last_man") : std::string();
+    });
+
+    const DefProvider* defs = getDefProvider();
+    const PingRenderDef* danger = defs ? defs->ping("ping_danger") : nullptr;
+    const PingRenderDef* airstrike = defs ? defs->ping("ping_airstrike") : nullptr;
+    CHECK(danger != nullptr);
+    CHECK(airstrike != nullptr);
+    if (!danger || !airstrike) {
+        return;
+    }
+    CHECK(!danger->soundLeader.empty());
+
+    EmoteManager& manager = world.emoteManager();
+
+    // Leader/captain/last-man pings use soundLeader.
+    Emote leaderPing;
+    leaderPing.isPing = true;
+    leaderPing.playerId = 2;
+    leaderPing.type = "ping_danger";
+    leaderPing.hasPos = true;
+    leaderPing.pos = Vec2(0.0f, 0.0f);
+    manager.addPing(leaderPing, false, world);
+    CHECK_EQ(backend.played.back().id, danger->soundLeader + "ui");
+
+    for (uint16_t id : { 3u, 4u }) {
+        leaderPing.playerId = id;
+        manager.addPing(leaderPing, false, world);
+        CHECK_EQ(backend.played.back().id, danger->soundLeader + "ui");
+    }
+
+    // A normal player uses the plain ping sound.
+    leaderPing.playerId = 5;
+    manager.addPing(leaderPing, false, world);
+    CHECK_EQ(backend.played.back().id, danger->sound + "ui");
+    const float dangerVolume = backend.played.back().volume;
+    CHECK(dangerVolume > 0.0f);
+    CHECK_NEAR(backend.played.back().pan, 0.0f, 1e-6f);
+
+    // Non-faction airstrike pings attenuate with distance (rangeMult 20,
+    // fallOff 1) and pan toward the ping.
+    Emote strikePing;
+    strikePing.isPing = true;
+    strikePing.type = "ping_airstrike";
+    strikePing.hasPos = true;
+    strikePing.pos = Vec2(600.0f, 0.0f);
+    manager.addPing(strikePing, false, world);
+    CHECK_EQ(backend.played.back().id, airstrike->sound + "ui");
+    CHECK(backend.played.back().volume < dangerVolume * 0.5f);
+    CHECK(backend.played.back().pan > 0.1f);
+
+    // Faction mode keeps the airstrike ping at full volume.
+    manager.addPing(strikePing, true, world);
+    CHECK_NEAR(backend.played.back().volume, dangerVolume, 1e-4f);
+    CHECK_NEAR(backend.played.back().pan, 0.0f, 1e-6f);
 }
