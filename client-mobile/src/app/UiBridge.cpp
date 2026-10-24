@@ -294,6 +294,10 @@ public:
     void pingResults(const std::string& json) override {
         ax::JniHelper::callStaticVoidMethod(kBridgeClass, "onNativePingResults", json);
     }
+    bool togglePause() override {
+        notify("onNativeTogglePause");
+        return true; // the Java UI owns the pause dialog
+    }
 
 private:
     void notify(const char* method) {

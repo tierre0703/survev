@@ -10,15 +10,15 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-24** — Session 35 added **client error reporting**
-(`client/src/errorLogs.ts`): `net/ErrorLog` reproduces the web's 1% sampling,
-five-request budget and 180 s throttle, the Java crash handler reports uncaught
-exceptions (main-thread crashes post synchronously, worker crashes go through the
-bridge), and `debug.surv_debug=1` sends a tagged startup probe for verification.
-Earlier in M8: §34 region latency test (generated probe list, server untouched).
-Also: §33 minimap zoom/clip + baked obstacles, §32 door anchors/open state/open
-speed, §31 crosshair loadout + standalone Java bridge config. **161 host tests
-pass, 0 fail.**
+Latest recorded state: **2026-10-24** — Session 36 hardened the app lifecycle:
+backgrounding (or opening the pause dialog) no longer closes the game socket -
+join tokens are single-use server-side, so the old "close + rejoin" always lost
+the match. The socket is kept, a 12 s liveness watchdog turns a half-open mobile
+connection into the normal "connection lost" path, and the WebSocket event queue
+is capped (4096 frames) so a long background cannot grow without bound.
+Earlier in M8: §35 error reporting, §34 region latency test. Also: §33 minimap
+zoom/clip + baked obstacles, §32 door anchors, §31 crosshair loadout. **163 host
+tests pass, 0 fail.**
 
 ---
 
@@ -35,7 +35,7 @@ pass, 0 fail.**
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb + per-source EFX low-pass EQ (muffled/club) + structure interior ambience + building `soundEmitters`. UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
 | M8 | Accounts / API | **started** | region latency test (`net/PingTest` + `net/Regions` codegen) and client error reporting (`net/ErrorLog` + Java crash handler); login/profile/quests/pass still to do. |
-| M9 | Polish & release | **not started** | lifecycle, perf, soak, store-ready AAB. |
+| M9 | Polish & release | **started** | lifecycle continuity done (§36); perf/soak/store-ready AAB still to do. |
 
 ---
 
@@ -324,7 +324,27 @@ pass, 0 fail.**
 - [ ] **M8 Accounts/API** (rest): login/profile, team links, quests/pass
       (`PassFragment` is still static), proxy detection (not applicable to
       native)
-- [ ] **Lifecycle hardening**: background pause/resume rejoin, reconnect/backoff on flaky mobile networks, back-button handling
+- [x] **Lifecycle hardening (mid-match continuity)**:
+      - Backgrounding and the in-game pause dialog keep the game socket.
+        `Game::pause()` used to `close("background")` and `resume()` re-joined
+        with the same join token, but the server deletes a token on join
+        (`server/src/game/client.ts`), so every short app switch lost the match.
+        `pause()` now only freezes input (`Game::sendInput` no-ops while paused)
+        and `resume()` keeps playing on the surviving socket.
+      - A 12 s liveness watchdog (`Game::kConnectionTimeoutSeconds`) closes a
+        socket that stops delivering frames after joining - half-open mobile
+        connections never send a close - so `GameScene` takes the existing
+        localized "connection lost" path instead of freezing.
+      - `WebSocketConnection` caps its queued events at 4096 and turns an
+        overflow into a `1006 backlog` close (buffered protocol deltas cannot be
+        skipped), so a long background cannot grow the queue unbounded.
+      - Back button: in a match, BACK opens/closes the Java pause dialog
+        (`UiHost::togglePause` -> `SurvBridge.onNativeTogglePause`); the
+        dialog's Quit calls `onQuitGame`. Hosts without that UI fall back to
+        leaving the match.
+- [ ] **Lifecycle hardening (remaining)**: reconnecting to a live match needs a
+      server-side rejoin token (the API only issues single-use join tokens);
+      menu-side `find_game` retries on flaky networks are not wired yet
 - [ ] **Perf/polish**: 60 fps on mid-range devices, notch/insets, battery/resolution tiers, crash-free soak
 - [ ] **Store-ready APK/AAB**
 
@@ -343,7 +363,7 @@ pass, 0 fail.**
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (161 tests, 0 failures expected)
+# host tests (163 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -434,3 +454,13 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - `debug.surv_debug=1` (`adb shell setprop debug.surv_debug 1`) sends one
   `startup_probe` report at launch and enables the find_game/audio dev traces;
   it must not send anything in normal runs.
+- Background pause / the in-game pause dialog must **not** close the game socket:
+  join tokens are single-use, so a rejoin is impossible and closing always lost
+  the match. `Game::pause()` only freezes input; `Game::resume()` keeps the
+  surviving socket. Do not reintroduce `close("background")` or a rejoin retry.
+- The liveness watchdog (`Game::kConnectionTimeoutSeconds`, 12 s) is the only
+  thing that closes a silently dead (half-open) socket; it synthesizes
+  `close(1006, "timeout")` so the existing localized disconnect path runs.
+- `WebSocketConnection`'s event queue is capped at 4096 frames and turns an
+  overflow into `close(1006, "backlog")` (deltas cannot be skipped); do not
+  raise the cap without bounding background memory some other way.

@@ -340,30 +340,6 @@ TEST(game_gameover_stops_playing) {
     CHECK(!h.game.isPlaying());
 }
 
-TEST(game_pause_closes_and_resume_rejoins) {
-    Harness h;
-    h.game.tryJoinGame("ws://dev/play", "tok");
-    h.conn()->open();
-    h.game.update(0.0f);
-    CHECK(h.game.isConnected());
-
-    FakeConnection* first = h.conn();
-    h.game.pause();
-    CHECK(h.game.isPaused());
-    CHECK_EQ(first->closeCount, 1);
-    CHECK_EQ(first->closeReason, std::string("background"));
-
-    h.game.resume();
-    CHECK(!h.game.isPaused());
-    CHECK_EQ(h.created.size(), static_cast<size_t>(2));
-    CHECK_EQ(h.conn()->url, std::string("ws://dev/play"));
-
-    // The rejoined socket re-sends the JoinMsg on open.
-    h.conn()->open();
-    h.game.update(0.0f);
-    CHECK_EQ(h.conn()->sent.size(), static_cast<size_t>(1));
-}
-
 TEST(game_close_resets_connected_state) {
     Harness h;
     h.game.tryJoinGame("ws://dev/play", "tok");
@@ -377,4 +353,99 @@ TEST(game_close_resets_connected_state) {
     CHECK(!h.game.isConnected());
     CHECK_EQ(h.game.getCloseCode(), static_cast<uint16_t>(3000));
     CHECK_EQ(h.game.getCloseReason(), std::string("server_restart"));
+}
+
+// Priority 5 lifecycle: backgrounding keeps the game socket. The server deletes
+// the join token on join, so the old "close and rejoin" could never work - it
+// just dropped the player to the menu.
+TEST(game_pause_keeps_the_socket_and_resume_does_not_rejoin) {
+    Harness h;
+    h.game.tryJoinGame("ws://dev/play", "tok");
+    h.conn()->open();
+    h.game.update(0.0f);
+    CHECK(h.game.isConnected());
+
+    h.game.pause();
+    CHECK(h.game.isPaused());
+    CHECK(h.game.isConnected()); // socket untouched
+    CHECK_EQ(h.conn()->closeCount, 0);
+
+    // Input stops while paused, but the transport stays open.
+    const size_t sentBefore = h.conn()->sent.size();
+    InputMsg input;
+    h.game.sendInput(input);
+    CHECK_EQ(h.conn()->sent.size(), sentBefore);
+
+    h.game.resume();
+    CHECK(!h.game.isPaused());
+    CHECK(h.game.isConnected());
+    CHECK_EQ(h.created.size(), static_cast<size_t>(1)); // no rejoin attempt
+    CHECK_EQ(h.conn()->closeCount, 0);
+
+    // Input flows again after resume.
+    h.game.sendInput(input);
+    CHECK_EQ(h.conn()->sent.size(), sentBefore + 1);
+}
+
+// A half-open mobile socket never delivers a close frame, so silence after
+// joining must be turned into the normal "connection lost" path.
+TEST(game_watchdog_closes_a_silent_socket) {
+    Harness h;
+    h.game.tryJoinGame("ws://dev/play", "tok");
+    h.conn()->open();
+    h.game.update(0.0f);
+
+    // Not armed before the server accepted us (joining has its own timeouts).
+    for (int i = 0; i < 20; ++i) {
+        h.game.update(1.0f);
+    }
+    CHECK(h.game.isConnected());
+
+    JoinedMsg joined;
+    joined.teamMode = 1;
+    joined.playerId = 7;
+    joined.started = true;
+    h.conn()->pushFrame(makeFrame(MsgType_Joined, joined));
+    h.game.update(0.0f);
+    CHECK(h.game.hasJoined());
+
+    // Inside the timeout window: still connected.
+    for (int i = 0; i < 6; ++i) {
+        h.game.update(1.0f);
+    }
+    CHECK(h.game.isConnected());
+
+    // Past it: the watchdog closes with the abnormal code (no close frame from
+    // the transport) and Game stops treating the socket as live.
+    for (int i = 0; i < 7; ++i) {
+        h.game.update(1.0f);
+    }
+    CHECK(!h.game.isConnected());
+    CHECK_EQ(h.game.getCloseCode(), 1006);
+    CHECK_EQ(h.game.getCloseReason(), std::string("timeout"));
+    CHECK_EQ(h.conn()->closeCount, 1);
+}
+
+TEST(game_watchdog_is_reset_by_traffic) {
+    Harness h;
+    h.game.tryJoinGame("ws://dev/play", "tok");
+    h.conn()->open();
+    h.game.update(0.0f);
+    JoinedMsg joined;
+    joined.teamMode = 1;
+    joined.playerId = 7;
+    joined.started = true;
+    h.conn()->pushFrame(makeFrame(MsgType_Joined, joined));
+    h.game.update(0.0f);
+
+    // 11 s of silence is fine...
+    h.game.update(11.0f);
+    CHECK(h.game.isConnected());
+
+    // ...and any frame restarts the window.
+    UpdateMsg update = makeUpdate();
+    h.conn()->pushFrame(makeFrame(MsgType_Update, update));
+    h.game.update(0.0f);
+    h.game.update(11.0f);
+    CHECK(h.game.isConnected());
 }

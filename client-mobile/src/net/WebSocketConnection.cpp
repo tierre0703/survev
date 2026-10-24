@@ -100,10 +100,7 @@ public:
     }
 
     // --- WebSocket::Delegate (network/scheduler thread) ---
-    void onOpen(WebSocket* /*ws*/) override {
-        std::lock_guard<std::mutex> lock(_mutex);
-        _events.push_back(Event::makeOpen());
-    }
+    void onOpen(WebSocket* /*ws*/) override { enqueue(Event::makeOpen()); }
 
     void onMessage(WebSocket* /*ws*/, const WebSocket::Data& data) override {
         std::vector<uint8_t> frame;
@@ -111,18 +108,15 @@ public:
             frame.assign(reinterpret_cast<const uint8_t*>(data.bytes),
                          reinterpret_cast<const uint8_t*>(data.bytes) + data.len);
         }
-        std::lock_guard<std::mutex> lock(_mutex);
-        _events.push_back(Event::makeMessage(std::move(frame)));
+        enqueue(Event::makeMessage(std::move(frame)));
     }
 
     void onClose(WebSocket* /*ws*/, uint16_t code, std::string_view reason) override {
-        std::lock_guard<std::mutex> lock(_mutex);
-        _events.push_back(Event::makeClose(code, std::string(reason)));
+        enqueue(Event::makeClose(code, std::string(reason)));
     }
 
     void onError(WebSocket* /*ws*/, const WebSocket::ErrorCode& /*error*/) override {
-        std::lock_guard<std::mutex> lock(_mutex);
-        _events.push_back(Event::makeError());
+        enqueue(Event::makeError());
     }
 
 private:
@@ -144,8 +138,32 @@ private:
         }
     };
 
+    // Priority 5 lifecycle: a backgrounded/paused app stops pumping while the
+    // socket keeps receiving. The buffered deltas cannot be skipped (state would
+    // desync), so cap the queue and report a close instead of growing without
+    // bound; GameScene turns that into "connection lost".
+    static constexpr std::size_t kMaxQueuedEvents = 4096;
+
+    void enqueue(Event event) {
+        std::lock_guard<std::mutex> lock(_mutex);
+        if (_overflowed) {
+            return;
+        }
+        if (_events.size() >= kMaxQueuedEvents) {
+            _overflowed = true;
+            _events.clear();
+            _events.push_back(Event::makeClose(1006, "backlog"));
+            if (_ws) {
+                _ws->closeAsync();
+            }
+            return;
+        }
+        _events.push_back(std::move(event));
+    }
+
     std::unique_ptr<WebSocket> _ws;
     bool _text = false;
+    bool _overflowed = false;
     mutable std::mutex _mutex;
     std::deque<Event> _events;
 };

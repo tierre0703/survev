@@ -83,11 +83,18 @@ public:
     // connected, and any previous connection is closed first.
     void tryJoinGame(const std::string& url, const std::string& joinToken);
 
-    // App lifecycle (plan.md 5.8): close gracefully when backgrounded and
-    // rejoin (server sends a fresh snapshot) when foregrounded again.
+    // App lifecycle (priority 5). `pause()` freezes local input when the app is
+    // backgrounded or the pause dialog opens, but keeps the game socket: join
+    // tokens are single-use server-side, so closing here would always lose the
+    // match. A socket that dies while away is surfaced by the queued close (or
+    // by the liveness watchdog) when the app resumes.
     void pause();
     void resume();
     bool isPaused() const { return _paused; }
+
+    // No server message for this long after joining marks a half-open socket as
+    // dead (mobile networks switch cells without delivering a close frame).
+    static constexpr float kConnectionTimeoutSeconds = 12.0f;
 
     uint16_t getActivePlayerId() const { return _activePlayerId; }
     uint16_t getLocalPlayerId() const { return _localPlayerId; }
@@ -217,7 +224,13 @@ private:
     uint16_t _closeCode = 0;
     std::string _closeReason;
 
-    // Join info retained so a foreground resume can rejoin.
+    // Liveness watchdog (half-open mobile sockets). `_elapsed` is the sum of
+    // update(dt); `_lastMsgTime` is refreshed by every received frame.
+    float _elapsed = 0.0f;
+    float _lastMsgTime = 0.0f;
+    bool _timedOut = false;
+
+    // Last join target; kept for diagnostics and the reconnect-less resume path.
     std::string _lastUrl;
     std::string _lastToken;
 

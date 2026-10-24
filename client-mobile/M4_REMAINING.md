@@ -2214,3 +2214,55 @@ document shape, budget decay, throttle/re-arm, sampling and the two-error cap.
   `/api/report_error` request before the process died.
 - `build-native.ps1 -Abis x86_64` + `build-apk.ps1 -Abis x86_64`: green; the
   final APK boots to the menu with `logcat -b crash` empty.
+
+## 37. Session 36 - lifecycle hardening (2026-10-24)
+
+### 37.1 Backgrounding lost the match
+
+`Game::pause()` closed the game socket with the "background" reason and
+`Game::resume()` re-joined with the same join token. The server deletes a token
+as soon as it is used (`server/src/game/client.ts`), so the rejoin was rejected
+and `GameScene` dropped to the menu (`returnToMenu error=index-host-closed`).
+On-device this reproduced with a 3 s app switch.
+
+Fix: `pause()` only freezes input (`Game::sendInput` no-ops while paused) and
+keeps the socket; `resume()` keeps playing on the surviving socket. The pause
+dialog uses the same path, so opening settings no longer leaves the match.
+
+### 37.2 Half-open mobile sockets
+
+A cell handover can leave a TCP socket open on both ends while no frames flow
+(`GameScene` would sit in a frozen match forever). `Game::update` now tracks
+`_elapsed`/`_lastMsgTime` and, after joining, synthesizes
+`close(1006, "timeout")` when 12 s pass without any server frame
+(`kConnectionTimeoutSeconds`). `GameScene` already maps a non-zero close code to
+the localized "connection lost" path.
+
+### 37.3 Bounded event backlog
+
+While backgrounded the director is stopped, so nothing pumps the WebSocket event
+queue while the socket keeps receiving updates. `WebSocketConnection` now caps
+its queue at 4096 events and turns an overflow into `close(1006, "backlog")`
+(buffered protocol deltas cannot be skipped without corrupting state), so a long
+background cannot grow memory without bound.
+
+### 37.4 Back button
+
+Android BACK is delivered to the C++ key listener (axmol maps it there), not to
+`AppActivity.onKeyDown`, so the match used to be abandoned. `handleBackPressed`
+now calls the new `UiHost::togglePause()` -> `SurvBridge.onNativeTogglePause` ->
+`JavaUiHost.togglePause()`: BACK opens/closes the Java pause dialog; its Quit
+button still calls `onQuitGame`. Hosts without the dialog (desktop) fall back to
+leaving the match.
+
+### 37.5 Verification
+
+- `surv_tests`: **163 tests, 2,599 assertions, 0 failures** - new
+  `game_pause_keeps_the_socket_and_resume_does_not_rejoin` (replaces the old
+  close/rejoin test), `game_watchdog_closes_a_silent_socket` and
+  `game_watchdog_is_reset_by_traffic`.
+- Device (x86_64 emulator, stock bundle): join a match, press HOME, wait 40 s,
+  return - still in the same match, no disconnect and no menu (verified with
+  `uiautomator dump`); BACK in a match opens the pause dialog ("Return to Game",
+  volume/sensitivity), BACK again closes it and play continues; `logcat -b crash`
+  empty.

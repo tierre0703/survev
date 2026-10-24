@@ -90,6 +90,9 @@ public:
     // Java: every region probe finished; `json` is PingTest::resultsJson()
     // ({"complete","bestRegion","tests":[{"region","zone","pingMs",...}]}).
     virtual void pingResults(const std::string& json) { (void)json; }
+    // Java: open/close the in-game pause dialog. Returns false when the host has
+    // no such UI (desktop), so the caller can fall back to leaving the match.
+    virtual bool togglePause() { return false; }
 };
 
 // No-op host: used by the host tests and by any build without Java.

@@ -32,6 +32,8 @@ void Game::free() {
     _connected = false;
     _playing = false;
     _paused = false;
+    _timedOut = false;
+    _lastMsgTime = _elapsed;
 
     _activePlayerId = 0;
     _localPlayerId = 0;
@@ -80,6 +82,8 @@ void Game::tryJoinGame(const std::string& url, const std::string& joinToken) {
     _connected = false;
     _closeCode = 0;
     _closeReason.clear();
+    _lastMsgTime = _elapsed;
+    _timedOut = false;
 
     _connection = _factory(url);
     if (!_connection) {
@@ -104,14 +108,10 @@ void Game::pause() {
         return;
     }
     _paused = true;
-    _playing = false;
-    if (_connection) {
-        // connection.ts close(reason) -> ws.close(3000, reason)
-        _connection->close("background");
-    }
-    // The connection may still be mid-handshake; make the next resume eligible.
-    _connecting = false;
-    _connected = false;
+    // Priority 5 lifecycle: keep the socket. The server deletes the join token
+    // on join (game/client.ts), so closing here could never rejoin the match -
+    // it just dropped the player to the menu. Background input stops because the
+    // app stops ticking; a socket that dies while away is surfaced on resume.
 }
 
 void Game::resume() {
@@ -119,13 +119,14 @@ void Game::resume() {
         return;
     }
     _paused = false;
-    if (!_lastUrl.empty()) {
-        // Rejoin: the server replays Map/Joined/Update so state re-syncs.
-        tryJoinGame(_lastUrl, _lastToken);
-    }
+    // The socket usually survived a short background: keep playing. If it died,
+    // the queued close is pumped by update() and GameScene leaves with the
+    // localized reason; if it hangs half-open, the watchdog closes it.
 }
 
 void Game::update(float dt) {
+    _elapsed += dt;
+
     for (auto& entry : _killFeed) entry.timeLeft -= dt;
     _killFeed.erase(std::remove_if(_killFeed.begin(), _killFeed.end(),
         [](const KillFeedEntry& entry) { return entry.timeLeft <= 0; }), _killFeed.end());
@@ -134,6 +135,19 @@ void Game::update(float dt) {
     // onClose/onError are invoked from here, in arrival order.
     if (_connection) {
         _connection->pump();
+    }
+
+    // Liveness watchdog (priority 5): a half-open mobile socket never delivers a
+    // close frame, so the client would sit in a frozen match forever. After
+    // joining, silence for kConnectionTimeoutSeconds means the connection is
+    // dead; synthesize the close the transport failed to report.
+    if (_connected && _joined && !_paused && !_timedOut &&
+        _elapsed - _lastMsgTime > kConnectionTimeoutSeconds) {
+        _timedOut = true;
+        if (_connection) {
+            _connection->resetAndClose();
+        }
+        onClose(1006, "timeout");
     }
 }
 
@@ -151,7 +165,8 @@ void Game::sendMessage(MsgType type, Msg& msg, size_t maxLen) {
 }
 
 void Game::sendInput(InputMsg& msg) {
-    if (!isConnected()) {
+    // Backgrounded/paused: stop streaming input but keep the socket (priority 5).
+    if (!isConnected() || _paused) {
         return;
     }
     // Mirrors game.ts: only advance the sequence once the previous input has
@@ -167,6 +182,7 @@ void Game::sendInput(InputMsg& msg) {
 void Game::onOpen() {
     _connecting = false;
     _connected = true;
+    _lastMsgTime = _elapsed;
     sendJoinMessage();
 }
 
@@ -192,6 +208,8 @@ void Game::onFrame(std::vector<uint8_t>&& frame) {
     if (frame.empty()) {
         return;
     }
+    // Any traffic proves the socket (and the path to the server) is alive.
+    _lastMsgTime = _elapsed;
     // Mirrors connection.ts onMessage: parse every message in the frame.
     MsgStream stream(std::move(frame));
     while (true) {

@@ -754,7 +754,13 @@ void GameScene::returnToMenu() {
 
 bool GameScene::handleBackPressed() {
     AXLOGI("[dev] GameScene::handleBackPressed _inGame={} _pendingFind={} _notifiedStarted={}",
-           _inGame, _pendingFind, _notifiedStarted);
+           _inGame, _pendingFind, _findInFlight);
+    // In a match, BACK opens (or closes) the Java pause dialog instead of
+    // dropping the player out of it; the dialog's Quit calls onQuitGame.
+    // Hosts without that UI (desktop) fall back to leaving.
+    if (_inGame && uiHost()->togglePause()) {
+        return true;
+    }
     if (_inGame || _pendingFind || _findInFlight) {
         returnToMenu();
         return true;
@@ -1297,6 +1303,11 @@ void GameScene::update(float delta) {
 }
 
 void GameScene::updateInput(float dt) {
+    // The pause dialog / background pause keeps the socket, but the player must
+    // not keep moving or firing with stale pad state.
+    if (_game->isPaused()) {
+        return;
+    }
     const ax::Size size = getContentSize();
 
     // Feed the dual-joystick state into an InputMsg. isHoldingThrowable drives

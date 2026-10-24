@@ -182,6 +182,19 @@ public final class SurvBridge {
         });
     }
 
+    /** Android BACK in a match: open/close the pause dialog (C++). */
+    static void onNativeTogglePause() {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.togglePause();
+                }
+            }
+        });
+    }
+
     private static void post(Runnable runnable) {
         AppActivity activity = AppActivity.current();
         if (activity == null) {

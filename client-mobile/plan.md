@@ -319,8 +319,10 @@ scaffolded and require the axmol SDK (M0) to compile.
 - `src/app/GameScene.{h,cpp}` — injects `createWebSocketConnection`, and
   auto-connects from a dev join target (`DevConfig.h` / UserDefault keys
   `surv_joinUrl`/`surv_joinToken`/`surv_apiUrl`/`surv_region`).
-- `src/app/AppDelegate.cpp` — background pauses the ticker + closes the socket
-  gracefully; foreground resumes and rejoins (server replay/snapshot).
+- `src/app/AppDelegate.cpp` - background pauses the ticker but keeps the game
+  socket (join tokens are single-use, so a close could never rejoin); foreground
+  resumes the same session. A silent socket is closed by the `Game` liveness
+  watchdog (12 s) so the UI takes the normal disconnect path.
 - `tests/test_game.cpp` (+ `FakeConnection.h`) — drives the whole flow through
   an in-memory connection: JoinMsg bytes, multi-message frames, state snapshot,
   pause/close/resume, GameOver. All 29 `surv_tests` pass.
