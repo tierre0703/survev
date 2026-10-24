@@ -352,14 +352,16 @@ void Obstacle::update(float dt, Ctx& ctx) {
     }
 
     if (doorHasInterp) {
-        const float moveSpd = 15.0f * scale;
+        // obstacle.ts: both speeds come from def.door.openSpeed (no scale).
+        const float openSpeed = def ? def->doorOpenSpeed : 2.0f;
+        const float moveSpd = openSpeed;
         const Vec2 posDiff = v2Sub(pos, doorInterpPos);
         const float diffLen = v2Length(posDiff);
         float posMove = moveSpd * dt;
         if (diffLen < posMove) posMove = diffLen;
         const Vec2 moveDir = diffLen > 0.0001f ? v2Div(posDiff, diffLen) : Vec2(1.0f, 0.0f);
         doorInterpPos = v2Add(doorInterpPos, v2Mul(moveDir, posMove));
-        const float rotSpd = pi * 15.0f * scale;
+        const float rotSpd = pi * openSpeed;
         const float angDiff = math::angleDiff(doorInterpRot, rot);
         float angMove = math::sign(angDiff) * rotSpd * dt;
         if (std::fabs(angDiff) < std::fabs(angMove)) angMove = angDiff;

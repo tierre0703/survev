@@ -210,6 +210,8 @@ struct MapObjectDef {
     std::string explosionParticle;
     // obstacle.ts door.slideOffset (used to compute the open door position).
     float doorSlideOffset = 0.0f;
+    // obstacle.ts door.openSpeed (position/rotation interpolation speed).
+    float doorOpenSpeed = 2.0f;
     // obstacle.ts def.door.casingImg (rendered behind/next to the door).
     std::string doorCasingSprite;
     Vec2 doorCasingPos;

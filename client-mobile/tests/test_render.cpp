@@ -1698,6 +1698,32 @@ TEST(obstacle_door_interp_and_casing) {
     CHECK_NEAR(fresh.doorInterpPos.y, openData.pos.y, 1e-4f);
     CHECK_NEAR(fresh.doorClosedPos.x, openData.pos.x, 1e-4f);
     CHECK_NEAR(fresh.doorClosedPos.y, openData.pos.y + 3.75f, 1e-4f);
+
+    // obstacle.ts interpolates at def.door.openSpeed (lab_door_01 = 7), not a
+    // hardcoded constant. Position and rotation both use it.
+    Obstacle sliding;
+    sliding.active = true;
+    sliding.__id = 7;
+    ObjectData slideData = data;
+    slideData.pos = Vec2(20.0f, 30.0f);
+    slideData.ori = 0;
+    sliding.m_updateData(slideData, true, true, world);
+    slideData.pos = Vec2(20.0f, 33.75f);
+    sliding.m_updateData(slideData, true, false, world);
+    sliding.update(0.016f, world);
+    CHECK_NEAR(sliding.doorInterpPos.y, 30.0f + 7.0f * 0.016f, 1e-4f);
+
+    Obstacle swinging;
+    swinging.active = true;
+    swinging.__id = 8;
+    ObjectData swingData = data;
+    swingData.pos = Vec2(20.0f, 30.0f);
+    swingData.ori = 0;
+    swinging.m_updateData(swingData, true, true, world);
+    swingData.ori = 1;
+    swinging.m_updateData(swingData, true, false, world);
+    swinging.update(0.016f, world);
+    CHECK_NEAR(swinging.doorInterpRot, 3.14159265358979f * 7.0f * 0.016f, 1e-4f);
 }
 
 // ---------------------------------------------------------------------------

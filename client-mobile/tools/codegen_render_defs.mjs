@@ -375,7 +375,7 @@ for (let i = 0; i < mapTypes.length; i++) {
         str(
             Array.isArray(def.explosion) ? def.explosion[0] : def.explosion,
         )
-    },${n(def.door?.slideOffset, 0)},${str(def.door?.casingImg?.sprite)},${
+    },${n(def.door?.slideOffset, 0)},${n(def.door?.openSpeed, 2)},${str(def.door?.casingImg?.sprite)},${
         n(
             def.door?.casingImg?.pos?.x,
             0,
@@ -916,7 +916,7 @@ struct RawSoundEmitter {
 struct RawMapObj {
     const char* type; RawImg img; int hasImg; RawCollider collision; int hasCollision;
     int isDoor, isButton, isTree, isWall; int randomRotation, hasExplosion; const char* explosionParticle;
-    float doorSlideOffset;
+    float doorSlideOffset, doorOpenSpeed;
     const char* doorCasingSprite; float doorCasingPx, doorCasingPy, doorCasingScale; unsigned doorCasingTint; float doorCasingAlpha;
     float doorSpriteAnchorX, doorSpriteAnchorY;
     float height; int collidable, isWindow;
@@ -1091,6 +1091,7 @@ public:
             d.hasExplosion = r.hasExplosion != 0;
             d.explosionParticle = r.explosionParticle ? r.explosionParticle : "";
             d.doorSlideOffset = r.doorSlideOffset;
+            d.doorOpenSpeed = r.doorOpenSpeed;
             d.doorCasingSprite = r.doorCasingSprite ? r.doorCasingSprite : "";
             d.doorCasingPos = Vec2(r.doorCasingPx, r.doorCasingPy);
             d.doorCasingScale = r.doorCasingScale;

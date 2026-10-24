@@ -2006,9 +2006,17 @@ Two more `obstacle.ts` mismatches in `Obstacle::m_updateData`:
 
 ### Verification
 
-- `surv_tests`: **146 tests, 2,451 assertions, 0 failures** (new door-anchor
-  conversion checks, open-door seed/casing position checks).
+- `surv_tests`: **146 tests, 2,453 assertions, 0 failures** (new door-anchor
+  conversion checks, open-door seed/casing position checks, and open-speed
+  interpolation checks).
 - Device (x86_64 emulator): the Killpit/prison gate doors render centred in
-  their wall slots after the anchor fix; no native crash. (The door-open
-  animation speed still uses the port's hardcoded 15 instead of
-  `def.door.openSpeed`; recorded as a remaining parity item.)
+  their wall slots after the anchor fix; no native crash.
+
+### 33.3 Open speed
+
+`Obstacle::update` hardcoded `15` for both door position and rotation
+interpolation. `def.door.openSpeed` is now generated into
+`MapObjectDef::doorOpenSpeed` (default 2) and used exactly like `obstacle.ts`
+(`moveSpd = openSpeed`, `rotSpd = PI * openSpeed`, no scale factor), so house
+doors/hinged doors/lab doors animate at their configured speeds instead of
+snapping at a fixed rate.
