@@ -233,10 +233,14 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
     if (data.isDoor && doorHasInterp) {
         const float slideOffset = def ? def->doorSlideOffset : 0.0f;
         const Vec2 offset = v2Rotate(Vec2(slideOffset, 0.0f), rot + pi * 0.5f);
-        const Vec2 closedPos = data.doorOpen ? v2Add(data.pos, offset) : data.pos;
-        // Re-seed the interpolation target after a respawn/pool reuse.
+        // `closedPos` is where the *casing* stays; the door itself is at
+        // data.pos (which the server moves when a sliding door opens).
+        doorClosedPos = data.doorOpen ? v2Add(data.pos, offset) : data.pos;
+        // Re-seed the interpolation target after a respawn/pool reuse. Match
+        // obstacle.ts: the door starts at data.pos, not at the casing position
+        // (otherwise an already-open door first appears one door-width away).
         if (newObj) {
-            doorInterpPos = closedPos;
+            doorInterpPos = data.pos;
             doorInterpRot = rot;
         }
     }
@@ -297,9 +301,12 @@ void Obstacle::applyFrame(bool hasImage) {
         return;
     }
     // obstacle.ts: anchor 0.5 normally, or def.door.spriteAnchor for doors.
-    // The anchor is applied unconditionally (the node is a menu-less sprite;
-    // re-applying the same value is cheap and keeps pool reuse correct).
-    const Vec2 anchor = (def && isDoor) ? def->doorSpriteAnchor : Vec2(0.5f, 0.5f);
+    // PIXI anchors are top-left based; axmol is bottom-left based. `y' = 1 - y`
+    // keeps a door's hinge at the same end (the camera root is positive-Y).
+    Vec2 anchor(0.5f, 0.5f);
+    if (def && isDoor) {
+        anchor = Vec2(def->doorSpriteAnchor.x, 1.0f - def->doorSpriteAnchor.y);
+    }
     _anchor = anchor;
     sprite->setAnchor(anchor.x, anchor.y);
     if (hasImage) {
@@ -387,8 +394,12 @@ void Obstacle::render(Ctx& ctx, int activeLayer) {
         sprite = ctx.factory()->createSprite();
     }
     // obstacle.ts m_updateData: anchor 0.5, or def.door.spriteAnchor for doors.
-    // Bake it into the sprite before rendering the current frame.
-    const Vec2 obstacleAnchor = (def && isDoor) ? def->doorSpriteAnchor : Vec2(0.5f, 0.5f);
+    // Bake it into the sprite before rendering the current frame. Convert the
+    // PIXI top-left anchor to axmol's bottom-left anchor (`y' = 1 - y`).
+    Vec2 obstacleAnchor(0.5f, 0.5f);
+    if (def && isDoor) {
+        obstacleAnchor = Vec2(def->doorSpriteAnchor.x, 1.0f - def->doorSpriteAnchor.y);
+    }
     if (!_anchorApplied || obstacleAnchor.x != _anchor.x || obstacleAnchor.y != _anchor.y) {
         _anchor = obstacleAnchor;
         _anchorApplied = true;

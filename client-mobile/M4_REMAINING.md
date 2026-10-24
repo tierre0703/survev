@@ -1974,3 +1974,41 @@ partial), which replaced the whole loadout and was ignored by the validator.
   carry any `crosshair_*` type; the style grid is empty because `SurvBridge`
   does not expose the available crosshair items yet).
 - Stroke is bucketed to 0/1/2; the web accepts arbitrary float widths.
+
+---
+
+## 33. Session 32 - door anchor and open-state position (2026-10-24)
+
+Fixes the reported "door is positioned one door-width next to the hinge" bug.
+
+### 33.1 PIXI vs axmol sprite anchors
+
+`obstacle.ts` pivots doors at `def.door.spriteAnchor`, which is a **PIXI**
+(top-left origin) anchor, usually `(0.5, 1)` (bottom-centre). The port passed it
+straight to `ax::Node::setAnchorPoint` (bottom-left origin), so `y = 1` put the
+pivot at the door's **top** and the slab extended one door-length past the hinge
+(the opposite side/along the wall). The port now converts `(x, y)` to
+`(x, 1 - y)` when applying a door anchor in `Obstacle::applyFrame`/`render`.
+
+### 33.2 Open-door seed and casing
+
+Two more `obstacle.ts` mismatches in `Obstacle::m_updateData`:
+
+- A door first streamed in while already open was seeded at
+  `closedPos = data.pos + slideOffset` instead of `data.pos`, so it appeared
+  one slide offset (about one door width) away before interpolating back.
+  `doorInterpPos`/`doorInterpRot` now seed from `data.pos`/`rot`, matching
+  `m_updateData` (`interpPos = data.pos`).
+- `doorClosedPos` (the casing/slot position) was only set on the first update;
+  for sliding doors that open later the casing stayed at the open position.
+  It is now recomputed on every door update as
+  `data.doorOpen ? data.pos + rotate(slideOffset, rot + PI/2) : data.pos`.
+
+### Verification
+
+- `surv_tests`: **146 tests, 2,451 assertions, 0 failures** (new door-anchor
+  conversion checks, open-door seed/casing position checks).
+- Device (x86_64 emulator): the Killpit/prison gate doors render centred in
+  their wall slots after the anchor fix; no native crash. (The door-open
+  animation speed still uses the port's hardcoded 15 instead of
+  `def.door.openSpeed`; recorded as a remaining parity item.)

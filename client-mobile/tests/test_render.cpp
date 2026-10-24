@@ -1660,11 +1660,22 @@ TEST(obstacle_door_interp_and_casing) {
     o.m_updateData(data, true, true, world);
     CHECK(o.casingEnabled);
     CHECK(o.doorHasInterp);
+    // obstacle.ts: closedPos/interpPos start at data.pos (the hinge).
+    CHECK_NEAR(o.doorClosedPos.x, data.pos.x, 1e-4f);
+    CHECK_NEAR(o.doorClosedPos.y, data.pos.y, 1e-4f);
+    CHECK_NEAR(o.doorInterpPos.x, data.pos.x, 1e-4f);
+    CHECK_NEAR(o.doorInterpPos.y, data.pos.y, 1e-4f);
 
-    // A network move (door slides open) interpolates the visual position.
+    // A network move (door slides open) interpolates the visual position. The
+    // casing stays at the closed slot (data.pos + slideOffset), while the door
+    // itself remains at data.pos (the server's open position).
     data.doorOpen = true;
     data.pos = Vec2(20.0f, 30.0f);
     o.m_updateData(data, true, false, world);
+    CHECK_NEAR(o.doorClosedPos.x, data.pos.x, 1e-4f);
+    CHECK_NEAR(o.doorClosedPos.y, data.pos.y + 3.75f, 1e-4f);
+    CHECK_NEAR(o.doorInterpPos.x, data.pos.x, 1e-4f);
+    CHECK_NEAR(o.doorInterpPos.y, data.pos.y, 1e-4f);
     o.update(0.016f, world);
     o.render(world, 0);
     CHECK(o.casingSprite != nullptr);
@@ -1674,6 +1685,19 @@ TEST(obstacle_door_interp_and_casing) {
     }
     CHECK(casingDrawn);
     CHECK(sprite(o.casingSprite)->visible);
+
+    // A door that is already open when first streamed in must render at its
+    // data.pos, not one slideOffset (door width) next to it.
+    Obstacle fresh;
+    fresh.active = true;
+    fresh.__id = 6;
+    ObjectData openData = data;
+    openData.pos = Vec2(50.0f, 60.0f);
+    fresh.m_updateData(openData, true, true, world);
+    CHECK_NEAR(fresh.doorInterpPos.x, openData.pos.x, 1e-4f);
+    CHECK_NEAR(fresh.doorInterpPos.y, openData.pos.y, 1e-4f);
+    CHECK_NEAR(fresh.doorClosedPos.x, openData.pos.x, 1e-4f);
+    CHECK_NEAR(fresh.doorClosedPos.y, openData.pos.y + 3.75f, 1e-4f);
 }
 
 // ---------------------------------------------------------------------------
@@ -1956,12 +1980,13 @@ TEST(obstacle_door_sprite_anchor) {
         return;
     }
     // obstacle.ts: the sprite anchor is 0.5, or def.door.spriteAnchor for doors.
-    // The anchor is stored on the Obstacle and applied to the sprite (which the
-    // adapter anchors before applying the rest of the transform).
+    // PIXI uses a top-left anchor; the adapter uses axmol's bottom-left anchor,
+    // so Y is converted (`y' = 1 - y`).
     CHECK_NEAR(o.debugAnchor().x, def->doorSpriteAnchor.x, 1e-4f);
+    CHECK_NEAR(o.debugAnchor().y, 1.0f - def->doorSpriteAnchor.y, 1e-4f);
     CHECK_NEAR(sprite(o.sprite)->ax, def->doorSpriteAnchor.x, 1e-4f);
+    CHECK_NEAR(sprite(o.sprite)->ay, 1.0f - def->doorSpriteAnchor.y, 1e-4f);
     CHECK_NEAR(sprite(o.sprite)->ax, 0.5f, 1e-4f);
-    CHECK_NEAR(o.debugAnchor().x, 0.5f, 1e-4f);
     (void)def;
 
     // A custom anchor is honoured (def.door.spriteAnchor is 0.5 for shipped
@@ -1989,15 +2014,14 @@ TEST(obstacle_door_sprite_anchor) {
     custom.m_updateData(cdata, true, true, world);
     custom.update(0.016f, world);
     custom.render(world, 0);
-    // The custom anchor (0.25, 0.75) must reach the sprite; read it back from
-    // the Obstacle's cached value and the sprite node.
+    // The custom PIXI anchor (0.25, 0.75) becomes (0.25, 0.25) for axmol.
     CHECK_EQ(custom.isDoor, true);
     CHECK_EQ(custom.type, std::string("custom_door"));
     CHECK_NEAR(custom.debugAnchor().x, 0.25f, 1e-4f);
-    CHECK_NEAR(custom.debugAnchor().y, 0.75f, 1e-4f);
+    CHECK_NEAR(custom.debugAnchor().y, 0.25f, 1e-4f);
     CHECK_NEAR(sprite(custom.sprite) != nullptr ? sprite(custom.sprite)->ax : -1.0f, 0.25f,
                1e-4f);
-    CHECK_NEAR(sprite(custom.sprite) != nullptr ? sprite(custom.sprite)->ay : -1.0f, 0.75f,
+    CHECK_NEAR(sprite(custom.sprite) != nullptr ? sprite(custom.sprite)->ay : -1.0f, 0.25f,
                1e-4f);
     (void)def;
     installGeneratedDefs();

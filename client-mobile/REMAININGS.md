@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-24** — Session 31 wired the crosshair loadout end to end: the Java Customize editor’s colour/size/stroke now persist through a standalone bridge `Config` (Android has no C++ MenuScene), partial loadouts merge instead of replacing, and `GameScene` renders the selected `crosshairDefs` style as a tinted/scaled screen-space sprite (30 styles × 3 stroke buckets generated into `Content/gui/crosshair`). This also restores the Java player name/loadout reaching the JoinMsg. Earlier: §30 leader ping sounds/airstrike falloff, §29 per-source EQ, §28 soundEmitters + thread-safe bridge. **146 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-24** — Session 32 fixed doors: PIXI top-left sprite anchors are converted to axmol bottom-left (`y' = 1 - y`) so a `(0.5, 1)` door pivots at the hinge instead of one door-length away, and open doors/casings now seed from `data.pos` exactly like `obstacle.ts`. Earlier: §31 crosshair loadout + standalone Java bridge config, §30 leader ping sounds/airstrike falloff, §29 per-source EQ. **146 host tests pass, 0 fail.**
 
 ---
 
@@ -325,6 +325,7 @@ node tools/build-gui-icons.mjs
 - Layer-index clamping (`0..3`)
 - Quoted `-DANDROID_ABI` in `build-native.ps1`
 - `src/app/UiBridge.cpp` excluded from host build
+- Door sprite anchors are PIXI (top-left) values converted to axmol (bottom-left) with `y' = 1 - y`; `doorInterpPos` seeds from `data.pos` and `doorClosedPos` updates every door update
 - `AxRenderTexture::resize` recreates the framebuffer (axmol `setContentSize` does not)
 - `AxSprite::setRenderTexture` sets the texture rect (axmol `setTexture` keeps a zero-size quad)
 - Minimap ping sprites stay in the masked layer (the 512px pulse ring spills otherwise)
