@@ -723,6 +723,19 @@ void GameScene::update(float delta) {
             if (UiHost* host = uiHost()) {
                 host->enterGame(static_cast<int>(_game->getActivePlayerId()));
             }
+            // Debug-only EQ self-test: with `debug.surv_debug=1` the `[audio]`
+            // trace must show an EFX low-pass for muffled/club, so the filter
+            // path is verifiable on-device without finding a club/underground.
+            if (audio::audioTraceEnabled() && _audio) {
+                audio::PlaySoundOptions eqOpts;
+                eqOpts.channel = "ui";
+                eqOpts.filter = "muffled";
+                eqOpts.forceFilter = true;
+                eqOpts.volumeScale = 0.01f;
+                _audio->playSound("emote_01", eqOpts);
+                eqOpts.filter = "club";
+                _audio->playSound("emote_01", eqOpts);
+            }
             if (onMatchStarted) onMatchStarted();
         } else if (_joinElapsed > 30) {
             leaveGame();

@@ -81,6 +81,26 @@ defs codegen into `MapObjectDef::soundEmitters` and `Building::update` runs the
 web's 10 Hz distance/fade/layer volume model, playing looped start-silent and
 stopping on `m_free()`.
 
-Still not ported: per-source EQ filters (`muffled`/`club` are plumbed but the
-axmol backend is reverb-only) and the audible on-device verification of the
-interior tracks/sound emitters.
+## Per-source EQ + audio trace (2026-10-24)
+
+The web's `muffled`/`club` biquad chains are approximated by an OpenAL EFX
+low-pass, added to the vendored engine by
+`tools/patch-axmol-audio-filter.ps1` (run automatically by
+`tools/vendor-axmol.ps1`):
+
+- `ax::AudioEngine::setFilterProperties(audioId, enabled, gain, gainHF)` ->
+  `AudioPlayer::setFilterProperties` (EFX `AL_FILTER_LOWPASS`, released in
+  `clearEffects`).
+- `audio/AudioFilter.h` maps muffled -> gain 0.90/gainHF 0.05 and club ->
+  0.85/0.02; never/reverb leave the filter off (reverb is EAX).
+- `AudioManager` resolves the filter like `audioManager.ts` (different layer or
+  `forceFilter` -> EQ, otherwise `reverb`) and passes it via
+  `PlayOptions.filter`; `AxmolAudioBackend` applies it at play.
+- With `adb shell setprop debug.surv_debug 1`, every play is logged as
+  `[audio] play <sound><channel> filter=<name> [eq=lowpass gain=.. gainHF=..]
+  vol=.. loop=..`, so footsteps/interior tracks/EQ can be checked from
+  `logcat` without listening. A debug-only match-start self-test plays
+  `emote_01` muffled and club to prove the EFX path.
+
+Still not ported: human timbre verification (the call trace now proves the
+parameters) and UI sounds (the Java UI owns those screens).

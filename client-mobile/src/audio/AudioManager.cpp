@@ -107,6 +107,10 @@ SoundHandle AudioManager::playSound(const std::string& sound, const PlaySoundOpt
     const float baseVol = baseVolume * masterVolume *
                           getTypeVolume(a->isMusic ? "music" : "sound") * options.volumeScale;
     const bool diffLayer = options.hasLayer && !sameAudioLayer(options.layer, activeLayer);
+    // audioManager.ts: a filtered sound uses its EQ only when it is on another
+    // layer (or forceFilter is set); otherwise it goes through the reverb send.
+    const std::string filter = options.filter.empty() ? "none"
+        : ((diffLayer || options.forceFilter) ? options.filter : "reverb");
 
     SoundHandle instance = kInvalidSound;
     if (channel != "activePlayer" && options.hasSoundPos) {
@@ -131,6 +135,7 @@ SoundHandle AudioManager::playSound(const std::string& sound, const PlaySoundOpt
             po.offset = options.offset;
             po.ambient = ambient;
             po.detune = options.detune;
+            po.filter = filter;
             instance = _backend->play(key, po);
         }
     } else {
@@ -145,6 +150,7 @@ SoundHandle AudioManager::playSound(const std::string& sound, const PlaySoundOpt
         po.offset = options.offset;
         po.ambient = ambient;
         po.detune = options.detune;
+        po.filter = filter;
         instance = _backend->play(key, po);
     }
 

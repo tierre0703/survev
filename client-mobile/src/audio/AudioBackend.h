@@ -18,6 +18,9 @@ struct PlayOptions {
     float offset = 0.0f;
     bool ambient = false;
     float detune = 0.0f;
+    // Web createJS filter name: "none" | "reverb" | "muffled" | "club".
+    // The backend maps muffled/club to a per-source low-pass EQ.
+    std::string filter = "none";
 };
 
 class AudioBackend {

@@ -1787,7 +1787,7 @@ saloons were silent.
 
 ### Verification
 
-- `surv_tests`: **141 tests, 2,376 assertions, 0 failures** (new:
+- `surv_tests`: **144 tests, 2,400 assertions, 0 failures** (new:
   `structure_interior_ambience` checks the def fields, the opaque-ceiling
   filtered track (`outsideVolume` 0.25 + `club` filter), the revealed
   unfiltered track, layer-1 `undergroundVolume` 0.707, the `reserve_music_02`
@@ -1829,10 +1829,45 @@ then destroyed the `GameWorld` while the GL thread was inside
   (`activePlayerId` 4596 → 4597 → 4598): each joins, renders and returns to the
   menu with an empty `logcat -b crash`.
 
+### 30.9 Per-source EQ (muffled/club) + automated audio trace
+
+The web client filters sounds through biquad EQ chains (`muffled`, `club`); the
+native port only plumbed the filter name and dropped it.
+
+- `tools/patch-axmol-audio-filter.ps1` (called by `tools/vendor-axmol.ps1`)
+  adds `ax::AudioEngine::setFilterProperties(audioId, enabled, gain, gainHF)` on
+  top of the vendored engine's existing EFX helpers (`AUDIO_FILTER_LOWPASS`,
+  `AL_LOWPASS_GAIN`, `AL_LOWPASS_GAINHF`). `AudioPlayer::clearEffects` releases
+  the filter with the source.
+- `audio/AudioFilter.h` maps the web names onto the low-pass (muffled
+  gain 0.90/gainHF 0.05; club 0.85/0.02; none/reverb disabled — reverb is the
+  EAX path). `AudioManager` resolves the filter exactly like `audioManager.ts`
+  (different layer or `forceFilter` uses the EQ, otherwise the reverb send) and
+  passes it in `PlayOptions.filter`; `AxmolAudioBackend` applies it at play.
+- `AxmolAudioBackend` logs every play/`filter`/EQ parameter when
+  `debug.surv_debug=1` (system property or UserDefault), so audio can be
+  verified automatically from `adb logcat`. A debug-only match-start self-test
+  plays `emote_01` once muffled and once club, proving the EFX path on-device.
+- Automated checks: `audio_filter_mapping`, `audio_filter_routing` (layer rule,
+  forceFilter, club/none) and `player_footstep_uses_floor_surface` (the player
+  on a bank tile requests `footstep_tile_*`, never grass), plus the device trace
+  below.
+
+### Verification
+
+- `surv_tests`: **144 tests, 2,400 assertions, 0 failures**.
+- On-device (x86_64 emulator, `debug.surv_debug=1`):
+  - `[audio] play emote_01ui filter=muffled eq=lowpass gain=0.90 gainHF=0.05`
+  - `[audio] play emote_01ui filter=club eq=lowpass gain=0.85 gainHF=0.02`
+  - footsteps walked grass → sand → water with
+    `[audio] play footstep_{grass,sand,water}_* filter=reverb`, confirming the
+    surface groups and the layer/reverb routing without listening.
+  - no `AL error` lines and `logcat -b crash` empty.
+
 ### Still open
 
-- Audible check of the per-floor footstep groups, the underground reverb/fade,
-  the structure interior tracks and the building sound emitters on device (the
-  emulator cannot be listened to).
-- Per-source EQ (`muffled`/`club`) is plumbed but the axmol backend is
-  reverb-only; the web's biquad filter chains remain unimplemented.
+- Human listening is still the only way to judge the EQ's timbre; the call
+  trace now proves the filter chain runs and the exact parameters.
+- Structure interior tracks and building `soundEmitters` were not reachable in
+  the short device runs, so their on-device trace lines remain unobserved
+  (host tests cover the selection/volume).

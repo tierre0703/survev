@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-24** — Session 28 finished the interior-audio work: building `soundEmitters` (bathhouse steam / oasis waves) now loop with the web's distance/fade/layer volume model, and the JNI bridge now marshals join/leave/pause/audio calls onto the axmol thread, fixing an intermittent second-join `PlayerBarn` use-after-free. Earlier: §27 structure `interiorSound` tracks, §26 obstacle-filtered ceiling reveal, §25 ground surfaces/bounds/underground. **141 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-24** — Session 29 replaced the "reverb-only" EQ gap: the vendored axmol engine now exposes an EFX low-pass per source (reproducible via `tools/patch-axmol-audio-filter.ps1`), `AudioManager` resolves the web's muffled/club filter routing, and `debug.surv_debug=1` emits an `[audio] play ... filter=...` trace that makes footsteps/EQ verifiable from `adb logcat`. Host tests also assert the tile-footstep group by simulation. Earlier: §28 building soundEmitters + thread-safe JNI bridge, §27 interior tracks, §26 ceiling reveal, §25 surfaces/bounds. **144 host tests pass, 0 fail.**
 
 ---
 
@@ -24,7 +24,7 @@ Latest recorded state: **2026-10-24** — Session 28 finished the interior-audio
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
 | M4 | Rendering | **done, latest verified** | terrain/island hole, obstacles, buildings + ceilings (obstacle-filtered reveal + stairs suppression), particles, decals, gas, skeletal player. |
 | M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired; emote + team-ping wheels own their touches. |
-| M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb (cathedral/cave model) + structure interior ambience + building `soundEmitters`. UI sounds and per-source EQ still unwired (see §2). |
+| M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb + per-source EFX low-pass EQ (muffled/club) + structure interior ambience + building `soundEmitters`. UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
 | M8 | Accounts / API | **not started** | login/profile/team-link/quests/pass. |
 | M9 | Polish & release | **not started** | lifecycle, perf, soak, store-ready AAB. |
@@ -295,7 +295,7 @@ Latest recorded state: **2026-10-24** — Session 28 finished the interior-audio
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (141 tests, 0 failures expected)
+# host tests (144 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -345,6 +345,8 @@ node tools/build-gui-icons.mjs
 - Structure interior ambience is immediate-mode: `Map::update` (structure updates) must run before `Ambiance::update` each frame, and `Structure::update` re-sets `interior_0/1` sound/filter/weight every frame
 - `SurvBridge` JNI methods run on the Java UI thread: scene/world/audio mutations must go through `UiBridge::runOnGameThread` (`Scheduler::runOnAxmolThread`); calling `enterWithJoin`/`leaveGame` inline races the GL thread and crashes in the player pool
 - Building `soundEmitters` are owned by `Building`: created on `isNew`, stopped in `m_free()` via the cached `audioOwner`, and updated at 10 Hz with `setVolume(..., "sound")`
+- Per-source EQ is an axmol patch: re-vendoring **must** run `tools/vendor-axmol.ps1` (which calls `patch-axmol-audio-filter.ps1`) or `AudioEngine::setFilterProperties` disappears; `audio/AudioFilter.h` maps muffled/club to the EFX low-pass
+- `AudioManager` resolves `filter` like the web (different layer or `forceFilter` → EQ, otherwise `reverb`); the app-only backend trace is enabled with `debug.surv_debug=1` and prints `[audio] play ... filter=...`
 - `SurvevMobile-debug.apk.idsig` is a tracked build artifact refreshed by every
   `build-apk.ps1` run; commit the refreshed file along with the build.
 - Emote/ping wheel frames are re-applied by `refreshFrames()` after the map

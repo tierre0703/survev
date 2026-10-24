@@ -2,6 +2,7 @@
 // ax::AudioEngine implementation of the audio backend (app build only; not
 // compiled by the host tests).
 #include "AudioBackend.h"
+#include "AudioFilter.h"
 #include "ReverbModel.h"
 #include "SoundDefs.h"
 #include "axmol.h"
@@ -11,8 +12,25 @@
 #include <string>
 #include <unordered_map>
 
+#if defined(__ANDROID__)
+#    include <sys/system_properties.h>
+#endif
+
 namespace surv {
 namespace audio {
+
+// `adb shell setprop debug.surv_debug 1` (DevConfig.h) is the documented dev
+// switch; the release APK is not debuggable, so axmol's UserDefault copy may be
+// unavailable. Read the system property directly as well.
+inline bool audioTraceEnabled() {
+#if defined(__ANDROID__)
+    char value[PROP_VALUE_MAX] = {0};
+    if (__system_property_get("debug.surv_debug", value) > 0) {
+        return std::string(value) == "1";
+    }
+#endif
+    return ax::UserDefault::getInstance()->getStringForKey("surv_debug", "0") == "1";
+}
 
 class AxmolAudioBackend : public AudioBackend {
 public:
@@ -54,6 +72,23 @@ public:
         }
         if (opts.pan != 0.0f) {
             ax::AudioEngine::setPan(handle, opts.pan);
+        }
+        // Per-source EQ (createJS muffled/club chains approximated by an EFX
+        // low-pass). The reverb send is handled by applyReverb() below.
+        const FilterParams filterParams = filterParamsFor(opts.filter);
+        if (filterParams.enabled) {
+            ax::AudioEngine::setFilterProperties(handle, true, filterParams.gain,
+                                                 filterParams.gainHF);
+        }
+        if (audioTraceEnabled()) {
+            if (filterParams.enabled) {
+                AXLOGI("[audio] play {} filter={} eq=lowpass gain={:.2f} gainHF={:.2f} vol={:.3f} loop={}",
+                       id, opts.filter, filterParams.gain, filterParams.gainHF, volume,
+                       opts.loop ? 1 : 0);
+            } else {
+                AXLOGI("[audio] play {} filter={} vol={:.3f} loop={}", id, opts.filter, volume,
+                       opts.loop ? 1 : 0);
+            }
         }
         _handles[handle] = volume;
         if (_appliedReverb > 0.001f) {

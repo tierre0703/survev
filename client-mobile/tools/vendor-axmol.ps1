@@ -35,5 +35,8 @@ if ($patched -ne $text) {
     Write-Host "note: 1k/fetch.cmake already patched (or pattern changed)"
 }
 
+# Patch: per-source low-pass EQ API (muffled/club filters) on top of EFX.
+& (Join-Path $PSScriptRoot 'patch-axmol-audio-filter.ps1') -AxmolRoot $dst
+
 $sz = (Get-ChildItem $dst -Recurse -File | Measure-Object -Property Length -Sum).Sum
 Write-Host ("done: {0:N0} MB" -f ($sz / 1MB))

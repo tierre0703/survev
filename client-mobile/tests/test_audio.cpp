@@ -3,6 +3,7 @@
 #include "TestFramework.h"
 
 #include "audio/Ambiance.h"
+#include "audio/AudioFilter.h"
 #include "audio/AudioManager.h"
 #include "audio/GeneratedSoundDefs.h"
 #include "audio/ReverbModel.h"
@@ -24,6 +25,7 @@ public:
         bool loop = false;
         float volume = 0.0f;
         float pan = 0.0f;
+        std::string filter;
     };
 
     std::vector<Played> played;
@@ -43,7 +45,7 @@ public:
         return it != loaded.end() && it->second;
     }
     audio::SoundHandle play(const std::string& id, const audio::PlayOptions& opts) override {
-        played.push_back(Played{id, opts.loop, opts.volume, opts.pan});
+        played.push_back(Played{id, opts.loop, opts.volume, opts.pan, opts.filter});
         const audio::SoundHandle handle = nextHandle++;
         volumes[handle] = opts.volume;
         return handle;
@@ -263,4 +265,67 @@ TEST(ambiance_tracks) {
         }
     }
     CHECK(windLoops);
+}
+
+// ---------------------------------------------------------------------------
+TEST(audio_filter_mapping) {
+    // The web's createJS EQ chains are approximated by a single EFX low-pass.
+    const audio::FilterParams none = audio::filterParamsFor("none");
+    CHECK(!none.enabled);
+    CHECK_NEAR(none.gain, 1.0f, 1e-6f);
+
+    // "reverb" is a send, not an EQ; the EAX path handles it.
+    CHECK(!audio::filterParamsFor("reverb").enabled);
+
+    const audio::FilterParams muffled = audio::filterParamsFor("muffled");
+    CHECK(muffled.enabled);
+    CHECK(muffled.gainHF < 0.1f);
+    CHECK(muffled.gain > muffled.gainHF);
+
+    const audio::FilterParams club = audio::filterParamsFor("club");
+    CHECK(club.enabled);
+    CHECK(club.gainHF < muffled.gainHF); // club cuts the highs harder
+    CHECK(club.gain > club.gainHF);
+}
+
+// ---------------------------------------------------------------------------
+TEST(audio_filter_routing) {
+    audio::installGeneratedSoundDefs();
+    RecordingBackend backend;
+    audio::AudioManager manager(&backend);
+    manager.preloadSounds();
+    manager.activeLayer = 0;
+
+    audio::PlaySoundOptions opts;
+    opts.channel = "sfx";
+    opts.filter = "muffled";
+    opts.hasLayer = true;
+    opts.layer = 0;
+
+    // Same layer without forceFilter -> the web uses the reverb send.
+    CHECK(manager.playSound("explosion_01", opts) != audio::kInvalidSound);
+    CHECK_EQ(backend.played.back().filter, std::string("reverb"));
+
+    // Different layer -> the EQ is applied.
+    manager.activeLayer = 1;
+    CHECK(manager.playSound("explosion_01", opts) != audio::kInvalidSound);
+    CHECK_EQ(backend.played.back().filter, std::string("muffled"));
+
+    // forceFilter bypasses the layer rule (audioManager.ts).
+    manager.activeLayer = 0;
+    opts.forceFilter = true;
+    CHECK(manager.playSound("explosion_01", opts) != audio::kInvalidSound);
+    CHECK_EQ(backend.played.back().filter, std::string("muffled"));
+
+    // Club filter and unfiltered sounds.
+    opts.forceFilter = false;
+    manager.activeLayer = 1;
+    opts.filter = "club";
+    CHECK(manager.playSound("explosion_01", opts) != audio::kInvalidSound);
+    CHECK_EQ(backend.played.back().filter, std::string("club"));
+
+    audio::PlaySoundOptions plain;
+    plain.channel = "sfx";
+    CHECK(manager.playSound("explosion_01", plain) != audio::kInvalidSound);
+    CHECK_EQ(backend.played.back().filter, std::string("none"));
 }

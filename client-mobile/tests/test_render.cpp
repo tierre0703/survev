@@ -1148,6 +1148,101 @@ TEST(building_sound_emitters) {
     world.setActivePlayer(nullptr);
 }
 
+// Automated footstep verification: the player standing on a building's tile
+// floor must request the footstep_tile sound group (the on-device equivalent is
+// the sample call; this asserts the selection without listening).
+TEST(player_footstep_uses_floor_surface) {
+    installGeneratedDefs();
+    audio::installGeneratedSoundDefs();
+
+    class FootstepBackend : public audio::AudioBackend {
+    public:
+        struct Played {
+            std::string id;
+            std::string filter;
+            float volume = 0.0f;
+        };
+        std::vector<Played> played;
+        audio::SoundHandle next = 1;
+
+        bool load(const std::string&, const std::string&) override { return true; }
+        bool isLoaded(const std::string&) const override { return true; }
+        audio::SoundHandle play(const std::string& id, const audio::PlayOptions& opts) override {
+            played.push_back({id, opts.filter, opts.volume});
+            return next++;
+        }
+        void stop(audio::SoundHandle) override {}
+        void stopAll() override {}
+        void setVolume(audio::SoundHandle, float) override {}
+        float getVolume(audio::SoundHandle) const override { return 0.0f; }
+        void setPan(audio::SoundHandle, float) override {}
+        void setMute(bool) override {}
+        bool isPlaying(audio::SoundHandle) const override { return true; }
+    };
+
+    FootstepBackend backend;
+    audio::AudioManager audioManager(&backend);
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.setAudio(&audioManager, nullptr);
+    audioManager.activeLayer = 0;
+
+    const MapObjectDef* bank = getDefProvider()->mapObject("bank_01");
+    CHECK(bank != nullptr);
+    if (!bank || bank->surfaces.empty() || bank->surfaces[0].colliders.empty()) {
+        return;
+    }
+    const Vec2 origin(100.0f, 100.0f);
+    Building* b = world.map().buildingPool.m_alloc();
+    ObjectData bd;
+    bd.type = "bank_01";
+    bd.pos = origin;
+    bd.layer = 0;
+    bd.__id = 31;
+    b->m_updateData(bd, true, true, world);
+
+    const Collider& tile = bank->surfaces[0].colliders[0];
+    const Vec2 center = v2Add(origin, v2Mul(v2Add(tile.min, tile.max), 0.5f));
+
+    Player p;
+    p.m_init();
+    ObjectData pd;
+    pd.pos = center;
+    pd.dir = Vec2(1.0f, 0.0f);
+    pd.outfit = "outfitBase";
+    pd.activeWeapon = "fists";
+    pd.layer = 0;
+    pd.__id = 7;
+    p.m_updateData(pd, true, true, world);
+    world.setActivePlayer(&p);
+    world.camera().m_pos = pd.pos;
+    audioManager.cameraPos = pd.pos; // GameWorld normally copies camera -> audio each frame
+
+    // Prime posOld, then move far enough for a step (>4 units).
+    p.update(0.0f, world);
+    p.pos = v2Add(center, Vec2(6.0f, 0.0f));
+    world.camera().m_pos = p.pos;
+    audioManager.cameraPos = p.pos;
+    p.update(0.016f, world);
+
+    bool footstepTile = false;
+    bool reverbFilter = false;
+    for (const auto& play : backend.played) {
+        if (play.id.rfind("footstep_tile_", 0) == 0) {
+            footstepTile = true;
+            reverbFilter = play.filter == "reverb"; // same layer -> reverb send
+        }
+    }
+    CHECK(footstepTile);
+    CHECK(reverbFilter);
+    // No grass footsteps were requested on the tile floor.
+    for (const auto& play : backend.played) {
+        CHECK(play.id.rfind("footstep_grass_", 0) != 0);
+    }
+
+    world.setActivePlayer(nullptr);
+}
+
 // ---------------------------------------------------------------------------
 TEST(particles_emitter_spawns) {
     installGeneratedDefs();
