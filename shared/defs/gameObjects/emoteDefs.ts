@@ -354,7 +354,7 @@ export const EmotesDefs: Record<string, EmoteDef> = {
         teamOnly: false,
         category: EmoteCategory.Faces,
     },
-    
+
     emote_heart: {
         type: "emote",
         name: "Heart",
@@ -425,7 +425,7 @@ export const EmotesDefs: Record<string, EmoteDef> = {
         teamOnly: false,
         category: EmoteCategory.Faces,
     },
-    
+
     emote_egg: {
         type: "emote",
         name: "Egg",
@@ -456,7 +456,7 @@ export const EmotesDefs: Record<string, EmoteDef> = {
         teamOnly: false,
         category: EmoteCategory.Faces,
     },
-    
+
     emote_logosurviv: {
         type: "emote",
         name: "PARMA",
@@ -507,7 +507,7 @@ export const EmotesDefs: Record<string, EmoteDef> = {
         teamOnly: false,
         category: EmoteCategory.Logos,
     },
-    
+
     emote_logocaduceus: {
         type: "emote",
         name: "The Caduceus",
@@ -628,7 +628,7 @@ export const EmotesDefs: Record<string, EmoteDef> = {
         teamOnly: false,
         category: EmoteCategory.Other,
     },
-    
+
     emote_logoconch: {
         type: "emote",
         name: "The Conch",
@@ -929,7 +929,7 @@ export const EmotesDefs: Record<string, EmoteDef> = {
         teamOnly: false,
         category: EmoteCategory.Other,
     },
-    
+
     emote_logocloud: {
         type: "emote",
         name: "The Cloud",
