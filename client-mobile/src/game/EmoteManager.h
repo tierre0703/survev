@@ -12,8 +12,11 @@
 #include <vector>
 #include <unordered_map>
 
-namespace audio { class AudioManager; }
 namespace surv {
+
+namespace audio {
+class AudioManager;
+}
 
 class GameWorld;
 

@@ -29,6 +29,7 @@
 #include "../ui/Localization.h"
 
 #include <jni.h>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -42,6 +43,21 @@ namespace {
 
 // The Java bridge class (proj.android/app/src/dev/axmol/app/SurvBridge.java).
 constexpr const char* kBridgeClass = "dev/axmol/app/SurvBridge";
+
+// JNI calls arrive on the Java UI thread; the scene graph, GameWorld and audio
+// mixer are owned by the GL thread. World teardown (resetWorld()) must never
+// race a frame's update, so scene-mutating bridge calls are queued onto the
+// axmol scheduler (ARCHITECTURE.md A4.2).
+void runOnGameThread(std::function<void()> action) {
+    if (auto* director = ax::Director::getInstance()) {
+        if (auto* scheduler = director->getScheduler()) {
+            scheduler->runOnAxmolThread(std::move(action));
+            return;
+        }
+    }
+    AXLOGW("bridge: no scheduler; running action inline");
+    action();
+}
 
 std::string fromJstring(JNIEnv* env, jstring value) {
     if (!value) return {};
@@ -117,21 +133,23 @@ public:
     }
 
     void setAudio(const std::string& key, float value) override {
-        audio::AudioManager* audio = _game ? _game->audioManager() : nullptr;
-        if (key == "master") {
-            if (_menu) _menu->config().setFloat("masterVolume", value);
-            if (audio) audio->setMasterVolume(value);
-        } else if (key == "sound") {
-            if (_menu) _menu->config().setFloat("soundVolume", value);
-            if (audio) audio->setSoundVolume(value);
-        } else if (key == "music") {
-            if (_menu) _menu->config().setFloat("musicVolume", value);
-            if (audio) audio->setMusicVolume(value);
-        } else if (key == "mute") {
-            const bool mute = value != 0.0f;
-            if (_menu) _menu->config().setBool("muteAudio", mute);
-            if (audio) audio->setMute(mute);
-        }
+        runOnGameThread([this, key, value] {
+            audio::AudioManager* audio = _game ? _game->audioManager() : nullptr;
+            if (key == "master") {
+                if (_menu) _menu->config().setFloat("masterVolume", value);
+                if (audio) audio->setMasterVolume(value);
+            } else if (key == "sound") {
+                if (_menu) _menu->config().setFloat("soundVolume", value);
+                if (audio) audio->setSoundVolume(value);
+            } else if (key == "music") {
+                if (_menu) _menu->config().setFloat("musicVolume", value);
+                if (audio) audio->setMusicVolume(value);
+            } else if (key == "mute") {
+                const bool mute = value != 0.0f;
+                if (_menu) _menu->config().setBool("muteAudio", mute);
+                if (audio) audio->setMute(mute);
+            }
+        });
     }
 
     void setLanguage(const std::string& locale) override {
@@ -155,31 +173,45 @@ public:
     bool isInGame() override { return _game && _game->isInGame(); }
 
     void quickStart(int teamMode) override {
-        if (_menu) _menu->quickStartFromBridge(teamMode);
+        runOnGameThread([this, teamMode] {
+            if (_menu) _menu->quickStartFromBridge(teamMode);
+        });
     }
 
     void joinUrls(const std::vector<std::string>& urls, const std::string& joinToken) override {
         if (!_game || urls.empty()) return;
-        // Keep the loadout the Java UI settled on in the join parcel, exactly
-        // like main.ts sets the config fields before Game.enterWithJoin().
-        _game->setJoinInfo(_menu ? uikit::Loadout(&_menu->config()).joinInfo() : Game::JoinInfo{});
-        _game->enterWithJoin(urls, joinToken);
+        runOnGameThread([this, urls, joinToken] {
+            if (!_game) return;
+            // Keep the loadout the Java UI settled on in the join parcel,
+            // exactly like main.ts sets the config fields before
+            // Game.enterWithJoin().
+            _game->setJoinInfo(_menu ? uikit::Loadout(&_menu->config()).joinInfo() : Game::JoinInfo{});
+            _game->enterWithJoin(urls, joinToken);
+        });
     }
 
     void cancelPending() override {
-        if (_menu) _menu->cancelPending();
+        runOnGameThread([this] {
+            if (_menu) _menu->cancelPending();
+        });
     }
 
     void quitGame() override {
-        if (_game) _game->returnToMenu();
+        runOnGameThread([this] {
+            if (_game) _game->returnToMenu();
+        });
     }
 
     void pauseGame() override {
-        if (_game) _game->pauseGame();
+        runOnGameThread([this] {
+            if (_game) _game->pauseGame();
+        });
     }
 
     void resumeGame() override {
-        if (_game) _game->resumeGame();
+        runOnGameThread([this] {
+            if (_game) _game->resumeGame();
+        });
     }
 
     void saveConfig() override {

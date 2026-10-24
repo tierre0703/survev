@@ -46,6 +46,9 @@ public:
     void m_free() override;
     void m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) override;
 
+    // structure.ts update(): interior ambience (interior_0/interior_1 tracks).
+    void update(float dt, Ctx& ctx);
+
     bool insideStairs(const Collider& c) const;
     bool insideMask(const Collider& c) const;
 };

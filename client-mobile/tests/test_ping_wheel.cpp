@@ -113,6 +113,14 @@ TEST(ping_wheel_button_and_ammo_mapping) {
     // Hidden HUD never fires the button.
     fx.wheel.setHudVisible(false);
     CHECK(!fx.wheel.buttonHit(fx.wheel.buttonCenter().x, fx.wheel.buttonCenter().y));
+
+    // refreshFrames() re-resolves the icons after the map atlases load.
+    fx.wheel.setHudVisible(true);
+    fx.wheel.refreshFrames();
+    const auto* icon = static_cast<const pix::NullSprite*>(fx.wheel.buttonIcon());
+    CHECK(icon != nullptr);
+    CHECK(icon->visible);
+    CHECK_EQ(icon->frame, std::string("ping-team-danger.img"));
 }
 
 TEST(ping_wheel_selects_pings_and_team_emotes) {

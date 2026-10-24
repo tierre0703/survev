@@ -139,6 +139,7 @@ public:
         _ambiance = ambiance;
     }
     audio::AudioManager* audio() { return _audio; }
+    audio::Ambiance* ambiance() { return _ambiance; }
 
     void setPlayerName(uint16_t playerId, const std::string& name) {
         _playerNames[playerId] = name;

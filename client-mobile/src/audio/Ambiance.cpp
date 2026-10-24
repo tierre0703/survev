@@ -35,6 +35,15 @@ Ambiance::Track* Ambiance::getTrack(const std::string& name) {
     return nullptr;
 }
 
+const Ambiance::Track* Ambiance::getTrack(const std::string& name) const {
+    for (const auto& t : _tracks) {
+        if (t.name == name) {
+            return &t;
+        }
+    }
+    return nullptr;
+}
+
 void Ambiance::setTrackSound(const std::string& name, const std::string& sound) {
     if (Track* t = getTrack(name)) {
         t->sound = sound;
@@ -45,6 +54,27 @@ void Ambiance::setTrackWeight(const std::string& name, float weight) {
     if (Track* t = getTrack(name)) {
         t->weight = weight;
     }
+}
+
+void Ambiance::setTrackFilter(const std::string& name, const std::string& filter) {
+    if (Track* t = getTrack(name)) {
+        t->filter = filter;
+    }
+}
+
+std::string Ambiance::trackSound(const std::string& name) const {
+    const Track* t = getTrack(name);
+    return t ? t->sound : std::string();
+}
+
+float Ambiance::trackWeight(const std::string& name) const {
+    const Track* t = getTrack(name);
+    return t ? t->weight : 0.0f;
+}
+
+std::string Ambiance::trackFilter(const std::string& name) const {
+    const Track* t = getTrack(name);
+    return t ? t->filter : std::string();
 }
 
 void Ambiance::setMap(const AmbienceMap& map, AudioManager& audio) {

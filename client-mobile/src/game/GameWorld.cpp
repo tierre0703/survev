@@ -471,7 +471,7 @@ void GameWorld::update(float dt) {
 
     // M6: drive the audio manager + ambience (game.ts update order).
     if (_activePlayer) {
-        const bool underground = _map->isUnderground(_activePlayer->pos, _activePlayer->layer);
+        const bool underground = _map->isUnderground(_activePlayer->pos, _activePlayer->layer, _activePlayer->rad);
         _renderer->setUnderground(underground);
         if (_audio) {
             _audio->activeLayer = _activePlayer->layer;

@@ -1654,3 +1654,185 @@ regenerated from the shared TS code. No parser changes were needed (the
   the id mapping itself now matches the server exactly.
 - Keep `codegen_defs.mjs` in the build/verification checklist whenever
   `shared/defs` changes (a stale inc is silent but broad).
+
+---
+
+## 30. Session 25-28 - surfaces, bounds, ceilings and interior audio (2026-10-23/24)
+
+Closes the two Priority-4 parity items in `REMAININGS.md` §3.
+
+### 30.1 Full ground-surface types + building floors
+
+`Map::getGroundSurface` only knew `Water`/`Sand`/`Grass`, so every building
+interior (tile, carpet, wood/container, bunker, ...) fell back to grass for the
+`footstep_<type>` sound group, and `Building::surfaces` was never populated from
+the defs (the struct existed but stayed empty).
+
+- `render/Defs.h` now defines the complete web `SurfaceType` enum
+  (`water/sand/grass/tile/asphalt/brick/stone/carpet/bunker/container/warehouse/
+  house/shack/snow`) plus `surfaceTypeName` / `surfaceTypeFromName`. `Map` and
+  `Player` alias it instead of keeping their own 3-value enums.
+- `codegen_render_defs.mjs` emits `def.floor.surfaces[]` (type, collision AABBs,
+  optional water/ripple colours, e.g. the bunker pools) into
+  `MapObjectDef::surfaces`; `Building::m_updateData` transforms them to world
+  space exactly like `building.ts` ("Create floor surfaces").
+- `Map::getGroundSurface` maps the building surface string through
+  `surfaceTypeFromName` and honours the surface's own water colours; the player
+  footstep group is now `"footstep_" + surfaceTypeName(surfaceType)`.
+
+### 30.2 Structure/building bounding colliders
+
+`MapObjectDef::boundingCollider` was only filled from `def.collision` /
+`mapObstacleBounds`, which are undefined for buildings and structures. Buildings
+therefore had no AABB (ceiling proximity reveal disabled, no minimap fallback),
+and structure `layers[]` collisions were zero-sized, breaking the underground
+test.
+
+- The codegen now ports `mapHelpers.computeBoundingCollider`: structures union
+  their layers' bounds + stairs and add the web's 1-unit margin; buildings union
+  floor-surface collisions, ceiling zoom regions and map objects. Weighted
+  map-object type maps are unioned over every candidate (the web picks one at
+  random) so the generated file is byte-reproducible; two successive runs hash
+  identically.
+- `Building::getDistanceToBuilding` now matches `building.ts` (penetration of
+  the transformed ceiling `zoomIn` regions) instead of an AABB distance, and the
+  minimap prefers `ceiling.zoomRegions[0].zoomIn` like `map.ts renderMap`.
+
+### 30.3 Structure layer default + `isUnderground`
+
+`structure.ts` computes `underground = layer.underground !== undefined ?
+layer.underground : i == 1`, i.e. the second layer is underground when the def
+omits the flag. The codegen had collapsed it to a bool, and
+`Map::isUnderground` checked every layer for an explicitly-true flag with a
+hard-coded radius of 1, returning false when nothing matched. The web default is
+the opposite (true), so the underground render fade/reverb never activated.
+
+- `StructureLayerDef` now keeps `hasUnderground` alongside the value, and
+  `Structure::m_updateData` applies the `i == 1` default.
+- `Map::isUnderground(pos, layer, rad)` ports `player.ts` exactly: layer 1 only,
+  the second layer only, `Player::rad`, and `true` when no structure matches.
+
+### 30.4 Stale sprite atlases + emote/ping wheel icon frames
+
+The on-device ping wheel showed no icons. Two causes:
+
+- `Content/atlas/**` was staged on 2026-10-15, before the `gui/ping-team-*.svg`
+  and `emotes/ammo-box.svg` entries entered
+  `client/atlas-builder/defs/loadout.ts`, so the plists had no such frames.
+  `node tools/build-atlas.mjs --res low` restages them (16 sheets, 1706 frames).
+- `GameScene::resetWorld()` builds the emote/ping wheels before the first
+  `MapMsg` registers the map atlases, so their build-time `setFrame()` calls
+  missed and the on-screen button icons stayed blank until the wheel was
+  opened. `EmoteWheel::refreshFrames()` / `PingWheel::refreshFrames()` re-resolve
+  the frames; the MapMsg callback calls them right after
+  `loadAtlasesForMap()`.
+
+### 30.5 Obstacle-filtered ceiling reveal + stairs suppression
+
+`Building::update` still used a circle/zoomIn overlap plus an AABB distance to
+decide whether a ceiling should fade out, so ceilings could reveal through
+walls, and the `noCeilingReveal` stair hack was missing.
+
+- The `collisionHelpers` segment/scan helpers moved into
+  `game/objects/ObstacleScan.h` (shared by `PlayerRender.cpp` melee/LOS and
+  `Barns.cpp`), with a full port of `scanCollider` (5 parallel rays, obstacle
+  filters for `active/dead/collidable/isWindow/height/layer`, the stairs hack).
+- `Building::update` now matches `building.ts`: `scanCollider(zoomIn, obstacles,
+  playerPos, player.layer, 0.5, vision.width*2, vision.dist, 5)`, then
+  `noCeilingRevealTicker` zeroes the vision ticker (unless the ceiling is dead)
+  and suppresses the immediate stairs reveal.
+- `Player::noCeilingRevealTicker` is ported: decremented per frame and set to
+  0.25 s when the active player (layer != 0) overlaps a stair whose def has
+  `noCeilingReveal`, mirroring `player.ts updateRenderLayer`.
+
+### Verification
+
+- `surv_tests`: **139 tests, 2,320 assertions, 0 failures** (new:
+  `building_floor_surfaces` checks a bank's tile surface transform + tile
+  footstep group and the bunker water surface data; `structure_mask_and_underground`
+  checks mask/stairs queries, non-zero layer bounds, the `i == 1` default and
+  the layer/radius/default-underground semantics; `building_ceiling_scan_and_no_reveal`
+  checks the scan reveal, wall blocking, the window/height/collidable filters
+  and ticker suppression; `player_stairs_no_ceiling_reveal` checks the 0.25 s
+  latch, the layer-0 rule and that non-active players never latch; the wheel
+  tests assert the button icon frames after `refreshFrames()`).
+- `src/render/GeneratedDefs.cpp` regenerates deterministically (same SHA-256 on
+  two runs); the x86_64 `libSurvevMobile.so` builds and links.
+- x86_64 APK installed on the emulator against the bundle server: `Play Solo`
+  joins, atlases load, the player moves with the joystick, the minimap dot
+  tracks, the ping/emote buttons show their icons before opening, holding the
+  ping button shows all six selectors (medical/ammo greyed in solo), and a
+  released ping draws the yellow ring on the player. A match was walked through
+  for ~40 s (including into the gas) with no crash; `logcat -b crash` empty.
+
+### 30.6 Structure interior ambience
+
+`Structure` kept `soundTransitionT`/`soundEnabledT`, but nothing drove the
+immediate-mode `interior_0`/`interior_1` Ambiance tracks, so bunkers/clubs/
+saloons were silent.
+
+- The def codegen emits `structureDefs.ts interiorSound` (sound/soundAlt/
+  filter/transitionTime/outsideMaxDist/outsideVolume/undergroundVolume) into
+  `MapObjectDef::interiorSound`.
+- `Structure::update` ports `structure.ts updateInteriorSounds`: outside vs
+  layer 1, building distance (`getDistanceToBuilding`), ceiling fade
+  (`weight0 = w*(1-fade)`, `weight1 = w*fade*outside/undergroundVolume`), the
+  soundAlt transition (`|t-0.5|*2`), the disabled fade and the club filter.
+- `Map::update` calls it for every active structure before `Ambiance::update`
+  (immediate-mode tracks are reset after each mixer tick).
+- `Ambiance` gained `setTrackFilter` plus read-only track accessors.
+- Note: the `club` filter name is plumbed through `PlaySoundOptions.filter`, but
+  `AxmolAudioBackend` has no per-source EQ (OpenAL EAX is reverb-only), so the
+  track plays unfiltered; the web's `muffled`/`club` EQ remains a backend gap.
+
+### Verification
+
+- `surv_tests`: **141 tests, 2,376 assertions, 0 failures** (new:
+  `structure_interior_ambience` checks the def fields, the opaque-ceiling
+  filtered track (`outsideVolume` 0.25 + `club` filter), the revealed
+  unfiltered track, layer-1 `undergroundVolume` 0.707, the `reserve_music_02`
+  soundAlt transition and the enable/disable fade).
+- x86_64 native lib + APK rebuilt, installed on the emulator, `Play Solo` joins
+  and runs with OpenAL initialized; `logcat -b crash` empty.
+
+### 30.7 Building sound emitters (building.ts)
+
+`buildingDefs.ts soundEmitters` (bathhouse steam, potato oasis waves) were not
+ported, so those looping positional ambiences never played.
+
+- The def codegen emits `soundEmitters` (sound/channel/local pos/range/
+  falloff/volume) into `MapObjectDef`.
+- `Building` creates the world-space emitter points on `isNew`, runs the web's
+  10 Hz volume update (`baseVolume * emitter.volume * remap(dist, range) **
+  falloff * lerp(ceilingFadeAlpha, 1, 0.25)`, same-audio-layer gate, 0.003
+  threshold), plays them looped/start-silent and stops them in `m_free()`.
+- `setVolume(..., "sound")` supplies the web's `getTypeVolume("sound")` factor;
+  `baseVolume` is used explicitly like `building.ts`.
+- `EmoteManager.h` moved its `audio::AudioManager` forward declaration inside
+  `namespace surv` (it was leaking a global `audio` namespace and made
+  `audio::` ambiguous in TUs that also use `using namespace surv`).
+
+### 30.8 JNI bridge thread marshalling (second-join SIGSEGV)
+
+The on-device second join intermittently crashed in
+`Pool<Player>::rebuild()` (`GameWorld::update` → `PlayerBarn::update`) with a
+destroyed world. Root cause: `SurvBridge` JNI methods run on the Java UI thread
+and called `enterWithJoin()`/`leaveGame()`/pause/audio directly; `resetWorld()`
+then destroyed the `GameWorld` while the GL thread was inside
+`GameScene::update()`.
+
+- `UiBridge.cpp` now queues scene-mutating calls (`quickStart`, `joinUrls`,
+  `cancelPending`, `quitGame`, `pauseGame`, `resumeGame`, `setAudio`) through
+  `ax::Scheduler::runOnAxmolThread`, so teardown/rebuild happens between frames
+  on the axmol thread (ARCHITECTURE.md A4.2).
+- Verified with three consecutive **Play Solo → Back → Play Solo** joins
+  (`activePlayerId` 4596 → 4597 → 4598): each joins, renders and returns to the
+  menu with an empty `logcat -b crash`.
+
+### Still open
+
+- Audible check of the per-floor footstep groups, the underground reverb/fade,
+  the structure interior tracks and the building sound emitters on device (the
+  emulator cannot be listened to).
+- Per-source EQ (`muffled`/`club`) is plumbed but the axmol backend is
+  reverb-only; the web's biquad filter chains remain unimplemented.

@@ -10,9 +10,16 @@ struct RawCollider { int type; float a, b, c, d; };
 struct RawImg { const char* sprite; float scale; float alpha; unsigned tint; int zIdx; int mirrorX; int mirrorY; float ori; };
 struct RawBImg { const char* sprite; float scale; float alpha; unsigned tint; float px, py, rot; int mirrorX, mirrorY, removeOnDamaged; };
 struct RawBEmitter { const char* type; float px, py, rot, scale; int layer, parentToCeiling; float dirx, diry; };
-struct RawLayer { const char* type; float x, y; int ori; int inheritOri; int underground; };
+struct RawLayer { const char* type; float x, y; int ori; int inheritOri; int hasUnderground; int underground; };
 struct RawStair { RawCollider col; float dx, dy; int noCeilingReveal; int lootOnly; };
 struct RawShape { RawCollider col; float scale; unsigned color; };
+struct RawBSurface {
+    const char* type; const RawCollider* colliders; int count;
+    int hasWaterColor; unsigned waterColor; int hasRippleColor; unsigned rippleColor;
+};
+struct RawSoundEmitter {
+    const char* sound; const char* channel; float x, y, rangeMin, rangeMax, falloff, volume;
+};
 struct RawMapObj {
     const char* type; RawImg img; int hasImg; RawCollider collision; int hasCollision;
     int isDoor, isButton, isTree, isWall; int randomRotation, hasExplosion; const char* explosionParticle;
@@ -40,6 +47,11 @@ struct RawMapObj {
     const char* destroyResidue;
     const RawBEmitter* emitters; int emitterCount;
     const RawCollider* zoomIns; int zoomCount;
+    const RawBSurface* surfaces; int surfaceCount;
+    int hasInteriorSound; const char* interiorSound; const char* interiorSoundAlt; const char* interiorFilter;
+    float interiorTransitionTime, interiorOutsideMaxDist, interiorOutsideVolume;
+    int hasInteriorUndergroundVolume; float interiorUndergroundVolume;
+    const RawSoundEmitter* soundEmitters; int soundEmitterCount;
 };
 struct RawMapRender {
     const char* name;
@@ -170,6 +182,13 @@ static const RawCollider kZoomIns_741[] = {
     {1,16.75,-3.25,26.25,11.25},
     {1,-25.75,-5,-4.25,17},
 };
+static const RawCollider kSurfCols_741_0[] = {
+    {1,-5.25,-19.25,17.25,17.25},
+    {1,16.75,-3.25,26.25,11.25},
+};
+static const RawBSurface kSurfaces_741[] = {
+    {"tile",kSurfCols_741_0,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_742[] = {
     {"map-building-barn-basement-stairs.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -183,6 +202,13 @@ static const RawCollider kZoomIns_743[] = {
     {1,-4,-7,8,7},
     {1,7.5,-5.5,14.5,-1.5},
 };
+static const RawCollider kSurfCols_743_0[] = {
+    {1,-15,-7,9,7},
+    {1,9,-5.5,15,-1.5},
+};
+static const RawBSurface kSurfaces_743[] = {
+    {"asphalt",kSurfCols_743_0,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_744[] = {
     {"map-building-barn-basement-floor-02.img",0.5,1,16777215,-2,-0.5,0,0,0,0},
 };
@@ -191,6 +217,12 @@ static const RawBImg kCeilImgs_744[] = {
 };
 static const RawCollider kZoomIns_744[] = {
     {1,-6,-7,4,5},
+};
+static const RawCollider kSurfCols_744_0[] = {
+    {1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_744[] = {
+    {"asphalt",kSurfCols_744_0,1,0,0,0,0},
 };
 static const RawShape kShapes_745[] = {
     {{1,-5,10,5,14},1,12300935},
@@ -207,6 +239,13 @@ static const RawCollider kZoomIns_745[] = {
     {1,-24.5,-14.8,24.5,10.8},
     {1,-5.5,9.5,5.5,14.5},
 };
+static const RawCollider kSurfCols_745_0[] = {
+    {1,-25,-15.2,25,11.2},
+    {1,-5.5,9.5,5.5,14.5},
+};
+static const RawBSurface kSurfaces_745[] = {
+    {"house",kSurfCols_745_0,2,0,0,0,0},
+};
 static const RawShape kShapes_746[] = {
     {{1,-5,10,5,14},1,12300935},
     {{1,-24.5,-14.8,24.5,10.8},1,3816739},
@@ -221,6 +260,13 @@ static const RawBImg kCeilImgs_746[] = {
 static const RawCollider kZoomIns_746[] = {
     {1,-24.5,-14.8,24.5,10.8},
     {1,-5.5,9.5,5.5,14.5},
+};
+static const RawCollider kSurfCols_746_0[] = {
+    {1,-25,-15.2,25,11.2},
+    {1,-5.5,9.5,5.5,14.5},
+};
+static const RawBSurface kSurfaces_746[] = {
+    {"house",kSurfCols_746_0,2,0,0,0,0},
 };
 static const RawBImg kFloorImgs_747[] = {
     {"map-building-club-gradient-01.img",4,1,16777215,-3.5,-13.5,0,0,0,0},
@@ -241,6 +287,14 @@ static const RawCollider kZoomIns_747[] = {
     {1,22.5,-6,37.5,7},
     {1,-33.5,10,-18.5,23},
 };
+static const RawCollider kSurfCols_747_0[] = {
+    {1,-18,-12.5,22,31.5},
+    {1,-26,-40.5,26,55.5},
+    {1,-30,-29,-22,-23},
+};
+static const RawBSurface kSurfaces_747[] = {
+    {"tile",kSurfCols_747_0,3,0,0,0,0},
+};
 static const RawBImg kFloorImgs_748[] = {
     {"map-building-bathhouse-sideroom-01.img",0.5,1,16777215,-1,0,0,0,0,0},
 };
@@ -250,6 +304,15 @@ static const RawBImg kCeilImgs_748[] = {
 static const RawCollider kZoomIns_748[] = {
     {1,-7.5,-6.5,7.5,6.5},
 };
+static const RawCollider kSurfCols_748_0[] = {
+    {1,-7.5,-6.5,7.5,6.5},
+};
+static const RawBSurface kSurfaces_748[] = {
+    {"shack",kSurfCols_748_0,1,0,0,0,0},
+};
+static const RawSoundEmitter kSoundEmitters_748[] = {
+    {"ambient_steam_01","ambient",0,0,9,16,1,0.2},
+};
 static const RawBImg kFloorImgs_749[] = {
     {"map-building-bathhouse-sideroom-02.img",0.5,1,16777215,0,0.5,0,0,0,0},
 };
@@ -258,6 +321,12 @@ static const RawBImg kCeilImgs_749[] = {
 };
 static const RawCollider kZoomIns_749[] = {
     {1,-14,-9.5,14,9.5},
+};
+static const RawCollider kSurfCols_749_0[] = {
+    {1,-14,-10,14,10},
+};
+static const RawBSurface kSurfaces_749[] = {
+    {"container",kSurfCols_749_0,1,0,0,0,0},
 };
 static const RawShape kShapes_750[] = {
     {{1,-31.5,-8,31.5,8},1,5197647},
@@ -276,6 +345,12 @@ static const RawBImg kCeilImgs_750[] = {
 static const RawCollider kZoomIns_750[] = {
     {1,-16.5,-7,16.5,7},
 };
+static const RawCollider kSurfCols_750_0[] = {
+    {1,-31.5,-8,31.5,8},
+};
+static const RawBSurface kSurfaces_750[] = {
+    {"asphalt",kSurfCols_750_0,1,0,0,0,0},
+};
 static const RawShape kShapes_752[] = {
     {{1,-38.5,-12,38.5,12},1,2894124},
     {{1,-19,-14.5,-13,-11.5},1,3618615},
@@ -286,11 +361,23 @@ static const RawShape kShapes_752[] = {
 static const RawBImg kFloorImgs_752[] = {
     {"map-building-bridge-xlg-floor.img",0.5,1,16777215,0,0,0,0,0,0},
 };
+static const RawCollider kSurfCols_752_0[] = {
+    {1,-38.5,-12,38.5,12},
+};
+static const RawBSurface kSurfaces_752[] = {
+    {"asphalt",kSurfCols_752_0,1,0,0,0,0},
+};
 static const RawShape kShapes_754[] = {
     {{1,-14,-3.5,14,3.5},1,9322264},
 };
 static const RawBImg kFloorImgs_754[] = {
     {"map-building-bridge-md-floor.img",0.5,1,16777215,0,0,0,0,0,0},
+};
+static const RawCollider kSurfCols_754_0[] = {
+    {1,-13.5,-3.5,13.5,3.5},
+};
+static const RawBSurface kSurfaces_754[] = {
+    {"shack",kSurfCols_754_0,1,0,0,0,0},
 };
 static const RawShape kShapes_756[] = {
     {{1,-18,-11.5,18,12.5},1,3823128},
@@ -310,6 +397,17 @@ static const RawBEmitter kEmitters_756[] = {
 static const RawCollider kZoomIns_756[] = {
     {1,-19,-11.5,19,12.5},
     {1,1,-15,7,-11},
+};
+static const RawCollider kSurfCols_756_0[] = {
+    {1,-18,-15.5,18,12.5},
+};
+static const RawCollider kSurfCols_756_1[] = {
+    {1,1,-16.5,7,-11.5},
+    {1,-6,12.5,-2,14.5},
+};
+static const RawBSurface kSurfaces_756[] = {
+    {"house",kSurfCols_756_0,1,0,0,0,0},
+    {"asphalt",kSurfCols_756_1,2,0,0,0,0},
 };
 static const RawShape kShapes_757[] = {
     {{1,-32.5,-11,-26,-6},1,13022098},
@@ -348,6 +446,27 @@ static const RawCollider kZoomIns_757[] = {
     {1,-3.5,-27,6.5,-21},
     {1,-24,4,-19,10},
 };
+static const RawCollider kSurfCols_757_0[] = {
+    {1,-3.5,-28,6.5,-21},
+    {1,-29.5,4.75,3.5,35.75},
+    {1,-29.5,-5.25,-26.5,5.25},
+};
+static const RawCollider kSurfCols_757_1[] = {
+    {1,-32.5,-11,-26.5,-6},
+};
+static const RawCollider kSurfCols_757_2[] = {
+    {1,-26,-21.75,18,4.75},
+    {1,-6,9.75,15,26.25},
+    {1,14,10,18,23},
+    {1,4,4,9,10},
+    {1,17.75,-5.5,29.25,-0.5},
+    {1,24,-14.5,29,-0.5},
+};
+static const RawBSurface kSurfaces_757[] = {
+    {"asphalt",kSurfCols_757_0,3,0,0,0,0},
+    {"stone",kSurfCols_757_1,1,0,0,0,0},
+    {"carpet",kSurfCols_757_2,6,0,0,0,0},
+};
 static const RawBImg kFloorImgs_758[] = {
     {"",0.5,1,6250335,0,0,0,0,0,0},
 };
@@ -356,6 +475,12 @@ static const RawBImg kCeilImgs_758[] = {
 };
 static const RawCollider kZoomIns_758[] = {
     {1,-3,-4,3,4},
+};
+static const RawCollider kSurfCols_758_0[] = {
+    {1,-3,-4,3,4},
+};
+static const RawBSurface kSurfaces_758[] = {
+    {"container",kSurfCols_758_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_760[] = {
     {"map-building-container-floor-01.img",0.5,1,2703694,0,0,0,0,0,0},
@@ -366,6 +491,12 @@ static const RawBImg kCeilImgs_760[] = {
 static const RawCollider kZoomIns_760[] = {
     {1,-2.5,-3.25,2.5,7.75},
 };
+static const RawCollider kSurfCols_760_0[] = {
+    {1,-2.5,-8,2.5,8},
+};
+static const RawBSurface kSurfaces_760[] = {
+    {"container",kSurfCols_760_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_761[] = {
     {"map-building-container-floor-01.img",0.5,1,2703694,0,0,0,0,0,0},
 };
@@ -374,6 +505,12 @@ static const RawBImg kCeilImgs_761[] = {
 };
 static const RawCollider kZoomIns_761[] = {
     {1,-2.5,-3.25,2.5,7.75},
+};
+static const RawCollider kSurfCols_761_0[] = {
+    {1,-2.5,-8,2.5,8},
+};
+static const RawBSurface kSurfaces_761[] = {
+    {"container",kSurfCols_761_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_762[] = {
     {"map-building-container-floor-01.img",0.5,1,2703694,0,0,0,0,0,0},
@@ -384,6 +521,12 @@ static const RawBImg kCeilImgs_762[] = {
 static const RawCollider kZoomIns_762[] = {
     {1,-2.5,-3.25,2.5,7.75},
 };
+static const RawCollider kSurfCols_762_0[] = {
+    {1,-2.5,-8,2.5,8},
+};
+static const RawBSurface kSurfaces_762[] = {
+    {"container",kSurfCols_762_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_763[] = {
     {"map-building-container-open-floor.img",0.5,1,3560807,0,0,0,0,0,0},
 };
@@ -392,6 +535,12 @@ static const RawBImg kCeilImgs_763[] = {
 };
 static const RawCollider kZoomIns_763[] = {
     {1,-2.5,-5.75,2.5,5.75},
+};
+static const RawCollider kSurfCols_763_0[] = {
+    {1,-2.5,-11,2.5,11},
+};
+static const RawBSurface kSurfaces_763[] = {
+    {"container",kSurfCols_763_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_764[] = {
     {"",0.5,1,16777215,0,0,0,0,0,0},
@@ -402,6 +551,12 @@ static const RawBImg kCeilImgs_764[] = {
 static const RawCollider kZoomIns_764[] = {
     {1,-2.5,-3.35,2.5,8.15},
 };
+static const RawCollider kSurfCols_764_0[] = {
+    {1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_764[] = {
+    {"container",kSurfCols_764_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_765[] = {
     {"map-building-container-floor-01.img",0.5,1,12227840,0,0,0,0,0,0},
 };
@@ -411,6 +566,12 @@ static const RawBImg kCeilImgs_765[] = {
 static const RawCollider kZoomIns_765[] = {
     {1,-2.5,-3.25,2.5,7.75},
 };
+static const RawCollider kSurfCols_765_0[] = {
+    {1,-2.5,-8,2.5,8},
+};
+static const RawBSurface kSurfaces_765[] = {
+    {"container",kSurfCols_765_0,1,0,0,0,0},
+};
 static const RawShape kShapes_766[] = {
     {{1,0.10000000000000009,-10.25,4.9,10.25},1,8862486},
     {{1,-5.050000000000001,5.25,0.1499999999999999,10.25},1,8862486},
@@ -418,6 +579,13 @@ static const RawShape kShapes_766[] = {
 static const RawBImg kFloorImgs_766[] = {
     {"map-building-dock-floor-01a.img",0.5,1,16777215,-2.5,7.85,0,0,0,0},
     {"map-building-dock-floor-01b.img",0.5,1,16777215,2.5,0,0,0,0,0},
+};
+static const RawCollider kSurfCols_766_0[] = {
+    {1,0.10000000000000009,-10.25,4.9,10.25},
+    {1,-5.050000000000001,5.25,0.1499999999999999,10.25},
+};
+static const RawBSurface kSurfaces_766[] = {
+    {"shack",kSurfCols_766_0,2,0,0,0,0},
 };
 static const RawBImg kFloorImgs_767[] = {
     {"map-building-greenhouse-floor-01.img",0.5,1,16777215,0,10,2,0,0,0},
@@ -432,6 +600,16 @@ static const RawBImg kCeilImgs_767[] = {
 static const RawCollider kZoomIns_767[] = {
     {1,-12.5,-19.5,12.5,19.5},
 };
+static const RawCollider kSurfCols_767_0[] = {
+    {1,-13,-20,13,20},
+};
+static const RawCollider kSurfCols_767_1[] = {
+    {1,-2,-20,2,20},
+};
+static const RawBSurface kSurfaces_767[] = {
+    {"tile",kSurfCols_767_0,1,0,0,0,0},
+    {"house",kSurfCols_767_1,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_768[] = {
     {"map-building-greenhouse-floor-02.img",0.5,1,16777215,0,10,2,0,0,0},
     {"map-building-greenhouse-floor-02.img",0.5,1,16777215,0,-10,0,0,0,0},
@@ -443,6 +621,16 @@ static const RawBImg kCeilImgs_768[] = {
 };
 static const RawCollider kZoomIns_768[] = {
     {1,-12.5,-19.5,12.5,19.5},
+};
+static const RawCollider kSurfCols_768_0[] = {
+    {1,-13,-20,13,20},
+};
+static const RawCollider kSurfCols_768_1[] = {
+    {1,-2,-20,2,20},
+};
+static const RawBSurface kSurfaces_768[] = {
+    {"tile",kSurfCols_768_0,1,0,0,0,0},
+    {"house",kSurfCols_768_1,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_769[] = {
     {"map-hedgehog-01.img",0.5,1,16777215,0,0,0,0,0,0},
@@ -461,6 +649,13 @@ static const RawBImg kCeilImgs_770[] = {
 static const RawCollider kZoomIns_770[] = {
     {1,-6,-6,6,6},
 };
+static const RawCollider kSurfCols_770_0[] = {
+    {1,-7,-7,7,7},
+    {1,-2,-30.9,2,-6.899999999999999},
+};
+static const RawBSurface kSurfaces_770[] = {
+    {"shack",kSurfCols_770_0,2,0,0,0,0},
+};
 static const RawShape kShapes_771[] = {
     {{1,-7,-7,7,7},1,15181895},
     {{1,-2,-30.9,2,-6.899999999999999},1,6171907},
@@ -474,6 +669,13 @@ static const RawBImg kCeilImgs_771[] = {
 };
 static const RawCollider kZoomIns_771[] = {
     {1,-6,-6,6,6},
+};
+static const RawCollider kSurfCols_771_0[] = {
+    {1,-7,-7,7,7},
+    {1,-2,-30.9,2,-6.899999999999999},
+};
+static const RawBSurface kSurfaces_771[] = {
+    {"shack",kSurfCols_771_0,2,0,0,0,0},
 };
 static const RawShape kShapes_772[] = {
     {{1,-7,-7,7,7},1,7771201},
@@ -489,6 +691,13 @@ static const RawBImg kCeilImgs_772[] = {
 static const RawCollider kZoomIns_772[] = {
     {1,-6,-6,6,6},
 };
+static const RawCollider kSurfCols_772_0[] = {
+    {1,-7,-7,7,7},
+    {1,-2,-30.9,2,-6.899999999999999},
+};
+static const RawBSurface kSurfaces_772[] = {
+    {"shack",kSurfCols_772_0,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_773[] = {
     {"map-building-house-floor-01.img",0.5,1,16777215,0,0,0,0,0,0},
     {"map-building-porch-01.img",0.5,1,16777215,-1,14.5,0,0,0,0},
@@ -499,6 +708,12 @@ static const RawBImg kCeilImgs_773[] = {
 };
 static const RawCollider kZoomIns_773[] = {
     {1,-14.5,-13,14.5,13},
+};
+static const RawCollider kSurfCols_773_0[] = {
+    {1,-14.5,-13,14.5,13},
+};
+static const RawBSurface kSurfaces_773[] = {
+    {"house",kSurfCols_773_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_774[] = {
     {"map-building-house-floor-02.img",0.5,1,16777215,0,0,0,0,0,0},
@@ -517,6 +732,12 @@ static const RawBImg kCeilImgs_774[] = {
 };
 static const RawCollider kZoomIns_774[] = {
     {1,-14.5,-13,14.5,13},
+};
+static const RawCollider kSurfCols_774_0[] = {
+    {1,-14.5,-13,14.5,13},
+};
+static const RawBSurface kSurfaces_774[] = {
+    {"house",kSurfCols_774_0,1,0,0,0,0},
 };
 static const RawShape kShapes_775[] = {
     {{1,-14,16,11,25},1,8671554},
@@ -539,6 +760,29 @@ static const RawCollider kZoomIns_775[] = {
     {1,-31.5,-20.5,24.5,16.5},
     {1,-13.5,16.400000000000002,10.5,24.8},
 };
+static const RawCollider kSurfCols_775_0[] = {
+    {1,-31.5,-20.5,24.5,16.5},
+    {1,-14,16,11,25},
+    {1,-20,-20,20,20},
+};
+static const RawCollider kSurfCols_775_1[] = {
+    {1,-32,-25,-10,-9},
+    {1,-31,-9,-15,-3},
+    {1,-4,-27,0,-21},
+    {1,25,-1.5,31,4.5},
+};
+static const RawCollider kSurfCols_775_2[] = {
+    {1,-7,-1,3,9},
+};
+static const RawCollider kSurfCols_775_3[] = {
+    {1,-1,9.75,3,16.25},
+};
+static const RawBSurface kSurfaces_775[] = {
+    {"tile",kSurfCols_775_0,3,0,0,0,0},
+    {"asphalt",kSurfCols_775_1,4,0,0,0,0},
+    {"grass",kSurfCols_775_2,1,0,0,0,0},
+    {"house",kSurfCols_775_3,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_776[] = {
     {"map-building-mansion-gradient-01.img",4,1,16777215,-3.75,0.25,0,0,0,0},
     {"map-building-mansion-cellar-01a.img",0.5,1,16777215,11.5,5.5,0,0,0,0},
@@ -549,6 +793,13 @@ static const RawCollider kZoomIns_776[] = {
     {1,11,-10,25,16},
     {1,-1,-10.5,11,13.5},
 };
+static const RawCollider kSurfCols_776_0[] = {
+    {1,11,-10,25,16},
+    {1,-1,-10,11,10},
+};
+static const RawBSurface kSurfaces_776[] = {
+    {"brick",kSurfCols_776_0,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_777[] = {
     {"map-building-outhouse-floor.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -558,6 +809,12 @@ static const RawBImg kCeilImgs_777[] = {
 static const RawCollider kZoomIns_777[] = {
     {1,-3.6,-1.7500000000000002,3.6,4.65},
 };
+static const RawCollider kSurfCols_777_0[] = {
+    {1,-3.75,-4.6,3.75,4.9},
+};
+static const RawBSurface kSurfaces_777[] = {
+    {"shack",kSurfCols_777_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_778[] = {
     {"map-building-panicroom-floor.img",0.5,1,6250335,0,0,0,0,0,0},
 };
@@ -566,6 +823,12 @@ static const RawBImg kCeilImgs_778[] = {
 };
 static const RawCollider kZoomIns_778[] = {
     {1,-4.5,-6,4.5,6},
+};
+static const RawCollider kSurfCols_778_0[] = {
+    {1,-4.5,-6,4.5,6},
+};
+static const RawBSurface kSurfaces_778[] = {
+    {"container",kSurfCols_778_0,1,0,0,0,0},
 };
 static const RawShape kShapes_779[] = {
     {{1,-42.25,-22,0.25,6},1,5855577},
@@ -594,6 +857,20 @@ static const RawCollider kZoomIns_779[] = {
     {1,-0.15000000000000036,-22,20.85,22},
     {1,20.5,3,42,22},
 };
+static const RawCollider kSurfCols_779_0[] = {
+    {1,-42.25,-1.25,-6.75,18.25},
+    {1,-7,5.75,0,18.25},
+    {1,-0.15000000000000036,-22,20.85,22},
+    {1,20.5,3,42,22},
+};
+static const RawCollider kSurfCols_779_1[] = {
+    {1,-42.5,-24.5,-0.5,-1.5},
+    {1,-6.5,-1.5,-0.5,5.5},
+};
+static const RawBSurface kSurfaces_779[] = {
+    {"tile",kSurfCols_779_0,4,0,0,0,0},
+    {"asphalt",kSurfCols_779_1,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_780[] = {
     {"map-building-saferoom-floor.img",0.5,1,6250335,0,0,0,0,0,0},
 };
@@ -602,6 +879,12 @@ static const RawBImg kCeilImgs_780[] = {
 };
 static const RawCollider kZoomIns_780[] = {
     {1,-5,-3,5,3},
+};
+static const RawCollider kSurfCols_780_0[] = {
+    {1,-6,-4,6,4},
+};
+static const RawBSurface kSurfaces_780[] = {
+    {"container",kSurfCols_780_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_781[] = {
     {"map-building-shack-floor-01.img",0.5,1,16777215,0,0,0,0,0,0},
@@ -612,6 +895,16 @@ static const RawBImg kCeilImgs_781[] = {
 static const RawCollider kZoomIns_781[] = {
     {1,-5.6,-2.6,5.6,4.4},
 };
+static const RawCollider kSurfCols_781_0[] = {
+    {1,-5.6,-2.6,5.6,4.4},
+};
+static const RawCollider kSurfCols_781_1[] = {
+    {1,1.5,-5.5,6,-2.5},
+};
+static const RawBSurface kSurfaces_781[] = {
+    {"shack",kSurfCols_781_0,1,0,0,0,0},
+    {"asphalt",kSurfCols_781_1,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_782[] = {
     {"map-building-shack-floor-02.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -620,6 +913,16 @@ static const RawBImg kCeilImgs_782[] = {
 };
 static const RawCollider kZoomIns_782[] = {
     {1,-4.75,-2.75,4.75,4.75},
+};
+static const RawCollider kSurfCols_782_0[] = {
+    {1,-5,-3,5,5},
+};
+static const RawCollider kSurfCols_782_1[] = {
+    {1,-2,-5,2,-3},
+};
+static const RawBSurface kSurfaces_782[] = {
+    {"shack",kSurfCols_782_0,1,0,0,0,0},
+    {"asphalt",kSurfCols_782_1,1,0,0,0,0},
 };
 static const RawShape kShapes_783[] = {
     {{1,-8.75,1,-6.75,5},1,6171907},
@@ -637,6 +940,15 @@ static const RawBImg kCeilImgs_783[] = {
 static const RawCollider kZoomIns_783[] = {
     {1,-6.75,-3.75,8.75,6.75},
 };
+static const RawCollider kSurfCols_783_0[] = {
+    {1,-7,-4,9,7},
+    {1,-12.65,-5,-8.65,19},
+    {1,-8.75,1,-6.75,5},
+    {1,3,-5.75,7,-3.75},
+};
+static const RawBSurface kSurfaces_783[] = {
+    {"shack",kSurfCols_783_0,4,0,0,0,0},
+};
 static const RawShape kShapes_784[] = {
     {{1,-8.75,1,-6.75,5},1,6171907},
     {{1,3,-5.75,7,-3.75},1,6171907},
@@ -652,6 +964,15 @@ static const RawBImg kCeilImgs_784[] = {
 };
 static const RawCollider kZoomIns_784[] = {
     {1,-6.75,-3.75,8.75,6.75},
+};
+static const RawCollider kSurfCols_784_0[] = {
+    {1,-7,-4,9,7},
+    {1,-12.65,-3,-8.65,21},
+    {1,-8.75,1,-6.75,5},
+    {1,3,-5.75,7,-3.75},
+};
+static const RawBSurface kSurfaces_784[] = {
+    {"shack",kSurfCols_784_0,4,0,0,0,0},
 };
 static const RawShape kShapes_785[] = {
     {{1,-14,-9,14,9},1,4608356},
@@ -670,6 +991,17 @@ static const RawBImg kCeilImgs_785[] = {
 static const RawCollider kZoomIns_785[] = {
     {1,-12,-7,12,7},
 };
+static const RawCollider kSurfCols_785_0[] = {
+    {1,-14,-9,14,9},
+    {1,7,-11.65,11,-8.65},
+    {1,-11,8.65,-7,11.65},
+};
+static const RawBSurface kSurfaces_785[] = {
+    {"shack",kSurfCols_785_0,3,0,0,0,0},
+};
+static const RawBSurface kSurfaces_786[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
 static const RawShape kShapes_787[] = {
     {{1,24,-12.25,30,12.25},1,10066329},
     {{1,-30,-12.25,-24,12.25},1,10066329},
@@ -684,6 +1016,12 @@ static const RawBImg kCeilImgs_787[] = {
 };
 static const RawCollider kZoomIns_787[] = {
     {1,-24.5,-12.25,24.5,12.25},
+};
+static const RawCollider kSurfCols_787_0[] = {
+    {1,-32,-12.5,32,12.5},
+};
+static const RawBSurface kSurfaces_787[] = {
+    {"warehouse",kSurfCols_787_0,1,0,0,0,0},
 };
 static const RawShape kShapes_788[] = {
     {{1,22,-12.25,28,12.25},1,10066329},
@@ -700,6 +1038,12 @@ static const RawBImg kCeilImgs_788[] = {
 static const RawCollider kZoomIns_788[] = {
     {1,-22,-12.25,22,12.25},
 };
+static const RawCollider kSurfCols_788_0[] = {
+    {1,-27.5,-12.5,27.5,12.5},
+};
+static const RawBSurface kSurfaces_788[] = {
+    {"warehouse",kSurfCols_788_0,1,0,0,0,0},
+};
 static const RawShape kShapes_789[] = {
     {{1,24,-12.25,30,12.25},1,10066329},
     {{1,-30,-12.25,-24,12.25},1,10066329},
@@ -714,6 +1058,12 @@ static const RawBImg kCeilImgs_789[] = {
 };
 static const RawCollider kZoomIns_789[] = {
     {1,-24.5,-12.25,24.5,12.25},
+};
+static const RawCollider kSurfCols_789_0[] = {
+    {1,-32,-12.5,32,12.5},
+};
+static const RawBSurface kSurfaces_789[] = {
+    {"warehouse",kSurfCols_789_0,1,0,0,0,0},
 };
 static const RawShape kShapes_790[] = {
     {{1,-21,63,73,78},1,5855577},
@@ -742,6 +1092,14 @@ static const RawBImg kFloorImgs_790[] = {
     {"map-complex-warehouse-floor-02.img",1,1,16777215,-39.2,11.5,0,0,0,0},
     {"map-complex-warehouse-floor-03.img",1,1,16777215,-39.2,-32,0,0,0,0},
 };
+static const RawCollider kSurfCols_790_0[] = {
+    {1,-21,42,73,78},
+    {1,-42,-40,52,63},
+    {1,52,-20,108,42},
+};
+static const RawBSurface kSurfaces_790[] = {
+    {"asphalt",kSurfCols_790_0,3,0,0,0,0},
+};
 static const RawBImg kFloorImgs_791[] = {
     {"",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -750,6 +1108,12 @@ static const RawBImg kCeilImgs_791[] = {
 };
 static const RawCollider kZoomIns_791[] = {
     {1,-12.75,-10.5,5.75,10.5},
+};
+static const RawCollider kSurfCols_791_0[] = {
+    {1,-13.5,-10.5,6.5,10.5},
+};
+static const RawBSurface kSurfaces_791[] = {
+    {"container",kSurfCols_791_0,1,0,0,0,0},
 };
 static const RawShape kShapes_792[] = {
     {{1,-7,-7,7,7},1,15181895},
@@ -764,6 +1128,13 @@ static const RawBImg kCeilImgs_792[] = {
 };
 static const RawCollider kZoomIns_792[] = {
     {1,-6,-6,6,6},
+};
+static const RawCollider kSurfCols_792_0[] = {
+    {1,-7,-7,7,7},
+    {1,-2,-30.9,2,-6.899999999999999},
+};
+static const RawBSurface kSurfaces_792[] = {
+    {"shack",kSurfCols_792_0,2,0,0,0,0},
 };
 static const RawShape kShapes_793[] = {
     {{1,-15.25,-6.25,9.75,10.75},1,15181895},
@@ -780,6 +1151,15 @@ static const RawBImg kCeilImgs_793[] = {
 };
 static const RawCollider kZoomIns_793[] = {
     {1,-14.25,-5.25,8.75,9.75},
+};
+static const RawCollider kSurfCols_793_0[] = {
+    {1,-15.25,-6.25,9.75,10.75},
+    {1,-13.25,-10.75,9.75,-6.25},
+    {1,9.75,-10.75,15.25,8.75},
+    {1,-2,-34.75,2,-10.75},
+};
+static const RawBSurface kSurfaces_793[] = {
+    {"shack",kSurfCols_793_0,4,0,0,0,0},
 };
 static const RawShape kShapes_794[] = {
     {{1,-14,16,11,25},1,8671554},
@@ -802,6 +1182,29 @@ static const RawCollider kZoomIns_794[] = {
     {1,-31.5,-20.5,24.5,16.5},
     {1,-13.5,16.400000000000002,10.5,24.8},
 };
+static const RawCollider kSurfCols_794_0[] = {
+    {1,-31.5,-20.5,24.5,16.5},
+    {1,-14,16,11,25},
+    {1,-20,-20,20,20},
+};
+static const RawCollider kSurfCols_794_1[] = {
+    {1,-32,-25,-10,-9},
+    {1,-31,-9,-15,-3},
+    {1,-4,-27,0,-21},
+    {1,25,-1.5,31,4.5},
+};
+static const RawCollider kSurfCols_794_2[] = {
+    {1,-7,-1,3,9},
+};
+static const RawCollider kSurfCols_794_3[] = {
+    {1,-1,9.75,3,16.25},
+};
+static const RawBSurface kSurfaces_794[] = {
+    {"tile",kSurfCols_794_0,3,0,0,0,0},
+    {"asphalt",kSurfCols_794_1,4,0,0,0,0},
+    {"grass",kSurfCols_794_2,1,0,0,0,0},
+    {"house",kSurfCols_794_3,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_795[] = {
     {"map-building-mansion-gradient-01.img",4,1,16777215,-3.75,0.25,0,0,0,0},
     {"map-building-mansion-cellar-01a.img",0.5,1,16777215,11.5,5.5,0,0,0,0},
@@ -812,8 +1215,24 @@ static const RawCollider kZoomIns_795[] = {
     {1,11,-10,25,16},
     {1,-1,-10.5,11,13.5},
 };
+static const RawCollider kSurfCols_795_0[] = {
+    {1,11,-10,25,16},
+    {1,-1,-10,11,10},
+};
+static const RawBSurface kSurfaces_795[] = {
+    {"brick",kSurfCols_795_0,2,0,0,0,0},
+};
+static const RawBSurface kSurfaces_796[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
 static const RawBImg kCeilImgs_797[] = {
     {"map-building-archway-ceiling-01.img",0.5,1,16777215,0,0,0,0,0,0},
+};
+static const RawCollider kSurfCols_797_0[] = {
+    {1,-10,-1,10,1},
+};
+static const RawBSurface kSurfaces_797[] = {
+    {"grass",kSurfCols_797_0,1,0,0,0,0},
 };
 static const RawShape kShapes_798[] = {
     {{1,-26.75,-4,-5.25,18},1,7820585},
@@ -834,6 +1253,13 @@ static const RawCollider kZoomIns_798[] = {
     {1,16.75,-3.25,26.25,11.25},
     {1,-25.75,-5,-4.25,17},
 };
+static const RawCollider kSurfCols_798_0[] = {
+    {1,-5.25,-19.25,17.25,17.25},
+    {1,16.75,-3.25,26.25,11.25},
+};
+static const RawBSurface kSurfaces_798[] = {
+    {"tile",kSurfCols_798_0,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_799[] = {
     {"",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -842,6 +1268,12 @@ static const RawBImg kCeilImgs_799[] = {
 };
 static const RawCollider kZoomIns_799[] = {
     {1,-12.75,-10.5,5.75,10.5},
+};
+static const RawCollider kSurfCols_799_0[] = {
+    {1,-13.5,-10.5,6.5,10.5},
+};
+static const RawBSurface kSurfaces_799[] = {
+    {"container",kSurfCols_799_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_800[] = {
     {"map-building-barn-basement-floor-01.img",0.5,1,16777215,5.5,-0.5,0,0,0,0},
@@ -853,6 +1285,13 @@ static const RawCollider kZoomIns_800[] = {
     {1,-4,-7,8,7},
     {1,7.5,-5.5,14.5,-1.5},
 };
+static const RawCollider kSurfCols_800_0[] = {
+    {1,-15,-7,9,7},
+    {1,9,-5.5,15,-1.5},
+};
+static const RawBSurface kSurfaces_800[] = {
+    {"asphalt",kSurfCols_800_0,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_801[] = {
     {"map-building-barn-basement-floor-02.img",0.5,1,16777215,-2,-0.5,0,0,0,0},
 };
@@ -861,6 +1300,12 @@ static const RawBImg kCeilImgs_801[] = {
 };
 static const RawCollider kZoomIns_801[] = {
     {1,-6,-7,4,5},
+};
+static const RawCollider kSurfCols_801_0[] = {
+    {1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_801[] = {
+    {"asphalt",kSurfCols_801_0,1,0,0,0,0},
 };
 static const RawShape kShapes_802[] = {
     {{1,-5,10,5,14},1,12300935},
@@ -877,8 +1322,44 @@ static const RawCollider kZoomIns_802[] = {
     {1,-24.5,-14.8,24.5,10.8},
     {1,-5.5,9.5,5.5,14.5},
 };
+static const RawCollider kSurfCols_802_0[] = {
+    {1,-25,-15.2,25,11.2},
+    {1,-5.5,9.5,5.5,14.5},
+};
+static const RawBSurface kSurfaces_802[] = {
+    {"house",kSurfCols_802_0,2,0,0,0,0},
+};
+static const RawCollider kSurfCols_803_0[] = {
+    {1,-55,-25,55,25},
+};
+static const RawBSurface kSurfaces_803[] = {
+    {"grass",kSurfCols_803_0,1,0,0,0,0},
+};
+static const RawCollider kSurfCols_804_0[] = {
+    {1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_804[] = {
+    {"grass",kSurfCols_804_0,1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_805[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawSoundEmitter kSoundEmitters_805[] = {
+    {"ambient_waves_01","ambient",0,0,15,35,1,1},
+};
 static const RawBImg kFloorImgs_806[] = {
     {"map-complex-warehouse-floor-05.img",1,1,16777215,81,10,0,0,0,0},
+};
+static const RawCollider kSurfCols_806_0[] = {
+    {1,0,0,0,0},
+};
+static const RawCollider kSurfCols_806_1[] = {
+    {1,39,-22,83,16},
+    {1,39.25,-48,50.75,-20},
+};
+static const RawBSurface kSurfaces_806[] = {
+    {"grass",kSurfCols_806_0,1,0,0,0,0},
+    {"asphalt",kSurfCols_806_1,2,0,0,0,0},
 };
 static const RawShape kShapes_807[] = {
     {{1,-30,-18.5,30,23.5},1,2499104},
@@ -913,6 +1394,28 @@ static const RawCollider kZoomIns_807[] = {
     {1,33,22.5,59,30.5},
     {1,-18,-33.5,18,-17.5},
 };
+static const RawCollider kSurfCols_807_0[] = {
+    {1,-58,-4.5,-15.5,19.5},
+    {1,-58,19.5,-26,27},
+    {1,-58,-22.5,-30,-4.5},
+    {1,29.5,-23.5,58.5,2.5},
+    {1,39,2.5,44,16.5},
+    {1,-15.5,-17.5,29.5,23.5},
+    {1,-18,-33.5,18,-17.5},
+};
+static const RawCollider kSurfCols_807_1[] = {
+    {1,-29,-17.5,-16,-4.5},
+    {1,29.5,2,38.5,23},
+};
+static const RawCollider kSurfCols_807_2[] = {
+    {1,45,5.5,58,27.5},
+    {1,39,16.5,45,27.5},
+};
+static const RawBSurface kSurfaces_807[] = {
+    {"house",kSurfCols_807_0,7,0,0,0,0},
+    {"tile",kSurfCols_807_1,2,0,0,0,0},
+    {"asphalt",kSurfCols_807_2,2,0,0,0,0},
+};
 static const RawShape kShapes_808[] = {
     {{1,-40,-30,40,30},1,7820585},
 };
@@ -932,6 +1435,24 @@ static const RawCollider kZoomIns_808[] = {
     {1,-26.5,-21,3,23},
     {1,3,-21,16.5,-3.5},
 };
+static const RawCollider kSurfCols_808_0[] = {
+    {1,-15.5,-20.5,2.5,22.5},
+    {1,2.5,-20.5,17.5,-4.5},
+    {1,-26.5,-12.5,-15.5,7.5},
+};
+static const RawCollider kSurfCols_808_1[] = {
+    {1,30.5,4.5,43.5,18.5},
+    {1,30.5,-20.5,56.5,4.5},
+    {1,17.5,-20.5,30.5,-8.5},
+};
+static const RawCollider kSurfCols_808_2[] = {
+    {1,-32.5,22.5,-4.5,30.5},
+};
+static const RawBSurface kSurfaces_808[] = {
+    {"bunker",kSurfCols_808_0,3,0,0,0,0},
+    {"asphalt",kSurfCols_808_1,3,0,0,0,0},
+    {"brick",kSurfCols_808_2,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_809[] = {
     {"map-building-reserve-sideroom-01.img",0.5,1,16777215,0,-0.5,0,0,0,0},
 };
@@ -940,6 +1461,12 @@ static const RawBImg kCeilImgs_809[] = {
 };
 static const RawCollider kZoomIns_809[] = {
     {1,-8.5,-13,8.5,13},
+};
+static const RawCollider kSurfCols_809_0[] = {
+    {1,-9,-14,9,14},
+};
+static const RawBSurface kSurfaces_809[] = {
+    {"bunker",kSurfCols_809_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_810[] = {
     {"map-building-reserve-sideroom-02.img",0.5,1,16777215,0,0,0,0,0,0},
@@ -950,6 +1477,12 @@ static const RawBImg kCeilImgs_810[] = {
 static const RawCollider kZoomIns_810[] = {
     {1,-14,-4.5,14,5.5},
 };
+static const RawCollider kSurfCols_810_0[] = {
+    {1,-15,-5,15,6},
+};
+static const RawBSurface kSurfaces_810[] = {
+    {"bunker",kSurfCols_810_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_811[] = {
     {"map-building-reserve-vault-01.img",0.5,1,16777215,-1,0,0,0,0,0},
 };
@@ -958,6 +1491,12 @@ static const RawBImg kCeilImgs_811[] = {
 };
 static const RawCollider kZoomIns_811[] = {
     {1,-14,-13,14,13},
+};
+static const RawCollider kSurfCols_811_0[] = {
+    {1,-14,-13,14,13},
+};
+static const RawBSurface kSurfaces_811[] = {
+    {"container",kSurfCols_811_0,1,0,0,0,0},
 };
 static const RawShape kShapes_812[] = {
     {{1,-20.5,-20.5,20.5,20.5},1,5252110},
@@ -980,6 +1519,13 @@ static const RawBEmitter kEmitters_812[] = {
 static const RawCollider kZoomIns_812[] = {
     {1,-20,-18,18,20},
 };
+static const RawCollider kSurfCols_812_0[] = {
+    {1,-20.5,-20.5,20.5,20.5},
+    {1,-26.5,-1,-20.5,3},
+};
+static const RawBSurface kSurfaces_812[] = {
+    {"house",kSurfCols_812_0,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_813[] = {
     {"map-building-saloon-cellar-01.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -989,8 +1535,20 @@ static const RawBImg kCeilImgs_813[] = {
 static const RawCollider kZoomIns_813[] = {
     {1,-15,-9,15,9},
 };
+static const RawCollider kSurfCols_813_0[] = {
+    {1,-15,-9,15,9},
+};
+static const RawBSurface kSurfaces_813[] = {
+    {"brick",kSurfCols_813_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_814[] = {
     {"map-bunker-generic-floor-01.img",0.5,1,16777215,0,0,3,0,0,0},
+};
+static const RawCollider kSurfCols_814_0[] = {
+    {1,-3.75,-2,2.75,2},
+};
+static const RawBSurface kSurfaces_814[] = {
+    {"container",kSurfCols_814_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_815[] = {
     {"map-bunker-statue-chamber-floor-01.img",0.5,1,16777215,3.5,0,3,0,0,0},
@@ -1001,8 +1559,20 @@ static const RawBImg kCeilImgs_815[] = {
 static const RawCollider kZoomIns_815[] = {
     {1,2.5,-3,10.5,3},
 };
+static const RawCollider kSurfCols_815_0[] = {
+    {1,2.5,-3,10.5,3},
+};
+static const RawBSurface kSurfaces_815[] = {
+    {"bunker",kSurfCols_815_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_816[] = {
     {"map-bunker-generic-floor-01.img",0.5,1,16777215,0,0,3,0,0,0},
+};
+static const RawCollider kSurfCols_816_0[] = {
+    {1,-3.75,-2,2.75,2},
+};
+static const RawBSurface kSurfaces_816[] = {
+    {"container",kSurfCols_816_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_817[] = {
     {"map-bunker-statue-chamber-floor-01.img",0.5,1,16777215,3.5,0,3,0,0,0},
@@ -1013,6 +1583,12 @@ static const RawBImg kCeilImgs_817[] = {
 static const RawCollider kZoomIns_817[] = {
     {1,2.5,-3,10.5,3},
 };
+static const RawCollider kSurfCols_817_0[] = {
+    {1,2.5,-3,10.5,3},
+};
+static const RawBSurface kSurfaces_817[] = {
+    {"bunker",kSurfCols_817_0,1,0,0,0,0},
+};
 static const RawShape kShapes_818[] = {
     {{1,40.75,-54,100.75,55},1,3815994},
     {{1,54.5,54,100.5,74},1,3815994},
@@ -1021,6 +1597,18 @@ static const RawShape kShapes_818[] = {
 };
 static const RawBImg kFloorImgs_818[] = {
     {"map-complex-warehouse-floor-04.img",1,1,16777215,81,10,0,0,0,0},
+};
+static const RawCollider kSurfCols_818_0[] = {
+    {1,0,0,0,0},
+};
+static const RawCollider kSurfCols_818_1[] = {
+    {1,40.75,-54,100.75,55},
+    {1,54.5,54,100.5,74},
+    {1,100.5,-54,121.5,-5},
+};
+static const RawBSurface kSurfaces_818[] = {
+    {"grass",kSurfCols_818_0,1,0,0,0,0},
+    {"asphalt",kSurfCols_818_1,3,0,0,0,0},
 };
 static const RawBImg kFloorImgs_819[] = {
     {"",0.5,1,16777215,0,0,0,0,0,0},
@@ -1043,6 +1631,12 @@ static const RawBImg kCeilImgs_821[] = {
 static const RawCollider kZoomIns_821[] = {
     {1,-24.5,-12.25,24.5,12.25},
 };
+static const RawCollider kSurfCols_821_0[] = {
+    {1,-32,-12.5,32,12.5},
+};
+static const RawBSurface kSurfaces_821[] = {
+    {"warehouse",kSurfCols_821_0,1,0,0,0,0},
+};
 static const RawShape kShapes_822[] = {
     {{1,-5,10,5,14},1,12300935},
     {{1,-24.5,-14.8,24.5,10.8},1,3816739},
@@ -1057,6 +1651,13 @@ static const RawBImg kCeilImgs_822[] = {
 static const RawCollider kZoomIns_822[] = {
     {1,-24.5,-14.8,24.5,10.8},
     {1,-5.5,9.5,5.5,14.5},
+};
+static const RawCollider kSurfCols_822_0[] = {
+    {1,-25,-15.2,25,11.2},
+    {1,-5.5,9.5,5.5,14.5},
+};
+static const RawBSurface kSurfaces_822[] = {
+    {"house",kSurfCols_822_0,2,0,0,0,0},
 };
 static const RawShape kShapes_823[] = {
     {{1,24,-12.25,30,12.25},1,10066329},
@@ -1073,6 +1674,15 @@ static const RawBImg kCeilImgs_823[] = {
 static const RawCollider kZoomIns_823[] = {
     {1,-24.5,-12.25,24.5,12.25},
 };
+static const RawCollider kSurfCols_823_0[] = {
+    {1,-32,-12.5,32,12.5},
+};
+static const RawBSurface kSurfaces_823[] = {
+    {"warehouse",kSurfCols_823_0,1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_824[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
 static const RawBImg kFloorImgs_825[] = {
     {"map-building-house-floor-01.img",0.5,1,16777215,0,0,0,0,0,0},
     {"map-building-porch-01.img",0.5,1,16777215,-1,14.5,0,0,0,0},
@@ -1083,6 +1693,12 @@ static const RawBImg kCeilImgs_825[] = {
 };
 static const RawCollider kZoomIns_825[] = {
     {1,-14.5,-13,14.5,13},
+};
+static const RawCollider kSurfCols_825_0[] = {
+    {1,-14.5,-13,14.5,13},
+};
+static const RawBSurface kSurfaces_825[] = {
+    {"house",kSurfCols_825_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_826[] = {
     {"map-building-house-floor-02.img",0.5,1,16777215,0,0,0,0,0,0},
@@ -1102,6 +1718,12 @@ static const RawBImg kCeilImgs_826[] = {
 static const RawCollider kZoomIns_826[] = {
     {1,-14.5,-13,14.5,13},
 };
+static const RawCollider kSurfCols_826_0[] = {
+    {1,-14.5,-13,14.5,13},
+};
+static const RawBSurface kSurfaces_826[] = {
+    {"house",kSurfCols_826_0,1,0,0,0,0},
+};
 static const RawShape kShapes_827[] = {
     {{1,-18,-11.5,18,12.5},1,3823128},
     {{1,-17,-15,17,-11},1,6368528},
@@ -1120,6 +1742,17 @@ static const RawBEmitter kEmitters_827[] = {
 static const RawCollider kZoomIns_827[] = {
     {1,-19,-11.5,19,12.5},
     {1,1,-15,7,-11},
+};
+static const RawCollider kSurfCols_827_0[] = {
+    {1,-18,-15.5,18,12.5},
+};
+static const RawCollider kSurfCols_827_1[] = {
+    {1,1,-16.5,7,-11.5},
+    {1,-6,12.5,-2,14.5},
+};
+static const RawBSurface kSurfaces_827[] = {
+    {"house",kSurfCols_827_0,1,0,0,0,0},
+    {"asphalt",kSurfCols_827_1,2,0,0,0,0},
 };
 static const RawShape kShapes_828[] = {
     {{1,-14,16,11,25},1,8671554},
@@ -1142,6 +1775,29 @@ static const RawCollider kZoomIns_828[] = {
     {1,-31.5,-20.5,24.5,16.5},
     {1,-13.5,16.400000000000002,10.5,24.8},
 };
+static const RawCollider kSurfCols_828_0[] = {
+    {1,-31.5,-20.5,24.5,16.5},
+    {1,-14,16,11,25},
+    {1,-20,-20,20,20},
+};
+static const RawCollider kSurfCols_828_1[] = {
+    {1,-32,-25,-10,-9},
+    {1,-31,-9,-15,-3},
+    {1,-4,-27,0,-21},
+    {1,25,-1.5,31,4.5},
+};
+static const RawCollider kSurfCols_828_2[] = {
+    {1,-7,-1,3,9},
+};
+static const RawCollider kSurfCols_828_3[] = {
+    {1,-1,9.75,3,16.25},
+};
+static const RawBSurface kSurfaces_828[] = {
+    {"tile",kSurfCols_828_0,3,0,0,0,0},
+    {"asphalt",kSurfCols_828_1,4,0,0,0,0},
+    {"grass",kSurfCols_828_2,1,0,0,0,0},
+    {"house",kSurfCols_828_3,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_829[] = {
     {"map-building-mansion-gradient-01.img",4,1,16777215,-3.75,0.25,0,0,0,0},
     {"map-building-mansion-cellar-01a.img",0.5,1,16777215,11.5,5.5,0,0,0,0},
@@ -1152,6 +1808,13 @@ static const RawCollider kZoomIns_829[] = {
     {1,11,-10,25,16},
     {1,-1,-10.5,11,13.5},
 };
+static const RawCollider kSurfCols_829_0[] = {
+    {1,11,-10,25,16},
+    {1,-1,-10,11,10},
+};
+static const RawBSurface kSurfaces_829[] = {
+    {"brick",kSurfCols_829_0,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_830[] = {
     {"map-building-shilo-floor-01.img",0.5,1,16777215,0,0,0,0,0,0},
     {"map-building-porch-01.img",0.5,1,16777215,0,-13,2,0,0,0},
@@ -1161,6 +1824,12 @@ static const RawBImg kCeilImgs_830[] = {
 };
 static const RawCollider kZoomIns_830[] = {
     {1,-14.5,-11.5,14.5,11.5},
+};
+static const RawCollider kSurfCols_830_0[] = {
+    {1,-15,-12,15,12},
+};
+static const RawBSurface kSurfaces_830[] = {
+    {"shack",kSurfCols_830_0,1,0,0,0,0},
 };
 static const RawShape kShapes_831[] = {
     {{1,24,-12.25,30,12.25},1,10066329},
@@ -1177,11 +1846,55 @@ static const RawBImg kCeilImgs_831[] = {
 static const RawCollider kZoomIns_831[] = {
     {1,-24.5,-12.25,24.5,12.25},
 };
+static const RawCollider kSurfCols_831_0[] = {
+    {1,-32,-12.5,32,12.5},
+};
+static const RawBSurface kSurfaces_831[] = {
+    {"warehouse",kSurfCols_831_0,1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_832[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawBSurface kSurfaces_836[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawBSurface kSurfaces_837[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawBSurface kSurfaces_838[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawBSurface kSurfaces_839[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawCollider kSurfCols_840_0[] = {
+    {1,-16,-12,16,12},
+};
+static const RawBSurface kSurfaces_840[] = {
+    {"grass",kSurfCols_840_0,1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_841[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
 static const RawBImg kFloorImgs_842[] = {
     {"map-building-perch-floor.img",0.5,1,16777215,0,0,0,0,0,0},
 };
 static const RawBImg kCeilImgs_842[] = {
     {"map-building-perch-ceiling.img",0.5,1,16777215,0,0,0,0,0,0},
+};
+static const RawCollider kSurfCols_842_0[] = {
+    {1,-4.25,-5,4.25,5},
+    {1,3.75,-2,6.25,2},
+    {1,-6.25,-2,-3.75,2},
+};
+static const RawBSurface kSurfaces_842[] = {
+    {"shack",kSurfCols_842_0,3,0,0,0,0},
+};
+static const RawBSurface kSurfaces_843[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawSoundEmitter kSoundEmitters_843[] = {
+    {"ambient_waves_01","ambient",0,0,15,35,1,1},
 };
 static const RawShape kShapes_844[] = {
     {{1,-7,-7,7,7},1,15181895},
@@ -1199,6 +1912,13 @@ static const RawBImg kCeilImgs_844[] = {
 static const RawCollider kZoomIns_844[] = {
     {1,-6,-6,6,6},
 };
+static const RawCollider kSurfCols_844_0[] = {
+    {1,-7,-7,7,7},
+    {1,-2,-30.9,2,-6.899999999999999},
+};
+static const RawBSurface kSurfaces_844[] = {
+    {"shack",kSurfCols_844_0,2,0,0,0,0},
+};
 static const RawShape kShapes_845[] = {
     {{1,-7,-7,7,7},1,15181895},
     {{1,-2,-30.9,2,-6.899999999999999},1,6171907},
@@ -1214,6 +1934,13 @@ static const RawBImg kCeilImgs_845[] = {
 };
 static const RawCollider kZoomIns_845[] = {
     {1,-6,-6,6,6},
+};
+static const RawCollider kSurfCols_845_0[] = {
+    {1,-7,-7,7,7},
+    {1,-2,-30.9,2,-6.899999999999999},
+};
+static const RawBSurface kSurfaces_845[] = {
+    {"shack",kSurfCols_845_0,2,0,0,0,0},
 };
 static const RawShape kShapes_846[] = {
     {{1,24,-12.25,30,12.25},1,10066329},
@@ -1234,6 +1961,12 @@ static const RawBImg kCeilImgs_846[] = {
 static const RawCollider kZoomIns_846[] = {
     {1,-24.5,-12.25,24.5,12.25},
 };
+static const RawCollider kSurfCols_846_0[] = {
+    {1,-32,-12.5,32,12.5},
+};
+static const RawBSurface kSurfaces_846[] = {
+    {"warehouse",kSurfCols_846_0,1,0,0,0,0},
+};
 static const RawShape kShapes_847[] = {
     {{1,22,-12.25,28,12.25},1,10066329},
     {{1,-28,-12.25,-22,12.25},1,10066329},
@@ -1251,6 +1984,12 @@ static const RawBImg kCeilImgs_847[] = {
 };
 static const RawCollider kZoomIns_847[] = {
     {1,-22,-12.25,22,12.25},
+};
+static const RawCollider kSurfCols_847_0[] = {
+    {1,-27.5,-12.5,27.5,12.5},
+};
+static const RawBSurface kSurfaces_847[] = {
+    {"warehouse",kSurfCols_847_0,1,0,0,0,0},
 };
 static const RawShape kShapes_848[] = {
     {{1,24,-12.25,30,12.25},1,10066329},
@@ -1271,6 +2010,12 @@ static const RawBImg kCeilImgs_848[] = {
 static const RawCollider kZoomIns_848[] = {
     {1,-24.5,-12.25,24.5,12.25},
 };
+static const RawCollider kSurfCols_848_0[] = {
+    {1,-32,-12.5,32,12.5},
+};
+static const RawBSurface kSurfaces_848[] = {
+    {"warehouse",kSurfCols_848_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_849[] = {
     {"map-building-shack-floor-01.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -1282,6 +2027,16 @@ static const RawBImg kCeilImgs_849[] = {
 static const RawCollider kZoomIns_849[] = {
     {1,-5.6,-2.6,5.6,4.4},
 };
+static const RawCollider kSurfCols_849_0[] = {
+    {1,-5.6,-2.6,5.6,4.4},
+};
+static const RawCollider kSurfCols_849_1[] = {
+    {1,1.5,-5.5,6,-2.5},
+};
+static const RawBSurface kSurfaces_849[] = {
+    {"shack",kSurfCols_849_0,1,0,0,0,0},
+    {"asphalt",kSurfCols_849_1,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_850[] = {
     {"map-building-shack-floor-02.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -1291,6 +2046,16 @@ static const RawBImg kCeilImgs_850[] = {
 };
 static const RawCollider kZoomIns_850[] = {
     {1,-4.75,-2.75,4.75,4.75},
+};
+static const RawCollider kSurfCols_850_0[] = {
+    {1,-5,-3,5,5},
+};
+static const RawCollider kSurfCols_850_1[] = {
+    {1,-2,-5,2,-3},
+};
+static const RawBSurface kSurfaces_850[] = {
+    {"shack",kSurfCols_850_0,1,0,0,0,0},
+    {"asphalt",kSurfCols_850_1,1,0,0,0,0},
 };
 static const RawShape kShapes_851[] = {
     {{1,-8.75,1,-6.75,5},1,6171907},
@@ -1309,6 +2074,15 @@ static const RawBImg kCeilImgs_851[] = {
 static const RawCollider kZoomIns_851[] = {
     {1,-6.75,-3.75,8.75,6.75},
 };
+static const RawCollider kSurfCols_851_0[] = {
+    {1,-7,-4,9,7},
+    {1,-12.65,-5,-8.65,19},
+    {1,-8.75,1,-6.75,5},
+    {1,3,-5.75,7,-3.75},
+};
+static const RawBSurface kSurfaces_851[] = {
+    {"shack",kSurfCols_851_0,4,0,0,0,0},
+};
 static const RawBImg kFloorImgs_852[] = {
     {"map-building-outhouse-floor.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -1319,6 +2093,12 @@ static const RawBImg kCeilImgs_852[] = {
 static const RawCollider kZoomIns_852[] = {
     {1,-3.6,-1.7500000000000002,3.6,4.65},
 };
+static const RawCollider kSurfCols_852_0[] = {
+    {1,-3.75,-4.6,3.75,4.9},
+};
+static const RawBSurface kSurfaces_852[] = {
+    {"shack",kSurfCols_852_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_853[] = {
     {"map-building-outhouse-floor.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -1327,6 +2107,12 @@ static const RawBImg kCeilImgs_853[] = {
 };
 static const RawCollider kZoomIns_853[] = {
     {1,-3.6,-1.7500000000000002,3.6,4.65},
+};
+static const RawCollider kSurfCols_853_0[] = {
+    {1,-3.75,-4.6,3.75,4.9},
+};
+static const RawBSurface kSurfaces_853[] = {
+    {"shack",kSurfCols_853_0,1,0,0,0,0},
 };
 static const RawShape kShapes_854[] = {
     {{1,-5,10,5,14},1,12300935},
@@ -1346,6 +2132,13 @@ static const RawCollider kZoomIns_854[] = {
     {1,-24.5,-14.8,24.5,10.8},
     {1,-5.5,9.5,5.5,14.5},
 };
+static const RawCollider kSurfCols_854_0[] = {
+    {1,-25,-15.2,25,11.2},
+    {1,-5.5,9.5,5.5,14.5},
+};
+static const RawBSurface kSurfaces_854[] = {
+    {"house",kSurfCols_854_0,2,0,0,0,0},
+};
 static const RawShape kShapes_855[] = {
     {{1,-5,10,5,14},1,12300935},
     {{1,-24.5,-14.8,24.5,10.8},1,3816739},
@@ -1363,6 +2156,13 @@ static const RawBImg kCeilImgs_855[] = {
 static const RawCollider kZoomIns_855[] = {
     {1,-24.5,-14.8,24.5,10.8},
     {1,-5.5,9.5,5.5,14.5},
+};
+static const RawCollider kSurfCols_855_0[] = {
+    {1,-25,-15.2,25,11.2},
+    {1,-5.5,9.5,5.5,14.5},
+};
+static const RawBSurface kSurfaces_855[] = {
+    {"house",kSurfCols_855_0,2,0,0,0,0},
 };
 static const RawShape kShapes_856[] = {
     {{1,-26.75,-4,-5.25,18},1,7820585},
@@ -1386,6 +2186,13 @@ static const RawCollider kZoomIns_856[] = {
     {1,-5.25,-19.25,17.25,17.25},
     {1,16.75,-3.25,26.25,11.25},
     {1,-25.75,-5,-4.25,17},
+};
+static const RawCollider kSurfCols_856_0[] = {
+    {1,-5.25,-19.25,17.25,17.25},
+    {1,16.75,-3.25,26.25,11.25},
+};
+static const RawBSurface kSurfaces_856[] = {
+    {"tile",kSurfCols_856_0,2,0,0,0,0},
 };
 static const RawShape kShapes_857[] = {
     {{1,-42.25,-22,0.25,6},1,5855577},
@@ -1420,6 +2227,20 @@ static const RawCollider kZoomIns_857[] = {
     {1,-0.15000000000000036,-22,20.85,22},
     {1,20.5,3,42,22},
 };
+static const RawCollider kSurfCols_857_0[] = {
+    {1,-42.25,-1.25,-6.75,18.25},
+    {1,-7,5.75,0,18.25},
+    {1,-0.15000000000000036,-22,20.85,22},
+    {1,20.5,3,42,22},
+};
+static const RawCollider kSurfCols_857_1[] = {
+    {1,-42.5,-24.5,-0.5,-1.5},
+    {1,-6.5,-1.5,-0.5,5.5},
+};
+static const RawBSurface kSurfaces_857[] = {
+    {"tile",kSurfCols_857_0,4,0,0,0,0},
+    {"asphalt",kSurfCols_857_1,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_858[] = {
     {"map-building-house-floor-01.img",0.5,1,16777215,0,0,0,0,0,0},
     {"map-building-porch-01.img",0.5,1,16777215,-1,14.5,0,0,0,0},
@@ -1432,6 +2253,12 @@ static const RawBImg kCeilImgs_858[] = {
 };
 static const RawCollider kZoomIns_858[] = {
     {1,-14.5,-13,14.5,13},
+};
+static const RawCollider kSurfCols_858_0[] = {
+    {1,-14.5,-13,14.5,13},
+};
+static const RawBSurface kSurfaces_858[] = {
+    {"house",kSurfCols_858_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_859[] = {
     {"map-building-house-floor-02.img",0.5,1,16777215,0,0,0,0,0,0},
@@ -1452,6 +2279,12 @@ static const RawBImg kCeilImgs_859[] = {
 };
 static const RawCollider kZoomIns_859[] = {
     {1,-14.5,-13,14.5,13},
+};
+static const RawCollider kSurfCols_859_0[] = {
+    {1,-14.5,-13,14.5,13},
+};
+static const RawBSurface kSurfaces_859[] = {
+    {"house",kSurfCols_859_0,1,0,0,0,0},
 };
 static const RawShape kShapes_860[] = {
     {{1,-18,-11.5,18,12.5},1,3823128},
@@ -1474,6 +2307,17 @@ static const RawBEmitter kEmitters_860[] = {
 static const RawCollider kZoomIns_860[] = {
     {1,-19,-11.5,19,12.5},
     {1,1,-15,7,-11},
+};
+static const RawCollider kSurfCols_860_0[] = {
+    {1,-18,-15.5,18,12.5},
+};
+static const RawCollider kSurfCols_860_1[] = {
+    {1,1,-16.5,7,-11.5},
+    {1,-6,12.5,-2,14.5},
+};
+static const RawBSurface kSurfaces_860[] = {
+    {"house",kSurfCols_860_0,1,0,0,0,0},
+    {"asphalt",kSurfCols_860_1,2,0,0,0,0},
 };
 static const RawShape kShapes_861[] = {
     {{1,-14,16,11,25},1,8671554},
@@ -1503,6 +2347,29 @@ static const RawCollider kZoomIns_861[] = {
     {1,-31.5,-20.5,24.5,16.5},
     {1,-13.5,16.400000000000002,10.5,24.8},
 };
+static const RawCollider kSurfCols_861_0[] = {
+    {1,-31.5,-20.5,24.5,16.5},
+    {1,-14,16,11,25},
+    {1,-20,-20,20,20},
+};
+static const RawCollider kSurfCols_861_1[] = {
+    {1,-32,-25,-10,-9},
+    {1,-31,-9,-15,-3},
+    {1,-4,-27,0,-21},
+    {1,25,-1.5,31,4.5},
+};
+static const RawCollider kSurfCols_861_2[] = {
+    {1,-7,-1,3,9},
+};
+static const RawCollider kSurfCols_861_3[] = {
+    {1,-1,9.75,3,16.25},
+};
+static const RawBSurface kSurfaces_861[] = {
+    {"tile",kSurfCols_861_0,3,0,0,0,0},
+    {"asphalt",kSurfCols_861_1,4,0,0,0,0},
+    {"grass",kSurfCols_861_2,1,0,0,0,0},
+    {"house",kSurfCols_861_3,1,0,0,0,0},
+};
 static const RawShape kShapes_862[] = {
     {{1,-14,-9,14,9},1,4608356},
     {{1,-7.5,-3.75,7.5,3.75},1,5793921},
@@ -1522,6 +2389,17 @@ static const RawBImg kCeilImgs_862[] = {
 };
 static const RawCollider kZoomIns_862[] = {
     {1,-12,-7,12,7},
+};
+static const RawCollider kSurfCols_862_0[] = {
+    {1,-14,-9,14,9},
+    {1,7,-11.65,11,-8.65},
+    {1,-11,8.65,-7,11.65},
+};
+static const RawBSurface kSurfaces_862[] = {
+    {"shack",kSurfCols_862_0,3,0,0,0,0},
+};
+static const RawBSurface kSurfaces_863[] = {
+    {"grass",nullptr,0,0,0,0,0},
 };
 static const RawShape kShapes_864[] = {
     {{1,-31.5,-8,31.5,8},1,5197647},
@@ -1544,6 +2422,12 @@ static const RawBImg kCeilImgs_864[] = {
 static const RawCollider kZoomIns_864[] = {
     {1,-16.5,-7,16.5,7},
 };
+static const RawCollider kSurfCols_864_0[] = {
+    {1,-31.5,-8,31.5,8},
+};
+static const RawBSurface kSurfaces_864[] = {
+    {"asphalt",kSurfCols_864_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_865[] = {
     {"map-building-container-floor-01.img",0.5,1,2703694,0,0,0,0,0,0},
 };
@@ -1553,6 +2437,12 @@ static const RawBImg kCeilImgs_865[] = {
 };
 static const RawCollider kZoomIns_865[] = {
     {1,-2.5,-3.25,2.5,7.75},
+};
+static const RawCollider kSurfCols_865_0[] = {
+    {1,-2.5,-8,2.5,8},
+};
+static const RawBSurface kSurfaces_865[] = {
+    {"container",kSurfCols_865_0,1,0,0,0,0},
 };
 static const RawShape kShapes_866[] = {
     {{1,-8.5,-20.5,24.5,20.5},1,1130539},
@@ -1572,11 +2462,44 @@ static const RawCollider kZoomIns_866[] = {
     {1,-8,-20,24,20},
     {1,-25,-11,-8,20},
 };
+static const RawCollider kSurfCols_866_0[] = {
+    {1,-7.5,-20.5,23.5,20.5},
+};
+static const RawCollider kSurfCols_866_1[] = {
+    {1,-3.5,20.5,20.5,26.5},
+};
+static const RawCollider kSurfCols_866_2[] = {
+    {1,-3.5,-26.5,20.5,-20.5},
+};
+static const RawCollider kSurfCols_866_3[] = {
+    {1,-24.5,-10.5,-7.5,19.5},
+};
+static const RawBSurface kSurfaces_866[] = {
+    {"warehouse",kSurfCols_866_0,1,0,0,0,0},
+    {"warehouse",kSurfCols_866_1,1,0,0,0,0},
+    {"warehouse",kSurfCols_866_2,1,0,0,0,0},
+    {"house",kSurfCols_866_3,1,0,0,0,0},
+};
+static const RawCollider kSurfCols_868_0[] = {
+    {1,-55,-55,55,55},
+};
+static const RawBSurface kSurfaces_868[] = {
+    {"grass",kSurfCols_868_0,1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_869[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawBSurface kSurfaces_870[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
 static const RawBEmitter kEmitters_871[] = {
     {"campfire_smoke",0,0,0,1,0,1,1,0},
 };
 static const RawCollider kZoomIns_871[] = {
     {1,-15,-15,15,15},
+};
+static const RawBSurface kSurfaces_871[] = {
+    {"snow",nullptr,0,0,0,0,0},
 };
 static const RawShape kShapes_872[] = {
     {{1,-9,-9,9,9},1,10555920},
@@ -1592,6 +2515,28 @@ static const RawBImg kCeilImgs_872[] = {
 };
 static const RawCollider kZoomIns_872[] = {
     {1,-7,-7,7,7},
+};
+static const RawCollider kSurfCols_872_0[] = {
+    {1,-9,-9,9,9},
+    {1,-2,-11.65,2,-8.65},
+};
+static const RawBSurface kSurfaces_872[] = {
+    {"shack",kSurfCols_872_0,2,0,0,0,0},
+};
+static const RawBSurface kSurfaces_873[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawCollider kSurfCols_874_0[] = {
+    {1,-55,-55,55,55},
+};
+static const RawBSurface kSurfaces_874[] = {
+    {"grass",kSurfCols_874_0,1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_875[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawBSurface kSurfaces_876[] = {
+    {"grass",nullptr,0,0,0,0,0},
 };
 static const RawShape kShapes_877[] = {
     {{1,-8.5,-20.5,24.5,20.5},1,1130539},
@@ -1616,11 +2561,38 @@ static const RawCollider kZoomIns_877[] = {
     {1,-8,-20,24,20},
     {1,-25,-11,-8,20},
 };
+static const RawCollider kSurfCols_877_0[] = {
+    {1,-7.5,-20.5,23.5,20.5},
+};
+static const RawCollider kSurfCols_877_1[] = {
+    {1,-3.5,20.5,20.5,26.5},
+};
+static const RawCollider kSurfCols_877_2[] = {
+    {1,-3.5,-26.5,20.5,-20.5},
+};
+static const RawCollider kSurfCols_877_3[] = {
+    {1,-24.5,-10.5,-7.5,19.5},
+};
+static const RawBSurface kSurfaces_877[] = {
+    {"warehouse",kSurfCols_877_0,1,0,0,0,0},
+    {"warehouse",kSurfCols_877_1,1,0,0,0,0},
+    {"warehouse",kSurfCols_877_2,1,0,0,0,0},
+    {"house",kSurfCols_877_3,1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_879[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawBSurface kSurfaces_880[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
 static const RawBEmitter kEmitters_881[] = {
     {"campfire_smoke",0,0,0,1,0,1,1,0},
 };
 static const RawCollider kZoomIns_881[] = {
     {1,-15,-15,15,15},
+};
+static const RawBSurface kSurfaces_881[] = {
+    {"snow",nullptr,0,0,0,0,0},
 };
 static const RawShape kShapes_882[] = {
     {{1,-9,-9,9,9},1,10555920},
@@ -1637,6 +2609,28 @@ static const RawBImg kCeilImgs_882[] = {
 static const RawCollider kZoomIns_882[] = {
     {1,-7,-7,7,7},
 };
+static const RawCollider kSurfCols_882_0[] = {
+    {1,-9,-9,9,9},
+    {1,-2,-11.65,2,-8.65},
+};
+static const RawBSurface kSurfaces_882[] = {
+    {"shack",kSurfCols_882_0,2,0,0,0,0},
+};
+static const RawCollider kSurfCols_883_0[] = {
+    {1,-55,-55,55,55},
+};
+static const RawBSurface kSurfaces_883[] = {
+    {"grass",kSurfCols_883_0,1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_884[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawBSurface kSurfaces_885[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
+static const RawBSurface kSurfaces_886[] = {
+    {"grass",nullptr,0,0,0,0,0},
+};
 static const RawShape kShapes_887[] = {
     {{1,-3.6,4.2,3.6,15.8},1,6707790},
 };
@@ -1649,6 +2643,12 @@ static const RawBImg kCeilImgs_887[] = {
 static const RawCollider kZoomIns_887[] = {
     {1,-1.5,-3.5,1.5,3},
 };
+static const RawCollider kSurfCols_887_0[] = {
+    {1,-1.5,-3.25,1.5,3.25},
+};
+static const RawBSurface kSurfaces_887[] = {
+    {"container",kSurfCols_887_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_888[] = {
     {"map-bunker-chrys-chamber-floor-01a.img",0.5,1,16777215,0,1.85,0,0,0,0},
     {"map-bunker-chrys-chamber-floor-01b.img",0.5,1,16777215,11,-10.75,0,0,0,0},
@@ -1659,6 +2659,12 @@ static const RawBImg kCeilImgs_888[] = {
 static const RawCollider kZoomIns_888[] = {
     {1,-3.5,-21,25.5,-3},
 };
+static const RawCollider kSurfCols_888_0[] = {
+    {1,-3.5,-21,25.5,-3},
+};
+static const RawBSurface kSurfaces_888[] = {
+    {"bunker",kSurfCols_888_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_889[] = {
     {"map-bunker-chrys-chamber-floor-01a.img",0.5,1,16777215,0,1.85,0,0,0,0},
     {"map-bunker-chrys-chamber-floor-01b.img",0.5,1,16777215,11,-10.75,0,0,0,0},
@@ -1668,6 +2674,12 @@ static const RawBImg kCeilImgs_889[] = {
 };
 static const RawCollider kZoomIns_889[] = {
     {1,-3.5,-21,25.5,-3},
+};
+static const RawCollider kSurfCols_889_0[] = {
+    {1,-3.5,-21,25.5,-3},
+};
+static const RawBSurface kSurfaces_889[] = {
+    {"bunker",kSurfCols_889_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_890[] = {
     {"map-bunker-chrys-compartment-floor-01a.img",0.5,1,16777215,-12.5,-4.5,0,0,0,0},
@@ -1680,6 +2692,12 @@ static const RawBImg kCeilImgs_890[] = {
 static const RawCollider kZoomIns_890[] = {
     {1,-14,-11,14,15},
 };
+static const RawCollider kSurfCols_890_0[] = {
+    {1,-14,-11,14,15},
+};
+static const RawBSurface kSurfaces_890[] = {
+    {"tile",kSurfCols_890_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_891[] = {
     {"map-bunker-chrys-compartment-floor-01a.img",0.5,1,16777215,-12.5,-4.5,0,0,0,0},
     {"map-bunker-chrys-compartment-floor-01c.img",0.5,1,16777215,3.5,2,0,0,0,0},
@@ -1690,6 +2708,12 @@ static const RawBImg kCeilImgs_891[] = {
 };
 static const RawCollider kZoomIns_891[] = {
     {1,-14,-11,14,15},
+};
+static const RawCollider kSurfCols_891_0[] = {
+    {1,-14,-11,14,15},
+};
+static const RawBSurface kSurfaces_891[] = {
+    {"tile",kSurfCols_891_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_892[] = {
     {"map-bunker-chrys-compartment-floor-02a.img",0.5,1,16777215,0,-2.75,0,0,0,0},
@@ -1702,6 +2726,12 @@ static const RawBImg kCeilImgs_892[] = {
 static const RawCollider kZoomIns_892[] = {
     {1,-10,-11,10,11},
 };
+static const RawCollider kSurfCols_892_0[] = {
+    {1,-10,-10,10,10},
+};
+static const RawBSurface kSurfaces_892[] = {
+    {"bunker",kSurfCols_892_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_893[] = {
     {"map-bunker-chrys-compartment-floor-02a.img",0.5,1,16777215,0,-2.75,0,0,0,0},
     {"map-bunker-chrys-compartment-floor-02c.img",0.5,1,16777215,0,9.75,0,0,0,0},
@@ -1713,6 +2743,12 @@ static const RawBImg kCeilImgs_893[] = {
 static const RawCollider kZoomIns_893[] = {
     {1,-10,-11,10,11},
 };
+static const RawCollider kSurfCols_893_0[] = {
+    {1,-10,-10,10,10},
+};
+static const RawBSurface kSurfaces_893[] = {
+    {"bunker",kSurfCols_893_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_894[] = {
     {"map-bunker-chrys-compartment-floor-03a.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -1722,6 +2758,18 @@ static const RawBImg kCeilImgs_894[] = {
 };
 static const RawCollider kZoomIns_894[] = {
     {1,-10,-13,10,13},
+};
+static const RawCollider kSurfCols_894_0[] = {
+    {1,-10,-15,10,13},
+};
+static const RawCollider kSurfCols_894_1[] = {
+    {1,-10,7,10,15},
+    {1,-10,-6,-4,0},
+    {1,6,-6,10,0},
+};
+static const RawBSurface kSurfaces_894[] = {
+    {"bunker",kSurfCols_894_0,1,0,0,0,0},
+    {"grass",kSurfCols_894_1,3,0,0,0,0},
 };
 static const RawBImg kFloorImgs_895[] = {
     {"map-bunker-chrys-compartment-floor-03a.img",0.5,1,16777215,0,0,0,0,0,0},
@@ -1733,9 +2781,31 @@ static const RawBImg kCeilImgs_895[] = {
 static const RawCollider kZoomIns_895[] = {
     {1,-10,-13,10,13},
 };
+static const RawCollider kSurfCols_895_0[] = {
+    {1,-10,-15,10,13},
+};
+static const RawCollider kSurfCols_895_1[] = {
+    {1,-10,7,10,15},
+    {1,-10,-6,-4,0},
+    {1,6,-6,10,0},
+};
+static const RawBSurface kSurfaces_895[] = {
+    {"bunker",kSurfCols_895_0,1,0,0,0,0},
+    {"grass",kSurfCols_895_1,3,0,0,0,0},
+};
 static const RawBImg kFloorImgs_896[] = {
     {"map-bunker-generic-floor-01.img",0.5,1,16777215,0,0,0,0,0,0},
     {"map-bunker-generic-floor-01.img",0.5,1,16777215,-28.5,-77,2,0,0,0},
+};
+static const RawCollider kSurfCols_896_0[] = {
+    {1,-2,-3,2,3.5},
+};
+static const RawCollider kSurfCols_896_1[] = {
+    {1,-30.5,-80.5,-26.5,-74},
+};
+static const RawBSurface kSurfaces_896[] = {
+    {"container",kSurfCols_896_0,1,0,0,0,0},
+    {"container",kSurfCols_896_1,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_897[] = {
     {"map-bunker-cloud-floor-01.img",0.5,1,16777215,-4,-10,0,0,0,0},
@@ -1754,6 +2824,35 @@ static const RawCollider kZoomIns_897[] = {
     {1,23,-35.5,38,15.5},
     {1,19,-35.5,23,-29.5},
 };
+static const RawCollider kSurfCols_897_0[] = {
+    {1,-32.5,-5,-11.5,23},
+    {1,8.5,5,30.5,23},
+    {1,19,-35.5,29,-21.5},
+    {1,-19,-37,-9,-27},
+};
+static const RawCollider kSurfCols_897_1[] = {
+    {1,-25,-27,23,17},
+};
+static const RawCollider kSurfCols_897_2[] = {
+    {1,-14,-16.5,11,4.5},
+};
+static const RawCollider kSurfCols_897_3[] = {
+    {1,-11.5,17,8.5,38},
+    {1,-37,-37,-25,-5},
+    {1,-9,-42.5,19,-24.5},
+    {1,23,-21.5,37,5},
+};
+static const RawCollider kSurfCols_897_4[] = {
+    {1,20,12.5,29,21.5},
+    {1,-32,1.5,-28,12.5},
+};
+static const RawBSurface kSurfaces_897[] = {
+    {"tile",kSurfCols_897_0,4,0,0,0,0},
+    {"tile",kSurfCols_897_1,1,0,0,0,0},
+    {"grass",kSurfCols_897_2,1,0,0,0,0},
+    {"bunker",kSurfCols_897_3,4,0,0,0,0},
+    {"water",kSurfCols_897_4,2,1,1589851,1,11792639},
+};
 static const RawBImg kCeilImgs_898[] = {
     {"map-bunker-cloud-ceiling-01.img",1,1,6250335,-1.5,-6,0,0,0,0},
     {"map-bunker-cloud-ceiling-02.img",1,1,6250335,-0.25,-34,0,0,0,0},
@@ -1768,6 +2867,12 @@ static const RawCollider kZoomIns_899[] = {
 static const RawBImg kFloorImgs_900[] = {
     {"map-bunker-generic-floor-01.img",0.5,1,16777215,0,7.5,0,0,0,0},
 };
+static const RawCollider kSurfCols_900_0[] = {
+    {1,-2,4.5,2,11},
+};
+static const RawBSurface kSurfaces_900[] = {
+    {"container",kSurfCols_900_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_901[] = {
     {"map-bunker-egg-chamber-floor-01a.img",0.5,1,16777215,-0.15,-4.6,0,0,0,0},
     {"map-bunker-egg-chamber-floor-01b.img",0.5,1,16777215,0,9.24,0,0,0,0},
@@ -1777,6 +2882,12 @@ static const RawBImg kCeilImgs_901[] = {
 };
 static const RawCollider kZoomIns_901[] = {
     {1,-10,-13.5,10,4.5},
+};
+static const RawCollider kSurfCols_901_0[] = {
+    {1,-10,-13.5,10,4.5},
+};
+static const RawBSurface kSurfaces_901[] = {
+    {"bunker",kSurfCols_901_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_902[] = {
     {"map-bunker-egg-chamber-floor-01a.img",0.5,1,16777215,-0.15,-4.6,0,0,0,0},
@@ -1788,6 +2899,12 @@ static const RawBImg kCeilImgs_902[] = {
 static const RawCollider kZoomIns_902[] = {
     {1,-10,-13.5,10,4.5},
 };
+static const RawCollider kSurfCols_902_0[] = {
+    {1,-10,-13.5,10,4.5},
+};
+static const RawBSurface kSurfaces_902[] = {
+    {"bunker",kSurfCols_902_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_903[] = {
     {"map-bunker-egg-chamber-floor-01a.img",0.5,1,16777215,-0.15,-4.6,0,0,0,0},
     {"map-bunker-egg-chamber-floor-01b.img",0.5,1,16777215,0,9.25,0,0,0,0},
@@ -1797,6 +2914,12 @@ static const RawBImg kCeilImgs_903[] = {
 };
 static const RawCollider kZoomIns_903[] = {
     {1,-10,-13.5,10,4.5},
+};
+static const RawCollider kSurfCols_903_0[] = {
+    {1,-10,-13.5,10,4.5},
+};
+static const RawBSurface kSurfaces_903[] = {
+    {"bunker",kSurfCols_903_0,1,0,0,0,0},
 };
 static const RawShape kShapes_904[] = {
     {{1,14,-2,26.5,9},1,2894892},
@@ -1814,6 +2937,19 @@ static const RawCollider kZoomIns_904[] = {
     {1,13,-2,25.5,9},
     {1,25.5,-5.75,39,12.75},
 };
+static const RawCollider kSurfCols_904_0[] = {
+    {1,14,-2,26.5,9},
+    {1,25.5,-5.75,39,12.75},
+};
+static const RawCollider kSurfCols_904_1[] = {
+    {1,13,1.5,19.5,5.5},
+    {1,-18.5,-94,-14.5,-87.5},
+    {1,38,-53.75,42,-47.25},
+};
+static const RawBSurface kSurfaces_904[] = {
+    {"tile",kSurfCols_904_0,2,0,0,0,0},
+    {"container",kSurfCols_904_1,3,0,0,0,0},
+};
 static const RawBImg kFloorImgs_905[] = {
     {"map-bunker-hydra-chamber-floor-01a.img",0.5,1,16777215,17.5,3.5,0,0,0,0},
     {"map-bunker-hydra-chamber-floor-01b.img",0.5,1,16777215,3.5,2.5,0,0,0,0},
@@ -1830,6 +2966,17 @@ static const RawCollider kZoomIns_905[] = {
     {1,-20.5,-87.5,-9.5,-66.5},
     {1,26.5,-70,49.5,-54},
 };
+static const RawCollider kSurfCols_905_0[] = {
+    {1,-6,-6,13,12},
+};
+static const RawCollider kSurfCols_905_1[] = {
+    {1,-18.5,-87.5,-12.5,-71.5},
+    {1,31,-70,50,-54},
+};
+static const RawBSurface kSurfaces_905[] = {
+    {"bunker",kSurfCols_905_0,1,0,0,0,0},
+    {"tile",kSurfCols_905_1,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_906[] = {
     {"map-bunker-hydra-compartment-floor-01.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -1838,6 +2985,12 @@ static const RawBImg kCeilImgs_906[] = {
 };
 static const RawCollider kZoomIns_906[] = {
     {1,-10,-8.75,10,11.25},
+};
+static const RawCollider kSurfCols_906_0[] = {
+    {1,-9.5,-11,9.5,14},
+};
+static const RawBSurface kSurfaces_906[] = {
+    {"tile",kSurfCols_906_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_907[] = {
     {"map-bunker-hydra-compartment-floor-02.img",0.5,1,16777215,0,0,0,0,0,0},
@@ -1848,6 +3001,14 @@ static const RawBImg kCeilImgs_907[] = {
 static const RawCollider kZoomIns_907[] = {
     {1,-24.5,-16.5,20.5,22.5},
 };
+static const RawCollider kSurfCols_907_0[] = {
+    {1,-24.5,12,19.5,20},
+    {1,-8.5,7,3.5,12},
+    {1,-25,-21.5,25,12.5},
+};
+static const RawBSurface kSurfaces_907[] = {
+    {"tile",kSurfCols_907_0,3,0,0,0,0},
+};
 static const RawBImg kFloorImgs_908[] = {
     {"map-bunker-hydra-compartment-floor-03.img",0.5,1,16777215,0,-0.5,0,0,0,0},
 };
@@ -1856,6 +3017,12 @@ static const RawBImg kCeilImgs_908[] = {
 };
 static const RawCollider kZoomIns_908[] = {
     {1,-10,-7,10,8.5},
+};
+static const RawCollider kSurfCols_908_0[] = {
+    {1,-9,-6.75,9,10.75},
+};
+static const RawBSurface kSurfaces_908[] = {
+    {"bunker",kSurfCols_908_0,1,0,0,0,0},
 };
 static const RawShape kShapes_909[] = {
     {{1,-3.6,4.2,3.6,15.8},1,6707790},
@@ -1869,6 +3036,20 @@ static const RawBImg kCeilImgs_909[] = {
 static const RawCollider kZoomIns_909[] = {
     {1,-3.5,4.4,3.5,15.6},
 };
+static const RawCollider kSurfCols_909_0[] = {
+    {1,-2,4.5,2,11},
+};
+static const RawCollider kSurfCols_909_1[] = {
+    {1,-3.75,11,3.75,16},
+};
+static const RawCollider kSurfCols_909_2[] = {
+    {1,3.75,11.5,6.25,16},
+};
+static const RawBSurface kSurfaces_909[] = {
+    {"container",kSurfCols_909_0,1,0,0,0,0},
+    {"shack",kSurfCols_909_1,1,0,0,0,0},
+    {"asphalt",kSurfCols_909_2,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_910[] = {
     {"map-bunker-storm-chamber-floor-01a.img",0.5,1,16777215,8.5,-4.5,0,0,0,0},
     {"map-bunker-storm-chamber-floor-01b.img",0.5,1,16777215,0,9.25,0,0,0,0},
@@ -1878,6 +3059,16 @@ static const RawBImg kCeilImgs_910[] = {
 };
 static const RawCollider kZoomIns_910[] = {
     {1,-9.5,-14,26.5,5},
+};
+static const RawCollider kSurfCols_910_0[] = {
+    {1,-9.5,-13.4,11.5,4.6},
+};
+static const RawCollider kSurfCols_910_1[] = {
+    {1,11.5,-13.5,26.5,2.5},
+};
+static const RawBSurface kSurfaces_910[] = {
+    {"bunker",kSurfCols_910_0,1,0,0,0,0},
+    {"tile",kSurfCols_910_1,1,0,0,0,0},
 };
 static const RawShape kShapes_911[] = {
     {{1,14.5,0.8500000000000001,25.5,5.85},1,2703694},
@@ -1895,6 +3086,15 @@ static const RawCollider kZoomIns_911[] = {
     {1,13.5,0.8500000000000001,24.5,5.85},
     {1,42,-35.05,53,-30.049999999999997},
 };
+static const RawCollider kSurfCols_911_0[] = {
+    {1,13,1.5,19.5,5.5},
+    {1,41,-34.5,47.5,-30.5},
+    {1,14,0.8500000000000001,30,5.85},
+    {1,42.5,-35.05,58.5,-30.049999999999997},
+};
+static const RawBSurface kSurfaces_911[] = {
+    {"container",kSurfCols_911_0,4,0,0,0,0},
+};
 static const RawBImg kFloorImgs_912[] = {
     {"map-bunker-conch-chamber-floor-01.img",0.5,1,16777215,4,5,0,0,0,0},
     {"map-bunker-conch-chamber-floor-02.img",0.5,1,16777215,34.86,-29.9,0,0,0,0},
@@ -1910,6 +3110,13 @@ static const RawCollider kZoomIns_912[] = {
     {1,-11.5,-1.5,13.5,8.5},
     {1,11.5,-34.5,42,-25.5},
 };
+static const RawCollider kSurfCols_912_0[] = {
+    {1,-11.5,0.5,13.5,7.5},
+    {1,14.5,-34.5,41.5,-25.5},
+};
+static const RawBSurface kSurfaces_912[] = {
+    {"tile",kSurfCols_912_0,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_913[] = {
     {"map-bunker-conch-compartment-floor-01a.img",0.5,1,16777215,-3,-0.75,0,0,0,0},
     {"map-bunker-conch-compartment-floor-01b.img",0.5,1,16777215,9.75,-17.5,0,0,0,0},
@@ -1924,6 +3131,12 @@ static const RawCollider kZoomIns_913[] = {
     {1,-14,-13,11,11},
     {1,5.5,-17,13.5,-12},
 };
+static const RawCollider kSurfCols_913_0[] = {
+    {1,-14,-18,16,13},
+};
+static const RawBSurface kSurfaces_913[] = {
+    {"water",kSurfCols_913_0,1,0,0,0,0},
+};
 static const RawShape kShapes_914[] = {
     {{1,-2,-2.25,2,4.25},1,3815994},
 };
@@ -1936,6 +3149,12 @@ static const RawBImg kCeilImgs_914[] = {
 static const RawCollider kZoomIns_914[] = {
     {1,-2,-2.5,2,4},
 };
+static const RawCollider kSurfCols_914_0[] = {
+    {1,-2,-2.25,2,4.25},
+};
+static const RawBSurface kSurfaces_914[] = {
+    {"container",kSurfCols_914_0,1,0,0,0,0},
+};
 static const RawShape kShapes_915[] = {
     {{1,-2,-2.25,2,4.25},1,3815994},
 };
@@ -1947,6 +3166,12 @@ static const RawBImg kCeilImgs_915[] = {
 };
 static const RawCollider kZoomIns_915[] = {
     {1,-2,-2.5,2,4},
+};
+static const RawCollider kSurfCols_915_0[] = {
+    {1,-2,-2.25,2,4.25},
+};
+static const RawBSurface kSurfaces_915[] = {
+    {"container",kSurfCols_915_0,1,0,0,0,0},
 };
 static const RawShape kShapes_916[] = {
     {{1,-5,-5,5,5},1,1984867},
@@ -1974,6 +3199,12 @@ static const RawCollider kZoomIns_917[] = {
     {1,-7,17.5,-1,23.5},
     {1,1,-17.5,7,-11.5},
 };
+static const RawCollider kSurfCols_917_0[] = {
+    {1,-38,-24.75,38,31.25},
+};
+static const RawBSurface kSurfaces_917[] = {
+    {"tile",kSurfCols_917_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_918[] = {
     {"",0.5,1,6250335,0,0,0,0,0,0},
 };
@@ -1982,6 +3213,12 @@ static const RawBImg kCeilImgs_918[] = {
 };
 static const RawCollider kZoomIns_918[] = {
     {1,-3.75,-2,3.75,2},
+};
+static const RawCollider kSurfCols_918_0[] = {
+    {1,0,0,0,0},
+};
+static const RawBSurface kSurfaces_918[] = {
+    {"water",kSurfCols_918_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_919[] = {
     {"map-bunker-crossing-compartment-floor-02.img",0.5,1,16777215,-22.5,-10,0,0,0,0},
@@ -1998,6 +3235,12 @@ static const RawCollider kZoomIns_919[] = {
     {1,-18,-11.5,26,17.5},
     {1,-26.5,-20,-17.5,-2},
 };
+static const RawCollider kSurfCols_919_0[] = {
+    {1,-18,-14.5,16,20.5},
+};
+static const RawBSurface kSurfaces_919[] = {
+    {"water",kSurfCols_919_0,1,0,0,0,0},
+};
 static const RawShape kShapes_920[] = {
     {{1,-3.6,4.2,3.6,15.8},1,6707790},
 };
@@ -2010,6 +3253,17 @@ static const RawBImg kCeilImgs_920[] = {
 static const RawCollider kZoomIns_920[] = {
     {1,-3.5,4.4,3.5,15.6},
 };
+static const RawCollider kSurfCols_920_0[] = {
+    {1,-2,4.5,2,11},
+};
+static const RawCollider kSurfCols_920_1[] = {
+    {1,-3.75,11,3.75,16},
+    {1,3.75,11.5,6.25,16},
+};
+static const RawBSurface kSurfaces_920[] = {
+    {"container",kSurfCols_920_0,1,0,0,0,0},
+    {"shack",kSurfCols_920_1,2,0,0,0,0},
+};
 static const RawBImg kFloorImgs_921[] = {
     {"map-bunker-hatchet-chamber-floor-01a.img",0.5,1,16777215,0,-4.5,0,0,0,0},
     {"map-bunker-hatchet-chamber-floor-01b.img",0.5,1,16777215,0,9.25,0,0,0,0},
@@ -2021,6 +3275,12 @@ static const RawBImg kCeilImgs_921[] = {
 static const RawCollider kZoomIns_921[] = {
     {1,-16,-13.65,10,4.85},
 };
+static const RawCollider kSurfCols_921_0[] = {
+    {1,-16,-13.4,10,4.6},
+};
+static const RawBSurface kSurfaces_921[] = {
+    {"bunker",kSurfCols_921_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_922[] = {
     {"map-bunker-hatchet-compartment-floor-01.img",0.5,1,16777215,0,0.5,0,0,0,0},
 };
@@ -2029,6 +3289,12 @@ static const RawBImg kCeilImgs_922[] = {
 };
 static const RawCollider kZoomIns_922[] = {
     {1,-16,-12.5,16,12.5},
+};
+static const RawCollider kSurfCols_922_0[] = {
+    {1,-16,-13,16,13},
+};
+static const RawBSurface kSurfaces_922[] = {
+    {"tile",kSurfCols_922_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_923[] = {
     {"map-bunker-hatchet-compartment-floor-02a.img",0.5,1,16777215,4,-8.25,0,0,0,0},
@@ -2042,6 +3308,12 @@ static const RawBImg kCeilImgs_923[] = {
 static const RawCollider kZoomIns_923[] = {
     {1,-16.5,-15,15.5,15},
 };
+static const RawCollider kSurfCols_923_0[] = {
+    {1,-16,-15,16,15},
+};
+static const RawBSurface kSurfaces_923[] = {
+    {"tile",kSurfCols_923_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_924[] = {
     {"map-bunker-hatchet-compartment-floor-03a.img",0.5,1,16777215,-14.5,-8.5,0,0,0,0},
     {"map-bunker-hatchet-compartment-floor-03b.img",0.5,1,16777215,-9,3,0,0,0,0},
@@ -2053,6 +3325,12 @@ static const RawBImg kCeilImgs_924[] = {
 };
 static const RawCollider kZoomIns_924[] = {
     {1,-19,-9.5,19,9.5},
+};
+static const RawCollider kSurfCols_924_0[] = {
+    {1,-19,-10,19,10},
+};
+static const RawBSurface kSurfaces_924[] = {
+    {"tile",kSurfCols_924_0,1,0,0,0,0},
 };
 static const RawShape kShapes_925[] = {
     {{1,-2,4.25,2,10.75},1,6946816},
@@ -2066,6 +3344,12 @@ static const RawBImg kCeilImgs_925[] = {
 static const RawCollider kZoomIns_925[] = {
     {1,-2,5,2,11.5},
 };
+static const RawCollider kSurfCols_925_0[] = {
+    {1,-2,4.5,2,11},
+};
+static const RawBSurface kSurfaces_925[] = {
+    {"container",kSurfCols_925_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_926[] = {
     {"map-bunker-eye-chamber-floor-01a.img",0.5,1,16777215,0,-8.5,0,0,0,0},
     {"map-bunker-eye-chamber-floor-01b.img",0.5,1,16777215,13,-23,0,0,0,0},
@@ -2076,6 +3360,12 @@ static const RawBImg kCeilImgs_926[] = {
 static const RawCollider kZoomIns_926[] = {
     {1,-14,-29,14,5},
 };
+static const RawCollider kSurfCols_926_0[] = {
+    {1,-14,-29,14,5},
+};
+static const RawBSurface kSurfaces_926[] = {
+    {"bunker",kSurfCols_926_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_927[] = {
     {"map-bunker-eye-compartment-floor-01.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -2084,6 +3374,12 @@ static const RawBImg kCeilImgs_927[] = {
 };
 static const RawCollider kZoomIns_927[] = {
     {1,-10,-10,10,10},
+};
+static const RawCollider kSurfCols_927_0[] = {
+    {1,-10,-10,10,10},
+};
+static const RawBSurface kSurfaces_927[] = {
+    {"tile",kSurfCols_927_0,1,0,0,0,0},
 };
 static const RawShape kShapes_928[] = {
     {{1,-2,-2.25,2,4.25},1,10244368},
@@ -2097,6 +3393,12 @@ static const RawBImg kCeilImgs_928[] = {
 static const RawCollider kZoomIns_928[] = {
     {1,-2,-2.5,2,4},
 };
+static const RawCollider kSurfCols_928_0[] = {
+    {1,-2,-2.25,2,4.25},
+};
+static const RawBSurface kSurfaces_928[] = {
+    {"container",kSurfCols_928_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_929[] = {
     {"map-bunker-vent-02.img",0.5,1,16777215,0,0,0,0,0,0},
 };
@@ -2109,6 +3411,12 @@ static const RawBImg kCeilImgs_930[] = {
 static const RawCollider kZoomIns_930[] = {
     {1,-15.5,-10.5,15.5,10.5},
 };
+static const RawCollider kSurfCols_930_0[] = {
+    {1,-16,-11,16,11},
+};
+static const RawBSurface kSurfaces_930[] = {
+    {"tile",kSurfCols_930_0,1,0,0,0,0},
+};
 static const RawBImg kFloorImgs_931[] = {
     {"map-bunker-twins-compartment-floor-01.img",0.5,1,16777215,0,-2,0,0,0,0},
 };
@@ -2117,6 +3425,12 @@ static const RawBImg kCeilImgs_931[] = {
 };
 static const RawCollider kZoomIns_931[] = {
     {1,-10,-7,10,8.5},
+};
+static const RawCollider kSurfCols_931_0[] = {
+    {1,-9,-6.75,9,10.75},
+};
+static const RawBSurface kSurfaces_931[] = {
+    {"bunker",kSurfCols_931_0,1,0,0,0,0},
 };
 static const RawBImg kFloorImgs_932[] = {
     {"",0.5,1,16777215,0,0,0,0,0,0},
@@ -2230,8 +3544,8 @@ static const RawBImg kFloorImgs_968[] = {
     {"",0.5,1,16777215,0,0,0,0,0,0},
 };
 static const RawLayer kLayers_969[] = {
-    {"bridge_lg_01",0,0,0,1,0},
-    {"bridge_lg_under_01",0,0,0,1,0},
+    {"bridge_lg_01",0,0,0,1,0,0},
+    {"bridge_lg_under_01",0,0,0,1,1,0},
 };
 static const RawStair kStairs_969[] = {
     {{1,-11.5,-11,11.5,-8},0,1,0,1},
@@ -2241,8 +3555,8 @@ static const RawCollider kMask_969[] = {
     {1,-12,-8,12,8},
 };
 static const RawLayer kLayers_970[] = {
-    {"bridge_xlg_01",0,0,0,1,0},
-    {"bridge_xlg_under_01",0,0,0,1,0},
+    {"bridge_xlg_01",0,0,0,1,0,0},
+    {"bridge_xlg_under_01",0,0,0,1,1,0},
 };
 static const RawStair kStairs_970[] = {
     {{1,-11.5,-15,11.5,-12},0,1,0,1},
@@ -2252,8 +3566,8 @@ static const RawCollider kMask_970[] = {
     {1,-12,-12,12,12},
 };
 static const RawLayer kLayers_971[] = {
-    {"bridge_md_01",0,0,0,1,0},
-    {"bridge_md_under_01",0,0,0,1,0},
+    {"bridge_md_01",0,0,0,1,0,0},
+    {"bridge_md_under_01",0,0,0,1,1,0},
 };
 static const RawStair kStairs_971[] = {
     {{1,-5.5,-6,5.5,-3.5},0,1,0,1},
@@ -2263,8 +3577,8 @@ static const RawCollider kMask_971[] = {
     {1,-6.5,-3.6,6.5,3.6},
 };
 static const RawLayer kLayers_972[] = {
-    {"statue_building_03",0,0,0,1,0},
-    {"statue_underground_03",0,0,0,1,0},
+    {"statue_building_03",0,0,0,1,0,0},
+    {"statue_underground_03",0,0,0,1,0,0},
 };
 static const RawStair kStairs_972[] = {
     {{1,-3.6,-2,1.6,2},1,0,0,0},
@@ -2273,8 +3587,8 @@ static const RawCollider kMask_972[] = {
     {1,1.7000000000000002,-4,9.7,4},
 };
 static const RawLayer kLayers_973[] = {
-    {"statue_building_04",0,0,0,1,0},
-    {"statue_underground_04",0,0,0,1,0},
+    {"statue_building_04",0,0,0,1,0,0},
+    {"statue_underground_04",0,0,0,1,0,0},
 };
 static const RawStair kStairs_973[] = {
     {{1,-3.6,-2,1.6,2},1,0,0,0},
@@ -2283,8 +3597,8 @@ static const RawCollider kMask_973[] = {
     {1,1.7000000000000002,-4,9.7,4},
 };
 static const RawLayer kLayers_974[] = {
-    {"barn_basement_stairs_01",0,0,0,1,0},
-    {"barn_basement_floor_01",-10,-0.5,0,1,0},
+    {"barn_basement_stairs_01",0,0,0,1,0,0},
+    {"barn_basement_floor_01",-10,-0.5,0,1,0,0},
 };
 static const RawStair kStairs_974[] = {
     {{1,-0.5,-2,3.5,5},0,-1,0,0},
@@ -2294,8 +3608,8 @@ static const RawCollider kMask_974[] = {
     {1,-0.4900000000000002,-10,7.51,-2},
 };
 static const RawLayer kLayers_975[] = {
-    {"barn_basement_stairs_01",0,0,0,1,0},
-    {"barn_basement_floor_01d",-10,-0.5,0,1,0},
+    {"barn_basement_stairs_01",0,0,0,1,0,0},
+    {"barn_basement_floor_01d",-10,-0.5,0,1,0,0},
 };
 static const RawStair kStairs_975[] = {
     {{1,-0.5,-2,3.5,5},0,-1,0,0},
@@ -2305,8 +3619,8 @@ static const RawCollider kMask_975[] = {
     {1,-0.4900000000000002,-10,7.51,-2},
 };
 static const RawLayer kLayers_976[] = {
-    {"barn_basement_stairs_01",0,0,0,1,0},
-    {"barn_basement_floor_01",-10,-0.5,0,1,0},
+    {"barn_basement_stairs_01",0,0,0,1,0,0},
+    {"barn_basement_floor_01",-10,-0.5,0,1,0,0},
 };
 static const RawStair kStairs_976[] = {
     {{1,-0.5,-2,3.5,5},0,-1,0,0},
@@ -2316,8 +3630,8 @@ static const RawCollider kMask_976[] = {
     {1,-0.4900000000000002,-10,7.51,-2},
 };
 static const RawLayer kLayers_977[] = {
-    {"mansion_01",0,0,0,1,0},
-    {"mansion_cellar_01",0,0,0,1,0},
+    {"mansion_01",0,0,0,1,0,0},
+    {"mansion_cellar_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_977[] = {
     {{1,25,-1.0499999999999998,31,4.05},-1,0,1,0},
@@ -2328,8 +3642,8 @@ static const RawCollider kMask_977[] = {
     {1,10.01,10.01,24.990000000000002,16.990000000000002},
 };
 static const RawLayer kLayers_978[] = {
-    {"mansion_01x",0,0,0,1,0},
-    {"mansion_cellar_01",0,0,0,1,0},
+    {"mansion_01x",0,0,0,1,0,0},
+    {"mansion_cellar_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_978[] = {
     {{1,25,-1.0499999999999998,31,4.05},-1,0,1,0},
@@ -2340,8 +3654,8 @@ static const RawCollider kMask_978[] = {
     {1,10.01,10.01,24.990000000000002,16.990000000000002},
 };
 static const RawLayer kLayers_979[] = {
-    {"mansion_02",0,0,0,1,0},
-    {"mansion_cellar_02",0,0,0,1,0},
+    {"mansion_02",0,0,0,1,0,0},
+    {"mansion_cellar_02",0,0,0,1,0,0},
 };
 static const RawStair kStairs_979[] = {
     {{1,25,-1.0499999999999998,31,4.05},-1,0,1,0},
@@ -2352,8 +3666,8 @@ static const RawCollider kMask_979[] = {
     {1,10.01,10.01,24.990000000000002,16.990000000000002},
 };
 static const RawLayer kLayers_980[] = {
-    {"mansion_03",0,0,0,1,0},
-    {"mansion_cellar_03",0,0,0,1,0},
+    {"mansion_03",0,0,0,1,0,0},
+    {"mansion_cellar_03",0,0,0,1,0,0},
 };
 static const RawStair kStairs_980[] = {
     {{1,25,-1.0499999999999998,31,4.05},-1,0,1,0},
@@ -2364,8 +3678,8 @@ static const RawCollider kMask_980[] = {
     {1,10.01,10.01,24.990000000000002,16.990000000000002},
 };
 static const RawLayer kLayers_981[] = {
-    {"reserve_01",0,0,0,1,0},
-    {"reserve_basement_01",14.5,-2,0,1,0},
+    {"reserve_01",0,0,0,1,0,0},
+    {"reserve_basement_01",14.5,-2,0,1,0,0},
 };
 static const RawStair kStairs_981[] = {
     {{1,45,5.5,58,16.5},0,-1,0,0},
@@ -2377,8 +3691,8 @@ static const RawCollider kMask_981[] = {
     {1,-45,5.5,-18,13.5},
 };
 static const RawLayer kLayers_982[] = {
-    {"saloon_01",0,0,0,1,0},
-    {"saloon_cellar_01",-19,-6,0,1,0},
+    {"saloon_01",0,0,0,1,0,0},
+    {"saloon_cellar_01",-19,-6,0,1,0,0},
 };
 static const RawStair kStairs_982[] = {
     {{1,-21,-1.25,-18,2.75},-1,0,0,0},
@@ -2387,8 +3701,8 @@ static const RawCollider kMask_982[] = {
     {1,-40,-4.25,-20,5.75},
 };
 static const RawLayer kLayers_983[] = {
-    {"club_01",-3.5,-17.5,0,1,0},
-    {"bathhouse_01",0,0,0,1,0},
+    {"club_01",-3.5,-17.5,0,1,0,0},
+    {"bathhouse_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_983[] = {
     {{1,-36,-28.55,-30,-23.45},1,0,1,0},
@@ -2399,8 +3713,8 @@ static const RawCollider kMask_983[] = {
     {1,20.01,-39.5,26.01,-31.5},
 };
 static const RawLayer kLayers_984[] = {
-    {"bunker_egg_01",0,0,0,1,0},
-    {"bunker_egg_sublevel_01",0,0,0,1,0},
+    {"bunker_egg_01",0,0,0,1,0,0},
+    {"bunker_egg_sublevel_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_984[] = {
     {{1,-2,5.800000000000001,2,11},0,-1,0,0},
@@ -2409,8 +3723,8 @@ static const RawCollider kMask_984[] = {
     {1,-10,-13.2,10,5.8},
 };
 static const RawLayer kLayers_985[] = {
-    {"bunker_egg_01",0,0,0,1,0},
-    {"bunker_egg_sublevel_02",0,0,0,1,0},
+    {"bunker_egg_01",0,0,0,1,0,0},
+    {"bunker_egg_sublevel_02",0,0,0,1,0,0},
 };
 static const RawStair kStairs_985[] = {
     {{1,-2,5.800000000000001,2,11},0,-1,0,0},
@@ -2419,8 +3733,8 @@ static const RawCollider kMask_985[] = {
     {1,-10,-13.2,10,5.8},
 };
 static const RawLayer kLayers_986[] = {
-    {"bunker_egg_01",0,0,0,1,0},
-    {"bunker_egg_sublevel_01sv",0,0,0,1,0},
+    {"bunker_egg_01",0,0,0,1,0,0},
+    {"bunker_egg_sublevel_01sv",0,0,0,1,0,0},
 };
 static const RawStair kStairs_986[] = {
     {{1,-2,5.800000000000001,2,11},0,-1,0,0},
@@ -2429,8 +3743,8 @@ static const RawCollider kMask_986[] = {
     {1,-10,-13.2,10,5.8},
 };
 static const RawLayer kLayers_987[] = {
-    {"bunker_hydra_01",0,0,0,1,0},
-    {"bunker_hydra_sublevel_01",0,0,0,1,0},
+    {"bunker_hydra_01",0,0,0,1,0,0},
+    {"bunker_hydra_sublevel_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_987[] = {
     {{1,13.799999999999999,1.5,19,5.5},-1,0,0,0},
@@ -2445,8 +3759,8 @@ static const RawCollider kMask_987[] = {
     {1,0.5,-82.2,20.5,-71.2},
 };
 static const RawLayer kLayers_988[] = {
-    {"bunker_storm_01",0,0,0,1,0},
-    {"bunker_storm_sublevel_01",0,0,0,1,0},
+    {"bunker_storm_01",0,0,0,1,0,0},
+    {"bunker_storm_sublevel_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_988[] = {
     {{1,-2,5.800000000000001,2,11},0,-1,0,0},
@@ -2455,8 +3769,8 @@ static const RawCollider kMask_988[] = {
     {1,-9.5,-13.2,26.5,5.8},
 };
 static const RawLayer kLayers_989[] = {
-    {"bunker_conch_01",0,0,0,1,0},
-    {"bunker_conch_sublevel_01",0,0,0,1,0},
+    {"bunker_conch_01",0,0,0,1,0,0},
+    {"bunker_conch_sublevel_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_989[] = {
     {{1,14.299999999999999,1.5,19.5,5.5},-1,0,0,0},
@@ -2467,8 +3781,8 @@ static const RawCollider kMask_989[] = {
     {1,14.25,-40,42.25,-24},
 };
 static const RawLayer kLayers_990[] = {
-    {"bunker_crossing_01",0,0,0,1,0},
-    {"bunker_crossing_sublevel_01",0,0,0,1,0},
+    {"bunker_crossing_01",0,0,0,1,0,0},
+    {"bunker_crossing_sublevel_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_990[] = {
     {{1,33,26.5,38.2,30.5},-1,0,0,0},
@@ -2482,8 +3796,8 @@ static const RawCollider kMask_990[] = {
     {1,-30,-15.95,30,21.95},
 };
 static const RawLayer kLayers_991[] = {
-    {"bunker_hatchet_01",0,0,0,1,0},
-    {"bunker_hatchet_sublevel_01",0,0,0,1,0},
+    {"bunker_hatchet_01",0,0,0,1,0,0},
+    {"bunker_hatchet_sublevel_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_991[] = {
     {{1,-2,5.800000000000001,2,11},0,-1,0,0},
@@ -2493,8 +3807,8 @@ static const RawCollider kMask_991[] = {
     {1,-80.025,-18.95,-16.025,30.95},
 };
 static const RawLayer kLayers_992[] = {
-    {"bunker_eye_01",0,0,0,1,0},
-    {"bunker_eye_sublevel_01",0,0,0,1,0},
+    {"bunker_eye_01",0,0,0,1,0,0},
+    {"bunker_eye_sublevel_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_992[] = {
     {{1,-2,5.800000000000001,2,11},0,-1,0,0},
@@ -2503,8 +3817,8 @@ static const RawCollider kMask_992[] = {
     {1,-13.5,-50.2,13.5,5.800000000000001},
 };
 static const RawLayer kLayers_993[] = {
-    {"bunker_chrys_01",0,0,0,1,0},
-    {"bunker_chrys_sublevel_01",0,0,0,1,0},
+    {"bunker_chrys_01",0,0,0,1,0,0},
+    {"bunker_chrys_sublevel_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_993[] = {
     {{1,-1.5,-2.6,1.5,2.6},0,-1,0,0},
@@ -2514,8 +3828,8 @@ static const RawCollider kMask_993[] = {
     {1,25.55,-15,54.45,55},
 };
 static const RawLayer kLayers_994[] = {
-    {"bunker_chrys_01",0,0,0,1,0},
-    {"bunker_chrys_sublevel_01b",0,0,0,1,0},
+    {"bunker_chrys_01",0,0,0,1,0,0},
+    {"bunker_chrys_sublevel_01b",0,0,0,1,0,0},
 };
 static const RawStair kStairs_994[] = {
     {{1,-1.5,-2.6,1.5,2.6},0,-1,0,0},
@@ -2525,8 +3839,8 @@ static const RawCollider kMask_994[] = {
     {1,25.55,-15,54.45,55},
 };
 static const RawLayer kLayers_995[] = {
-    {"bunker_twins_01",0,0,0,1,0},
-    {"bunker_twins_sublevel_01",0,0,0,1,0},
+    {"bunker_twins_01",0,0,0,1,0,0},
+    {"bunker_twins_sublevel_01",0,0,0,1,0,0},
 };
 static const RawStair kStairs_995[] = {
     {{1,-1,11.8,3,17},0,-1,0,0},
@@ -2538,8 +3852,8 @@ static const RawCollider kMask_995[] = {
     {1,-16.75,-11.75,16.75,11.75},
 };
 static const RawLayer kLayers_996[] = {
-    {"bunker_cloud_01",0,0,0,1,0},
-    {"bunker_cloud_sublevel_01",1.5,-39,0,1,0},
+    {"bunker_cloud_01",0,0,0,1,0,0},
+    {"bunker_cloud_sublevel_01",1.5,-39,0,1,0,0},
 };
 static const RawStair kStairs_996[] = {
     {{1,-2,-1.7000000000000002,2,3.5},0,-1,0,0},
@@ -2790,1077 +4104,1077 @@ static const RawBulletRender kBulletRender[] = {
 };
 
 static const RawMapObj kMapObjs[] = {
-    {"house_door_01",{"map-door-01.img",0.5,1,14671839,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"whiteChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_door_02",{"map-door-01.img",0.5,1,4934475,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_door_03",{"map-door-03.img",0.5,1,14671839,15,0,0,0},1,{1,-0.5,0.25,0.5,3.75},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"whiteChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.5,0.25,0.5,3.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_door_05",{"map-door-05.img",0.5,1,14671839,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crossing_door_01",{"map-door-01.img",0.5,1,3159362,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cell_door_01",{"map-door-01.img",0.5,1,1776411,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"eye_door_01",{"map-door-01.img",0.5,1,921102,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_door_01",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_door_02",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",-3.75,"map-door-slot-01.img",6,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_door_03",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_door_locked_01",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_door_chrys",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_main",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_chrys_01",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_chrys_02",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_reserve",{"map-door-06.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,10},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,2,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_eye",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_door_secret",{"map-door-04.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,0,0.75,4},1,0,0,0,0,0,0,"",4.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.75,0,0.75,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_door_01",{"map-door-01.img",0.5,0.95,14537141,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-02.img",-2,0,0.5,3211264,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"secret_door_club",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_door_bathhouse",{"map-door-01.img",0.5,1,4934475,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_window_01",{"map-building-house-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,1,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,4456448,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_window_01",{"map-building-house-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,1,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"lab_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,1316379,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stairs_01",{"map-stairs-broken-01.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stairs_02",{"map-stairs-broken-02.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-4,2.5,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-4,2.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stairs_03",{"map-stairs-broken-03.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_window_01",{"map-building-boarded-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,7886127,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_window_01",{"map-building-bank-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,1,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_window_01",{"map-building-reserve-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-3.5,0.4,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,1,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-3.5,0.4,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_window_broken_01",{"map-building-reserve-window-res-01.img",0.5,1,1316379,10,0,0,0},1,{1,-0.4,-4,0.4,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-4,0.4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"container_05_collider",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-6,2.75,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.75,-6,2.75,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hedgehog_wall",{"",1,1,16777215,0,0,0,0},0,{1,-3,-0.5,3,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5854285,1,{1,-3,-0.5,3,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_4",{"map-wall-04.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_5",{"map-wall-05.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_6",{"map-wall-06.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_7",{"map-wall-07.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_10",{"map-wall-10.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_12",{"map-wall-12.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_wall_int_14",{"map-wall-14.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_window_open_01",{"map-building-house-window-res-01.img",0.5,1,7681026,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_wall_side",{"",1,1,16777215,0,0,0,0},0,{1,-25,-0.6,25,0.6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-25,-0.6,25,0.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_wall_edge",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-3.2,0.6,3.2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-3.2,0.6,3.2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_wall_edge_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-6.5,0.6,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-6.5,0.6,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_wall_int",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-1,0.6,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-1,0.6,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_column",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-0.6,0.6,0.6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-0.6,0.6,0.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_right",{"",1,1,16777215,0,0,0,0},0,{1,-20,-0.5,20,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-20,-0.5,20,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_edge",{"",1,1,16777215,0,0,0,0},0,{1,-4,-0.5,4,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-0.5,4,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_mid_1",{"",1,1,16777215,0,0,0,0},0,{1,-7.25,-0.5,7.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-7.25,-0.5,7.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_mid_2",{"",1,1,16777215,0,0,0,0},0,{1,-8,-0.5,8,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-8,-0.5,8,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_mid_3",{"",1,1,16777215,0,0,0,0},0,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_bot",{"",1,1,16777215,0,0,0,0},0,{1,-8.75,-0.5,8.75,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-8.75,-0.5,8.75,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_room_1",{"",1,1,16777215,0,0,0,0},0,{1,-4.25,-0.5,4.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4.25,-0.5,4.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_room_2",{"",1,1,16777215,0,0,0,0},0,{1,-2.25,-0.5,2.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-0.5,2.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_room_3",{"",1,1,16777215,0,0,0,0},0,{1,-4.5,-0.5,4.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4.5,-0.5,4.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_room_4",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-0.5,2.75,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.75,-0.5,2.75,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_wall_left",{"",1,1,16777215,0,0,0,0},0,{1,-15.5,-0.5,15.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-15.5,-0.5,15.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cobalt_wall_int_4",{"map-wall-04-cobalt.img",0.5,1,16777215,10,0,0,0},1,{1,-0.6,-2,0.6,2},1,0,0,0,1,0,1,"explosion_cobalt",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","cobalt_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-2,0.6,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"archway_column_1",{"map-column-01.img",0.5,1,7290644,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_top",{"map-wall-shack-top.img",0.5,1,16777215,10,0,0,0},1,{1,-5.6,-0.35,5.6,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-5.6,-0.35,5.6,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_side_left",{"map-wall-shack-left.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.43,0.35,3.43},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.35,-3.43,0.35,3.43},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_side_right",{"map-wall-shack-right.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.8,0.35,3.8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.35,-3.8,0.35,3.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_bot",{"map-wall-shack-bot.img",0.5,1,16777215,10,0,0,0},1,{1,-3.75,-0.35,3.75,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3.75,-0.35,3.75,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_ext_2",{"map-wall-02.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_ext_5",{"map-wall-05.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_ext_9",{"map-wall-09.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_ext_10",{"map-wall-10.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"shack_wall_ext_14",{"map-wall-14.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"outhouse_wall_top",{"map-wall-outhouse-top.img",0.5,1,16777215,10,0,0,0},1,{1,-3.2,-0.35,3.2,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"outhouseChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3.2,-0.35,3.2,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"outhouse_wall_side",{"map-wall-outhouse-side.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.1,0.35,3.1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"outhouseChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.35,-3.1,0.35,3.1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"outhouse_wall_bot",{"map-wall-outhouse-bot.img",0.5,1,16777215,10,0,0,0},1,{1,-1.15,-0.35,1.15,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"outhouseChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.15,-0.35,1.15,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_1",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_12_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.25,0.5,6.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.25,0.5,6.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_19",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9.5,0.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9.5,0.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_20",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10,0.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-10,0.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_21",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10.5,0.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-10.5,0.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_33",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-16.5,0.5,16.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-16.5,0.5,16.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_41",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-20.5,0.5,20.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-20.5,0.5,20.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_short_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_16",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8,1.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-8,1.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_thicker_24",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12,1.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-12,1.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thin_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.375,-3,0.375,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.375,-3,0.375,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_1_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.75,0.5,0.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-0.75,0.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_9_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.75,0.5,4.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.75,0.5,4.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_10_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.25,0.5,5.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.25,0.5,5.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_11_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.75,0.5,5.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.75,0.5,5.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_24",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12,0.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-12,0.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_25",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12.5,0.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-12.5,0.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_2x8",{"",1,1,16777215,0,0,0,0},0,{1,-1,-4,1,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-4,1,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_4x8",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4,2,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2,-4,2,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_4x9",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4.5,2,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2,-4.5,2,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_4x24",{"",1,1,16777215,0,0,0,0},0,{1,-2,-12,2,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2,-12,2,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_5x10",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-5,2.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-5,2.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_7x10",{"",1,1,16777215,0,0,0,0},0,{1,-3.5,-5,3.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3.5,-5,3.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_8x3",{"",1,1,16777215,0,0,0,0},0,{1,-4,-1.5,4,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-1.5,4,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thick_11",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5.5,1,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_11",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5.5,1.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-5.5,1.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_14",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_17",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8.5,1.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-8.5,1.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_19",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9.5,1.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-9.5,1.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_22",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11,1.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-11,1.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_27",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13.5,1.5,13.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-13.5,1.5,13.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_30",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15,1.5,15},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-15,1.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_31",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15.5,1.5,15.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-15.5,1.5,15.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_42",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-21,1.5,21},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-21,1.5,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_ext_thicker_54",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-27,1.5,27},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-27,1.5,27},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_2x2",{"",1,1,16777215,0,0,0,0},0,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_12_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.25,0.5,6.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.25,0.5,6.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_1x15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_43",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-21.5,0.5,21.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-21.5,0.5,21.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_short_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_short_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_5",{"",1,1,16777215,0,0,0,0},0,{1,-1,-2.5,1,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-2.5,1,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_2x5_5",{"",1,1,16777215,0,0,0,0},0,{1,-1,-2.75,1,2.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-2.75,1,2.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_6",{"",1,1,16777215,0,0,0,0},0,{1,-1,-3,1,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-3,1,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_8",{"",1,1,16777215,0,0,0,0},0,{1,-1,-4,1,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-4,1,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_12",{"",1,1,16777215,0,0,0,0},0,{1,-1,-6,1,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-6,1,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_16",{"",1,1,16777215,0,0,0,0},0,{1,-1,-8,1,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-8,1,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_20",{"",1,1,16777215,0,0,0,0},0,{1,-1,-10,1,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-10,1,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_23",{"",1,1,16777215,0,0,0,0},0,{1,-1,-11.5,1,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-11.5,1,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thick_28",{"",1,1,16777215,0,0,0,0},0,{1,-1,-14,1,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-14,1,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_1_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-0.75,1.5,0.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-0.75,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_11",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5.5,1.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-5.5,1.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_14",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_16",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8,1.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-8,1.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_17",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8.5,1.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-8.5,1.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_18",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9,1.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-9,1.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_19",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9.5,1.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-9.5,1.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_20",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10,1.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-10,1.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_22",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11,1.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-11,1.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_23",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11.5,1.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-11.5,1.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_24",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12,1.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-12,1.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_25",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12.5,1.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-12.5,1.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_26",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13,1.5,13},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-13,1.5,13},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_27",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13.5,1.5,13.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-13.5,1.5,13.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_28",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-14,1.5,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-14,1.5,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_29",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-14.5,1.5,14.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-14.5,1.5,14.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_30",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15,1.5,15},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-15,1.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_32",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-16,1.5,16},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-16,1.5,16},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_34",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-17,1.5,17},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-17,1.5,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_35",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-17.5,1.5,17.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-17.5,1.5,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_42",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-21,1.5,21},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-21,1.5,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_48",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-24,1.5,24},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-24,1.5,24},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_ext_thicker_49",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-7,2.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-7,2.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x6",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-3,2.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-3,2.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x10",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-5,2.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-5,2.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x13",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-6.5,2.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-6.5,2.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x22_5",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-11.25,2.5,11.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-11.25,2.5,11.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x23",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-11.5,2.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-11.5,2.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_5x26",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-13,2.5,13},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-13,2.5,13},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_6x8",{"",1,1,16777215,0,0,0,0},0,{1,-3,-4,3,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3,-4,3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_9",{"map-wall-glass-9.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_10",{"map-wall-glass-10.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_12",{"map-wall-glass-12.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_12_2",{"map-wall-glass-12-2.img",0.5,1,16777215,10,0,0,0},1,{1,-1,-6,1,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-6,1,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_13",{"map-wall-glass-13.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_1x19",{"map-wall-glass-1x19.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-9.5,0.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9.5,0.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"glass_wall_1x23",{"map-wall-glass-1x23.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_2",{"map-wall-02-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_2_5",{"map-wall-02-5-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-1.25,0.5,1.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.25,0.5,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_4",{"map-wall-04-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_5",{"map-wall-05-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_6",{"map-wall-06-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_7",{"map-wall-07-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_8",{"map-wall-08-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_11",{"map-wall-11-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_wall_int_13",{"map-wall-13-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_column_1",{"map-column-01.img",0.5,1,2764060,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_wall_int_3",{"map-wall-03-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_wall_int_4",{"map-wall-04-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_wall_int_5",{"map-wall-05-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_wall_int_8",{"map-wall-08-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_1",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_20",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10,0.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-10,0.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_22",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11,0.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11,0.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_25",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12.5,0.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-12.5,0.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_38",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-19,0.5,19},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-19,0.5,19},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_2x11",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5.5,1,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_2x10",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5,1,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-5,1,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_3x4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_perm_wall_ext_3x13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_3",{"map-wall-03-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_4",{"map-wall-04-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_5",{"map-wall-05-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_6",{"map-wall-06-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_8",{"map-wall-08-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_9",{"map-wall-09-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_10",{"map-wall-10-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_12",{"map-wall-12-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_13",{"map-wall-13-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_wall_int_16",{"map-wall-16-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_bar_small",{"",0.5,1,16777215,10,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_bar_large",{"map-reserve-bar-large.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_bar_back",{"map-reserve-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-6.5,0.75,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.75,-6.5,0.75,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_2",{"map-wall-02-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_3",{"map-wall-03-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_4",{"map-wall-04-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_6",{"map-wall-06-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_7",{"map-wall-07-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_8",{"map-wall-08-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"police_wall_int_10",{"map-wall-10-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_4",{"map-wall-04-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_5",{"map-wall-05-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_8",{"map-wall-08-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_9",{"map-wall-09-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_11",{"map-wall-11-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_wall_int_14",{"map-wall-14-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_column_1",{"map-column-01.img",0.5,1,5587506,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cabin_wall_int_5",{"map-wall-05-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cabin_wall_int_10",{"map-wall-10-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cabin_wall_int_13",{"map-wall-13-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_1",{"map-wall-01-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_5",{"map-wall-05-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_6",{"map-wall-06-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_7",{"map-wall-07-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_8",{"map-wall-08-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_9",{"map-wall-09-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_10",{"map-wall-10-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_11",{"map-wall-11-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_12",{"map-wall-12-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_wall_int_13",{"map-wall-13-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_column_1",{"map-column-01.img",0.5,1,7432016,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_column_1",{"map-column-01.img",0.5,1,1710618,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_bar_small",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_bar_large",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_bar_back_large",{"map-saloon-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-5,0.75,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.75,-5,0.75,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_bar_back_small",{"map-saloon-bar-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-1.5,0.75,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.75,-1.5,0.75,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_wall_int_4",{"map-wall-04-stone.img",0.5,1,16777215,10,0,0,0},1,{1,-0.6,-2,0.6,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-2,0.6,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_column_4x8",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4,2,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2,-4,2,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"metal_wall_column_5x12",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-6,2.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-6,2.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_35",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-17.5,0.5,17.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-17.5,0.5,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_18",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9,1.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-9,1.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wood_perm_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_3",{"map-wall-03.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_4",{"map-wall-04.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_5",{"map-wall-05.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_7",{"map-wall-07.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_12",{"map-wall-12.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_13",{"map-wall-13.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_14",{"map-wall-14.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_wall_int_18",{"map-wall-18.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_window_open_01",{"map-building-house-window-res-01.img",0.5,1,12216619,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_wall_3",{"map-wall-03-grassy.img",0.5,1,16777215,10,0,0,0},1,{1,-0.375,-1.5,0.375,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7282176,1,{1,-0.375,-1.5,0.375,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_wall_8",{"map-wall-08-grassy.img",0.5,1,16777215,10,0,0,0},1,{1,-0.375,-4,0.375,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7282176,1,{1,-0.375,-4,0.375,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_wall_int_6",{"map-wall-06-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_wall_int_10",{"map-wall-10-rounded.img",0.5,1,7218988,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"redChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_bar_small",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_bar_large",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_bar_back_large",{"map-club-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-7.5,0.75,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.75,-7.5,0.75,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bathhouse_column_1",{"map-bathhouse-column-01.img",0.5,1,13481337,10,0,0,0},1,{1,-2,-2,2,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"whiteChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bathhouse_column_2",{"map-bathhouse-column-02.img",0.5,1,13481337,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"whiteChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_lg_under_column",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-10,2.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-10,2.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_5x4",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-2,2.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_rail_3",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"rail_4",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-2.5,0.4,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2.5,0.4,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_rail_12",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-6.5,0.4,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-6.5,0.4,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_xlg_under_column",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-14,2.5,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-14,2.5,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"concrete_wall_column_9x4",{"",1,1,16777215,0,0,0,0},0,{1,-4.5,-2,4.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_rail_20",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-10,0.4,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-10,0.4,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_rail_28",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-14,0.4,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-14,0.4,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_3_0_low",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brick_wall_ext_11_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.75,0.5,5.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.75,0.5,5.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"container_wall_top",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-0.4,2.75,0.4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.75,-0.4,2.75,0.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"container_wall_side",{"",1,1,16777215,0,0,0,0},0,{1,-0.4,-5.5,0.4,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.4,-5.5,0.4,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"container_wall_side_open",{"",1,1,16777215,0,0,0,0},0,{1,-0.4,-6,0.4,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.4,-6,0.4,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_01",{"map-case-deagle-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_02",{"map-case-deagle-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_03",{"map-case-hatchet-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_04",{"map-case-flare-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_05",{"map-case-meteor-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_06",{"map-case-chrys-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_07",{"map-case-ring-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_07de",{"map-case-ring-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_08",{"map-case-crow-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_08sv",{"map-case-crow-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_09",{"map-case-twins-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"case_10",{"map-case-cloud-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_01",{"map-chest-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_01cb",{"map-chest-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_02",{"map-chest-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03",{"map-chest-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03cb",{"map-chest-03cb.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03d",{"map-chest-03d.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03f",{"map-chest-03f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03sv",{"map-chest-03sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03x",{"map-chest-03x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_03tr",{"map-chest-03tr.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_04",{"map-case-basement-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chest_04d",{"map-case-basement-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_01",{"map-crate-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_01x",{"map-crate-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02",{"map-crate-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02sv",{"map-crate-02sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16760832,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02sv_lake",{"map-crate-02sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16760832,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02x",{"map-crate-02x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02f",{"map-crate-02f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,13369344,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_02d",{"map-crate-02f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,13369344,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_03",{"map-crate-03.img",0.35,1,16777215,10,0,0,0},1,{1,-1.575,-1.575,1.575,1.575},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5066014,0.875,{1,-1.575,-1.575,1.575,1.575},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_03x",{"map-crate-03x.img",0.35,1,16777215,10,0,0,0},1,{1,-1.575,-1.575,1.575,1.575},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"glassChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,31863,0.875,{1,-1.575,-1.575,1.575,1.575},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_04",{"map-crate-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"greenChip","ammo_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5468244,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_05",{"map-crate-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2,-2,2,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"goldChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_06",{"map-crate-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.1,2.25,1.1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"greenChip","ammo_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-1.1,2.25,1.1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_07",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_07b",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_07sv",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_08",{"map-crate-08.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_09",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_09bh",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_09de",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_10",{"map-crate-10.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_11",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_11h",{"map-crate-11h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_10sv",{"map-crate-10.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_11sv",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_11de",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_11tr",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_12",{"map-crate-12.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_12po",{"map-crate-12.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_12dev",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_13",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_13po",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_14",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_14a",{"map-crate-14a.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_15",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_16",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_17",{"map-crate-17.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_18",{"map-crate-18.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,12867840,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_19",{"map-crate-19.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4500224,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_20",{"map-crate-20.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.7,1.7,1.7},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"greenChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,3884335,1,{1,-1.7,-1.7,1.7,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_21",{"map-crate-21.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,18799,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_21b",{"map-crate-21.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,18799,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_22",{"map-crate-22.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,32511,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"crate_22d",{"map-crate-22.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,32511,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_01",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_03",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_03po",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_03dev",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_04",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_04po",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_05",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_01sv",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02sv",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02de",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02h",{"map-airdrop-01h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02tr",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_01x",{"map-airdrop-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"airdrop_crate_02x",{"map-airdrop-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_shell_01",{"map-class-shell-01a.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_shell_02",{"map-class-shell-02a.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_shell_03",{"map-class-shell-03a.img",0.5,1,16777215,20,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_scout",{"map-class-crate-scout.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_sniper",{"map-class-crate-sniper.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_healer",{"map-class-crate-healer.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_demo",{"map-class-crate-demo.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_assault",{"map-class-crate-assault.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_tank",{"map-class-crate-tank.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_common_classless",{"map-class-crate-classless.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_scout",{"map-class-crate-scout.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_sniper",{"map-class-crate-sniper.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_healer",{"map-class-crate-healer.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_demo",{"map-class-crate-demo.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_assault",{"map-class-crate-assault.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_tank",{"map-class-crate-tank.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_rare_classless",{"map-class-crate-classless.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"class_crate_mythic",{"map-class-crate-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mil_crate_01",{"map-crate-mil-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mil_crate_02",{"map-crate-mil-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mil_crate_03",{"map-crate-mil-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mil_crate_04",{"map-crate-mil-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mil_crate_05",{"map-crate-mil-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,3622438,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_02",{"map-barrel-02.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"outhouseChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11235106,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_03",{"map-barrel-03.img",0.45,1,16777215,10,0,0,0},1,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"outhouseChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11235106,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_04",{"map-barrel-04.img",0.45,1,16777215,10,0,0,0},1,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"outhouseChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11235106,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_05",{"map-barrel-05.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"outhouseChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11235106,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bathhouse_rocks_01",{"map-bathrocks-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.55,-1.55,1.55,1.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.55,-1.55,1.55,1.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bed_sm_01",{"map-bed-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.4,-3.4,1.4,3.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-1.4,-3.4,1.4,3.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bed_lg_01",{"map-bed-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.8,-3.4,2.8,3.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.8,-3.4,2.8,3.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bookshelf_01",{"map-bookshelf-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-1,3.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-1,3.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bookshelf_02",{"map-bookshelf-02.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-1,3.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-1,3.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chair_01",{"map-chair-01.img",0.5,1,16777215,5,0,0,0},1,{1,-1,-1.25,1,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1,-1.25,1,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"chair_02",{"map-chair-02.img",0.5,1,16777215,5,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"couch_01",{"map-couch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4.5,-1.5,4.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4.5,-1.5,4.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"couch_02",{"map-couch-02.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.5,3,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3,-1.5,3,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"couch_02b",{"map-couch-02.img",0.5,1,16777215,10,0,1,0},1,{1,-3,-1.5,3,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3,-1.5,3,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"couch_03",{"map-couch-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_01",{"map-bottle-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"bottleBrownChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02",{"map-bottle-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_04",{"map-bottle-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"bottleWhiteChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_05",{"map-bottle-05.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"bottleWhiteChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"candle_01",{"map-candle-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"goldChip","none",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,16777215,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"deposit_box_01",{"map-deposit-box-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"deposit_box_02",{"map-deposit-box-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"deposit_box_03",{"map-deposit-box-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"drawers_01",{"map-drawers-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-1.1,2.5,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-1.1,2.5,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"drawers_02",{"map-drawers-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-1.1,2.5,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-1.1,2.5,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"fire_ext_01",{"map-fire-ext-01.img",0.5,1,16777215,10,0,0,0},1,{0,0.35,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"redChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0.35,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grill_01",{"map-grill-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.55,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,14935011,0.875,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_empty",{"map-gun-mount-empty.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_01",{"map-gun-mount-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_02",{"map-gun-mount-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_03",{"map-gun-mount-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_04",{"map-gun-mount-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_05",{"map-gun-mount-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_06",{"map-gun-mount-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"gun_mount_07",{"map-gun-mount-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"locker_01",{"map-locker-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"locker_02",{"map-locker-02.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"locker_03",{"map-locker-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"oven_01",{"map-oven-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1500000000000001,1.7,1.45},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,14935011,0.875,{1,-1.7,-1.1500000000000001,1.7,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"piano_01",{"map-piano-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.75,-1,3.75,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","piano_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.75,-1,3.75,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_01",{"map-planter-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_02",{"map-planter-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_03",{"map-planter-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_04",{"map-planter-04.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_06",{"map-planter-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"planter_07",{"map-planter-07.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_01",{"map-pot-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_02",{"map-pot-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_03",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_03b",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_03c",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_04",{"map-pot-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pot_05",{"map-pot-05.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"rack_01",{"map-rack-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2,-1.05,2,1.45},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2,-1.05,2,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"refrigerator_01",{"map-refrigerator-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"redChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7733259,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"refrigerator_01b",{"map-refrigerator-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"redChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7733259,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"safe_01",{"map-safe-01.img",0.4,1,16777215,10,0,0,0},1,{1,-1.25,-1.15,1.25,1.35},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockEyeChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1512466,1,{1,-1.25,-1.15,1.25,1.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"safe_01de",{"map-safe-01.img",0.4,1,16777215,10,0,0,0},1,{1,-1.25,-1.15,1.25,1.35},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockEyeChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1512466,1,{1,-1.25,-1.15,1.25,1.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"screen_01",{"map-screen-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-0.15000000000000002,4,0.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-0.15000000000000002,4,0.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"sink_01",{"map-sink-01.img",0.35,1,16777215,10,0,0,0},1,{1,-2,-1.5,2,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"whiteChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{1,-2,-1.5,2,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stand_01",{"map-stand-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.25,-1.1,1.25,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1.25,-1.1,1.25,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"power_box_01",{"map-power-box-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stove_01",{"map-stove-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-2.25,3,2.25},1,0,0,0,0,0,1,"explosion_stove",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3,-2.25,3,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stove_02",{"map-stove-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,1,"explosion_stove",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_01",{"map-table-01.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_01x",{"map-table-01x.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_01d",{"map-table-01d.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2.5,2.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_02",{"map-table-02.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2.5,4.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4.5,-2.5,4.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_02x",{"map-table-02x.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2.5,4.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4.5,-2.5,4.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_03",{"map-table-03.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_03x",{"map-table-03x.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_04",{"map-table-04.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2,4.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_05",{"map-table-05.img",0.5,1,16777215,60,0,0,0},1,{1,-9,-2.75,9,2.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-9,-2.75,9,2.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_06",{"map-table-06.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-2,4,2},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-2,4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_07",{"map-table-07.img",0.5,1,16777215,10,0,0,0},1,{1,-3.3000000000000003,-1.35,3.4,1.15},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3.3000000000000003,-1.35,3.4,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_08",{"map-table-08.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-1.55,4,1.45},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-1.55,4,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"table_09",{"map-table-09.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-2.05,3,1.95},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3,-2.05,3,1.95},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_01",{"map-toilet-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"whiteChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_02",{"map-toilet-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"whiteChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_02b",{"map-toilet-02.img",0.5,1,11842740,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"whiteChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_03",{"map-toilet-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","toilet_metal_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_04",{"map-toilet-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","toilet_metal_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"toilet_05",{"map-toilet-05.img",0.66,1,16777215,10,0,0,0},1,{0,0,0.25,1.56,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"toiletGoldChip","toilet_metal_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.56,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"towelrack_01",{"map-towelrack-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1,3,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3,-1,3,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vat_01",{"map-vat-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vat_02",{"map-vat-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,3.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,3.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vat_03",{"map-vat-03.img",0.5,1,16777215,50,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,0,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vat_04",{"map-vat-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vat_05",{"map-vat-05.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vending_01",{"map-vending-soda-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blueChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,10925,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wheel_01",{"map-wheel-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wheel_02",{"map-wheel-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"wheel_03",{"map-wheel-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_01",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_02",{"map-control-panel-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_02b",{"map-control-panel-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_03",{"map-control-panel-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.25,-1.2,1.25,1.2},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.25,-1.2,1.25,1.2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_04",{"map-control-panel-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_06",{"map-control-panel-06.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.4,3,1.4},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3,-1.4,3,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_07de",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"control_panel_07sv",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_01",{"map-switch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_01o",{"map-switch-01o.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_01p",{"map-switch-01p.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_01y",{"map-switch-01y.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_02",{"map-switch-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"switch_03",{"map-switch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02r",{"map-bottle-02.img",0.5,1,13172736,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,1,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02o",{"map-bottle-02.img",0.5,1,16734720,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02y",{"map-bottle-02.img",0.5,1,16776960,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02g",{"map-bottle-02.img",0.5,1,32768,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02b",{"map-bottle-02.img",0.5,1,27903,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,1,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02i",{"map-bottle-02.img",0.5,1,4915330,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bottle_02v",{"map-bottle-02.img",0.5,1,15631086,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,1,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"button_01",{"map-button-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"button_01g",{"map-button-01g.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"button_01b",{"map-button-01b.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_01",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_02",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_03",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_04",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_05",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_06",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_07",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_08",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_09",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_10",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_11",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_12",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_13",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"recorder_14",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_switch_01",{"map-tree-switch-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_switch_02",{"map-tree-switch-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_switch_03",{"map-tree-switch-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01",{"map-barrel-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01b",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01w",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01bh",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01f",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barrel_01bd",{"map-barrel-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"propane_01",{"map-propane-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24516,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bollard_01",{"map-bollard-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6310464,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01",{"map-bush-01.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01b",{"map-bush-01.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01cb",{"map-bush-01cb.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafSynthetic","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2518873,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01f",{"map-bush-01f.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1793032,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01sv",{"map-bush-01sv.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafPrickly","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7569455,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brush_01sv",{"map-brush-01sv.img",0.5,0.97,16777215,60,0,0,0},1,{1,-1.75,-1.75,1.75,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5207588,1.5,{1,-1.75,-1.75,1.75,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brush_02sv",{"map-brush-02sv.img",0.5,0.97,16777215,60,0,0,0},1,{1,-1.75,-1.75,1.75,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5207588,1.5,{1,-1.75,-1.75,1.75,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_01x",{"map-bush-01x.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4545840,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_02",{"map-bush-01.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_03",{"map-bush-03.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_04",{"map-bush-04.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafRiver","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_04cb",{"map-bush-04cb.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafRiver","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2784099,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_05",{"map-bush-05.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6971965,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_06",{"map-bush-06.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16489473,1.5,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_06tr",{"map-bush-06tr.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,14853402,1,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_06b",{"map-bush-06.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,14041344,1.5,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_07",{"map-bush-07.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafRiver","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_07sp",{"map-bush-07sp.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafRiver","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,671242,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_07x",{"map-bush-07x.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bush_07cb",{"map-bush-07cb.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafSynthetic","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"campfire_01",{"map-campfire-01.img",0.375,1,16777215,10,0,0,0},1,{0,0,0,2.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,2.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_01",{"map-potato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_01f",{"map-potato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_02",{"map-potato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_02f",{"map-potato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_03",{"map-potato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"potato_03f",{"map-potato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tomato_01",{"map-tomato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"tomatoChip_01","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tomato_02",{"map-tomato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"tomatoChip_01","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tomato_03",{"map-tomato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"tomatoChip_02","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"egg_01",{"map-egg-01.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"pinkChip","egg_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"egg_02",{"map-egg-02.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"ltblueChip","egg_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"egg_03",{"map-egg-03.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"yellowChip","egg_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"egg_04",{"map-egg-04.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"greenChip","egg_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pumpkin_01",{"map-pumpkin-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"pumpkinChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,15889667,1,{0,0,0,1.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pumpkin_02",{"map-pumpkin-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"pumpkinChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,15889667,1,{0,0,0,1.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"pumpkin_03",{"map-pumpkin-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"pumpkinChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,15889667,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"squash_01",{"map-squash-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"squashChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6452036,1.25,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"squash_02",{"map-squash-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"squashChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16569521,1.25,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"sandbags_01",{"map-sandbags-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.1,-1.4,3.1,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"goldChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,13278307,1,{1,-3.1,-1.4,3.1,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"sandbags_02",{"map-sandbags-02.img",0.5,1,16777215,10,0,0,0},1,{1,-1.1,-1.4,1.1,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"goldChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,13278307,1,{1,-1.1,-1.4,1.1,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"silo_01",{"map-silo-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4079166,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"silo_01po",{"map-silo-01.img",0.5,1,16749645,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4079166,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_01",{"map-statue-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_03",{"map-statue-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_04",{"map-statue-04.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_top_01",{"map-statue-top-01.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.45,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5723991,1,{0,0,0,2.45,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_top_02",{"map-statue-top-02.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.45,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5723991,1,{0,0,0,2.45,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01b",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01cb",{"map-stone-01cb.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01f",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8224125,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01sv",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_01x",{"map-stone-01x.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6052956,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02sv",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02cb",{"map-stone-01cb.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02w",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02x",{"map-stone-01x.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02bh",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_02f",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03",{"map-stone-03.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03b",{"map-stone-03b.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03cb",{"map-stone-03cb.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03f",{"map-stone-03f.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03sv",{"map-stone-03sv.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03x",{"map-stone-03x.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03tr",{"map-stone-03tr.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_03bh",{"map-stone-03bh.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_04",{"map-stone-04.img",0.4,1,16777215,10,0,0,0},1,{1,-1.8,-1.8,1.8,1.8},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockEyeChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1512466,1,{1,-1.8,-1.8,1.8,1.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_04x",{"map-stone-04x.img",0.4,1,16777215,10,0,0,0},1,{1,-1.8,-1.8,1.8,1.8},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockEyeChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11725567,1,{1,-1.8,-1.8,1.8,1.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_05",{"map-stone-05.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.7,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockEyeChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1512466,1,{0,0,0,1.7,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_06",{"map-stone-06.img",0.5,1,16777215,10,0,0,0},1,{1,-4.5,-2,4.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,3618615,1,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_07",{"map-stone-07.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,9931908,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_08",{"map-stone-03.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_08x",{"map-stone-03x.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"stone_08cb",{"map-stone-03cb.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_01",{"map-tree-03.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_01cb",{"map-tree-03cb.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.2,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2900834,2.5,{0,0,0,1.2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_01sv",{"map-tree-03sv.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4411673,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_interior_01",{"map-tree-03.img",0.7,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_interior_01bh",{"map-tree-13.img",0.35,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_interior_01de",{"map-tree-14.img",0.35,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_01x",{"map-tree-01x.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_02",{"map-tree-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4083758,2.5,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_02h",{"map-tree-04h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4083758,2.5,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03",{"map-tree-03.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03su",{"map-tree-07su.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,2185478,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03sp",{"map-tree-07sp.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03x",{"map-tree-10.img",0.7,1,13158600,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03sv",{"map-tree-03sv.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4411673,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03d",{"map-tree-06.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7700520,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03f",{"map-tree-08f.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,995844,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03w",{"map-tree-07.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03h",{"map-tree-07.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03cb",{"map-tree-03cb.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.2,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,2900834,2.5,{0,0,0,1.2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_03bh",{"map-tree-13.img",0.35,1,11645361,800,0,0,0},1,{0,0,0,1.1,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4083758,2.5,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_05",{"map-tree-05.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,2.3,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5911831,3,{0,0,0,2.3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_05b",{"map-tree-05.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,2.3,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5911831,3,{0,0,0,2.3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_05c",{"map-tree-05c.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.05,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,9064739,3,{0,0,0,1.05,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_06",{"map-tree-06.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7700520,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_07",{"map-tree-07.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_07sp",{"map-tree-07sp.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_07spr",{"map-tree-07sp.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_07su",{"map-tree-07su.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2185478,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08",{"map-tree-08.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11033868,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08b",{"map-tree-08.img",0.35,1,14383224,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,9647632,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08c",{"map-tree-08.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7817749,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08f",{"map-tree-08f.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,995844,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08sp",{"map-tree-08sp.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16746936,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08spb",{"map-tree-08sp.img",0.35,1,14383224,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16734619,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08spc",{"map-tree-08sp.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8268107,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08spr",{"map-tree-08sp.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16746936,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08su",{"map-tree-08su.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2183181,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_08sub",{"map-tree-08su.img",0.35,1,9211210,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1785864,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_09",{"map-tree-09.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_10",{"map-tree-10.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7571807,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_11",{"map-tree-11.img",0.75,0.92,16777215,201,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_interior_11",{"map-tree-11.img",0.5,0.92,16777215,200,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_12",{"map-tree-12.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8032292,7,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_13",{"map-tree-13.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_13bh",{"map-tree-13.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_13x",{"map-tree-13x.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_14",{"map-tree-14.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_14d",{"map-tree-14.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"tree_14x",{"map-tree-14x.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"woodpile_01",{"map-woodpile-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9455616,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"woodpile_02",{"map-woodpile-02.img",0.5,1,16777215,10,0,0,0},1,{1,-6,-3,6,3},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.8,{1,-6,-3,6,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"woodpile_03",{"map-woodpile-03.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.75,3,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.8,{1,-3,-1.75,3,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bank_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_741,3,1,kFloorImgs_741,2,kCeilImgs_741,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_741,3},
-    {"barn_basement_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_742,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_basement_floor_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_743,1,kCeilImgs_743,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_743,2},
-    {"barn_basement_floor_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_744,1,kCeilImgs_744,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_744,1},
-    {"barn_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_745,2,1,kFloorImgs_745,1,kCeilImgs_745,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_745,2},
-    {"barn_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_746,2,1,kFloorImgs_746,1,kCeilImgs_746,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_746,2},
-    {"bathhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_747,6,nullptr,0,5.5,2.75,0.5,6,"",kEmitters_747,2,kZoomIns_747,5},
-    {"bathhouse_sideroom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_748,1,kCeilImgs_748,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_748,1},
-    {"bathhouse_sideroom_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_749,1,kCeilImgs_749,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_749,1},
-    {"bridge_lg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_750,5,1,kFloorImgs_750,2,kCeilImgs_750,1,10,2.75,0,12,"",nullptr,0,kZoomIns_750,1},
-    {"bridge_lg_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"bridge_xlg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_752,5,1,kFloorImgs_752,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_xlg_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"bridge_md_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_754,1,1,kFloorImgs_754,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_md_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"cabin_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_756,2,1,kFloorImgs_756,1,kCeilImgs_756,3,5.5,2.75,0.5,6,"",kEmitters_756,1,kZoomIns_756,2},
-    {"club_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_757,9,1,kFloorImgs_757,8,kCeilImgs_757,3,7.5,2.5,0.5,6,"",nullptr,0,kZoomIns_757,9},
-    {"club_vault",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_758,1,kCeilImgs_758,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_758,1},
-    {"club_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-41,-52,31,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"container_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_760,1,kCeilImgs_760,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_760,1},
-    {"container_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_761,1,kCeilImgs_761,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_761,1},
-    {"container_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_762,1,kCeilImgs_762,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_762,1},
-    {"container_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_763,1,kCeilImgs_763,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_763,1},
-    {"container_05",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11485762,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_764,1,kCeilImgs_764,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_764,1},
-    {"container_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_765,1,kCeilImgs_765,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_765,1},
-    {"dock_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_766,2,1,kFloorImgs_766,2,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"greenhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1995644,1,{1,-17.5,-25,22,25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_767,4,kCeilImgs_767,2,7.5,2.75,0.5,6,"",nullptr,0,kZoomIns_767,1},
-    {"greenhouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1995644,1,{1,-17.5,-25,22,25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_768,4,kCeilImgs_768,1,7.5,2.75,0.5,6,"",nullptr,0,kZoomIns_768,1},
-    {"hedgehog_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_769,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_770,2,0,kFloorImgs_770,2,kCeilImgs_770,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_770,1},
-    {"hut_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_771,2,0,kFloorImgs_771,2,kCeilImgs_771,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_771,1},
-    {"hut_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_772,2,0,kFloorImgs_772,2,kCeilImgs_772,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_772,1},
-    {"house_red_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6429724,1,{1,-19,-17.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_773,3,kCeilImgs_773,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_773,1},
-    {"house_red_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4656911,1,{1,-19,-19.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_774,10,kCeilImgs_774,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_774,1},
-    {"mansion_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_775,5,1,kFloorImgs_775,4,kCeilImgs_775,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_775,3},
-    {"mansion_cellar_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_776,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_776,2},
-    {"outhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8145976,1,{1,-5.5,-5.1,5.5,7.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_777,1,kCeilImgs_777,1,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_777,1},
-    {"panicroom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_778,1,kCeilImgs_778,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_778,1},
-    {"police_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_779,10,1,kFloorImgs_779,2,kCeilImgs_779,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_779,4},
-    {"saferoom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_780,1,kCeilImgs_780,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_780,1},
-    {"shack_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_781,1,kCeilImgs_781,1,5.5,4,0,12,"map-shack-res-01.img",nullptr,0,kZoomIns_781,1},
-    {"shack_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4014894,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_782,1,kCeilImgs_782,1,5.5,4,0,12,"map-shack-res-02.img",nullptr,0,kZoomIns_782,1},
-    {"shack_03a",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_783,4,1,kFloorImgs_783,2,kCeilImgs_783,1,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_783,1},
-    {"shack_03b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_784,4,1,kFloorImgs_784,2,kCeilImgs_784,1,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_784,1},
-    {"teahouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_785,4,0,kFloorImgs_785,3,kCeilImgs_785,1,5.5,4,0,12,"map-building-teahouse-res-01.img",nullptr,0,kZoomIns_785,1},
-    {"teahouse_complex_01s",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_787,3,1,kFloorImgs_787,2,kCeilImgs_787,1,8,5,0,12,"",nullptr,0,kZoomIns_787,1},
-    {"warehouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_788,3,1,kFloorImgs_788,2,kCeilImgs_788,1,8,5,0,12,"",nullptr,0,kZoomIns_788,1},
-    {"warehouse_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_789,3,1,kFloorImgs_789,2,kCeilImgs_789,1,8,5,0,12,"",nullptr,0,kZoomIns_789,1},
-    {"warehouse_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-42,-40,108,78},1,nullptr,0,nullptr,0,nullptr,0,kShapes_790,20,0,kFloorImgs_790,3,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"vault_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_791,1,kCeilImgs_791,1,7.25,2.75,0.5,6,"",nullptr,0,kZoomIns_791,1},
-    {"hut_01bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_792,2,0,kFloorImgs_792,2,kCeilImgs_792,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_792,1},
-    {"hut_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_793,4,0,kFloorImgs_793,2,kCeilImgs_793,1,5.5,4,0,12,"map-hut-res-02.img",nullptr,0,kZoomIns_793,1},
-    {"mansion_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_794,5,1,kFloorImgs_794,4,kCeilImgs_794,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_794,3},
-    {"mansion_cellar_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_795,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_795,2},
-    {"teahouse_complex_01cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"archway_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7813914,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,kCeilImgs_797,1,5.5,2.75,0,12,"map-archway-res-01.img",nullptr,0,nullptr,0},
-    {"bank_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_798,3,1,kFloorImgs_798,2,kCeilImgs_798,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_798,3},
-    {"vault_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_799,1,kCeilImgs_799,1,7.25,2.75,0.5,6,"",nullptr,0,kZoomIns_799,1},
-    {"barn_basement_floor_01d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_800,1,kCeilImgs_800,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_800,2},
-    {"barn_basement_floor_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_801,1,kCeilImgs_801,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_801,1},
-    {"barn_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_802,2,1,kFloorImgs_802,1,kCeilImgs_802,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_802,2},
-    {"desert_town_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-70,-120,65,120},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"desert_town_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-85,-89,85,57},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"oasis_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-43,-43,43,43},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"river_town_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-95,-50,85,36},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_806,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-68,-37,68,39},1,nullptr,0,nullptr,0,nullptr,0,kShapes_807,6,1,kFloorImgs_807,4,kCeilImgs_807,5,5.5,2.75,0.5,6,"",kEmitters_807,1,kZoomIns_807,7},
-    {"reserve_basement_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-70,-35,70,35},1,nullptr,0,nullptr,0,nullptr,0,kShapes_808,1,1,kFloorImgs_808,5,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_808,7},
-    {"reserve_armory_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_809,1,kCeilImgs_809,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_809,1},
-    {"reserve_security_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_810,1,kCeilImgs_810,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_810,1},
-    {"reserve_vault_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_811,1,kCeilImgs_811,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_811,1},
-    {"saloon_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-22.5,-22.5,22.5,22.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_812,4,1,kFloorImgs_812,2,kCeilImgs_812,3,5.5,2.75,0.5,6,"",kEmitters_812,1,kZoomIns_812,1},
-    {"saloon_cellar_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_813,1,kCeilImgs_813,1,7,3,0,12,"",nullptr,0,kZoomIns_813,1},
-    {"statue_building_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_814,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_underground_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_815,1,kCeilImgs_815,1,5,3,0,12,"",nullptr,0,kZoomIns_815,1},
-    {"statue_building_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_816,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_underground_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_817,1,kCeilImgs_817,1,5,3,0,12,"",nullptr,0,kZoomIns_817,1},
-    {"river_town_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-121,-56,122,75},1,nullptr,0,nullptr,0,nullptr,0,kShapes_818,4,0,kFloorImgs_818,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_819,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_820,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"warehouse_01f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_821,3,1,kFloorImgs_821,2,kCeilImgs_821,1,8,5,0,12,"",nullptr,0,kZoomIns_821,1},
-    {"barn_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_822,2,1,kFloorImgs_822,1,kCeilImgs_822,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_822,2},
-    {"warehouse_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_823,3,1,kFloorImgs_823,2,kCeilImgs_823,1,8,5,0,12,"",nullptr,0,kZoomIns_823,1},
-    {"junkyard_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-37,-37,37,37},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"house_red_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6429724,1,{1,-19,-17.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_825,3,kCeilImgs_825,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_825,1},
-    {"house_red_02h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4656911,1,{1,-19,-19.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_826,10,kCeilImgs_826,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_826,1},
-    {"cabin_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_827,2,1,kFloorImgs_827,1,kCeilImgs_827,3,5.5,2.75,0.5,6,"",kEmitters_827,1,kZoomIns_827,2},
-    {"mansion_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_828,5,1,kFloorImgs_828,4,kCeilImgs_828,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_828,3},
-    {"mansion_cellar_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_829,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_829,2},
-    {"shilo_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,3240224,1,{1,-17,-16,17,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_830,2,kCeilImgs_830,1,5.5,4,0,12,"",nullptr,0,kZoomIns_830,1},
-    {"warehouse_03sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_831,3,1,kFloorImgs_831,2,kCeilImgs_831,1,8,5,0,12,"",nullptr,0,kZoomIns_831,1},
-    {"kopje_brush_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-18,-18,18,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_cover_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-10,-10,10,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_cover_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-10,-10,10,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_cover_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-10,-10,10,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"grassy_cover_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-30,-10,30,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brush_clump_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-17,-17,17,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brush_clump_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-17,-17,17,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"brush_clump_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-17,-17,17,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"savannah_patch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-20,-16,20,16},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"kopje_patch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-45,-35,45,35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"perch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1915136,1,{1,-7,-8,7,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_842,1,kCeilImgs_842,1,5.5,2.75,0,12,"map-perch-res-01.img",nullptr,0,nullptr,0},
-    {"oasis_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-43,-43,43,43},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"hut_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_844,2,0,kFloorImgs_844,2,kCeilImgs_844,3,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_844,1},
-    {"hut_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_845,2,0,kFloorImgs_845,2,kCeilImgs_845,3,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_845,1},
-    {"warehouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_846,3,1,kFloorImgs_846,2,kCeilImgs_846,5,8,5,0,12,"",nullptr,0,kZoomIns_846,1},
-    {"warehouse_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_847,3,1,kFloorImgs_847,2,kCeilImgs_847,4,8,5,0,12,"",nullptr,0,kZoomIns_847,1},
-    {"warehouse_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-35,-16,35,16},1,nullptr,0,nullptr,0,nullptr,0,kShapes_848,3,1,kFloorImgs_848,2,kCeilImgs_848,5,8,5,0,12,"",nullptr,0,kZoomIns_848,1},
-    {"shack_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_849,1,kCeilImgs_849,3,5.5,4,0,12,"map-shack-res-01.img",nullptr,0,kZoomIns_849,1},
-    {"shack_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4014894,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_850,1,kCeilImgs_850,2,5.5,4,0,12,"map-shack-res-02.img",nullptr,0,kZoomIns_850,1},
-    {"shack_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_851,4,1,kFloorImgs_851,2,kCeilImgs_851,2,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_851,1},
-    {"outhouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8145976,1,{1,-5.5,-5.1,5.5,7.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_852,1,kCeilImgs_852,2,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_852,1},
-    {"outhouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,10371350,1,{1,-5.5,-5.1,5.5,7.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_853,1,kCeilImgs_853,1,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_853,1},
-    {"barn_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_854,2,1,kFloorImgs_854,1,kCeilImgs_854,5,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_854,2},
-    {"barn_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-28,-18.5,28,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_855,2,1,kFloorImgs_855,1,kCeilImgs_855,5,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_855,2},
-    {"bank_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_856,3,1,kFloorImgs_856,2,kCeilImgs_856,7,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_856,3},
-    {"police_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_857,10,1,kFloorImgs_857,2,kCeilImgs_857,9,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_857,4},
-    {"house_red_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6429724,1,{1,-19,-17.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_858,3,kCeilImgs_858,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_858,1},
-    {"house_red_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4656911,1,{1,-19,-19.5,19,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_859,10,kCeilImgs_859,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_859,1},
-    {"cabin_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_860,2,1,kFloorImgs_860,1,kCeilImgs_860,6,5.5,2.75,0.5,6,"",kEmitters_860,1,kZoomIns_860,2},
-    {"mansion_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_861,5,1,kFloorImgs_861,4,kCeilImgs_861,8,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_861,3},
-    {"teahouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_862,4,0,kFloorImgs_862,3,kCeilImgs_862,4,5.5,4,0,12,"map-building-teahouse-res-01.img",nullptr,0,kZoomIns_862,1},
-    {"teahouse_complex_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_lg_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_864,5,1,kFloorImgs_864,2,kCeilImgs_864,5,10,2.75,0,12,"",nullptr,0,kZoomIns_864,1},
-    {"container_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_865,1,kCeilImgs_865,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_865,1},
-    {"workshop_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-30.5,-32.5,34.5,32.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_866,4,1,kFloorImgs_866,2,kCeilImgs_866,2,8,5,0,12,"",nullptr,0,kZoomIns_866,2},
-    {"workshop_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-33,-35,37,35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-55,-54,55,46},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"camp_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-22.5,-22.5,22.5,22.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",kEmitters_871,1,kZoomIns_871,1},
-    {"teapavilion_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-11,-32,11,11},1,nullptr,0,nullptr,0,nullptr,0,kShapes_872,3,0,kFloorImgs_872,2,kCeilImgs_872,1,5.5,4,0,12,"map-building-pavilion-res-01.img",nullptr,0,kZoomIns_872,1},
-    {"teapavilion_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-14,-32,14,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_01sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-55,-54,55,46},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_02sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_03sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"workshop_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-30.5,-32.5,34.5,32.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_877,4,1,kFloorImgs_877,2,kCeilImgs_877,7,8,5,0,12,"",nullptr,0,kZoomIns_877,2},
-    {"workshop_complex_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-33,-35,37,35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"camp_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-22.5,-22.5,22.5,22.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",kEmitters_881,1,kZoomIns_881,1},
-    {"teapavilion_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-11,-32,11,11},1,nullptr,0,nullptr,0,nullptr,0,kShapes_882,3,0,kFloorImgs_882,2,kCeilImgs_882,1,5.5,4,0,12,"map-building-pavilion-res-01.img",nullptr,0,kZoomIns_882,1},
-    {"logging_complex_01su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-55,-54,55,46},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_02su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-40,-40,40,40},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"logging_complex_03su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-32,32,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"teahouse_complex_01su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-24,-18,24,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_chrys_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_887,1,2,kFloorImgs_887,1,kCeilImgs_887,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_887,1},
-    {"bunker_chrys_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_888,2,kCeilImgs_888,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_888,1},
-    {"bunker_chrys_sublevel_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_889,2,kCeilImgs_889,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_889,1},
-    {"bunker_chrys_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_890,2,kCeilImgs_890,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_890,1},
-    {"bunker_chrys_compartment_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_891,2,kCeilImgs_891,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_891,1},
-    {"bunker_chrys_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_892,2,kCeilImgs_892,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_892,1},
-    {"bunker_chrys_compartment_02b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_893,2,kCeilImgs_893,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_893,1},
-    {"bunker_chrys_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_894,1,kCeilImgs_894,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_894,1},
-    {"bunker_chrys_compartment_03b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_895,1,kCeilImgs_895,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_895,1},
-    {"bunker_cloud_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_896,2,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"bunker_cloud_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-45,-45,45,45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_897,3,kCeilImgs_897,4,7,3,0,12,"",nullptr,0,kZoomIns_897,4},
-    {"bunker_cloud_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,nullptr,0,kCeilImgs_898,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_898,2},
-    {"bunker_cloud_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,kZoomIns_899,1},
-    {"bunker_egg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_900,1,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"bunker_egg_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_901,2,kCeilImgs_901,1,5,3,0,12,"",nullptr,0,kZoomIns_901,1},
-    {"bunker_egg_sublevel_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_902,2,kCeilImgs_902,1,5,3,0,12,"",nullptr,0,kZoomIns_902,1},
-    {"bunker_egg_sublevel_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_903,2,kCeilImgs_903,1,5,3,0,12,"",nullptr,0,kZoomIns_903,1},
-    {"bunker_hydra_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_904,2,0,kFloorImgs_904,3,kCeilImgs_904,1,5,2.75,0.5,6,"",nullptr,0,kZoomIns_904,2},
-    {"bunker_hydra_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_905,4,kCeilImgs_905,3,10,3,0,12,"",nullptr,0,kZoomIns_905,3},
-    {"bunker_hydra_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_906,1,kCeilImgs_906,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_906,1},
-    {"bunker_hydra_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_907,1,kCeilImgs_907,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_907,1},
-    {"bunker_hydra_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_908,1,kCeilImgs_908,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_908,1},
-    {"bunker_storm_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_909,1,0,kFloorImgs_909,1,kCeilImgs_909,1,5,2.75,0.5,6,"none",nullptr,0,kZoomIns_909,1},
-    {"bunker_storm_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_910,2,kCeilImgs_910,1,5,3,0,12,"",nullptr,0,kZoomIns_910,1},
-    {"bunker_conch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_911,2,0,kFloorImgs_911,2,kCeilImgs_911,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_911,2},
-    {"bunker_conch_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_912,2,kCeilImgs_912,2,7,3,0,12,"",kEmitters_912,1,kZoomIns_912,2},
-    {"bunker_conch_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_913,2,kCeilImgs_913,1,7,3,0,12,"",kEmitters_913,1,kZoomIns_913,2},
-    {"bunker_crossing_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_914,1,1,kFloorImgs_914,1,kCeilImgs_914,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_914,1},
-    {"bunker_crossing_stairs_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_915,1,1,kFloorImgs_915,1,kCeilImgs_915,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_915,1},
-    {"bunker_crossing_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_916,1,0,kFloorImgs_916,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_crossing_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_917,8,kCeilImgs_917,2,7,3,0,12,"",nullptr,0,kZoomIns_917,4},
-    {"bunker_crossing_bathroom",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_918,1,kCeilImgs_918,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_918,1},
-    {"bunker_crossing_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_919,2,kCeilImgs_919,2,7,3,0,12,"",kEmitters_919,1,kZoomIns_919,2},
-    {"bunker_hatchet_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_920,1,0,kFloorImgs_920,1,kCeilImgs_920,1,5,2.75,0.5,6,"none",nullptr,0,kZoomIns_920,1},
-    {"bunker_hatchet_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_921,3,kCeilImgs_921,1,5,3,0,12,"",nullptr,0,kZoomIns_921,1},
-    {"bunker_hatchet_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_922,1,kCeilImgs_922,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_922,1},
-    {"bunker_hatchet_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_923,4,kCeilImgs_923,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_923,1},
-    {"bunker_hatchet_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_924,4,kCeilImgs_924,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_924,1},
-    {"bunker_eye_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_925,1,1,kFloorImgs_925,1,kCeilImgs_925,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_925,1},
-    {"bunker_eye_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_926,2,kCeilImgs_926,1,5,3,0,12,"",nullptr,0,kZoomIns_926,1},
-    {"bunker_eye_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_927,1,kCeilImgs_927,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_927,1},
-    {"bunker_twins_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,kShapes_928,1,1,kFloorImgs_928,1,kCeilImgs_928,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_928,1},
-    {"bunker_twins_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_929,1,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0},
-    {"bunker_twins_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_930,1,kCeilImgs_930,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_930,1},
-    {"bunker_twins_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_931,1,kCeilImgs_931,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_931,1},
-    {"cache_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_932,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_933,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_934,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_935,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_936,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_937,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_01f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_938,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_939,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_940,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_941,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_942,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_943,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_944,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_945,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_946,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_947,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_948,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_02bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_949,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_950,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_03tr",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_951,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_952,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_04x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_953,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_04cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_954,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_955,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_06bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_956,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_07",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_957,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_07w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_958,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_06cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_959,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_07f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_960,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_07bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_961,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_log_13",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_962,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_pumpkin_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_963,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_pumpkin_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_964,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_pumpkin_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_965,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"cache_pumpkin_airdrop_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_966,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"candle_lit_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_967,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"candle_lit_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_968,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_lg_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,kLayers_969,2,kStairs_969,2,kMask_969,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_xlg_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,kLayers_970,2,kStairs_970,2,kMask_970,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bridge_md_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-23,-7,23,7},1,kLayers_971,2,kStairs_971,2,kMask_971,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_972,2,kStairs_972,1,kMask_972,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"statue_structure_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_973,2,kStairs_973,1,kMask_973,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_basement_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-30,-30,30,30},1,kLayers_974,2,kStairs_974,1,kMask_974,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_basement_structure_01d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-30,-30,30,30},1,kLayers_975,2,kStairs_975,1,kMask_975,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"barn_basement_structure_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-30,-30,30,30},1,kLayers_976,2,kStairs_976,1,kMask_976,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,kLayers_977,2,kStairs_977,2,kMask_977,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_structure_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,kLayers_978,2,kStairs_978,2,kMask_978,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,kLayers_979,2,kStairs_979,2,kMask_979,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"mansion_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,kLayers_980,2,kStairs_980,2,kMask_980,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"reserve_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-68,-37,68,39},1,kLayers_981,2,kStairs_981,2,kMask_981,3,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"saloon_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,kLayers_982,2,kStairs_982,1,kMask_982,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"club_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,kLayers_983,2,kStairs_983,2,kMask_983,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_984,2,kStairs_984,1,kMask_984,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_985,2,kStairs_985,1,kMask_985,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.5,-7.5,7.5,17.5},1,kLayers_986,2,kStairs_986,1,kMask_986,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-23.5,-97,46.5,15},1,kLayers_987,2,kStairs_987,3,kMask_987,5,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7,-10.5,7,22.5},1,kLayers_988,2,kStairs_988,1,kMask_988,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,11.5,-40.5,58,11.5},1,kLayers_989,2,kStairs_989,2,kMask_989,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_05",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-42,-28.5,42,34.5},1,kLayers_990,2,kStairs_990,4,kMask_990,3,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-6,-7.5,8,19.5},1,kLayers_991,2,kStairs_991,1,kMask_991,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_07",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-42,-72,42,25},1,kLayers_992,2,kStairs_992,1,kMask_992,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_08",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-10,-10,20,20},1,kLayers_993,2,kStairs_993,1,kMask_993,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_08b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-10,-10,20,20},1,kLayers_994,2,kStairs_994,1,kMask_994,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_09",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-26.5,-21.4,26.5,21.4},1,kLayers_995,2,kStairs_995,4,kMask_995,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"bunker_structure_10",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-46.5,-99,20,22},1,kLayers_996,2,kStairs_996,2,kMask_996,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_barrel_explosion",{"map-barrel-res-01.img",0.24,1,0,9,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_frag_explosion",{"map-barrel-res-01.img",0.2,0.8,0,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_frag_small_explosion",{"map-barrel-res-01.img",0.12,0.8,2105376,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_rounds_explosion",{"map-barrel-res-01.img",0.1,0.8,3150346,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,1,2,2.5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_bomb_iron_explosion",{"map-barrel-res-01.img",0.2,0.8,0,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,1,6,10,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_smoke_explosion",{"map-smoke-res.img",0.2,0.5,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_snowball_explosion",{"map-snowball-res.img",0.2,0.25,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,1,5,5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_potato_explosion",{"map-potato-res.img",0.2,0.25,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,1,5,5,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_vent_01",{"map-bunker-vent-01.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_vent_02",{"map-bunker-vent-02.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_vent_03",{"map-bunker-vent-03.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_hydra_01",{"map-bunker-hydra-floor-04.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_camera_01",{"map-decal-camera-01.img",0.25,1,16777215,60,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipe_01",{"map-decal-pipe.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipes_01",{"map-pipes-01.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-4.5,1,4.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-4.5,1,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipes_02",{"map-pipes-02.img",0.5,0.96,16777215,60,0,0,0},1,{1,-4,-3,4,3},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4,-3,4,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipes_03",{"map-pipes-03.img",0.5,0.96,16777215,60,0,0,0},1,{1,-10.5,-4,10.5,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-10.5,-4,10.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipes_04",{"map-pipes-04.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-5.5,1,5.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_pipes_05",{"map-pipes-05.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-3.5,1,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-3.5,1,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_initiative_01",{"map-decal-initiative.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_caduceus_01",{"map-decal-caduceus.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_web_01",{"map-web-01.img",0.5,0.75,16777215,60,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_light_01",{"map-light-01.img",1,0.5,16751616,60,0,0,0},1,{1,-3.25,-3.25,3.25,3.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,1,0.9,1.1,0.5,1,1,10000000000,10000000000,1,0,0,1,{1,-3.25,-3.25,3.25,3.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_light_02",{"map-light-01.img",0.75,0.5,16760397,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,1,0.8,1.2,0.2,1,1,10000000000,10000000000,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_light_03",{"map-light-01.img",0.75,0.5,8585216,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,1,0.8,1.2,0.2,1,1,10000000000,10000000000,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_light_04",{"map-light-01.img",0.75,0.5,16734244,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,1,0.5,0.75,0.4,1,1,10000000000,10000000000,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_blood_01",{"part-splat-01.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_blood_02",{"part-splat-02.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_blood_03",{"part-splat-03.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_chrys_01",{"map-bunker-vent-01.img",0.5,1,16777215,3,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_01",{"map-decal-oil-01.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_02",{"map-decal-oil-02.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_03",{"map-decal-oil-03.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_04",{"map-decal-oil-04.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_05",{"map-decal-oil-05.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_oil_06",{"map-decal-oil-06.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_bathhouse_pool_01",{"map-bathhouse-pool-01.img",8,0.5,52721,5,0,0,0},1,{1,-9,-15,9,15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",1,0,5157572,10478319,1,0,4,0.5,2,1,7667727,1,0.85,1,8529201,1,11490399,0,1,1,1,0,0,0,0,1,0,0,1,{1,-9,-15,9,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_club_01",{"map-decal-club-01.img",1,1,16777215,4,0,0,0},1,{0,0,0,4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_club_02",{"map-decal-club-02.img",1,0,16777215,4,0,0,0},1,{1,-4,-10.5,4,10.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,1,4,6,3.25,0.5,0,16777215,1,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4,-10.5,4,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_plank_01",{"part-plank-01.img",0.5,1,4327436,9,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"decal_flyer_01",{"map-decal-flyer-01.img",0.6,0.667,16777215,4,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_1",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_2",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_beach",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_surviv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_vault_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_police_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_mansion_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_sv98",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_scopes_sniper",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_woodaxe",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_fireaxe",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_stonehammer",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_barn_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_hatchet_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_club_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_leaf_pile",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_islander_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_verde_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_lumber_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_imperial_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_pineapple_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_tarkhany_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_spetsnaz_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_eye_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_saloon",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_chrys_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_chrys_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_chrys_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_airdrop_armor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_perk_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_sniper_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_loot_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
-    {"loot_tier_helmet_forest",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,0,0},0,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0},
+    {"house_door_01",{"map-door-01.img",0.5,1,14671839,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"whiteChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_door_02",{"map-door-01.img",0.5,1,4934475,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_door_03",{"map-door-03.img",0.5,1,14671839,15,0,0,0},1,{1,-0.5,0.25,0.5,3.75},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"whiteChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.5,0.25,0.5,3.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_door_05",{"map-door-05.img",0.5,1,14671839,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crossing_door_01",{"map-door-01.img",0.5,1,3159362,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cell_door_01",{"map-door-01.img",0.5,1,1776411,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"eye_door_01",{"map-door-01.img",0.5,1,921102,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"lab_door_01",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"lab_door_02",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",-3.75,"map-door-slot-01.img",6,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"lab_door_03",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"lab_door_locked_01",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"lab_door_chrys",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vault_door_main",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vault_door_chrys_01",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vault_door_chrys_02",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vault_door_reserve",{"map-door-06.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,10},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,2,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vault_door_eye",{"map-door-02.img",0.5,1,14671839,15,0,0,0},1,{1,0,0,2,7},1,0,0,0,0,0,0,"",3.5,"",0,0,1,16777215,1,0.2,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,0,0,2,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"saloon_door_secret",{"map-door-04.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,0,0.75,4},1,0,0,0,0,0,0,"",4.5,"",0,0,1,16777215,1,0.5,1,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.75,0,0.75,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_door_01",{"map-door-01.img",0.5,0.95,14537141,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-02.img",-2,0,0.5,3211264,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"secret_door_club",{"map-door-01.img",0.5,1,5373952,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vault_door_bathhouse",{"map-door-01.img",0.5,1,4934475,15,0,0,0},1,{1,-0.3,0,0.3,4},1,0,0,0,0,0,0,"",3.75,"map-door-slot-01.img",-2,0,0.5,1316379,1,0.5,1,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.3,0,0.3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_window_01",{"map-building-house-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,1,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,4456448,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"lab_window_01",{"map-building-house-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,1,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"lab_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,1316379,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stairs_01",{"map-stairs-broken-01.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stairs_02",{"map-stairs-broken-02.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-4,2.5,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-4,2.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stairs_03",{"map-stairs-broken-03.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"club_window_01",{"map-building-boarded-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"club_window_broken_01",{"map-building-house-window-res-01.img",0.5,1,7886127,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bank_window_01",{"map-building-bank-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,1,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_window_01",{"map-building-reserve-window-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.4,-3.5,0.4,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,1,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-3.5,0.4,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_window_broken_01",{"map-building-reserve-window-res-01.img",0.5,1,1316379,10,0,0,0},1,{1,-0.4,-4,0.4,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-4,0.4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_05_collider",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-6,2.75,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.75,-6,2.75,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hedgehog_wall",{"",1,1,16777215,0,0,0,0},0,{1,-3,-0.5,3,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5854285,1,{1,-3,-0.5,3,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_wall_int_4",{"map-wall-04.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_wall_int_5",{"map-wall-05.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_wall_int_6",{"map-wall-06.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_wall_int_7",{"map-wall-07.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_wall_int_10",{"map-wall-10.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_wall_int_12",{"map-wall-12.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_wall_int_14",{"map-wall-14.img",0.5,1,4608000,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_window_open_01",{"map-building-house-window-res-01.img",0.5,1,7681026,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_wall_side",{"",1,1,16777215,0,0,0,0},0,{1,-25,-0.6,25,0.6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-25,-0.6,25,0.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_wall_edge",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-3.2,0.6,3.2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-3.2,0.6,3.2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_wall_edge_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-6.5,0.6,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-6.5,0.6,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_wall_int",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-1,0.6,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-1,0.6,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_column",{"",1,1,16777215,0,0,0,0},0,{1,-0.6,-0.6,0.6,0.6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-0.6,0.6,0.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_right",{"",1,1,16777215,0,0,0,0},0,{1,-20,-0.5,20,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-20,-0.5,20,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_edge",{"",1,1,16777215,0,0,0,0},0,{1,-4,-0.5,4,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-0.5,4,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_mid_1",{"",1,1,16777215,0,0,0,0},0,{1,-7.25,-0.5,7.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-7.25,-0.5,7.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_mid_2",{"",1,1,16777215,0,0,0,0},0,{1,-8,-0.5,8,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-8,-0.5,8,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_mid_3",{"",1,1,16777215,0,0,0,0},0,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_bot",{"",1,1,16777215,0,0,0,0},0,{1,-8.75,-0.5,8.75,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-8.75,-0.5,8.75,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_room_1",{"",1,1,16777215,0,0,0,0},0,{1,-4.25,-0.5,4.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4.25,-0.5,4.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_room_2",{"",1,1,16777215,0,0,0,0},0,{1,-2.25,-0.5,2.25,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-0.5,2.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_room_3",{"",1,1,16777215,0,0,0,0},0,{1,-4.5,-0.5,4.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4.5,-0.5,4.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_room_4",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-0.5,2.75,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.75,-0.5,2.75,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_wall_left",{"",1,1,16777215,0,0,0,0},0,{1,-15.5,-0.5,15.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-15.5,-0.5,15.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cobalt_wall_int_4",{"map-wall-04-cobalt.img",0.5,1,16777215,10,0,0,0},1,{1,-0.6,-2,0.6,2},1,0,0,0,1,0,1,"explosion_cobalt",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","cobalt_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-2,0.6,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"archway_column_1",{"map-column-01.img",0.5,1,7290644,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_wall_top",{"map-wall-shack-top.img",0.5,1,16777215,10,0,0,0},1,{1,-5.6,-0.35,5.6,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-5.6,-0.35,5.6,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_wall_side_left",{"map-wall-shack-left.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.43,0.35,3.43},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.35,-3.43,0.35,3.43},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_wall_side_right",{"map-wall-shack-right.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.8,0.35,3.8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.35,-3.8,0.35,3.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_wall_bot",{"map-wall-shack-bot.img",0.5,1,16777215,10,0,0,0},1,{1,-3.75,-0.35,3.75,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3.75,-0.35,3.75,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_wall_ext_2",{"map-wall-02.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_wall_ext_5",{"map-wall-05.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_wall_ext_9",{"map-wall-09.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_wall_ext_10",{"map-wall-10.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_wall_ext_14",{"map-wall-14.img",0.5,1,12556639,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"outhouse_wall_top",{"map-wall-outhouse-top.img",0.5,1,16777215,10,0,0,0},1,{1,-3.2,-0.35,3.2,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"outhouseChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3.2,-0.35,3.2,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"outhouse_wall_side",{"map-wall-outhouse-side.img",0.5,1,16777215,10,0,0,0},1,{1,-0.35,-3.1,0.35,3.1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"outhouseChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.35,-3.1,0.35,3.1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"outhouse_wall_bot",{"map-wall-outhouse-bot.img",0.5,1,16777215,10,0,0,0},1,{1,-1.15,-0.35,1.15,0.35},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"outhouseChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.15,-0.35,1.15,0.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_1",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_12_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.25,0.5,6.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.25,0.5,6.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_19",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9.5,0.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9.5,0.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_20",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10,0.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-10,0.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_21",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10.5,0.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-10.5,0.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_33",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-16.5,0.5,16.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-16.5,0.5,16.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_41",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-20.5,0.5,20.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-20.5,0.5,20.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_short_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_thicker_16",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8,1.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-8,1.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_thicker_24",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12,1.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-12,1.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thin_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.375,-3,0.375,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.375,-3,0.375,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_1_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.75,0.5,0.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-0.75,0.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_9_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.75,0.5,4.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.75,0.5,4.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_10_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.25,0.5,5.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.25,0.5,5.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_11_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.75,0.5,5.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.75,0.5,5.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_24",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12,0.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-12,0.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_25",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12.5,0.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-12.5,0.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_column_2x8",{"",1,1,16777215,0,0,0,0},0,{1,-1,-4,1,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-4,1,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_column_4x8",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4,2,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2,-4,2,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_column_4x9",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4.5,2,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2,-4.5,2,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_column_4x24",{"",1,1,16777215,0,0,0,0},0,{1,-2,-12,2,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2,-12,2,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_column_5x10",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-5,2.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-5,2.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_column_7x10",{"",1,1,16777215,0,0,0,0},0,{1,-3.5,-5,3.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3.5,-5,3.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_column_8x3",{"",1,1,16777215,0,0,0,0},0,{1,-4,-1.5,4,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-1.5,4,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thick_11",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5.5,1,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_11",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5.5,1.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-5.5,1.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_14",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_17",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8.5,1.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-8.5,1.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_19",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9.5,1.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-9.5,1.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_22",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11,1.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-11,1.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_27",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13.5,1.5,13.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-13.5,1.5,13.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_30",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15,1.5,15},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-15,1.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_31",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15.5,1.5,15.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-15.5,1.5,15.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_42",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-21,1.5,21},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-21,1.5,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_ext_thicker_54",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-27,1.5,27},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-27,1.5,27},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_2x2",{"",1,1,16777215,0,0,0,0},0,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_3",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_9",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_12_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.25,0.5,6.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.25,0.5,6.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_13",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_1x15",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7.5,0.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7.5,0.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_16",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_43",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-21.5,0.5,21.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-21.5,0.5,21.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_short_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_short_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thick_5",{"",1,1,16777215,0,0,0,0},0,{1,-1,-2.5,1,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-2.5,1,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_2x5_5",{"",1,1,16777215,0,0,0,0},0,{1,-1,-2.75,1,2.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-2.75,1,2.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thick_6",{"",1,1,16777215,0,0,0,0},0,{1,-1,-3,1,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-3,1,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thick_8",{"",1,1,16777215,0,0,0,0},0,{1,-1,-4,1,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-4,1,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thick_12",{"",1,1,16777215,0,0,0,0},0,{1,-1,-6,1,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-6,1,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thick_16",{"",1,1,16777215,0,0,0,0},0,{1,-1,-8,1,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-8,1,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thick_20",{"",1,1,16777215,0,0,0,0},0,{1,-1,-10,1,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-10,1,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thick_23",{"",1,1,16777215,0,0,0,0},0,{1,-1,-11.5,1,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-11.5,1,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thick_28",{"",1,1,16777215,0,0,0,0},0,{1,-1,-14,1,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-14,1,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_1_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-0.75,1.5,0.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-0.75,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_5",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2.5,1.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2.5,1.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_9",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_11",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5.5,1.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-5.5,1.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_14",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_15",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_16",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8,1.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-8,1.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_17",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-8.5,1.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-8.5,1.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_18",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9,1.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-9,1.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_19",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9.5,1.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-9.5,1.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_20",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10,1.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-10,1.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_22",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11,1.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-11,1.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_23",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-11.5,1.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-11.5,1.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_24",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12,1.5,12},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-12,1.5,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_25",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-12.5,1.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-12.5,1.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_26",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13,1.5,13},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-13,1.5,13},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_27",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-13.5,1.5,13.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-13.5,1.5,13.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_28",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-14,1.5,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-14,1.5,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_29",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-14.5,1.5,14.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-14.5,1.5,14.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_30",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-15,1.5,15},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-15,1.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_32",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-16,1.5,16},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-16,1.5,16},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_34",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-17,1.5,17},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-17,1.5,17},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_35",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-17.5,1.5,17.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-17.5,1.5,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_42",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-21,1.5,21},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-21,1.5,21},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_48",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-24,1.5,24},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-24,1.5,24},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_ext_thicker_49",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-7,2.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-7,2.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_5x6",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-3,2.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-3,2.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_5x10",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-5,2.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-5,2.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_5x13",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-6.5,2.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-6.5,2.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_5x22_5",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-11.25,2.5,11.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-11.25,2.5,11.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_5x23",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-11.5,2.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-11.5,2.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_5x26",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-13,2.5,13},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-13,2.5,13},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_6x8",{"",1,1,16777215,0,0,0,0},0,{1,-3,-4,3,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3,-4,3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"glass_wall_9",{"map-wall-glass-9.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"glass_wall_10",{"map-wall-glass-10.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"glass_wall_12",{"map-wall-glass-12.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"glass_wall_12_2",{"map-wall-glass-12-2.img",0.5,1,16777215,10,0,0,0},1,{1,-1,-6,1,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-6,1,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"glass_wall_13",{"map-wall-glass-13.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"glass_wall_1x19",{"map-wall-glass-1x19.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-9.5,0.5,9.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9.5,0.5,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"glass_wall_1x23",{"map-wall-glass-1x23.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_wall_int_2",{"map-wall-02-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_wall_int_2_5",{"map-wall-02-5-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-1.25,0.5,1.25},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.25,0.5,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_wall_int_4",{"map-wall-04-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_wall_int_5",{"map-wall-05-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_wall_int_6",{"map-wall-06-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_wall_int_7",{"map-wall-07-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_wall_int_8",{"map-wall-08-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_wall_int_11",{"map-wall-11-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_wall_int_13",{"map-wall-13-rounded.img",0.5,1,7173701,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_column_1",{"map-column-01.img",0.5,1,2764060,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bank_wall_int_3",{"map-wall-03-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bank_wall_int_4",{"map-wall-04-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bank_wall_int_5",{"map-wall-05-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bank_wall_int_8",{"map-wall-08-rounded.img",0.5,1,7951934,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_1",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_2",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_4",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_8",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_10",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_11",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_12",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_18",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_20",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-10,0.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-10,0.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_22",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11,0.5,11},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11,0.5,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_23",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-11.5,0.5,11.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-11.5,0.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_25",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-12.5,0.5,12.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-12.5,0.5,12.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_38",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-19,0.5,19},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-19,0.5,19},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_2x11",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5.5,1,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_2x10",{"",1,1,16777215,0,0,0,0},0,{1,-1,-5,1,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-5,1,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_3x4",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-2,1.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-2,1.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_perm_wall_ext_3x13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_wall_int_3",{"map-wall-03-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_wall_int_4",{"map-wall-04-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_wall_int_5",{"map-wall-05-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_wall_int_6",{"map-wall-06-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_wall_int_8",{"map-wall-08-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_wall_int_9",{"map-wall-09-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_wall_int_10",{"map-wall-10-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_wall_int_12",{"map-wall-12-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_wall_int_13",{"map-wall-13-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_wall_int_16",{"map-wall-16-rounded.img",0.5,1,5186573,10,0,0,0},1,{1,-0.5,-8,0.5,8},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8,0.5,8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_bar_small",{"",0.5,1,16777215,10,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_bar_large",{"map-reserve-bar-large.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_bar_back",{"map-reserve-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-6.5,0.75,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.75,-6.5,0.75,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"police_wall_int_2",{"map-wall-02-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"police_wall_int_3",{"map-wall-03-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"police_wall_int_4",{"map-wall-04-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"police_wall_int_6",{"map-wall-06-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"police_wall_int_7",{"map-wall-07-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"police_wall_int_8",{"map-wall-08-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"police_wall_int_10",{"map-wall-10-rounded.img",0.5,1,1777447,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_wall_int_4",{"map-wall-04-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_wall_int_5",{"map-wall-05-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_wall_int_8",{"map-wall-08-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_wall_int_9",{"map-wall-09-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_wall_int_11",{"map-wall-11-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_wall_int_14",{"map-wall-14-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_column_1",{"map-column-01.img",0.5,1,5587506,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cabin_wall_int_5",{"map-wall-05-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cabin_wall_int_10",{"map-wall-10-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cabin_wall_int_13",{"map-wall-13-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_wall_int_1",{"map-wall-01-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_wall_int_5",{"map-wall-05-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_wall_int_6",{"map-wall-06-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_wall_int_7",{"map-wall-07-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_wall_int_8",{"map-wall-08-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-4,0.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4,0.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_wall_int_9",{"map-wall-09-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-4.5,0.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-4.5,0.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_wall_int_10",{"map-wall-10-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_wall_int_11",{"map-wall-11-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-5.5,0.5,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.5,0.5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_wall_int_12",{"map-wall-12-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_wall_int_13",{"map-wall-13-rounded.img",0.5,1,16768917,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"ltgreenChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_column_1",{"map-column-01.img",0.5,1,7432016,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"saloon_column_1",{"map-column-01.img",0.5,1,1710618,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"saloon_bar_small",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"saloon_bar_large",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-7.5,1.5,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-7.5,1.5,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"saloon_bar_back_large",{"map-saloon-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-5,0.75,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.75,-5,0.75,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"saloon_bar_back_small",{"map-saloon-bar-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-1.5,0.75,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.75,-1.5,0.75,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_wall_int_4",{"map-wall-04-stone.img",0.5,1,16777215,10,0,0,0},1,{1,-0.6,-2,0.6,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.6,-2,0.6,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_column_4x8",{"",1,1,16777215,0,0,0,0},0,{1,-2,-4,2,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2,-4,2,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"metal_wall_column_5x12",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-6,2.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-6,2.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_6",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_7",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_14",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_17",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-8.5,0.5,8.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-8.5,0.5,8.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_35",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-17.5,0.5,17.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-17.5,0.5,17.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_thicker_6",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3,1.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3,1.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_thicker_7",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-3.5,1.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-3.5,1.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_thicker_8",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-4,1.5,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-4,1.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_thicker_10",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-5,1.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-5,1.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_thicker_12",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6,1.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6,1.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_thicker_13",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-6.5,1.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-6.5,1.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_thicker_18",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-9,1.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-9,1.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wood_perm_wall_ext_thicker_21",{"",1,1,16777215,0,0,0,0},0,{1,-1.5,-10.5,1.5,10.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"blackChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.5,-10.5,1.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_wall_int_3",{"map-wall-03.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_wall_int_4",{"map-wall-04.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-2,0.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2,0.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_wall_int_5",{"map-wall-05.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-2.5,0.5,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-2.5,0.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_wall_int_7",{"map-wall-07.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-3.5,0.5,3.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3.5,0.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_wall_int_12",{"map-wall-12.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-6,0.5,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6,0.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_wall_int_13",{"map-wall-13.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-6.5,0.5,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-6.5,0.5,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_wall_int_14",{"map-wall-14.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-7,0.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-7,0.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_wall_int_18",{"map-wall-18.img",0.5,0.95,5505024,10,0,0,0},1,{1,-0.5,-9,0.5,9},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-9,0.5,9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_window_open_01",{"map-building-house-window-res-01.img",0.5,1,12216619,10,0,0,0},1,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"grassy_wall_3",{"map-wall-03-grassy.img",0.5,1,16777215,10,0,0,0},1,{1,-0.375,-1.5,0.375,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7282176,1,{1,-0.375,-1.5,0.375,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"grassy_wall_8",{"map-wall-08-grassy.img",0.5,1,16777215,10,0,0,0},1,{1,-0.375,-4,0.375,4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7282176,1,{1,-0.375,-4,0.375,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"club_wall_int_6",{"map-wall-06-rounded.img",0.5,1,10584424,10,0,0,0},1,{1,-0.5,-3,0.5,3},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"tanChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-3,0.5,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"club_wall_int_10",{"map-wall-10-rounded.img",0.5,1,7218988,10,0,0,0},1,{1,-0.5,-5,0.5,5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"redChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5,0.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"club_bar_small",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-4.5,1.5,4.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-4.5,1.5,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"club_bar_large",{"",0.5,1,4456448,10,0,0,0},0,{1,-1.5,-7,1.5,7},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-7,1.5,7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"club_bar_back_large",{"map-club-bar-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.75,-7.5,0.75,7.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.75,-7.5,0.75,7.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bathhouse_column_1",{"map-bathhouse-column-01.img",0.5,1,13481337,10,0,0,0},1,{1,-2,-2,2,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"whiteChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bathhouse_column_2",{"map-bathhouse-column-02.img",0.5,1,13481337,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"whiteChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_lg_under_column",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-10,2.5,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-10,2.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_column_5x4",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-2,2.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_rail_3",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-2,0.4,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2,0.4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"rail_4",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-2.5,0.4,2.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-2.5,0.4,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_rail_12",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-6.5,0.4,6.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-6.5,0.4,6.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_xlg_under_column",{"",1,1,16777215,0,0,0,0},0,{1,-2.5,-14,2.5,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-14,2.5,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"concrete_wall_column_9x4",{"",1,1,16777215,0,0,0,0},0,{1,-4.5,-2,4.5,2},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","concrete_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_rail_20",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-10,0.4,10},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-10,0.4,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_rail_28",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.4,-14,0.4,14},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.4,-14,0.4,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_3_0_low",{"",0.5,1,4456448,10,0,0,0},0,{1,-0.5,-1.5,0.5,1.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,1,0,"woodChip","wall_wood_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.5,-1.5,0.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brick_wall_ext_11_5",{"",1,1,16777215,0,0,0,0},0,{1,-0.5,-5.75,0.5,5.75},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"brickChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.5,-5.75,0.5,5.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_wall_top",{"",1,1,16777215,0,0,0,0},0,{1,-2.75,-0.4,2.75,0.4},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.75,-0.4,2.75,0.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_wall_side",{"",1,1,16777215,0,0,0,0},0,{1,-0.4,-5.5,0.4,5.5},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.4,-5.5,0.4,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_wall_side_open",{"",1,1,16777215,0,0,0,0},0,{1,-0.4,-6,0.4,6},1,0,0,0,1,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.4,-6,0.4,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_01",{"map-case-deagle-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_02",{"map-case-deagle-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_03",{"map-case-hatchet-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_04",{"map-case-flare-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_05",{"map-case-meteor-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_06",{"map-case-chrys-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_07",{"map-case-ring-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_07de",{"map-case-ring-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_08",{"map-case-crow-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_08sv",{"map-case-crow-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_09",{"map-case-twins-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"case_10",{"map-case-cloud-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blackChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_01",{"map-chest-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_01cb",{"map-chest-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_02",{"map-chest-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_03",{"map-chest-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_03cb",{"map-chest-03cb.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_03d",{"map-chest-03d.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_03f",{"map-chest-03f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_03sv",{"map-chest-03sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_03x",{"map-chest-03x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_03tr",{"map-chest-03tr.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,0,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,0,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_04",{"map-case-basement-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chest_04d",{"map-case-basement-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.6,2.25,1.6},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7025920,0.85,{1,-2.25,-1.6,2.25,1.6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_01",{"map-crate-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_01x",{"map-crate-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_02",{"map-crate-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_02sv",{"map-crate-02sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16760832,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_02sv_lake",{"map-crate-02sv.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16760832,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_02x",{"map-crate-02x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_02f",{"map-crate-02f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,13369344,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_02d",{"map-crate-02f.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,13369344,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_03",{"map-crate-03.img",0.35,1,16777215,10,0,0,0},1,{1,-1.575,-1.575,1.575,1.575},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5066014,0.875,{1,-1.575,-1.575,1.575,1.575},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_03x",{"map-crate-03x.img",0.35,1,16777215,10,0,0,0},1,{1,-1.575,-1.575,1.575,1.575},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"glassChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,31863,0.875,{1,-1.575,-1.575,1.575,1.575},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_04",{"map-crate-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"greenChip","ammo_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5468244,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_05",{"map-crate-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2,-2,2,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"goldChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_06",{"map-crate-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.1,2.25,1.1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"greenChip","ammo_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-1.1,2.25,1.1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_07",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_07b",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_07sv",{"map-crate-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_08",{"map-crate-08.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_09",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_09bh",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_09de",{"map-crate-09.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_10",{"map-crate-10.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_11",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_11h",{"map-crate-11h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_10sv",{"map-crate-10.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_11sv",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_11de",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_11tr",{"map-crate-11.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_12",{"map-crate-12.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_12po",{"map-crate-12.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_12dev",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_13",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_13po",{"map-crate-13.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-3.5,3.5,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-3.5,3.5,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_14",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_14a",{"map-crate-14a.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_15",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_16",{"map-crate-14.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_17",{"map-crate-17.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_18",{"map-crate-18.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,12867840,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_19",{"map-crate-19.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4500224,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_20",{"map-crate-20.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.7,1.7,1.7},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"greenChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,3884335,1,{1,-1.7,-1.7,1.7,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_21",{"map-crate-21.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,18799,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_21b",{"map-crate-21.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,18799,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_22",{"map-crate-22.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,32511,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"crate_22d",{"map-crate-22.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,32511,0.875,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_01",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_02",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_03",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_03po",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_03dev",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_04",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_04po",{"map-airdrop-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-4,4,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_05",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_01sv",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_02sv",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_02de",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_02h",{"map-airdrop-01h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_02tr",{"map-airdrop-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_01x",{"map-airdrop-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"airdrop_crate_02x",{"map-airdrop-01x.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_shell_01",{"map-class-shell-01a.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_shell_02",{"map-class-shell-02a.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_shell_03",{"map-class-shell-03a.img",0.5,1,16777215,20,0,0,0},1,{0,0,0,2.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_common_scout",{"map-class-crate-scout.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_common_sniper",{"map-class-crate-sniper.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_common_healer",{"map-class-crate-healer.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_common_demo",{"map-class-crate-demo.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_common_assault",{"map-class-crate-assault.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_common_tank",{"map-class-crate-tank.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_common_classless",{"map-class-crate-classless.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_rare_scout",{"map-class-crate-scout.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_rare_sniper",{"map-class-crate-sniper.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_rare_healer",{"map-class-crate-healer.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_rare_demo",{"map-class-crate-demo.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_rare_assault",{"map-class-crate-assault.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_rare_tank",{"map-class-crate-tank.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_rare_classless",{"map-class-crate-classless.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"class_crate_mythic",{"map-class-crate-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,2.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mil_crate_01",{"map-crate-mil-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mil_crate_02",{"map-crate-mil-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mil_crate_03",{"map-crate-mil-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mil_crate_04",{"map-crate-mil-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mil_crate_05",{"map-crate-mil-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2.7,-1.25,2.7,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,3622438,0.875,{1,-2.7,-1.25,2.7,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barrel_02",{"map-barrel-02.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"outhouseChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11235106,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barrel_03",{"map-barrel-03.img",0.45,1,16777215,10,0,0,0},1,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"outhouseChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11235106,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barrel_04",{"map-barrel-04.img",0.45,1,16777215,10,0,0,0},1,{1,-1.25,-0.5,1.25,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"outhouseChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11235106,1,{1,-1.25,-0.5,1.25,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barrel_05",{"map-barrel-05.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"outhouseChip","wood_crate_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11235106,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bathhouse_rocks_01",{"map-bathrocks-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.55,-1.55,1.55,1.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.55,-1.55,1.55,1.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bed_sm_01",{"map-bed-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.4,-3.4,1.4,3.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-1.4,-3.4,1.4,3.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bed_lg_01",{"map-bed-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.8,-3.4,2.8,3.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.8,-3.4,2.8,3.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bookshelf_01",{"map-bookshelf-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-1,3.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-1,3.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bookshelf_02",{"map-bookshelf-02.img",0.5,1,16777215,10,0,0,0},1,{1,-3.5,-1,3.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.5,-1,3.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chair_01",{"map-chair-01.img",0.5,1,16777215,5,0,0,0},1,{1,-1,-1.25,1,1.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1,-1.25,1,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"chair_02",{"map-chair-02.img",0.5,1,16777215,5,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"couch_01",{"map-couch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4.5,-1.5,4.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4.5,-1.5,4.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"couch_02",{"map-couch-02.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.5,3,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3,-1.5,3,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"couch_02b",{"map-couch-02.img",0.5,1,16777215,10,0,1,0},1,{1,-3,-1.5,3,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3,-1.5,3,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"couch_03",{"map-couch-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_01",{"map-bottle-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"bottleBrownChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_02",{"map-bottle-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_04",{"map-bottle-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"bottleWhiteChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_05",{"map-bottle-05.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"bottleWhiteChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"candle_01",{"map-candle-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,0.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"goldChip","none",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,16777215,1,{0,0,0,0.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"deposit_box_01",{"map-deposit-box-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"deposit_box_02",{"map-deposit-box-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"deposit_box_03",{"map-deposit-box-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-0.85,2.5,1.15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-0.85,2.5,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"drawers_01",{"map-drawers-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-1.1,2.5,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-1.1,2.5,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"drawers_02",{"map-drawers-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.5,-1.1,2.5,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-1.1,2.5,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"fire_ext_01",{"map-fire-ext-01.img",0.5,1,16777215,10,0,0,0},1,{0,0.35,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"redChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0.35,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"grill_01",{"map-grill-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.55,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,14935011,0.875,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"gun_mount_empty",{"map-gun-mount-empty.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"gun_mount_01",{"map-gun-mount-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"gun_mount_02",{"map-gun-mount-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"gun_mount_03",{"map-gun-mount-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"gun_mount_04",{"map-gun-mount-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"gun_mount_05",{"map-gun-mount-05.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"gun_mount_06",{"map-gun-mount-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"gun_mount_07",{"map-gun-mount-07.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.25,-0.49999999999999994,2.25,0.8999999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"locker_01",{"map-locker-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"locker_02",{"map-locker-02.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"locker_03",{"map-locker-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-0.44999999999999996,1.5,0.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1.5,-0.44999999999999996,1.5,0.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"oven_01",{"map-oven-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1500000000000001,1.7,1.45},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,14935011,0.875,{1,-1.7,-1.1500000000000001,1.7,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"piano_01",{"map-piano-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.75,-1,3.75,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","piano_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3.75,-1,3.75,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"planter_01",{"map-planter-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"planter_02",{"map-planter-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"planter_03",{"map-planter-03.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"planter_04",{"map-planter-04.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"planter_06",{"map-planter-06.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-4.25,2.25,4.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-2.25,-4.25,2.25,4.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"planter_07",{"map-planter-07.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"pot_01",{"map-pot-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"pot_02",{"map-pot-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"pot_03",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"pot_03b",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"pot_03c",{"map-pot-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"pot_04",{"map-pot-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"pot_05",{"map-pot-05.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"rack_01",{"map-rack-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2,-1.05,2,1.45},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2,-1.05,2,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"refrigerator_01",{"map-refrigerator-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"redChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7733259,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"refrigerator_01b",{"map-refrigerator-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"redChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7733259,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"safe_01",{"map-safe-01.img",0.4,1,16777215,10,0,0,0},1,{1,-1.25,-1.15,1.25,1.35},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockEyeChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1512466,1,{1,-1.25,-1.15,1.25,1.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"safe_01de",{"map-safe-01.img",0.4,1,16777215,10,0,0,0},1,{1,-1.25,-1.15,1.25,1.35},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockEyeChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1512466,1,{1,-1.25,-1.15,1.25,1.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"screen_01",{"map-screen-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-0.15000000000000002,4,0.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"clothHit","cloth_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4,-0.15000000000000002,4,0.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"sink_01",{"map-sink-01.img",0.35,1,16777215,10,0,0,0},1,{1,-2,-1.5,2,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"whiteChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{1,-2,-1.5,2,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stand_01",{"map-stand-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.25,-1.1,1.25,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-1.25,-1.1,1.25,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"power_box_01",{"map-power-box-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1,-1,1,1},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stove_01",{"map-stove-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-2.25,3,2.25},1,0,0,0,0,0,1,"explosion_stove",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3,-2.25,3,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stove_02",{"map-stove-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,1,"explosion_stove",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_01",{"map-table-01.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_01x",{"map-table-01x.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2,2.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2,2.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_01d",{"map-table-01d.img",0.5,1,16777215,60,0,0,0},1,{1,-2.5,-2.5,2.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-2.5,-2.5,2.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_02",{"map-table-02.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2.5,4.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4.5,-2.5,4.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_02x",{"map-table-02x.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2.5,4.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4.5,-2.5,4.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_03",{"map-table-03.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_03x",{"map-table-03x.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_04",{"map-table-04.img",0.5,1,16777215,60,0,0,0},1,{1,-4.5,-2,4.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_05",{"map-table-05.img",0.5,1,16777215,60,0,0,0},1,{1,-9,-2.75,9,2.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,0,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-9,-2.75,9,2.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_06",{"map-table-06.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-2,4,2},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-2,4,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_07",{"map-table-07.img",0.5,1,16777215,10,0,0,0},1,{1,-3.3000000000000003,-1.35,3.4,1.15},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3.3000000000000003,-1.35,3.4,1.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_08",{"map-table-08.img",0.5,1,16777215,10,0,0,0},1,{1,-4,-1.55,4,1.45},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-1.55,4,1.45},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"table_09",{"map-table-09.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-2.05,3,1.95},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3,-2.05,3,1.95},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"toilet_01",{"map-toilet-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"whiteChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"toilet_02",{"map-toilet-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"whiteChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"toilet_02b",{"map-toilet-02.img",0.5,1,11842740,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"whiteChip","toilet_porc_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"toilet_03",{"map-toilet-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","toilet_metal_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"toilet_04",{"map-toilet-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0.25,1.18,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","toilet_metal_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.18,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"toilet_05",{"map-toilet-05.img",0.66,1,16777215,10,0,0,0},1,{0,0,0.25,1.56,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"toiletGoldChip","toilet_metal_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0.25,1.56,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"towelrack_01",{"map-towelrack-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1,3,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","wood_prop_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{1,-3,-1,3,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vat_01",{"map-vat-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vat_02",{"map-vat-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,3.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,3.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vat_03",{"map-vat-03.img",0.5,1,16777215,50,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.2,0,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vat_04",{"map-vat-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vat_05",{"map-vat-05.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"glassChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vending_01",{"map-vending-soda-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.7,-1.1,1.7,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"blueChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,10925,0.875,{1,-1.7,-1.1,1.7,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wheel_01",{"map-wheel-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wheel_02",{"map-wheel-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"wheel_03",{"map-wheel-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,2.3,4.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6310464,1,{0,0,2.3,4.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"control_panel_01",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"control_panel_02",{"map-control-panel-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"control_panel_02b",{"map-control-panel-02.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"control_panel_03",{"map-control-panel-03.img",0.5,1,16777215,10,0,0,0},1,{1,-1.25,-1.2,1.25,1.2},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-1.25,-1.2,1.25,1.2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"control_panel_04",{"map-control-panel-04.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"control_panel_06",{"map-control-panel-06.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.4,3,1.4},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-3,-1.4,3,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"control_panel_07de",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"control_panel_07sv",{"map-control-panel-01.img",0.5,1,16777215,10,0,0,0},1,{1,-2.25,-1.7,2.25,1.7},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.25,-1.7,2.25,1.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"switch_01",{"map-switch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"switch_01o",{"map-switch-01o.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"switch_01p",{"map-switch-01p.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"switch_01y",{"map-switch-01y.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"switch_02",{"map-switch-02.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"switch_03",{"map-switch-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.45,-0.55,0.45,0.55},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.45,-0.55,0.45,0.55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_02r",{"map-bottle-02.img",0.5,1,13172736,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,1,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_02o",{"map-bottle-02.img",0.5,1,16734720,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_02y",{"map-bottle-02.img",0.5,1,16776960,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_02g",{"map-bottle-02.img",0.5,1,32768,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_02b",{"map-bottle-02.img",0.5,1,27903,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,1,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_02i",{"map-bottle-02.img",0.5,1,4915330,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bottle_02v",{"map-bottle-02.img",0.5,1,15631086,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,1,0,"bottleBlueChip","glass_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"button_01",{"map-button-01.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"button_01g",{"map-button-01g.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"button_01b",{"map-button-01b.img",0.5,1,16777215,10,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.3,0,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,16777215,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_01",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_02",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_03",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_04",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_05",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_06",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_07",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_08",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_09",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_10",{"map-recorder-01.img",0.5,1,16777215,9,0,0,0},1,{1,-0.9,-1.5,0.9,1.5},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.9,-1.5,0.9,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_11",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_12",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_13",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"recorder_14",{"map-recorder-03.img",0.5,1,16777215,9,0,0,0},1,{1,-0.75,-1.25,0.75,1.25},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","metal_punch",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-0.75,-1.25,0.75,1.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_switch_01",{"map-tree-switch-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_switch_02",{"map-tree-switch-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_switch_03",{"map-tree-switch-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barrel_01",{"map-barrel-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barrel_01b",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barrel_01w",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barrel_01bh",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barrel_01f",{"map-barrel-01.img",0.4,1,13224393,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barrel_01bd",{"map-barrel-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,1,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"propane_01",{"map-propane-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,1,"explosion_barrel",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","barrel_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24516,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bollard_01",{"map-bollard-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6310464,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_01",{"map-bush-01.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_01b",{"map-bush-01.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_01cb",{"map-bush-01cb.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafSynthetic","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2518873,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_01f",{"map-bush-01f.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1793032,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_01sv",{"map-bush-01sv.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafPrickly","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7569455,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brush_01sv",{"map-brush-01sv.img",0.5,0.97,16777215,60,0,0,0},1,{1,-1.75,-1.75,1.75,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5207588,1.5,{1,-1.75,-1.75,1.75,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brush_02sv",{"map-brush-02sv.img",0.5,0.97,16777215,60,0,0,0},1,{1,-1.75,-1.75,1.75,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5207588,1.5,{1,-1.75,-1.75,1.75,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_01x",{"map-bush-01x.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4545840,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_02",{"map-bush-01.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_03",{"map-bush-03.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_04",{"map-bush-04.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafRiver","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_04cb",{"map-bush-04cb.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafRiver","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2784099,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_05",{"map-bush-05.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6971965,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_06",{"map-bush-06.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16489473,1.5,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_06tr",{"map-bush-06tr.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,2.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,14853402,1,{0,0,0,2.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_06b",{"map-bush-06.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,14041344,1.5,{0,0,0,1.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_07",{"map-bush-07.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafRiver","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_07sp",{"map-bush-07sp.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafRiver","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,671242,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_07x",{"map-bush-07x.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leaf","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bush_07cb",{"map-bush-07cb.img",0.5,0.97,16777215,60,0,0,0},1,{0,0,0,1.4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,0,0,"leafSynthetic","bush_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,24320,1.5,{0,0,0,1.4,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"campfire_01",{"map-campfire-01.img",0.375,1,16777215,10,0,0,0},1,{0,0,0,2.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6447714,1,{0,0,0,2.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"potato_01",{"map-potato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"potato_01f",{"map-potato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"potato_02",{"map-potato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"potato_02f",{"map-potato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"potato_03",{"map-potato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"potato_03f",{"map-potato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"potatoChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tomato_01",{"map-tomato-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"tomatoChip_01","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tomato_02",{"map-tomato-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"tomatoChip_01","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tomato_03",{"map-tomato-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"tomatoChip_02","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9466197,1,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"egg_01",{"map-egg-01.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"pinkChip","egg_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"egg_02",{"map-egg-02.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"ltblueChip","egg_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"egg_03",{"map-egg-03.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"yellowChip","egg_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"egg_04",{"map-egg-04.img",0.35,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"greenChip","egg_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6697728,0.875,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"pumpkin_01",{"map-pumpkin-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"pumpkinChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,15889667,1,{0,0,0,1.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"pumpkin_02",{"map-pumpkin-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"pumpkinChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,15889667,1,{0,0,0,1.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"pumpkin_03",{"map-pumpkin-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.25,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"pumpkinChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,15889667,1,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"squash_01",{"map-squash-03.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"squashChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6452036,1.25,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"squash_02",{"map-squash-02.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.5,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"squashChip","organic_hit",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16569521,1.25,{0,0,0,1.5,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"sandbags_01",{"map-sandbags-01.img",0.5,1,16777215,10,0,0,0},1,{1,-3.1,-1.4,3.1,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"goldChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,13278307,1,{1,-3.1,-1.4,3.1,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"sandbags_02",{"map-sandbags-02.img",0.5,1,16777215,10,0,0,0},1,{1,-1.1,-1.4,1.1,1.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"goldChip","wall_brick_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,13278307,1,{1,-1.1,-1.4,1.1,1.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"silo_01",{"map-silo-01.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4079166,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"silo_01po",{"map-silo-01.img",0.5,1,16749645,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"barrelChip","silo_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4079166,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_01",{"map-statue-01.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_03",{"map-statue-03.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_04",{"map-statue-04.img",0.5,1,16777215,10,0,0,0},1,{1,-4.4,-4.4,4.4,4.4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5723991,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_top_01",{"map-statue-top-01.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.45,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5723991,1,{0,0,0,2.45,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_top_02",{"map-statue-top-02.img",0.5,1,16777215,60,0,0,0},1,{0,0,0,2.45,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5723991,1,{0,0,0,2.45,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_01",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_01b",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_01cb",{"map-stone-01cb.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_01f",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8224125,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_01sv",{"map-stone-01.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_01x",{"map-stone-01x.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6052956,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_02",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_02sv",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_02cb",{"map-stone-01cb.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_02w",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_02x",{"map-stone-01x.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,10265256,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_02bh",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_02f",{"map-stone-01.img",0.4,1,15066597,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,11776947,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_03",{"map-stone-03.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_03b",{"map-stone-03b.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_03cb",{"map-stone-03cb.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_03f",{"map-stone-03f.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_03sv",{"map-stone-03sv.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_03x",{"map-stone-03x.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_03tr",{"map-stone-03tr.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_03bh",{"map-stone-03bh.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_04",{"map-stone-04.img",0.4,1,16777215,10,0,0,0},1,{1,-1.8,-1.8,1.8,1.8},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockEyeChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1512466,1,{1,-1.8,-1.8,1.8,1.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_04x",{"map-stone-04x.img",0.4,1,16777215,10,0,0,0},1,{1,-1.8,-1.8,1.8,1.8},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockEyeChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11725567,1,{1,-1.8,-1.8,1.8,1.8},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_05",{"map-stone-05.img",0.4,1,16777215,10,0,0,0},1,{0,0,0,1.7,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockEyeChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1512466,1,{0,0,0,1.7,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_06",{"map-stone-06.img",0.5,1,16777215,10,0,0,0},1,{1,-4.5,-2,4.5,2},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,3618615,1,{1,-4.5,-2,4.5,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_07",{"map-stone-07.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,7.75,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,9931908,1,{0,0,0,7.75,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_08",{"map-stone-03.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_08x",{"map-stone-03x.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"stone_08cb",{"map-stone-03cb.img",0.4,1,15132390,10,0,0,0},1,{0,0,0,2.9,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"rockChip","stone_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5197647,1,{0,0,0,2.9,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_01",{"map-tree-03.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_01cb",{"map-tree-03cb.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.2,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2900834,2.5,{0,0,0,1.2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_01sv",{"map-tree-03sv.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4411673,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_interior_01",{"map-tree-03.img",0.7,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_interior_01bh",{"map-tree-13.img",0.35,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_interior_01de",{"map-tree-14.img",0.35,1,16777215,200,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_01x",{"map-tree-01x.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_02",{"map-tree-04.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4083758,2.5,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_02h",{"map-tree-04h.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4083758,2.5,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03",{"map-tree-03.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03su",{"map-tree-07su.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,2185478,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03sp",{"map-tree-07sp.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03x",{"map-tree-10.img",0.7,1,13158600,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4083758,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03sv",{"map-tree-03sv.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4411673,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03d",{"map-tree-06.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,7700520,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03f",{"map-tree-08f.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,995844,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03w",{"map-tree-07.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03h",{"map-tree-07.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03cb",{"map-tree-03cb.img",0.7,1,11645361,800,0,0,0},1,{0,0,0,1.2,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,2900834,2.5,{0,0,0,1.2,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_03bh",{"map-tree-13.img",0.35,1,11645361,800,0,0,0},1,{0,0,0,1.1,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,4083758,2.5,{0,0,0,1.1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_05",{"map-tree-05.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,2.3,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5911831,3,{0,0,0,2.3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_05b",{"map-tree-05.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,2.3,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5911831,3,{0,0,0,2.3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_05c",{"map-tree-05c.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.05,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,9064739,3,{0,0,0,1.05,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_06",{"map-tree-06.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7700520,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_07",{"map-tree-07.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,5199637,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_07sp",{"map-tree-07sp.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_07spr",{"map-tree-07sp.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16697057,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_07su",{"map-tree-07su.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2185478,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_08",{"map-tree-08.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11033868,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_08b",{"map-tree-08.img",0.35,1,14383224,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,9647632,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_08c",{"map-tree-08.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7817749,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_08f",{"map-tree-08f.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,995844,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_08sp",{"map-tree-08sp.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16746936,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_08spb",{"map-tree-08sp.img",0.35,1,14383224,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16734619,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_08spc",{"map-tree-08sp.img",0.35,1,11645361,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8268107,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_08spr",{"map-tree-08sp.img",0.35,1,16777215,800,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,16746936,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_08su",{"map-tree-08su.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2183181,2.5,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_08sub",{"map-tree-08su.img",0.35,1,9211210,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1785864,3,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_09",{"map-tree-09.img",0.5,1,16777215,10,0,0,0},1,{0,0,0,1.6,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8602624,1,{0,0,0,1.6,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_10",{"map-tree-10.img",0.7,1,16777215,800,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7571807,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_11",{"map-tree-11.img",0.75,0.92,16777215,201,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_interior_11",{"map-tree-11.img",0.5,0.92,16777215,200,0,0,0},1,{0,0,0,1.25,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1.25,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_12",{"map-tree-12.img",0.7,1,16777215,801,0,0,0},1,{0,0,0,1.55,0},1,0,0,1,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8032292,7,{0,0,0,1.55,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_13",{"map-tree-13.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_13bh",{"map-tree-13.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_13x",{"map-tree-13x.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_14",{"map-tree-14.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_14d",{"map-tree-14.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"tree_14x",{"map-tree-14x.img",0.35,1,16777215,801,0,0,0},1,{0,0,0,1,0},1,0,0,1,0,1,0,"",0,"",0,0,1,16777215,1,0.5,0.5,10,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4083758,2.5,{0,0,0,1,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"woodpile_01",{"map-woodpile-01.img",0.5,1,16777215,10,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,9455616,0.875,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"woodpile_02",{"map-woodpile-02.img",0.5,1,16777215,10,0,0,0},1,{1,-6,-3,6,3},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.8,{1,-6,-3,6,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"woodpile_03",{"map-woodpile-03.img",0.5,1,16777215,10,0,0,0},1,{1,-3,-1.75,3,1.75},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0.5,1,0,"woodChip","tree_bullet",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6697728,0.8,{1,-3,-1.75,3,1.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bank_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-26.4,-19.65,26.5,21.25},1,nullptr,0,nullptr,0,nullptr,0,kShapes_741,3,1,kFloorImgs_741,2,kCeilImgs_741,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_741,3,kSurfaces_741,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_basement_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-4.5,-6,4.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_742,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_basement_floor_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-16.5,-8.5,16.5,7.500000000000001},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_743,1,kCeilImgs_743,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_743,2,kSurfaces_743,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_basement_floor_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-6,-7,4,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_744,1,kCeilImgs_744,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_744,1,kSurfaces_744,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-25.15,-18.5,25.15,18.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_745,2,1,kFloorImgs_745,1,kCeilImgs_745,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_745,2,kSurfaces_745,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-25.15,-18.5,27,18.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_746,2,1,kFloorImgs_746,1,kCeilImgs_746,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_746,2,kSurfaces_746,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bathhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-37,-40.5,40,55.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_747,6,nullptr,0,5.5,2.75,0.5,6,"",kEmitters_747,2,kZoomIns_747,5,kSurfaces_747,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bathhouse_sideroom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-10,-9.5,8,9.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_748,1,kCeilImgs_748,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_748,1,kSurfaces_748,1,0,"","","",1,10,0,0,1,kSoundEmitters_748,1},
+    {"bathhouse_sideroom_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-16,-10.5,16,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_749,1,kCeilImgs_749,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_749,1,kSurfaces_749,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_lg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-31.5,-11,31.5,11},1,nullptr,0,nullptr,0,nullptr,0,kShapes_750,5,1,kFloorImgs_750,2,kCeilImgs_750,1,10,2.75,0,12,"",nullptr,0,kZoomIns_750,1,kSurfaces_750,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_lg_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-16.5,-10,16.5,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_xlg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-38.5,-15,38.5,15},1,nullptr,0,nullptr,0,nullptr,0,kShapes_752,5,1,kFloorImgs_752,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_752,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_xlg_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-16.5,-14,16.5,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_md_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-14,-5.75,14,5.75},1,nullptr,0,nullptr,0,nullptr,0,kShapes_754,1,1,kFloorImgs_754,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_754,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_md_under_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-6.5,-5.75,6.5,5.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cabin_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-21,-16.5,21,14.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_756,2,1,kFloorImgs_756,1,kCeilImgs_756,3,5.5,2.75,0.5,6,"",kEmitters_756,1,kZoomIns_756,2,kSurfaces_756,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"club_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-33.5,-30,29.65,36},1,nullptr,0,nullptr,0,nullptr,0,kShapes_757,9,1,kFloorImgs_757,8,kCeilImgs_757,3,7.5,2.5,0.5,6,"",nullptr,0,kZoomIns_757,9,kSurfaces_757,3,0,"","","",1,10,0,0,1,nullptr,0},
+    {"club_vault",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-3,-4,3,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_758,1,kCeilImgs_758,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_758,1,kSurfaces_758,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"club_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-38,-48.5,41,56.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,-3,-9.25,3,8.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_760,1,kCeilImgs_760,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_760,1,kSurfaces_760,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,-3,-9.25,3,8.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_761,1,kCeilImgs_761,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_761,1,kSurfaces_761,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,-3,-9.25,3,8.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_762,1,kCeilImgs_762,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_762,1,kSurfaces_762,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,-3,-11,3,11},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_763,1,kCeilImgs_763,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_763,1,kSurfaces_763,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_05",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,11485762,1,{1,-2.75,-3.6,2.75,8.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_764,1,kCeilImgs_764,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_764,1,kSurfaces_764,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,-3,-9.25,3,8.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_765,1,kCeilImgs_765,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_765,1,kSurfaces_765,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"dock_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-5.25,-10.25,4.9,10.25},1,nullptr,0,nullptr,0,nullptr,0,kShapes_766,2,1,kFloorImgs_766,2,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_766,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"greenhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1995644,1,{1,-16.575,-38,49.5,44.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_767,4,kCeilImgs_767,2,7.5,2.75,0.5,6,"",nullptr,0,kZoomIns_767,1,kSurfaces_767,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"greenhouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1995644,1,{1,-16.575,-38,49.5,44.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_768,4,kCeilImgs_768,1,7.5,2.75,0.5,6,"",nullptr,0,kZoomIns_768,1,kSurfaces_768,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hedgehog_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_769,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.15,-30.9,7,7},1,nullptr,0,nullptr,0,nullptr,0,kShapes_770,2,0,kFloorImgs_770,2,kCeilImgs_770,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_770,1,kSurfaces_770,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.15,-30.9,7,7},1,nullptr,0,nullptr,0,nullptr,0,kShapes_771,2,0,kFloorImgs_771,2,kCeilImgs_771,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_771,1,kSurfaces_771,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.15,-30.9,7,7},1,nullptr,0,nullptr,0,nullptr,0,kShapes_772,2,0,kFloorImgs_772,2,kCeilImgs_772,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_772,1,kSurfaces_772,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_red_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6429724,1,{1,-16.5,-15,16.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_773,3,kCeilImgs_773,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_773,1,kSurfaces_773,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_red_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4656911,1,{1,-16.5,-16.8,16.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_774,10,kCeilImgs_774,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_774,1,kSurfaces_774,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-36,-28.599999999999998,32,29.8},1,nullptr,0,nullptr,0,nullptr,0,kShapes_775,5,1,kFloorImgs_775,4,kCeilImgs_775,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_775,3,kSurfaces_775,4,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_cellar_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-13,32,19},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_776,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_776,2,kSurfaces_776,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"outhouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8145976,1,{1,-3.8,-4.6,3.8,4.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_777,1,kCeilImgs_777,1,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_777,1,kSurfaces_777,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"panicroom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-4.5,-6,4.5,6},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_778,1,kCeilImgs_778,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_778,1,kSurfaces_778,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"police_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-42.5,-26,42.5,26},1,nullptr,0,nullptr,0,nullptr,0,kShapes_779,10,1,kFloorImgs_779,2,kCeilImgs_779,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_779,4,kSurfaces_779,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"saferoom_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-6,-4,6,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_780,1,kCeilImgs_780,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_780,1,kSurfaces_780,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6707790,1,{1,-5.9,-5.5,9.700000000000001,4.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_781,1,kCeilImgs_781,1,5.5,4,0,12,"map-shack-res-01.img",nullptr,0,kZoomIns_781,1,kSurfaces_781,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4014894,1,{1,-5,-5.9,5.4,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_782,1,kCeilImgs_782,1,5.5,4,0,12,"map-shack-res-02.img",nullptr,0,kZoomIns_782,1,kSurfaces_782,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_03a",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-13.65,-7.45,9,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_783,4,1,kFloorImgs_783,2,kCeilImgs_783,1,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_783,1,kSurfaces_783,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_03b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-13.65,-7.45,9,21},1,nullptr,0,nullptr,0,nullptr,0,kShapes_784,4,1,kFloorImgs_784,2,kCeilImgs_784,1,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_784,1,kSurfaces_784,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-14,-11.65,14,11.65},1,nullptr,0,nullptr,0,nullptr,0,kShapes_785,4,0,kFloorImgs_785,3,kCeilImgs_785,1,5.5,4,0,12,"map-building-teahouse-res-01.img",nullptr,0,kZoomIns_785,1,kSurfaces_785,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_complex_01s",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-19.36,-14.55,19.55,13.395},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_786,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-12.5,32,12.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_787,3,1,kFloorImgs_787,2,kCeilImgs_787,1,8,5,0,12,"",nullptr,0,kZoomIns_787,1,kSurfaces_787,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-27.5,-12.500000000000002,27.5,12.500000000000002},1,nullptr,0,nullptr,0,nullptr,0,kShapes_788,3,1,kFloorImgs_788,2,kCeilImgs_788,1,8,5,0,12,"",nullptr,0,kZoomIns_788,1,kSurfaces_788,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-12.5,32,12.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_789,3,1,kFloorImgs_789,2,kCeilImgs_789,1,8,5,0,12,"",nullptr,0,kZoomIns_789,1,kSurfaces_789,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-42,-40,108,78},1,nullptr,0,nullptr,0,nullptr,0,kShapes_790,20,0,kFloorImgs_790,3,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_790,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vault_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-13.5,-10.5,6.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_791,1,kCeilImgs_791,1,7.25,2.75,0.5,6,"",nullptr,0,kZoomIns_791,1,kSurfaces_791,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_01bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.15,-30.9,7,7},1,nullptr,0,nullptr,0,nullptr,0,kShapes_792,2,0,kFloorImgs_792,2,kCeilImgs_792,1,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_792,1,kSurfaces_792,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-15.4,-34.75,15.25,10.9},1,nullptr,0,nullptr,0,nullptr,0,kShapes_793,4,0,kFloorImgs_793,2,kCeilImgs_793,1,5.5,4,0,12,"map-hut-res-02.img",nullptr,0,kZoomIns_793,1,kSurfaces_793,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-36,-28.599999999999998,32,29.8},1,nullptr,0,nullptr,0,nullptr,0,kShapes_794,5,1,kFloorImgs_794,4,kCeilImgs_794,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_794,3,kSurfaces_794,4,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_cellar_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-13,32,19},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_795,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_795,2,kSurfaces_795,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_complex_01cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-18.94,-14.2,19.2,13.08},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_796,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"archway_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,7813914,1,{1,-11,-3,11,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,kCeilImgs_797,1,5.5,2.75,0,12,"map-archway-res-01.img",nullptr,0,nullptr,0,kSurfaces_797,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bank_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-26.4,-19.65,26.5,21.25},1,nullptr,0,nullptr,0,nullptr,0,kShapes_798,3,1,kFloorImgs_798,2,kCeilImgs_798,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_798,3,kSurfaces_798,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"vault_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-13.5,-10.5,6.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_799,1,kCeilImgs_799,1,7.25,2.75,0.5,6,"",nullptr,0,kZoomIns_799,1,kSurfaces_799,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_basement_floor_01d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-16.5,-8.5,16.5,7.500000000000001},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_800,1,kCeilImgs_800,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_800,2,kSurfaces_800,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_basement_floor_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-6,-7,4,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_801,1,kCeilImgs_801,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_801,1,kSurfaces_801,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-25.15,-18.5,27,18.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_802,2,1,kFloorImgs_802,1,kCeilImgs_802,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_802,2,kSurfaces_802,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"desert_town_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-72.5,-98,66,98},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_803,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"desert_town_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-83,-86.75,83,55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_804,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"oasis_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-35,-35.1,33.75,31},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_805,1,0,"","","",1,10,0,0,1,kSoundEmitters_805,1},
+    {"river_town_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-92.25,-48,83,33.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_806,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_806,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-59.15,-35.5,60.5,35.75},1,nullptr,0,nullptr,0,nullptr,0,kShapes_807,6,1,kFloorImgs_807,4,kCeilImgs_807,5,5.5,2.75,0.5,6,"",kEmitters_807,1,kZoomIns_807,7,kSurfaces_807,3,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_basement_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-60,-35,60,35},1,nullptr,0,nullptr,0,nullptr,0,kShapes_808,1,1,kFloorImgs_808,5,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_808,7,kSurfaces_808,3,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_armory_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-9,-14,9,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_809,1,kCeilImgs_809,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_809,1,kSurfaces_809,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_security_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-17,-7.000000000000001,17,6.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_810,1,kCeilImgs_810,1,5.5,3.25,0.5,6,"",nullptr,0,kZoomIns_810,1,kSurfaces_810,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_vault_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-17,-16,23.95,16},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_811,1,kCeilImgs_811,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_811,1,kSurfaces_811,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"saloon_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-26.5,-22.5,22.5,20.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_812,4,1,kFloorImgs_812,2,kCeilImgs_812,3,5.5,2.75,0.5,6,"",kEmitters_812,1,kZoomIns_812,1,kSurfaces_812,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"saloon_cellar_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-17.5,-11.5,17.5,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_813,1,kCeilImgs_813,1,7,3,0,12,"",nullptr,0,kZoomIns_813,1,kSurfaces_813,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_building_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-5.4,-4.4,3.4000000000000004,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_814,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_814,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_underground_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-4.5,-5,13.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_815,1,kCeilImgs_815,1,5,3,0,12,"",nullptr,0,kZoomIns_815,1,kSurfaces_815,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_building_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-5.4,-4.4,3.4000000000000004,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_816,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_816,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_underground_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-4.5,-5,13.5,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_817,1,kCeilImgs_817,1,5,3,0,12,"",nullptr,0,kZoomIns_817,1,kSurfaces_817,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"river_town_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-113.5,-54,121.5,74},1,nullptr,0,nullptr,0,nullptr,0,kShapes_818,4,0,kFloorImgs_818,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_818,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_819,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4.4,-4.4,4.4,4.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_820,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_01f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-12.5,32,12.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_821,3,1,kFloorImgs_821,2,kCeilImgs_821,1,8,5,0,12,"",nullptr,0,kZoomIns_821,1,kSurfaces_821,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-25.15,-18.5,25.15,21.387500000000003},1,nullptr,0,nullptr,0,nullptr,0,kShapes_822,2,1,kFloorImgs_822,1,kCeilImgs_822,2,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_822,2,kSurfaces_822,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-12.5,32,12.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_823,3,1,kFloorImgs_823,2,kCeilImgs_823,1,8,5,0,12,"",nullptr,0,kZoomIns_823,1,kSurfaces_823,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"junkyard_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-27.2,-24.43,33.5,31.4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_824,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_red_01h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6429724,1,{1,-16.5,-19.8875,16.5,19.887500000000003},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_825,3,kCeilImgs_825,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_825,1,kSurfaces_825,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_red_02h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4656911,1,{1,-16.5,-19.8875,16.5,19.887500000000003},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_826,10,kCeilImgs_826,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_826,1,kSurfaces_826,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cabin_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-21,-17.8875,21,14.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_827,2,1,kFloorImgs_827,1,kCeilImgs_827,3,5.5,2.75,0.5,6,"",kEmitters_827,1,kZoomIns_827,2,kSurfaces_827,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-36,-28.599999999999998,32,29.8},1,nullptr,0,nullptr,0,nullptr,0,kShapes_828,5,1,kFloorImgs_828,4,kCeilImgs_828,1,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_828,3,kSurfaces_828,4,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_cellar_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-4,-13,32,19},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_829,4,nullptr,0,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_829,2,kSurfaces_829,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shilo_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,3240224,1,{1,-15,-12.3,15,12.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_830,2,kCeilImgs_830,1,5.5,4,0,12,"",nullptr,0,kZoomIns_830,1,kSurfaces_830,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_03sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-12.5,32,12.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_831,3,1,kFloorImgs_831,2,kCeilImgs_831,1,8,5,0,12,"",nullptr,0,kZoomIns_831,1,kSurfaces_831,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"kopje_brush_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.625,-10.625,5.125,8.625},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_832,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"grassy_cover_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4,-5.125000000000001,4,5.125},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"grassy_cover_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4,-5.125000000000001,4,5.125},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"grassy_cover_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-5.375,-5.125000000000001,5,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"grassy_cover_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-20.375,-5.125000000000001,20,5.499999999999999},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_836,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brush_clump_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-16.0625,-16.0625,15.0625,16.0625},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_837,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brush_clump_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-15.0625,-15.0625,15.0625,16.0625},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_838,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"brush_clump_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-15.0625,-16.5625,13.0625,16.0625},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_839,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"savannah_patch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-16,-12,16,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_840,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"kopje_patch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-47.625,-33.125,45.125,33.125},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_841,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"perch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,1915136,1,{1,-6.25,-5.15,6.25,5.15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_842,1,kCeilImgs_842,1,5.5,2.75,0,12,"map-perch-res-01.img",nullptr,0,nullptr,0,kSurfaces_842,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"oasis_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-35,-35.1,33.75,31},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_843,1,0,"","","",1,10,0,0,1,kSoundEmitters_843,1},
+    {"hut_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.15,-30.9,7,7},1,nullptr,0,nullptr,0,nullptr,0,kShapes_844,2,0,kFloorImgs_844,2,kCeilImgs_844,3,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_844,1,kSurfaces_844,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"hut_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7.15,-30.9,7,7},1,nullptr,0,nullptr,0,nullptr,0,kShapes_845,2,0,kFloorImgs_845,2,kCeilImgs_845,3,5.5,4,0,12,"map-hut-res-01.img",nullptr,0,kZoomIns_845,1,kSurfaces_845,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-12.5,32,12.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_846,3,1,kFloorImgs_846,2,kCeilImgs_846,5,8,5,0,12,"",nullptr,0,kZoomIns_846,1,kSurfaces_846,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-27.5,-12.500000000000002,27.5,12.500000000000002},1,nullptr,0,nullptr,0,nullptr,0,kShapes_847,3,1,kFloorImgs_847,2,kCeilImgs_847,4,8,5,0,12,"",nullptr,0,kZoomIns_847,1,kSurfaces_847,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"warehouse_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32,-12.5,32,12.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_848,3,1,kFloorImgs_848,2,kCeilImgs_848,5,8,5,0,12,"",nullptr,0,kZoomIns_848,1,kSurfaces_848,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6707790,1,{1,-5.9,-5.5,9.700000000000001,4.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_849,1,kCeilImgs_849,3,5.5,4,0,12,"map-shack-res-01.img",nullptr,0,kZoomIns_849,1,kSurfaces_849,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4014894,1,{1,-5,-5.9,5.4,5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_850,1,kCeilImgs_850,2,5.5,4,0,12,"map-shack-res-02.img",nullptr,0,kZoomIns_850,1,kSurfaces_850,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"shack_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-13.65,-7.45,9,19},1,nullptr,0,nullptr,0,nullptr,0,kShapes_851,4,1,kFloorImgs_851,2,kCeilImgs_851,2,5.5,4,0,12,"map-shack-res-03.img",nullptr,0,kZoomIns_851,1,kSurfaces_851,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"outhouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,8145976,1,{1,-3.8,-4.6,3.8,4.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_852,1,kCeilImgs_852,2,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_852,1,kSurfaces_852,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"outhouse_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,10371350,1,{1,-3.8,-4.6,3.8,4.9},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_853,1,kCeilImgs_853,1,5.5,2.75,0,12,"map-outhouse-res.img",nullptr,0,kZoomIns_853,1,kSurfaces_853,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-25.15,-18.5,25.15,18.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_854,2,1,kFloorImgs_854,1,kCeilImgs_854,5,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_854,2,kSurfaces_854,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-25.15,-18.5,27,18.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_855,2,1,kFloorImgs_855,1,kCeilImgs_855,5,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_855,2,kSurfaces_855,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bank_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-26.4,-19.65,26.5,21.25},1,nullptr,0,nullptr,0,nullptr,0,kShapes_856,3,1,kFloorImgs_856,2,kCeilImgs_856,7,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_856,3,kSurfaces_856,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"police_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-42.5,-26,42.5,26},1,nullptr,0,nullptr,0,nullptr,0,kShapes_857,10,1,kFloorImgs_857,2,kCeilImgs_857,9,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_857,4,kSurfaces_857,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_red_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,6429724,1,{1,-16.5,-15,16.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_858,3,kCeilImgs_858,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_858,1,kSurfaces_858,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"house_red_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,4656911,1,{1,-16.5,-16.8,16.5,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_859,10,kCeilImgs_859,3,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_859,1,kSurfaces_859,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cabin_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-21,-16.5,21,14.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_860,2,1,kFloorImgs_860,1,kCeilImgs_860,6,5.5,2.75,0.5,6,"",kEmitters_860,1,kZoomIns_860,2,kSurfaces_860,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-36,-28.599999999999998,32,29.8},1,nullptr,0,nullptr,0,nullptr,0,kShapes_861,5,1,kFloorImgs_861,4,kCeilImgs_861,8,5.5,2.75,0.5,6,"",nullptr,0,kZoomIns_861,3,kSurfaces_861,4,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-14,-11.65,14,11.65},1,nullptr,0,nullptr,0,nullptr,0,kShapes_862,4,0,kFloorImgs_862,3,kCeilImgs_862,4,5.5,4,0,12,"map-building-teahouse-res-01.img",nullptr,0,kZoomIns_862,1,kSurfaces_862,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_complex_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-19,-14.25,19.25,13.125},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_863,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_lg_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-31.5,-11,31.5,11},1,nullptr,0,nullptr,0,nullptr,0,kShapes_864,5,1,kFloorImgs_864,2,kCeilImgs_864,5,10,2.75,0,12,"",nullptr,0,kZoomIns_864,1,kSurfaces_864,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"container_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,1,2703694,1,{1,-3,-9.25,3,8.35},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_865,1,kCeilImgs_865,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_865,1,kSurfaces_865,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-25.5,-26.5,24.5,26.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_866,4,1,kFloorImgs_866,2,kCeilImgs_866,2,8,5,0,12,"",nullptr,0,kZoomIns_866,2,kSurfaces_866,4,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-25.5,-26.5,32.25,26.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-55,-55,55,55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_868,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-22.75,-16.75,25.25,26.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_869,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4.5,-4.75,4.35,4.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_870,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"camp_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-17,-18.75,15.375,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",kEmitters_871,1,kZoomIns_871,1,kSurfaces_871,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teapavilion_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-9,-11.65,9,9},1,nullptr,0,nullptr,0,nullptr,0,kShapes_872,3,0,kFloorImgs_872,2,kCeilImgs_872,1,5.5,4,0,12,"map-building-pavilion-res-01.img",nullptr,0,kZoomIns_872,1,kSurfaces_872,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teapavilion_complex_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-14.05,-11.65,13.395,13.395},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_873,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_01sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-55,-55,55,55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_874,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_02sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-22.75,-16.75,25.25,26.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_875,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_03sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4.5,-4.75,4.35,4.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_876,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-25.5,-26.5,24.5,26.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_877,4,1,kFloorImgs_877,2,kCeilImgs_877,7,8,5,0,12,"",nullptr,0,kZoomIns_877,2,kSurfaces_877,4,0,"","","",1,10,0,0,1,nullptr,0},
+    {"workshop_complex_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-25.5,-26.5,32.25,26.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-22.75,-16.75,25.25,26.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_879,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_03x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4.5,-4.75,4.35,4.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_880,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"camp_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-17,-18.75,15.705,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",kEmitters_881,1,kZoomIns_881,1,kSurfaces_881,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teapavilion_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-9,-11.65,9,9},1,nullptr,0,nullptr,0,nullptr,0,kShapes_882,3,0,kFloorImgs_882,2,kCeilImgs_882,1,5.5,4,0,12,"map-building-pavilion-res-01.img",nullptr,0,kZoomIns_882,1,kSurfaces_882,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_01su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-55,-55,55,55},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_883,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_02su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-22.75,-16.75,25.25,26.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_884,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"logging_complex_03su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4.5,-4.75,4.35,4.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_885,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"teahouse_complex_01su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-19.36,-14.55,19.55,13.395},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,kSurfaces_886,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_chrys_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,1,{1,-2.5,-3.5,2.5,3.6},1,nullptr,0,nullptr,0,nullptr,0,kShapes_887,1,2,kFloorImgs_887,1,kCeilImgs_887,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_887,1,kSurfaces_887,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_chrys_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-4.5,-21.5,58,59},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_888,2,kCeilImgs_888,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_888,1,kSurfaces_888,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_chrys_sublevel_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-4.5,-21.5,58,59},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_889,2,kCeilImgs_889,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_889,1,kSurfaces_889,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_chrys_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-14,-11,17,34},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_890,2,kCeilImgs_890,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_890,1,kSurfaces_890,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_chrys_compartment_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-14,-11,17,34},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_891,2,kCeilImgs_891,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_891,1,kSurfaces_891,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_chrys_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-10,-11,11,13.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_892,2,kCeilImgs_892,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_892,1,kSurfaces_892,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_chrys_compartment_02b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-10,-11,11,13.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_893,2,kCeilImgs_893,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_893,1,kSurfaces_893,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_chrys_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-14.499999999999998,-15,14.499999999999998,15.999999999999998},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_894,1,kCeilImgs_894,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_894,1,kSurfaces_894,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_chrys_compartment_03b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-14.499999999999998,-15,14.499999999999998,15.999999999999998},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_895,1,kCeilImgs_895,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_895,1,kSurfaces_895,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_cloud_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-45.0625,-98.0625,17.0625,21.0625},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_896,2,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0,kSurfaces_896,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_cloud_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-40,-44.5,40,43.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_897,3,kCeilImgs_897,4,7,3,0,12,"",nullptr,0,kZoomIns_897,4,kSurfaces_897,5,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_cloud_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-25,-42.5,22,14.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,nullptr,0,kCeilImgs_898,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_898,2,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_cloud_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-2.5,-2.25,2.5,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,kZoomIns_899,1,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_egg_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-7.35,-10.5,7.15,17.3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_900,1,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0,kSurfaces_900,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_egg_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-12,-16,12,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_901,2,kCeilImgs_901,1,5,3,0,12,"",nullptr,0,kZoomIns_901,1,kSurfaces_901,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_egg_sublevel_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-12,-16,12,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_902,2,kCeilImgs_902,1,5,3,0,12,"",nullptr,0,kZoomIns_902,1,kSurfaces_902,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_egg_sublevel_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-12,-16,12,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_903,2,kCeilImgs_903,1,5,3,0,12,"",nullptr,0,kZoomIns_903,1,kSurfaces_903,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_hydra_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-23.205000000000002,-94.5,46.6275,13},1,nullptr,0,nullptr,0,nullptr,0,kShapes_904,2,0,kFloorImgs_904,3,kCeilImgs_904,1,5,2.75,0.5,6,"",nullptr,0,kZoomIns_904,2,kSurfaces_904,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_hydra_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-21.5,-94.5,52.25,15.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_905,4,kCeilImgs_905,3,10,3,0,12,"",nullptr,0,kZoomIns_905,3,kSurfaces_905,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_hydra_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-11.25,-11,12,14},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_906,1,kCeilImgs_906,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_906,1,kSurfaces_906,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_hydra_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-27.5,-21.5,25,23.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_907,1,kCeilImgs_907,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_907,1,kSurfaces_907,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_hydra_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-12,-10,12,10.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_908,1,kCeilImgs_908,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_908,1,kSurfaces_908,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_storm_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-7,-10.5,6.5,19.7},1,nullptr,0,nullptr,0,nullptr,0,kShapes_909,1,0,kFloorImgs_909,1,kCeilImgs_909,1,5,2.75,0.5,6,"none",nullptr,0,kZoomIns_909,1,kSurfaces_909,3,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_storm_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-12,-16,29,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_910,2,kCeilImgs_910,1,5,3,0,12,"",nullptr,0,kZoomIns_910,1,kSurfaces_910,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_conch_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4,-38.75,58.5,10.75},1,nullptr,0,nullptr,0,nullptr,0,kShapes_911,2,0,kFloorImgs_911,2,kCeilImgs_911,2,5.5,2.75,0,12,"",nullptr,0,kZoomIns_911,2,kSurfaces_911,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_conch_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-18.5,-37.4,48.5,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_912,2,kCeilImgs_912,2,7,3,0,12,"",kEmitters_912,1,kZoomIns_912,2,kSurfaces_912,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_conch_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-17,-20,17,13},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_913,2,kCeilImgs_913,1,7,3,0,12,"",kEmitters_913,1,kZoomIns_913,2,kSurfaces_913,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_crossing_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-2.7,3,4.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_914,1,1,kFloorImgs_914,1,kCeilImgs_914,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_914,1,kSurfaces_914,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_crossing_stairs_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-2.7,3,4.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_915,1,1,kFloorImgs_915,1,kCeilImgs_915,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_915,1,kSurfaces_915,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_crossing_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-39,-25.5,39,31.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_916,1,0,kFloorImgs_916,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_crossing_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-41,-27.5,41,33.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_917,8,kCeilImgs_917,2,7,3,0,12,"",nullptr,0,kZoomIns_917,4,kSurfaces_917,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_crossing_bathroom",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-3.75,-2,3.75,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_918,1,kCeilImgs_918,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_918,1,kSurfaces_918,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_crossing_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-28.5,-20.45,29.5,20.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_919,2,kCeilImgs_919,2,7,3,0,12,"",kEmitters_919,1,kZoomIns_919,2,kSurfaces_919,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_hatchet_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.8,-10.5,8.3,19.7},1,nullptr,0,nullptr,0,nullptr,0,kShapes_920,1,0,kFloorImgs_920,1,kCeilImgs_920,1,5,2.75,0.5,6,"none",nullptr,0,kZoomIns_920,1,kSurfaces_920,2,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_hatchet_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-82,-22,12,32},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,1,kFloorImgs_921,3,kCeilImgs_921,1,5,3,0,12,"",nullptr,0,kZoomIns_921,1,kSurfaces_921,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_hatchet_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-23,-14.5,16.3,23.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_922,1,kCeilImgs_922,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_922,1,kSurfaces_922,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_hatchet_compartment_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-18.5,-18,16,33},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_923,4,kCeilImgs_923,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_923,1,kSurfaces_923,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_hatchet_compartment_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-21,-10,21,11.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_924,4,kCeilImgs_924,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_924,1,kSurfaces_924,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_eye_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,4.5,6.68,24.68},1,nullptr,0,nullptr,0,nullptr,0,kShapes_925,1,1,kFloorImgs_925,1,kCeilImgs_925,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_925,1,kSurfaces_925,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_eye_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-14,-51,17,12},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_926,2,kCeilImgs_926,1,5,3,0,12,"",nullptr,0,kZoomIns_926,1,kSurfaces_926,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_eye_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-12,-12,12,10},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_927,1,kCeilImgs_927,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_927,1,kSurfaces_927,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_twins_stairs_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-2.7,3,4.5},1,nullptr,0,nullptr,0,nullptr,0,kShapes_928,1,1,kFloorImgs_928,1,kCeilImgs_928,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_928,1,kSurfaces_928,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_twins_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-23,-18,23,18},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_929,1,nullptr,0,5,2.75,0.5,6,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_twins_sublevel_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-31.5,-29,31.5,29},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_930,1,kCeilImgs_930,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_930,1,kSurfaces_930,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_twins_compartment_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,6707790,1,{1,-12,-10.5,12,10.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,2,kFloorImgs_931,1,kCeilImgs_931,1,5.5,2.75,0,12,"",nullptr,0,kZoomIns_931,1,kSurfaces_931,1,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_932,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_933,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_934,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_01cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_935,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_01w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_936,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_01bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_937,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_01f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_938,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.5999999999999996,-3.5999999999999996,3.5999999999999996,3.5999999999999996},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_939,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.5999999999999996,-3.5999999999999996,3.5999999999999996,3.5999999999999996},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_940,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.5999999999999996,-3.5999999999999996,3.5999999999999996,3.5999999999999996},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_941,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.5999999999999996,-3.5999999999999996,3.5999999999999996,3.5999999999999996},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_942,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02sp",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.9000000000000004,-3.9000000000000004,3.9000000000000004,3.9000000000000004},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_943,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02su",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.9000000000000004,-3.9000000000000004,3.9000000000000004,3.9000000000000004},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_944,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.9000000000000004,-3.9000000000000004,3.9000000000000004,3.9000000000000004},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_945,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.5999999999999996,-3.5999999999999996,3.5999999999999996,3.5999999999999996},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_946,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.9000000000000004,-3.9000000000000004,3.9000000000000004,3.9000000000000004},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_947,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02h",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.5999999999999996,-3.5999999999999996,3.5999999999999996,3.5999999999999996},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_948,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_02bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2.7,-2.7,2.7,2.7},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_949,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_950,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_03tr",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_951,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_952,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_04x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_953,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_04cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_954,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_955,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_06bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_956,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_07",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.3000000000000003,-3.3000000000000003,3.3000000000000003,3.3000000000000003},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_957,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_07w",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.3000000000000003,-3.3000000000000003,3.3000000000000003,3.3000000000000003},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_958,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_06cb",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_959,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_07f",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.3000000000000003,-3.3000000000000003,3.3000000000000003,3.3000000000000003},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_960,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_07bh",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_961,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_log_13",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_962,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_pumpkin_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4.875,-4.875,4.875,4.875},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_963,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_pumpkin_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4.875,-4.875,4.875,4.875},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_964,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_pumpkin_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3.75,-3.75,3.75,3.75},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_965,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"cache_pumpkin_airdrop_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4.875,-4.875,4.875,4.875},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_966,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"candle_lit_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_967,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"candle_lit_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,kFloorImgs_968,1,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_lg_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32.5,-12,32.5,12},1,kLayers_969,2,kStairs_969,2,kMask_969,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_xlg_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-39.5,-16,39.5,16},1,kLayers_970,2,kStairs_970,2,kMask_970,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bridge_md_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-15,-7,15,7},1,kLayers_971,2,kStairs_971,2,kMask_971,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-6.4,-6,14.5,6},1,kLayers_972,2,kStairs_972,1,kMask_972,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"statue_structure_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-6.4,-6,14.5,6},1,kLayers_973,2,kStairs_973,1,kMask_973,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_basement_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-27.5,-10,7.5,8},1,kLayers_974,2,kStairs_974,1,kMask_974,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_basement_structure_01d",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-27.5,-10,7.5,8},1,kLayers_975,2,kStairs_975,1,kMask_975,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"barn_basement_structure_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-27.5,-10,7.5,8},1,kLayers_976,2,kStairs_976,1,kMask_976,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-37,-29.599999999999998,33,30.8},1,kLayers_977,2,kStairs_977,2,kMask_977,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_structure_01x",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-37,-29.599999999999998,33,30.8},1,kLayers_978,2,kStairs_978,2,kMask_978,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-37,-29.599999999999998,33,30.8},1,kLayers_979,2,kStairs_979,2,kMask_979,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"mansion_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-37,-29.599999999999998,33,30.8},1,kLayers_980,2,kStairs_980,2,kMask_980,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"reserve_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-60.15,-38,75.5,36.75},1,kLayers_981,2,kStairs_981,2,kMask_981,3,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,1,"reserve_music_01","reserve_music_02","club",1,20,0.25,1,0.707,nullptr,0},
+    {"saloon_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-37.5,-23.5,23.5,21.5},1,kLayers_982,2,kStairs_982,1,kMask_982,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,1,"piano_music_01","","",5,10,0.25,0,1,nullptr,0},
+    {"club_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-38,-48.5,41,56.5},1,kLayers_983,2,kStairs_983,2,kMask_983,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,1,"club_music_01","club_music_02","club",1,10,0.25,1,0.707,nullptr,0},
+    {"bunker_structure_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-13,-17,13,18.3},1,kLayers_984,2,kStairs_984,1,kMask_984,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_01b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-13,-17,13,18.3},1,kLayers_985,2,kStairs_985,1,kMask_985,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_01sv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-13,-17,13,18.3},1,kLayers_986,2,kStairs_986,1,kMask_986,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-24.205000000000002,-95.5,53.25,16.5},1,kLayers_987,2,kStairs_987,3,kMask_987,5,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-13,-17,30,20.7},1,kLayers_988,2,kStairs_988,1,kMask_988,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_04",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-19.5,-39.75,59.5,11.75},1,kLayers_989,2,kStairs_989,2,kMask_989,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_05",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-42,-28.5,42,34.5},1,kLayers_990,2,kStairs_990,4,kMask_990,3,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_06",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-83,-23,13,33},1,kLayers_991,2,kStairs_991,1,kMask_991,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_07",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-15,-52,18,25.68},1,kLayers_992,2,kStairs_992,1,kMask_992,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_08",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-5.5,-22.5,59,60},1,kLayers_993,2,kStairs_993,1,kMask_993,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_08b",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-5.5,-22.5,59,60},1,kLayers_994,2,kStairs_994,1,kMask_994,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_09",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-32.5,-30,32.5,30},1,kLayers_995,2,kStairs_995,4,kMask_995,1,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"bunker_structure_10",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-46.0625,-99.0625,42.5,22.0625},1,kLayers_996,2,kStairs_996,2,kMask_996,2,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_barrel_explosion",{"map-barrel-res-01.img",0.24,1,0,9,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_frag_explosion",{"map-barrel-res-01.img",0.2,0.8,0,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_frag_small_explosion",{"map-barrel-res-01.img",0.12,0.8,2105376,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_rounds_explosion",{"map-barrel-res-01.img",0.1,0.8,3150346,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,1,2,2.5,1,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_bomb_iron_explosion",{"map-barrel-res-01.img",0.2,0.8,0,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,1,6,10,1,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_smoke_explosion",{"map-smoke-res.img",0.2,0.5,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_snowball_explosion",{"map-snowball-res.img",0.2,0.25,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,1,5,5,1,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_potato_explosion",{"map-potato-res.img",0.2,0.25,16777215,11,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,1,5,5,1,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_vent_01",{"map-bunker-vent-01.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_vent_02",{"map-bunker-vent-02.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_vent_03",{"map-bunker-vent-03.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_hydra_01",{"map-bunker-hydra-floor-04.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_camera_01",{"map-decal-camera-01.img",0.25,1,16777215,60,0,0,0},1,{1,-0.5,-0.5,0.5,0.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.5,-0.5,0.5,0.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_pipe_01",{"map-decal-pipe.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_pipes_01",{"map-pipes-01.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-4.5,1,4.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-4.5,1,4.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_pipes_02",{"map-pipes-02.img",0.5,0.96,16777215,60,0,0,0},1,{1,-4,-3,4,3},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4,-3,4,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_pipes_03",{"map-pipes-03.img",0.5,0.96,16777215,60,0,0,0},1,{1,-10.5,-4,10.5,4},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-10.5,-4,10.5,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_pipes_04",{"map-pipes-04.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-5.5,1,5.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-5.5,1,5.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_pipes_05",{"map-pipes-05.img",0.5,0.96,16777215,60,0,0,0},1,{1,-1,-3.5,1,3.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-3.5,1,3.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_initiative_01",{"map-decal-initiative.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_caduceus_01",{"map-decal-caduceus.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,3,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-3,-3,3,3},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_web_01",{"map-web-01.img",0.5,0.75,16777215,60,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_light_01",{"map-light-01.img",1,0.5,16751616,60,0,0,0},1,{1,-3.25,-3.25,3.25,3.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,1,0.9,1.1,0.5,1,1,10000000000,10000000000,1,0,0,1,{1,-3.25,-3.25,3.25,3.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_light_02",{"map-light-01.img",0.75,0.5,16760397,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,1,0.8,1.2,0.2,1,1,10000000000,10000000000,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_light_03",{"map-light-01.img",0.75,0.5,8585216,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,1,0.8,1.2,0.2,1,1,10000000000,10000000000,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_light_04",{"map-light-01.img",0.75,0.5,16734244,60,0,0,0},1,{1,-2.5,-2.5,2.5,2.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,1,0.5,0.75,0.4,1,1,10000000000,10000000000,1,0,0,1,{1,-2.5,-2.5,2.5,2.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_blood_01",{"part-splat-01.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_blood_02",{"part-splat-02.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_blood_03",{"part-splat-03.img",0.25,0.95,4001294,0,0,0,0},1,{1,-1.5,-1.5,1.5,1.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1.5,-1.5,1.5,1.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_chrys_01",{"map-bunker-vent-01.img",0.5,1,16777215,3,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_oil_01",{"map-decal-oil-01.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_oil_02",{"map-decal-oil-02.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_oil_03",{"map-decal-oil-03.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_oil_04",{"map-decal-oil-04.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_oil_05",{"map-decal-oil-05.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,1,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-1,-1,1,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_oil_06",{"map-decal-oil-06.img",0.5,1,16777215,0,0,0,0},1,{0,0,0,2,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2,-2,2,2},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_bathhouse_pool_01",{"map-bathhouse-pool-01.img",8,0.5,52721,5,0,0,0},1,{1,-9,-15,9,15},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",1,0,5157572,10478319,1,0,4,0.5,2,1,7667727,1,0.85,1,8529201,1,11490399,0,1,1,1,0,0,0,0,1,0,0,1,{1,-9,-15,9,15},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_club_01",{"map-decal-club-01.img",1,1,16777215,4,0,0,0},1,{0,0,0,4,0},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4,-4,4,4},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_club_02",{"map-decal-club-02.img",1,0,16777215,4,0,0,0},1,{1,-4,-10.5,4,10.5},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,1,0,0,"","",0,0,0,0,1,4,6,3.25,0.5,0,16777215,1,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-4,-10.5,4,10.5},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_plank_01",{"part-plank-01.img",0.5,1,4327436,9,0,0,0},1,{1,-2.25,-2.25,2.25,2.25},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-2.25,-2.25,2.25,2.25},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"decal_flyer_01",{"map-decal-flyer-01.img",0.6,0.667,16777215,4,0,0,0},1,{1,-0.5,-1,0.5,1},1,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{1,-0.5,-1,0.5,1},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_1",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_2",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_beach",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_surviv",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_vault_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_police_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_mansion_floor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_sv98",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_scopes_sniper",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_woodaxe",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_fireaxe",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_stonehammer",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_barn_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_hatchet_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_club_melee",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_leaf_pile",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_islander_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_verde_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_lumber_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_imperial_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_pineapple_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_tarkhany_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_spetsnaz_outfit",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_eye_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_saloon",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_chrys_01",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_chrys_02",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_chrys_03",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_airdrop_armor",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_perk_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_sniper_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_loot_test",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
+    {"loot_tier_helmet_forest",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,"",0,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0},
 };
 static const char* const kMapAtlases_0[] = {"loadout","shared","main"};
 static const char* const kMapAtlases_248[] = {"loadout","shared","main"};
@@ -4988,6 +6302,7 @@ public:
                 l.pos = Vec2(r.layers[i].x, r.layers[i].y);
                 l.ori = r.layers[i].ori;
                 l.inheritOri = r.layers[i].inheritOri != 0;
+                l.hasUnderground = r.layers[i].hasUnderground != 0;
                 l.underground = r.layers[i].underground != 0;
                 d.layers.push_back(l);
             }
@@ -5027,6 +6342,38 @@ public:
                 d.occupiedEmitters.push_back(e);
             }
             for (int i = 0; i < r.zoomCount; i++) d.ceilingZoomIn.push_back(toCollider(r.zoomIns[i]));
+            for (int i = 0; i < r.surfaceCount; i++) {
+                BuildingSurfaceDef s;
+                s.type = r.surfaces[i].type ? r.surfaces[i].type : "";
+                s.hasWaterColor = r.surfaces[i].hasWaterColor != 0;
+                s.waterColor = r.surfaces[i].waterColor;
+                s.hasRippleColor = r.surfaces[i].hasRippleColor != 0;
+                s.rippleColor = r.surfaces[i].rippleColor;
+                for (int j = 0; j < r.surfaces[i].count; j++) {
+                    s.colliders.push_back(toCollider(r.surfaces[i].colliders[j]));
+                }
+                d.surfaces.push_back(std::move(s));
+            }
+            d.hasInteriorSound = r.hasInteriorSound != 0;
+            d.interiorSound.sound = r.interiorSound ? r.interiorSound : "";
+            d.interiorSound.soundAlt = r.interiorSoundAlt ? r.interiorSoundAlt : "";
+            d.interiorSound.filter = r.interiorFilter ? r.interiorFilter : "";
+            d.interiorSound.transitionTime = r.interiorTransitionTime;
+            d.interiorSound.outsideMaxDist = r.interiorOutsideMaxDist;
+            d.interiorSound.outsideVolume = r.interiorOutsideVolume;
+            d.interiorSound.hasUndergroundVolume = r.hasInteriorUndergroundVolume != 0;
+            d.interiorSound.undergroundVolume = r.interiorUndergroundVolume;
+            for (int i = 0; i < r.soundEmitterCount; i++) {
+                BuildingSoundEmitterDef e;
+                e.sound = r.soundEmitters[i].sound ? r.soundEmitters[i].sound : "";
+                e.channel = r.soundEmitters[i].channel ? r.soundEmitters[i].channel : "";
+                e.pos = Vec2(r.soundEmitters[i].x, r.soundEmitters[i].y);
+                e.rangeMin = r.soundEmitters[i].rangeMin;
+                e.rangeMax = r.soundEmitters[i].rangeMax;
+                e.falloff = r.soundEmitters[i].falloff;
+                e.volume = r.soundEmitters[i].volume;
+                d.soundEmitters.push_back(e);
+            }
             _mapObjs[d.type] = std::move(d);
         }
         for (const auto& r : kMapRenders) {

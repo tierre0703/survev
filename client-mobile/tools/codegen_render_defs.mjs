@@ -27,6 +27,8 @@ const { util } = await import(pathToFile(sharedDir, "utils/util.ts"));
 const { math } = await import(pathToFile(sharedDir, "utils/math.ts"));
 const { v2 } = await import(pathToFile(sharedDir, "utils/v2.ts"));
 const { IdlePoses, Animations } = await import(pathToFile(clientDir, "src/animData.ts"));
+const { collider } = await import(pathToFile(sharedDir, "utils/collider.ts"));
+const { coldet } = await import(pathToFile(sharedDir, "utils/coldet.ts"));
 
 const mapTypes = MapObjectDefs.getAllTypes();
 const gameTypes = GameObjectDefs.getAllTypes();
@@ -89,6 +91,71 @@ function unionBounds(cols) {
     return { type: 1, min, max };
 }
 
+// Deterministic port of mapHelpers.computeBoundingCollider. Weighted map-object
+// type maps are unioned over every candidate (the web picks one at random) so
+// the generated file is reproducible; the candidates are décor inside the
+// building footprint.
+const boundingCache = new Map();
+const boundingBusy = new Set();
+function computeBoundingCollider(type) {
+    if (boundingCache.has(type)) return boundingCache.get(type);
+    if (boundingBusy.has(type)) return null;
+    boundingBusy.add(type);
+    const def = MapObjectDefs.typeToDef(type);
+    let out = null;
+    if (def.type === "structure") {
+        const aabbs = [];
+        for (const layer of def.layers || []) {
+            const sub = computeBoundingCollider(layer.type);
+            if (!sub) continue;
+            const rot = math.oriToRad(layer.ori);
+            aabbs.push(collider.toAabb(collider.transform(sub, layer.pos, rot, 1.0)));
+        }
+        for (const stair of def.stairs || []) aabbs.push(stair.collision);
+        if (aabbs.length) {
+            const aabb = coldet.boundingAabb(aabbs);
+            // mapHelpers expands structure bounds by 1 unit (stairwell loot).
+            out = collider.createAabb(
+                v2.create(aabb.min.x - 1.0, aabb.min.y - 1.0),
+                v2.create(aabb.max.x + 1.0, aabb.max.y + 1.0),
+            );
+        }
+    } else if (def.type === "building") {
+        const aabbs = [];
+        for (const surface of def.floor?.surfaces || []) {
+            for (const c of surface.collision || []) aabbs.push(c);
+        }
+        for (const region of def.ceiling?.zoomRegions || []) {
+            if (region.zoomIn) aabbs.push(region.zoomIn);
+            if (region.zoomOut) aabbs.push(region.zoomOut);
+        }
+        for (const obj of def.mapObjects || []) {
+            const mt = obj.type;
+            const types = mt && typeof mt === "object" ? Object.keys(mt).filter((k) => mt[k]) : [mt];
+            for (const t of types) {
+                if (!t) continue;
+                const sub = computeBoundingCollider(t);
+                if (!sub) continue;
+                const rot = math.oriToRad(obj.ori);
+                aabbs.push(collider.toAabb(collider.transform(sub, obj.pos, rot, obj.scale)));
+            }
+        }
+        if (aabbs.length) {
+            const aabb = coldet.boundingAabb(aabbs);
+            out = collider.createAabb(aabb.min, aabb.max);
+        }
+    } else if (def.type === "decal") {
+        out = collider.toAabb(def.collision);
+    } else if (def.type === "loot_spawner") {
+        out = collider.createCircle(v2.create(0.0, 0.0), 3.0);
+    } else {
+        out = def.collision || null;
+    }
+    boundingBusy.delete(type);
+    boundingCache.set(type, out);
+    return out;
+}
+
 let arrays = "";
 let entries = "";
 const emittedLayers = [];
@@ -114,17 +181,17 @@ for (let i = 0; i < mapTypes.length; i++) {
     let layers = null;
     let stairs = null;
     let mask = null;
+    let interiorSound = null;
     if (kind === "structure") {
         layers = def.layers || [];
         stairs = def.stairs || [];
         mask = def.mask || [];
+        interiorSound = def.interiorSound || null;
     }
 
     let bounds = null;
-    if (collision) {
-        bounds = collision;
-    } else if (Array.isArray(def.mapObstacleBounds) && def.mapObstacleBounds.length) {
-        bounds = unionBounds(def.mapObstacleBounds);
+    if (kind === "structure" || kind === "building" || kind === "decal" || kind === "loot_spawner" || collision) {
+        bounds = computeBoundingCollider(type);
     }
 
     const refs = {
@@ -136,6 +203,8 @@ for (let i = 0; i < mapTypes.length; i++) {
         ceilingImgs: "nullptr",
         emitters: "nullptr",
         zoomIns: "nullptr",
+        surfaces: "nullptr",
+        soundEmitters: "nullptr",
     };
     if (layers && layers.length) {
         const name = `kLayers_${i}`;
@@ -143,7 +212,7 @@ for (let i = 0; i < mapTypes.length; i++) {
         for (const l of layers) {
             arrays += `    {${str(l.type)},${n(l.pos.x)},${n(l.pos.y)},${n(l.ori, 0)},${
                 l.inheritOri === undefined || l.inheritOri ? 1 : 0
-            },${l.underground ? 1 : 0}},\n`;
+            },${l.underground === undefined ? 0 : 1},${l.underground ? 1 : 0}},\n`;
         }
         arrays += `};\n`;
         refs.layers = name;
@@ -185,10 +254,14 @@ for (let i = 0; i < mapTypes.length; i++) {
     let ceilingImgs = [];
     let emitters = [];
     let zoomIns = [];
+    let floorSurfaces = [];
+    let buildingSoundEmitters = [];
     if (kind === "building") {
         zIdx = n(def.zIdx, 0);
         floorImgs = (def.floor && def.floor.imgs) || [];
         ceilingImgs = (def.ceiling && def.ceiling.imgs) || [];
+        floorSurfaces = (def.floor && def.floor.surfaces) || [];
+        buildingSoundEmitters = def.soundEmitters || [];
         vision = Object.assign({ dist: 5.5, width: 2.75, linger: 0, fadeRate: 12 }, def.ceiling?.vision);
         destroyResidue = def.ceiling?.destroy?.residue || "";
         emitters = def.occupiedEmitters || [];
@@ -230,6 +303,47 @@ for (let i = 0; i < mapTypes.length; i++) {
         for (const z of zoomIns) arrays += `    ${colInit(z)},\n`;
         arrays += `};\n`;
         refs.zoomIns = name;
+    }
+    // building.ts `def.floor.surfaces[]`: floor material + collision AABBs for
+    // map.ts getGroundSurface / footstep groups.
+    if (floorSurfaces.length) {
+        const name = `kSurfaces_${i}`;
+        const colRefs = [];
+        for (let j = 0; j < floorSurfaces.length; j++) {
+            const cols = floorSurfaces[j].collision || [];
+            if (!cols.length) {
+                colRefs.push({ name: "nullptr", count: 0 });
+                continue;
+            }
+            const cname = `kSurfCols_${i}_${j}`;
+            arrays += `static const RawCollider ${cname}[] = {\n`;
+            for (const c of cols) arrays += `    ${colInit(c)},\n`;
+            arrays += `};\n`;
+            colRefs.push({ name: cname, count: cols.length });
+        }
+        arrays += `static const RawBSurface ${name}[] = {\n`;
+        for (let j = 0; j < floorSurfaces.length; j++) {
+            const s = floorSurfaces[j];
+            arrays += `    {${str(s.type)},${colRefs[j].name},${colRefs[j].count},${
+                s.data && s.data.waterColor !== undefined ? 1 : 0
+            },${n(s.data?.waterColor, 0)},${s.data && s.data.rippleColor !== undefined ? 1 : 0},${
+                n(s.data?.rippleColor, 0)
+            }},\n`;
+        }
+        arrays += `};\n`;
+        refs.surfaces = name;
+    }
+    // building.ts `soundEmitters`: looping positional ambience points.
+    if (buildingSoundEmitters.length) {
+        const name = `kSoundEmitters_${i}`;
+        arrays += `static const RawSoundEmitter ${name}[] = {\n`;
+        for (const e of buildingSoundEmitters) {
+            arrays += `    {${str(e.sound)},${str(e.channel)},${n(e.pos?.x)},${n(e.pos?.y)},${n(e.range?.min)},${
+                n(e.range?.max)
+            },${n(e.falloff, 1)},${n(e.volume, 1)}},\n`;
+        }
+        arrays += `};\n`;
+        refs.soundEmitters = name;
     }
 
     // obstacle.ts collision/sound fields + decal.ts surface/gore fields.
@@ -326,7 +440,13 @@ for (let i = 0; i < mapTypes.length; i++) {
         )
     },${n(vision.linger, 0)},${n(vision.fadeRate, 12)},${
         str(destroyResidue)
-    },${refs.emitters},${emitters.length},${refs.zoomIns},${zoomIns.length}},\n`;
+    },${refs.emitters},${emitters.length},${refs.zoomIns},${zoomIns.length},${refs.surfaces},${floorSurfaces.length},${
+        interiorSound ? 1 : 0
+    },${str(interiorSound?.sound)},${str(interiorSound?.soundAlt)},${str(interiorSound?.filter)},${
+        n(interiorSound?.transitionTime, 1)
+    },${n(interiorSound?.outsideMaxDist, 10)},${n(interiorSound?.outsideVolume, 0)},${
+        interiorSound && interiorSound.undergroundVolume !== undefined ? 1 : 0
+    },${n(interiorSound?.undergroundVolume, 1)},${refs.soundEmitters},${buildingSoundEmitters.length}},\n`;
 }
 
 // Map render defs.
@@ -783,9 +903,16 @@ struct RawCollider { int type; float a, b, c, d; };
 struct RawImg { const char* sprite; float scale; float alpha; unsigned tint; int zIdx; int mirrorX; int mirrorY; float ori; };
 struct RawBImg { const char* sprite; float scale; float alpha; unsigned tint; float px, py, rot; int mirrorX, mirrorY, removeOnDamaged; };
 struct RawBEmitter { const char* type; float px, py, rot, scale; int layer, parentToCeiling; float dirx, diry; };
-struct RawLayer { const char* type; float x, y; int ori; int inheritOri; int underground; };
+struct RawLayer { const char* type; float x, y; int ori; int inheritOri; int hasUnderground; int underground; };
 struct RawStair { RawCollider col; float dx, dy; int noCeilingReveal; int lootOnly; };
 struct RawShape { RawCollider col; float scale; unsigned color; };
+struct RawBSurface {
+    const char* type; const RawCollider* colliders; int count;
+    int hasWaterColor; unsigned waterColor; int hasRippleColor; unsigned rippleColor;
+};
+struct RawSoundEmitter {
+    const char* sound; const char* channel; float x, y, rangeMin, rangeMax, falloff, volume;
+};
 struct RawMapObj {
     const char* type; RawImg img; int hasImg; RawCollider collision; int hasCollision;
     int isDoor, isButton, isTree, isWall; int randomRotation, hasExplosion; const char* explosionParticle;
@@ -813,6 +940,11 @@ struct RawMapObj {
     const char* destroyResidue;
     const RawBEmitter* emitters; int emitterCount;
     const RawCollider* zoomIns; int zoomCount;
+    const RawBSurface* surfaces; int surfaceCount;
+    int hasInteriorSound; const char* interiorSound; const char* interiorSoundAlt; const char* interiorFilter;
+    float interiorTransitionTime, interiorOutsideMaxDist, interiorOutsideVolume;
+    int hasInteriorUndergroundVolume; float interiorUndergroundVolume;
+    const RawSoundEmitter* soundEmitters; int soundEmitterCount;
 };
 struct RawMapRender {
     const char* name;
@@ -1009,6 +1141,7 @@ public:
                 l.pos = Vec2(r.layers[i].x, r.layers[i].y);
                 l.ori = r.layers[i].ori;
                 l.inheritOri = r.layers[i].inheritOri != 0;
+                l.hasUnderground = r.layers[i].hasUnderground != 0;
                 l.underground = r.layers[i].underground != 0;
                 d.layers.push_back(l);
             }
@@ -1048,6 +1181,38 @@ public:
                 d.occupiedEmitters.push_back(e);
             }
             for (int i = 0; i < r.zoomCount; i++) d.ceilingZoomIn.push_back(toCollider(r.zoomIns[i]));
+            for (int i = 0; i < r.surfaceCount; i++) {
+                BuildingSurfaceDef s;
+                s.type = r.surfaces[i].type ? r.surfaces[i].type : "";
+                s.hasWaterColor = r.surfaces[i].hasWaterColor != 0;
+                s.waterColor = r.surfaces[i].waterColor;
+                s.hasRippleColor = r.surfaces[i].hasRippleColor != 0;
+                s.rippleColor = r.surfaces[i].rippleColor;
+                for (int j = 0; j < r.surfaces[i].count; j++) {
+                    s.colliders.push_back(toCollider(r.surfaces[i].colliders[j]));
+                }
+                d.surfaces.push_back(std::move(s));
+            }
+            d.hasInteriorSound = r.hasInteriorSound != 0;
+            d.interiorSound.sound = r.interiorSound ? r.interiorSound : "";
+            d.interiorSound.soundAlt = r.interiorSoundAlt ? r.interiorSoundAlt : "";
+            d.interiorSound.filter = r.interiorFilter ? r.interiorFilter : "";
+            d.interiorSound.transitionTime = r.interiorTransitionTime;
+            d.interiorSound.outsideMaxDist = r.interiorOutsideMaxDist;
+            d.interiorSound.outsideVolume = r.interiorOutsideVolume;
+            d.interiorSound.hasUndergroundVolume = r.hasInteriorUndergroundVolume != 0;
+            d.interiorSound.undergroundVolume = r.interiorUndergroundVolume;
+            for (int i = 0; i < r.soundEmitterCount; i++) {
+                BuildingSoundEmitterDef e;
+                e.sound = r.soundEmitters[i].sound ? r.soundEmitters[i].sound : "";
+                e.channel = r.soundEmitters[i].channel ? r.soundEmitters[i].channel : "";
+                e.pos = Vec2(r.soundEmitters[i].x, r.soundEmitters[i].y);
+                e.rangeMin = r.soundEmitters[i].rangeMin;
+                e.rangeMax = r.soundEmitters[i].rangeMax;
+                e.falloff = r.soundEmitters[i].falloff;
+                e.volume = r.soundEmitters[i].volume;
+                d.soundEmitters.push_back(e);
+            }
             _mapObjs[d.type] = std::move(d);
         }
         for (const auto& r : kMapRenders) {

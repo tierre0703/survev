@@ -4,6 +4,9 @@
 #include "ReferenceData.h"
 #include "TestFramework.h"
 
+#include "audio/Ambiance.h"
+#include "audio/AudioManager.h"
+#include "audio/GeneratedSoundDefs.h"
 #include "game/GameWorld.h"
 #include "game/Map.h"
 #include "game/Gas.h"
@@ -11,6 +14,7 @@
 #include "game/Hud.h"
 #include "game/objects/Barns.h"
 #include "game/objects/GameObject.h"
+#include "game/objects/ObstacleScan.h"
 #include "game/objects/Structure.h"
 #include "render/Camera.h"
 #include "render/Defs.h"
@@ -20,6 +24,7 @@
 #include "render/Terrain.h"
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 using namespace surv;
@@ -521,6 +526,625 @@ TEST(building_floor_ceiling_render) {
         b.update(0.016f, world);
     }
     CHECK(b.ceilingFadeAlpha < 0.5f);
+    world.setActivePlayer(nullptr);
+}
+
+// building.ts floor surfaces feed map.ts getGroundSurface: stepping into a
+// building must report its floor material (not the terrain's grass), which is
+// what selects the `footstep_<type>` sound group.
+TEST(building_floor_surfaces) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.camera().m_screenWidth = 800.0f;
+    world.camera().m_screenHeight = 600.0f;
+
+    MapMsg msg;
+    msg.mapName = "main";
+    msg.seed = 123456;
+    msg.width = 512.0f;
+    msg.height = 512.0f;
+    msg.shoreInset = 4.0f;
+    msg.grassInset = 2.0f;
+    world.loadMap(msg);
+
+    const DefProvider* defs = getDefProvider();
+    CHECK(defs != nullptr);
+    const MapObjectDef* bank = defs ? defs->mapObject("bank_01") : nullptr;
+    CHECK(bank != nullptr);
+    if (!bank) {
+        return;
+    }
+    // bank_01: one "tile" floor surface made of two collision AABBs.
+    CHECK_EQ(bank->surfaces.size(), 1u);
+    CHECK_EQ(bank->surfaces[0].type, std::string("tile"));
+    CHECK_EQ(bank->surfaces[0].colliders.size(), 2u);
+    CHECK(!bank->surfaces[0].hasWaterColor);
+    // mapHelpers.getBoundingCollider() replaces the old (zero) collision-only
+    // bounds; buildings need this for the minimap fallback and ceiling vision.
+    CHECK(bank->hasBounding);
+    CHECK(bank->boundingCollider.max.x > bank->boundingCollider.min.x);
+    CHECK(bank->boundingCollider.max.y > bank->boundingCollider.min.y);
+
+    const Vec2 origin(100.0f, 100.0f);
+    Building* b = world.map().buildingPool.m_alloc();
+    ObjectData data;
+    data.type = "bank_01";
+    data.pos = origin;
+    data.ori = 0;
+    data.layer = 0;
+    data.__id = 7;
+    b->m_updateData(data, true, true, world);
+
+    CHECK_EQ(b->surfaces.size(), 1u);
+    CHECK_EQ(b->surfaces[0].type, std::string("tile"));
+    CHECK_EQ(b->surfaces[0].colliders.size(), 2u);
+
+    // The authored colliders are building-local AABBs; they must be translated
+    // by the building position (and mapped to the correct surface type).
+    const Collider& local = bank->surfaces[0].colliders[0];
+    CHECK_NEAR(b->surfaces[0].colliders[0].min.x, local.min.x + origin.x, 1e-4f);
+    CHECK_NEAR(b->surfaces[0].colliders[0].max.y, local.max.y + origin.y, 1e-4f);
+
+    const Vec2 surfaceCenter = v2Add(
+        origin, v2Mul(v2Add(local.min, local.max), 0.5f));
+    const Map::GroundSurface tile = world.map().getGroundSurface(surfaceCenter, 0);
+    CHECK(tile.type == Map::SurfaceType::Tile);
+    CHECK_EQ(std::string(surfaceTypeName(tile.type)), std::string("tile"));
+    CHECK_EQ(std::string("footstep_") + surfaceTypeName(tile.type),
+             std::string("footstep_tile"));
+
+    // A bunker water surface carries its own water colours.
+    const MapObjectDef* sub = defs->mapObject("bunker_cloud_sublevel_01");
+    CHECK(sub != nullptr);
+    if (sub) {
+        const BuildingSurfaceDef* water = nullptr;
+        for (const auto& s : sub->surfaces) {
+            if (s.type == "water") {
+                water = &s;
+            }
+        }
+        CHECK(water != nullptr);
+        if (water) {
+            CHECK(water->hasWaterColor);
+            CHECK_EQ(water->waterColor, 0x18425Bu);
+            CHECK_EQ(water->rippleColor, 0xb3f0ffu);
+            Building* wb = world.map().buildingPool.m_alloc();
+            ObjectData wd;
+            wd.type = "bunker_cloud_sublevel_01";
+            wd.pos = Vec2(300.0f, 300.0f);
+            wd.layer = 1;
+            wd.__id = 8;
+            wb->m_updateData(wd, true, true, world);
+            CHECK_EQ(wb->surfaces.size(), sub->surfaces.size());
+            // The last surface is the authored water pool; its data and
+            // colliders survive the transform (getGroundSurface reports the
+            // first overlapping surface, exactly like map.ts).
+            const Building::Surface& wsurface = wb->surfaces.back();
+            CHECK_EQ(wsurface.type, std::string("water"));
+            CHECK(wsurface.hasWaterColor);
+            CHECK_EQ(wsurface.waterColor, 0x18425Bu);
+            CHECK(!wsurface.colliders.empty());
+        }
+    }
+}
+
+// structure.ts / player.ts isUnderground + the structure mask/stairs queries
+// that renderer/audio use for the underground fade and reverb.
+TEST(structure_mask_and_underground) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+
+    const DefProvider* defs = getDefProvider();
+    CHECK(defs != nullptr);
+    const MapObjectDef* def = defs ? defs->mapObject("bunker_structure_02") : nullptr;
+    CHECK(def != nullptr);
+    if (!def) {
+        return;
+    }
+    CHECK(def->layers.size() >= 2u);
+    CHECK(!def->mask.empty());
+    CHECK(!def->stairs.empty());
+    CHECK(def->hasBounding);
+    CHECK(def->boundingCollider.max.x > def->boundingCollider.min.x);
+
+    Structure* s = world.map().structurePool.m_alloc();
+    ObjectData data;
+    data.type = "bunker_structure_02";
+    data.pos = Vec2(200.0f, 200.0f);
+    data.ori = 0;
+    data.layer = 0;
+    data.__id = 3;
+    data.layerObjIds[0] = 10;
+    data.layerObjIds[1] = 11;
+    s->m_updateData(data, true, true, world);
+
+    CHECK_EQ(s->layers.size(), def->layers.size());
+    CHECK_EQ(s->mask.size(), def->mask.size());
+    CHECK_EQ(s->stairs.size(), def->stairs.size());
+    CHECK_EQ(s->layers[0].objId, 10);
+    CHECK_EQ(s->layers[1].objId, 11);
+
+    // The structure queries hit on the authored geometry.
+    CHECK(world.map().insideStructureMask(s->mask[0]));
+    CHECK(world.map().insideStructureStairs(s->stairs[0].collision));
+    CHECK(!world.map().insideStructureMask(Collider::createCircle(Vec2(-10000.0f, -10000.0f), 0.5f)));
+
+    // player.ts isUnderground():
+    // - only layer 1 can be underground;
+    // - only the second structure layer is tested, using the player radius;
+    // - a layer-1 point that matches no structure defaults to underground.
+    const Structure::Layer& l0 = s->layers[0];
+    const Structure::Layer& l1 = s->layers[1];
+    const Vec2 center = v2Mul(v2Add(l1.collision.min, l1.collision.max), 0.5f);
+    // structure.ts defaults `underground` to `i == 1` when the def omits it.
+    CHECK(!def->layers[0].hasUnderground);
+    CHECK(!def->layers[1].hasUnderground);
+    CHECK(!l0.underground);
+    CHECK(l1.underground);
+    // The layer collision is the layer type's real bounding collider (not a
+    // zero-size AABB), so the player inside it is resolved.
+    CHECK(l1.collision.max.x > l1.collision.min.x);
+    CHECK(l1.collision.max.y > l1.collision.min.y);
+    CHECK(world.map().isUnderground(center, 1, 0.5f));
+    CHECK(!world.map().isUnderground(center, 0, 0.5f));
+    // Outside every second layer the web default is underground = true.
+    CHECK(world.map().isUnderground(Vec2(-10000.0f, -10000.0f), 1, 0.5f));
+    // Radius: a point 0.75 outside the layer AABB still misses with rad 0.5.
+    const Vec2 near(l1.collision.max.x + 0.75f, center.y);
+    CHECK(world.map().isUnderground(near, 1, 0.5f));
+    CHECK(world.map().isUnderground(near, 1, 1.0f));
+}
+
+// building.ts ceiling reveal uses collisionHelpers.scanCollider (obstacle
+// filtered rays) and player.ts noCeilingRevealTicker.
+TEST(building_ceiling_scan_and_no_reveal) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+
+    MapMsg msg;
+    msg.mapName = "main";
+    msg.seed = 123456;
+    msg.width = 512.0f;
+    msg.height = 512.0f;
+    msg.shoreInset = 4.0f;
+    msg.grassInset = 2.0f;
+    world.loadMap(msg);
+
+    const MapObjectDef* room =
+        getDefProvider() ? getDefProvider()->mapObject("bathhouse_sideroom_02") : nullptr;
+    CHECK(room != nullptr);
+    if (!room) {
+        return;
+    }
+    CHECK_EQ(room->ceilingZoomIn.size(), 1u);
+
+    Building* b = world.map().buildingPool.m_alloc();
+    ObjectData bd;
+    bd.type = "bathhouse_sideroom_02";
+    bd.pos = Vec2(100.0f, 100.0f);
+    bd.ori = 0;
+    bd.layer = 0;
+    bd.__id = 9;
+    b->m_updateData(bd, true, true, world);
+    CHECK(!b->ceilingRegions.empty());
+
+    Player ap;
+    ap.m_init();
+    ObjectData pd;
+    pd.pos = Vec2(83.0f, 100.0f); // 3 units left of the room's only zoomIn AABB
+    pd.dir = Vec2(1.0f, 0.0f);
+    pd.outfit = "outfitBase";
+    pd.activeWeapon = "fists";
+    pd.layer = 0;
+    pd.__id = 5;
+    ap.m_updateData(pd, true, true, world);
+    world.setActivePlayer(&ap);
+
+    // Clear line of sight: the ceiling reveal starts and fades in.
+    b->ceilingVisionTicker = 0.0f;
+    b->ceilingFadeAlpha = 1.0f;
+    b->update(0.016f, world);
+    CHECK(b->ceilingVisionTicker > 0.0f);
+    CHECK(b->ceilingFadeAlpha < 1.0f);
+
+    // A wall between the player and the zoomIn region blocks the reveal.
+    Obstacle* wall = world.map().obstaclePool.m_alloc();
+    wall->__id = 77;
+    wall->pos = Vec2(84.5f, 100.0f);
+    wall->collider = Collider::createAabb(Vec2(84.0f, 85.0f), Vec2(85.0f, 115.0f));
+    wall->height = 1.0f;
+    wall->layer = 0;
+    wall->collidable = true;
+    wall->isWindow = false;
+    wall->dead = false;
+
+    b->ceilingVisionTicker = 0.0f;
+    b->update(0.016f, world);
+    CHECK(b->ceilingVisionTicker <= 0.0f);
+
+    // Direct check: the wall blocks the scanCollider rays, but the reveal
+    // spots are still reachable when the wall is transparent.
+    const auto& obstacles = world.map().obstaclePool.m_getPool();
+    CHECK(!scanCollider(b->ceilingRegions[0], obstacles, ap.pos, 0, 0.5f,
+                        b->vision.width * 2.0f, b->vision.dist, 5));
+
+    // Windows and low obstacles do not block the scan (collisionHelpers).
+    wall->isWindow = true;
+    b->ceilingVisionTicker = 0.0f;
+    b->update(0.016f, world);
+    CHECK(b->ceilingVisionTicker > 0.0f);
+    wall->isWindow = false;
+    wall->collidable = false;
+    b->ceilingVisionTicker = 0.0f;
+    b->update(0.016f, world);
+    CHECK(b->ceilingVisionTicker > 0.0f);
+    wall->collidable = true;
+    wall->height = 0.25f; // below the scan height (0.5)
+    b->ceilingVisionTicker = 0.0f;
+    b->update(0.016f, world);
+    CHECK(b->ceilingVisionTicker > 0.0f);
+    wall->height = 1.0f;
+    world.map().obstaclePool.m_free(wall);
+
+    // noCeilingRevealTicker suppresses the reveal (player.ts stairs hack).
+    ap.noCeilingRevealTicker = 0.25f;
+    b->ceilingVisionTicker = 0.0f;
+    b->ceilingFadeAlpha = 1.0f;
+    b->update(0.016f, world);
+    CHECK(b->ceilingVisionTicker <= 0.0f);
+
+    // ...and suppresses the immediate stairs reveal (ap.layer & 2).
+    ap.layer = 3;
+    ap.noCeilingRevealTicker = 0.25f;
+    b->ceilingFadeAlpha = 1.0f;
+    b->update(0.016f, world);
+    CHECK(b->ceilingFadeAlpha > 0.5f);
+    ap.layer = 0;
+    ap.noCeilingRevealTicker = 0.0f;
+    world.setActivePlayer(nullptr);
+}
+
+// player.ts updateRenderLayer: crossing a noCeilingReveal stair sets the
+// 0.25s suppression ticker (only for the active player, only off layer 0).
+TEST(player_stairs_no_ceiling_reveal) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+
+    const MapObjectDef* def =
+        getDefProvider() ? getDefProvider()->mapObject("mansion_structure_01") : nullptr;
+    CHECK(def != nullptr);
+    if (!def) {
+        return;
+    }
+
+    Structure* s = world.map().structurePool.m_alloc();
+    ObjectData sd;
+    sd.type = "mansion_structure_01";
+    sd.pos = Vec2(200.0f, 200.0f);
+    sd.ori = 0;
+    sd.layer = 0;
+    sd.__id = 4;
+    sd.layerObjIds[0] = 1;
+    sd.layerObjIds[1] = 2;
+    s->m_updateData(sd, true, true, world);
+
+    const Stair* stair = nullptr;
+    for (const auto& st : s->stairs) {
+        if (st.noCeilingReveal) {
+            stair = &st;
+            break;
+        }
+    }
+    CHECK(stair != nullptr);
+    if (!stair) {
+        return;
+    }
+    const Vec2 center = v2Mul(v2Add(stair->collision.min, stair->collision.max), 0.5f);
+
+    Player p;
+    p.m_init();
+    ObjectData d;
+    d.pos = center;
+    d.dir = Vec2(1.0f, 0.0f);
+    d.outfit = "outfitBase";
+    d.activeWeapon = "fists";
+    d.layer = 1;
+    p.m_updateData(d, true, true, world);
+    world.setActivePlayer(&p);
+
+    p.noCeilingRevealTicker = 0.0f;
+    p.update(0.016f, world);
+    CHECK(p.noCeilingRevealTicker > 0.0f);
+
+    // Layer 0 never suppresses.
+    p.layer = 0;
+    p.noCeilingRevealTicker = 0.0f;
+    p.update(0.016f, world);
+    CHECK(p.noCeilingRevealTicker <= 0.0f);
+
+    // Non-active players do not update the ticker.
+    p.layer = 1;
+    p.noCeilingRevealTicker = 0.0f;
+    world.setActivePlayer(nullptr);
+    p.update(0.016f, world);
+    CHECK(p.noCeilingRevealTicker <= 0.0f);
+}
+
+// structure.ts updateInteriorSounds(): the interior_0/interior_1 ambience
+// tracks follow the building distance, ceiling fade, layer and transition.
+TEST(structure_interior_ambience) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+
+    const MapObjectDef* def =
+        getDefProvider() ? getDefProvider()->mapObject("reserve_structure_01") : nullptr;
+    CHECK(def != nullptr);
+    if (!def) {
+        return;
+    }
+    CHECK(def->hasInteriorSound);
+    CHECK_EQ(def->interiorSound.sound, std::string("reserve_music_01"));
+    CHECK_EQ(def->interiorSound.soundAlt, std::string("reserve_music_02"));
+    CHECK_EQ(def->interiorSound.filter, std::string("club"));
+    CHECK_NEAR(def->interiorSound.transitionTime, 1.0f, 1e-4f);
+    CHECK_NEAR(def->interiorSound.outsideMaxDist, 20.0f, 1e-4f);
+    CHECK_NEAR(def->interiorSound.outsideVolume, 0.25f, 1e-4f);
+    CHECK(def->interiorSound.hasUndergroundVolume);
+    CHECK_NEAR(def->interiorSound.undergroundVolume, 0.707f, 1e-4f);
+
+    surv::audio::Ambiance ambience;
+    world.setAudio(nullptr, &ambience); // the track setters do not need a backend
+
+    Structure* s = world.map().structurePool.m_alloc();
+    ObjectData sd;
+    sd.type = "reserve_structure_01";
+    sd.pos = Vec2(200.0f, 200.0f);
+    sd.ori = 0;
+    sd.layer = 0;
+    sd.__id = 3;
+    sd.layerObjIds[0] = 11;
+    sd.layerObjIds[1] = 12;
+    sd.interiorSoundAlt = false;
+    sd.interiorSoundEnabled = true;
+    s->m_updateData(sd, true, true, world);
+    CHECK_EQ(s->layers.size(), 2u);
+
+    const auto makeBuilding = [&](uint16_t id, const char* type) {
+        Building* b = world.map().buildingPool.m_alloc();
+        ObjectData bd;
+        bd.type = type;
+        bd.pos = Vec2(100.0f, 100.0f);
+        bd.ori = 0;
+        bd.layer = 0;
+        bd.__id = id;
+        b->m_updateData(bd, true, true, world);
+        b->__id = id;
+        b->ceilingFadeAlpha = 1.0f;
+        return b;
+    };
+    Building* b0 = makeBuilding(11, "barn_01");
+    Building* b1 = makeBuilding(12, "barn_basement_floor_01");
+    CHECK(!b0->ceilingRegions.empty());
+    CHECK(!b1->ceilingRegions.empty());
+
+    Player ap;
+    ap.m_init();
+    ObjectData pd;
+    pd.pos = Vec2(100.0f, 100.0f);
+    pd.dir = Vec2(1.0f, 0.0f);
+    pd.outfit = "outfitBase";
+    pd.activeWeapon = "fists";
+    pd.layer = 0;
+    pd.__id = 5;
+    ap.m_updateData(pd, true, true, world);
+    world.setActivePlayer(&ap);
+
+    // Outside with the ceiling opaque: the filtered track plays (outsideVolume).
+    b0->ceilingFadeAlpha = 1.0f;
+    s->soundTransitionT = 0.0f;
+    s->soundEnabledT = 1.0f;
+    s->interiorSoundAlt = false;
+    s->interiorSoundEnabled = true;
+    s->update(0.016f, world);
+    CHECK_EQ(ambience.trackSound("interior_0"), std::string("reserve_music_01"));
+    CHECK_EQ(ambience.trackSound("interior_1"), std::string("reserve_music_01"));
+    CHECK_EQ(ambience.trackFilter("interior_1"), std::string("club"));
+    CHECK(ambience.trackWeight("interior_0") <= 0.0001f);
+    CHECK_NEAR(ambience.trackWeight("interior_1"), 0.25f, 0.01f);
+
+    // Seeing inside (ceiling faded): the un-filtered track takes over.
+    b0->ceilingFadeAlpha = 0.0f;
+    s->update(0.016f, world);
+    CHECK_NEAR(ambience.trackWeight("interior_0"), 1.0f, 0.01f);
+    CHECK(ambience.trackWeight("interior_1") <= 0.0001f);
+
+    // Underground (layer 1, second building): undergroundVolume, no track 0.
+    ap.layer = 1;
+    b0->ceilingFadeAlpha = 1.0f;
+    b1->ceilingFadeAlpha = 1.0f;
+    s->update(0.016f, world);
+    CHECK(ambience.trackWeight("interior_0") <= 0.0001f);
+    CHECK_NEAR(ambience.trackWeight("interior_1"), 0.707f, 0.01f);
+
+    // soundAlt transition: 0 -> 1 over transitionTime, then the alt track.
+    s->interiorSoundAlt = true;
+    s->soundTransitionT = 0.0f;
+    s->update(0.5f, world);
+    CHECK_NEAR(s->soundTransitionT, 0.5f, 0.01f);
+    CHECK_EQ(ambience.trackSound("interior_1"), std::string("reserve_music_01"));
+    s->update(0.6f, world);
+    CHECK_NEAR(s->soundTransitionT, 1.0f, 0.01f);
+    CHECK_EQ(ambience.trackSound("interior_0"), std::string("reserve_music_02"));
+    CHECK_EQ(ambience.trackSound("interior_1"), std::string("reserve_music_02"));
+
+    // interiorSoundEnabled=false fades soundEnabledT (and the weights) out.
+    s->interiorSoundEnabled = false;
+    s->update(1.0f, world);
+    CHECK(s->soundEnabledT < 1.0f);
+    CHECK(ambience.trackWeight("interior_1") < 0.707f);
+
+    world.setActivePlayer(nullptr);
+}
+
+// building.ts soundEmitters: looping positional ambience (bathhouse steam).
+TEST(building_sound_emitters) {
+    installGeneratedDefs();
+    audio::installGeneratedSoundDefs();
+
+    class ProbeBackend : public audio::AudioBackend {
+    public:
+        struct Played {
+            std::string id;
+            bool loop = false;
+            float volume = 0.0f;
+        };
+        std::vector<Played> played;
+        std::unordered_map<audio::SoundHandle, float> volumes;
+        std::vector<audio::SoundHandle> stopped;
+        audio::SoundHandle next = 1;
+
+        bool load(const std::string&, const std::string&) override { return true; }
+        bool isLoaded(const std::string&) const override { return true; }
+        audio::SoundHandle play(const std::string& id, const audio::PlayOptions& opts) override {
+            played.push_back({id, opts.loop, opts.volume});
+            volumes[next] = opts.volume;
+            return next++;
+        }
+        void stop(audio::SoundHandle handle) override { stopped.push_back(handle); }
+        void stopAll() override {}
+        void setVolume(audio::SoundHandle handle, float volume) override { volumes[handle] = volume; }
+        float getVolume(audio::SoundHandle handle) const override {
+            auto it = volumes.find(handle);
+            return it == volumes.end() ? 0.0f : it->second;
+        }
+        void setPan(audio::SoundHandle, float) override {}
+        void setMute(bool) override {}
+        bool isPlaying(audio::SoundHandle) const override { return true; }
+    };
+
+    ProbeBackend backend;
+    audio::AudioManager audioManager(&backend);
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.setAudio(&audioManager, nullptr);
+
+    const MapObjectDef* def =
+        getDefProvider() ? getDefProvider()->mapObject("bathhouse_sideroom_01") : nullptr;
+    CHECK(def != nullptr);
+    if (!def) {
+        return;
+    }
+    CHECK_EQ(def->soundEmitters.size(), 1u);
+    if (def->soundEmitters.size() != 1u) {
+        return;
+    }
+    const BuildingSoundEmitterDef& se = def->soundEmitters[0];
+    CHECK_EQ(se.sound, std::string("ambient_steam_01"));
+    CHECK_EQ(se.channel, std::string("ambient"));
+    CHECK_NEAR(se.rangeMin, 9.0f, 1e-4f);
+    CHECK_NEAR(se.rangeMax, 16.0f, 1e-4f);
+    CHECK_NEAR(se.falloff, 1.0f, 1e-4f);
+    CHECK_NEAR(se.volume, 0.2f, 1e-4f);
+
+    audioManager.loadSound("ambient_steam_01", "ambient", "audio/ambient/ambient_steam_01.mp3");
+
+    Building* b = world.map().buildingPool.m_alloc();
+    ObjectData bd;
+    bd.type = "bathhouse_sideroom_01";
+    bd.pos = Vec2(150.0f, 160.0f);
+    bd.ori = 0;
+    bd.layer = 0;
+    bd.__id = 21;
+    b->m_updateData(bd, true, true, world);
+    CHECK_EQ(b->soundEmitters.size(), 1u);
+    if (b->soundEmitters.empty()) {
+        return;
+    }
+    CHECK_NEAR(b->soundEmitters[0].pos.x, 150.0f, 1e-4f);
+    CHECK_NEAR(b->soundEmitters[0].pos.y, 160.0f, 1e-4f);
+    CHECK(b->soundEmitters[0].instance == audio::kInvalidSound);
+
+    Player ap;
+    ap.m_init();
+    ObjectData pd;
+    pd.pos = Vec2(0.0f, 0.0f); // away from the building: no ceiling reveal
+    pd.dir = Vec2(1.0f, 0.0f);
+    pd.outfit = "outfitBase";
+    pd.activeWeapon = "fists";
+    pd.layer = 0;
+    pd.__id = 5;
+    ap.m_updateData(pd, true, true, world);
+    world.setActivePlayer(&ap);
+    world.camera().m_pos = Vec2(150.0f, 160.0f);
+
+    // First tick loads/plays the looping track silently, then sets its volume.
+    const auto tick = [&]() {
+        // Tick the sound emitter without meaningfully advancing the fade.
+        b->soundEmitterTicker = 0.101f;
+        b->ceilingVisionTicker = -10.0f;
+        b->update(0.0002f, world);
+    };
+    b->ceilingFadeAlpha = 1.0f;
+    tick();
+    CHECK_EQ(backend.played.size(), 1u);
+    if (!backend.played.empty()) {
+        CHECK_EQ(backend.played[0].id, std::string("ambient_steam_01ambient"));
+        CHECK(backend.played[0].loop);
+        CHECK_NEAR(backend.played[0].volume, 0.0f, 1e-6f); // startSilent
+    }
+    const audio::SoundHandle handle = b->soundEmitters[0].instance;
+    CHECK(handle != audio::kInvalidSound);
+    // baseVolume 0.5 * emitter volume 0.2 * distT 1 * visibility 0.25.
+    CHECK_NEAR(backend.getVolume(handle), 0.025f, 1e-4f);
+
+    // Halfway through the range: distT = 0.5.
+    world.camera().m_pos = Vec2(162.5f, 160.0f);
+    b->ceilingFadeAlpha = 1.0f;
+    tick();
+    CHECK_NEAR(backend.getVolume(handle), 0.0125f, 1e-4f);
+
+    // Seeing inside (ceiling faded) raises the visibility multiplier to 1.
+    b->ceilingFadeAlpha = 0.0f;
+    tick();
+    CHECK_NEAR(backend.getVolume(handle), 0.05f, 1e-3f);
+
+    // Wrong audio layer mutes the emitter.
+    ap.layer = 1;
+    b->ceilingFadeAlpha = 0.0f;
+    tick();
+    CHECK_NEAR(backend.getVolume(handle), 0.0f, 1e-6f);
+    ap.layer = 0;
+
+    // Beyond the max range: no audible volume.
+    world.camera().m_pos = Vec2(200.0f, 160.0f);
+    b->ceilingFadeAlpha = 0.0f;
+    tick();
+    CHECK_NEAR(backend.getVolume(handle), 0.0f, 1e-6f);
+
+    // The 10 Hz gate: a short frame does not re-run the volume update.
+    world.camera().m_pos = Vec2(150.0f, 160.0f);
+    b->ceilingFadeAlpha = 0.0f;
+    b->update(0.01f, world);
+    CHECK_NEAR(backend.getVolume(handle), 0.0f, 1e-6f); // still gated
+    b->soundEmitterTicker = 0.1f;
+    b->ceilingFadeAlpha = 0.0f;
+    b->ceilingVisionTicker = -10.0f;
+    b->update(0.001f, world); // ticker crossed 0.1 -> ~0.1 at dist 0
+    CHECK(backend.getVolume(handle) > 0.09f);
+
+    // Freeing stops the loop and drops the emitters.
+    b->m_free();
+    CHECK(b->soundEmitters.empty());
+    CHECK_EQ(backend.stopped.size(), 1u);
+    if (!backend.stopped.empty()) {
+        CHECK_EQ(backend.stopped[0], handle);
+    }
+
     world.setActivePlayer(nullptr);
 }
 

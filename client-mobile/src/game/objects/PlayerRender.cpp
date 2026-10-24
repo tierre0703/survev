@@ -1,4 +1,5 @@
 #include "Barns.h"
+#include "ObstacleScan.h"
 #include "../GameWorld.h"
 #include "../Map.h"
 #include "../../render/Renderer.h"
@@ -26,66 +27,6 @@ bool sameLayer(int a, int b) {
 float randf() { return static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX); }
 // util.random(min, max).
 float randRange(float a, float b) { return math::lerp(randf(), a, b); }
-
-// collisionHelpers.intersectSegmentObstacle: filters + nearest hit point.
-bool intersectSegmentObstacle(const Obstacle& o, const Vec2& s0, const Vec2& s1, float height,
-                              int layer, bool hackStairs, Vec2* pointOut) {
-    if (!o.active || o.dead || !o.collidable || o.isWindow || o.height < height ||
-        !sameLayer(o.layer, layer)) {
-        return false;
-    }
-    if (hackStairs && (layer & 0x2) != 0 && o.layer == 0) {
-        return false;
-    }
-    return colliderIntersectSegmentRes(o.collider, s0, s1, pointOut);
-}
-
-// collisionHelpers.intersectSegment: nearest obstacle along pos + dir*len.
-// Returns true and writes the hit id + distance.
-bool intersectSegmentNearest(const std::vector<Obstacle*>& obstacles, const Vec2& pos,
-                             const Vec2& dir, float len, float height, int layer, bool hackStairs,
-                             uint16_t* idOut, float* distOut) {
-    const Vec2 end = v2Add(pos, v2Mul(dir, len));
-    bool found = false;
-    float bestDist = 0.0f;
-    uint16_t bestId = 0;
-    for (auto* o : obstacles) {
-        if (!o) {
-            continue;
-        }
-        Vec2 point;
-        if (intersectSegmentObstacle(*o, pos, end, height, layer, hackStairs, &point)) {
-            const float dist = v2Length(v2Sub(point, pos));
-            if (!found || dist < bestDist) {
-                found = true;
-                bestDist = dist;
-                bestId = o->__id;
-            }
-        }
-    }
-    if (found) {
-        *idOut = bestId;
-        *distOut = bestDist;
-    }
-    return found;
-}
-
-// collisionHelpers.intersectSegmentDist: nearest obstacle distance (defaults len).
-float intersectSegmentDist(const std::vector<Obstacle*>& obstacles, const Vec2& pos, const Vec2& dir,
-                           float len, float height, int layer, bool hackStairs) {
-    float dist = len;
-    const Vec2 end = v2Add(pos, v2Mul(dir, len));
-    for (auto* o : obstacles) {
-        if (!o) {
-            continue;
-        }
-        Vec2 point;
-        if (intersectSegmentObstacle(*o, pos, end, height, layer, hackStairs, &point)) {
-            dist = math::min(dist, v2Length(v2Sub(point, pos)));
-        }
-    }
-    return dist;
-}
 
 BonePose blend(float t, const BonePose& a, const BonePose& b) {
     return {v2Lerp(t, a.pivot, b.pivot), math::lerp(t, a.rot, b.rot), v2Lerp(t, a.pos, b.pos)};
@@ -166,6 +107,7 @@ void Player::m_init() {
     bleedTicker = 0.0f;
     isNearDoorError = false;
     doorErrorTicker = 0.0f;
+    noCeilingRevealTicker = 0.0f;
     playedDryFire = false;
     _prevActiveWeapon.clear();
 }
@@ -520,6 +462,23 @@ void Player::update(float dt, Ctx& ctx) {
     int zOrd = 18;
     const auto* ap = ctx.activePlayer();
     const Collider col = Collider::createCircle(pos, maxVisualRadius);
+    // player.ts updateRenderLayer: stairs flagged noCeilingReveal suppress
+    // ceiling reveals while the active player is on them.
+    if (ap) {
+        noCeilingRevealTicker -= dt;
+        if (ap == this && layer != 0) {
+            for (auto* structure : ctx.map().structurePool.m_getPool()) {
+                if (!structure->active) {
+                    continue;
+                }
+                for (const auto& stair : structure->stairs) {
+                    if (stair.noCeilingReveal && colliderIntersect(stair.collision, col)) {
+                        noCeilingRevealTicker = 0.25f;
+                    }
+                }
+            }
+        }
+    }
     if (ap && ctx.map().insideStructureStairs(col)) {
         const bool mask = ctx.map().insideStructureMask(col);
         if (((layer & 1) && ((ap->layer & 1) || !ctx.map().insideBuildingCeiling(col, true))) || ((ap->layer & 2) && !mask)) renderLayer |= 2;
@@ -570,7 +529,9 @@ void Player::update(float dt, Ctx& ctx) {
 
         // player.ts: update surface and footsteps
         auto gs = ctx.map().getGroundSurface(pos, layer);
-        surfaceType = gs.type == Map::SurfaceType::Water ? SurfaceType::Water : gs.type == Map::SurfaceType::Sand ? SurfaceType::Sand : SurfaceType::Grass;
+        surfaceType = gs.type;
+        surfaceWaterColor = gs.waterColor;
+        surfaceRippleColor = gs.rippleColor;
         const bool inWater = surfaceType == SurfaceType::Water;
         // Footsteps (player.ts ~line 964)
         stepDistance += v2Length(v2Sub(posOld, pos));
@@ -596,13 +557,10 @@ void Player::update(float dt, Ctx& ctx) {
             opts.hasLayer = true;
             opts.layer = layer;
             opts.filter = "muffled";
-            // Build footstep group name from surface type (grass/sand/tile/asphalt/brick/stone/carpet/...)
-            std::string footstepGroup = "footstep_";
-            switch (surfaceType) {
-                case SurfaceType::Sand: footstepGroup += "sand"; break;
-                case SurfaceType::Water: footstepGroup += "water"; break;
-                default: footstepGroup += "grass"; break;
-            }
+            // player.ts: `footstep_${this.surface.type}` (a shipped sound group
+            // for every map material: grass/sand/water/tile/asphalt/brick/
+            // stone/carpet/bunker/container/warehouse/house/shack/snow).
+            const std::string footstepGroup = std::string("footstep_") + surfaceTypeName(surfaceType);
             audio->playGroup(footstepGroup, opts);
         }
         wasInWater = inWater;
@@ -905,7 +863,7 @@ void Player::updateSubmersion(float dt, Ctx& ctx) {
         return;
     }
     auto surface = ctx.map().getGroundSurface(pos, layer);
-    surfaceType = surface.type == Map::SurfaceType::Water ? SurfaceType::Water : surface.type == Map::SurfaceType::Sand ? SurfaceType::Sand : SurfaceType::Grass;
+    surfaceType = surface.type;
     surfaceWaterColor = surface.waterColor;
     surfaceRippleColor = surface.rippleColor;
     const bool inWater = surfaceType == SurfaceType::Water;

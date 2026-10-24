@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-23** — Session 24 fixed a **stale `src/net/generatedDefs.inc`**: it contained 757 game types while the server registry has 676, so every game-type id (outfit, backpack, weapon, loot, emotes, roles, perks) decoded to the wrong name. Regenerating it (and the TS reference fixtures) restored correct ids; the gear/perk HUD now shows the default backpack and loot renders as the right items. Earlier: §23 gear HUD, §22 squad bars, §21 gas/result. **135 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-24** — Session 28 finished the interior-audio work: building `soundEmitters` (bathhouse steam / oasis waves) now loop with the web's distance/fade/layer volume model, and the JNI bridge now marshals join/leave/pause/audio calls onto the axmol thread, fixing an intermittent second-join `PlayerBarn` use-after-free. Earlier: §27 structure `interiorSound` tracks, §26 obstacle-filtered ceiling reveal, §25 ground surfaces/bounds/underground. **141 host tests pass, 0 fail.**
 
 ---
 
@@ -22,9 +22,9 @@ Latest recorded state: **2026-10-23** — Session 24 fixed a **stale `src/net/ge
 | M1 | Asset pipeline | **done** | atlases, GUI PNGs (4x), Roboto Condensed TTF, l10n. |
 | M2 | Shared core ports (bit-exact) | **done** | `BitBuffer`, `Vec2/MathUtil/Collider`, message classes, TS-generated fixtures. |
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
-| M4 | Rendering | **done, latest verified** | terrain/island hole, obstacles, buildings + ceilings, particles, decals, gas, skeletal player. |
+| M4 | Rendering | **done, latest verified** | terrain/island hole, obstacles, buildings + ceilings (obstacle-filtered reveal + stairs suppression), particles, decals, gas, skeletal player. |
 | M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired; emote + team-ping wheels own their touches. |
-| M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb (cathedral/cave model). Player action sounds and UI sounds still unwired (see §2). |
+| M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb (cathedral/cave model) + structure interior ambience + building `soundEmitters`. UI sounds and per-source EQ still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
 | M8 | Accounts / API | **not started** | login/profile/team-link/quests/pass. |
 | M9 | Polish & release | **not started** | lifecycle, perf, soak, store-ready AAB. |
@@ -64,7 +64,7 @@ Latest recorded state: **2026-10-23** — Session 24 fixed a **stale `src/net/ge
 | `client/src/objects/airdrop.ts` → `objects/Barns.*` | ✅ |
 | `client/src/objects/plane.ts` → `objects/Barns.*` | ✅ |
 | `client/src/objects/flare.ts` → `objects/Barns.*` | ✅ |
-| `client/src/objects/structure.ts` → `objects/Structure.*` | ✅ |
+| `client/src/objects/structure.ts` → `objects/Structure.*` | ✅ bounds/masks/stairs/map icons + `interiorSound` ambience tracks |
 | `client/src/objects/particles.ts` → `objects/Barns.*` (ParticleBarn + Emitter) | ✅ |
 | `client/src/audioManager.ts` → `audio/AudioManager.*` | ✅ |
 | `client/src/soundDefs.ts` → `audio/GeneratedSoundDefs.cpp` (codegen) | ✅ generated |
@@ -262,8 +262,16 @@ Latest recorded state: **2026-10-23** — Session 24 fixed a **stale `src/net/ge
 
 ### Priority 4 — Minor simulation/render parity
 
-- [ ] **Map::getGroundSurface** — verify `footstep_${surface.type}` group names match all web surface types: grass, sand, water, tile, asphalt, brick, stone, carpet, bunker, container, warehouse, house, shack
-- [ ] **Structures** — verify `insideStructureMask`/`isUnderground` covers every shipped map
+- [x] **Map::getGroundSurface** — `SurfaceType` now covers every web material
+      (water/sand/grass/tile/asphalt/brick/stone/carpet/bunker/container/
+      warehouse/house/shack/snow). `Building::surfaces` is codegen'd from
+      `def.floor.surfaces` (with per-surface water colours) and transformed per
+      building, so `footstep_${surface.type}` matches the web client on floors.
+- [x] **Structures** — `mapHelpers.getBoundingCollider` is ported into the def
+      codegen (deterministic; weighted map-object candidates are unioned), so
+      building/structure bounds and minimap fallbacks are real. Structure layer
+      `underground` keeps the `i == 1` default, and `Map::isUnderground` matches
+      `player.ts` (layer 1 only, second layer, player radius, default true).
 
 ### Priority 5 — Platform / release (M8 + M9)
 
@@ -287,7 +295,7 @@ Latest recorded state: **2026-10-23** — Session 24 fixed a **stale `src/net/ge
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (135 tests, 0 failures expected)
+# host tests (141 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -329,3 +337,17 @@ node tools/build-gui-icons.mjs
 - Reverb is per-source OpenAL EAX: `AxmolAudioBackend` iterates active handles (no global convolver bus); `ReverbModel` is the host-tested mapping
 - The camera root is **positive-Y** (`Renderer::applyCamera`): axmol y-up origin = `screenH - pointToScreen(0,0).y`; world +y is screen-up. World labels do not `setFlipY`
 - Web/PIXI rotations on **world** nodes must be negated for the positive-Y root (obstacle/dead-body/flare/plane/bullet-ping sites already do)
+- Ground surfaces use the full `SurfaceType` enum + `surfaceTypeName` (the web's lowercase string is the `footstep_<type>` group); building floors come from codegen'd `def.floor.surfaces`, not terrain
+- Structure layer `underground` is tri-state: the def may omit it, in which case `i == 1` (structure.ts); do not collapse it to a bool at codegen time
+- `MapObjectDef::boundingCollider` is the deterministic `computeBoundingCollider` port (structures add a 1-unit margin; buildings union floor/zoom/map-object bounds); do not fall back to `def.collision` for buildings
+- Ceiling visibility comes from `ObstacleScan.h::scanCollider` (obstacle-filtered rays), not a circle/zoomIn overlap; `Player::noCeilingRevealTicker` must stay wired to `noCeilingReveal` stairs
+- `ObstacleScan.h` is the shared port of `collisionHelpers.ts` (player melee/LOS + building vision); add new helpers there instead of duplicating them in a `.cpp` anonymous namespace
+- Structure interior ambience is immediate-mode: `Map::update` (structure updates) must run before `Ambiance::update` each frame, and `Structure::update` re-sets `interior_0/1` sound/filter/weight every frame
+- `SurvBridge` JNI methods run on the Java UI thread: scene/world/audio mutations must go through `UiBridge::runOnGameThread` (`Scheduler::runOnAxmolThread`); calling `enterWithJoin`/`leaveGame` inline races the GL thread and crashes in the player pool
+- Building `soundEmitters` are owned by `Building`: created on `isNew`, stopped in `m_free()` via the cached `audioOwner`, and updated at 10 Hz with `setVolume(..., "sound")`
+- `SurvevMobile-debug.apk.idsig` is a tracked build artifact refreshed by every
+  `build-apk.ps1` run; commit the refreshed file along with the build.
+- Emote/ping wheel frames are re-applied by `refreshFrames()` after the map
+  atlases load (the wheels exist before the first `MapMsg`), and `Content/atlas`
+  must be restaged (`build-atlas.mjs`) after `client/atlas-builder/defs/*.ts`
+  changes or new icons render blank.

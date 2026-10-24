@@ -1,4 +1,5 @@
 #include "Barns.h"
+#include "ObstacleScan.h"
 
 #include "../GameWorld.h"
 #include "../Map.h"
@@ -504,6 +505,8 @@ void Building::m_init() {
     surfaces.clear();
     ceilingRegions.clear();
     particleEmitters.clear();
+    soundEmitters.clear();
+    soundEmitterTicker = 0.0f;
     hasAabb = false;
 }
 
@@ -519,6 +522,13 @@ void Building::m_free() {
         }
     }
     particleEmitters.clear();
+    for (auto& emitter : soundEmitters) {
+        if (emitter.instance != audio::kInvalidSound && audioOwner) {
+            audioOwner->stopSound(emitter.instance);
+        }
+        emitter.instance = audio::kInvalidSound;
+    }
+    soundEmitters.clear();
     imgs.clear();
     if (residue) {
         residue->setVisible(false);
@@ -566,6 +576,21 @@ void Building::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
         ceilingRegions.clear();
         for (const auto& zoomIn : def->ceilingZoomIn) {
             ceilingRegions.push_back(colliderTransform(zoomIn, pos, rot, scale));
+        }
+
+        // building.ts "Create floor surfaces": transform the authored AABBs.
+        surfaces.clear();
+        for (const auto& surfaceDef : def->surfaces) {
+            Surface surface;
+            surface.type = surfaceDef.type;
+            surface.hasWaterColor = surfaceDef.hasWaterColor;
+            surface.waterColor = surfaceDef.waterColor;
+            surface.hasRippleColor = surfaceDef.hasRippleColor;
+            surface.rippleColor = surfaceDef.rippleColor;
+            for (const auto& c : surfaceDef.colliders) {
+                surface.colliders.push_back(colliderTransform(c, pos, rot, scale));
+            }
+            surfaces.push_back(std::move(surface));
         }
 
         const float valueAdjust = ctx.map().mapDef.valueAdjust;
@@ -638,7 +663,23 @@ void Building::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
             particleEmitters.push_back(
                 ctx.particleBarn().addEmitter(ctx.factory(), e.type, opts));
         }
+
+        // building.ts "Create sound emitters": transform the authored points.
+        soundEmitters.clear();
+        soundEmitterTicker = 0.0f;
+        for (const auto& defEmitter : def->soundEmitters) {
+            SoundEmitter emitter;
+            emitter.sound = defEmitter.sound;
+            emitter.channel = defEmitter.channel;
+            emitter.pos = v2Add(pos, v2Rotate(defEmitter.pos, rot));
+            emitter.rangeMin = defEmitter.rangeMin;
+            emitter.rangeMax = defEmitter.rangeMax;
+            emitter.falloff = defEmitter.falloff;
+            emitter.volume = defEmitter.volume;
+            soundEmitters.push_back(emitter);
+        }
     }
+    audioOwner = ctx.audio();
     ctx.renderer().layerMaskDirty = true;
 }
 
@@ -684,16 +725,15 @@ void Building::update(float dt, Ctx& ctx) {
     if (ap) {
         const bool layerMatch = (layer == ap->layer) || ((ap->layer & 2) != 0);
         if (layerMatch) {
-            const Collider scan = Collider::createCircle(ap->pos, vision.width);
+            // building.ts: scan from the player through the ceiling zoomIn
+            // region; obstacles (walls) can block the reveal.
+            const auto& obstacles = ctx.map().obstaclePool.m_getPool();
             for (const auto& zoomIn : ceilingRegions) {
-                if (colliderIntersect(zoomIn, scan)) {
+                if (scanCollider(zoomIn, obstacles, ap->pos, ap->layer, 0.5f, vision.width * 2.0f,
+                                 vision.dist, 5)) {
                     canSeeInside = true;
                     break;
                 }
-            }
-            if (!canSeeInside && hasAabb &&
-                getDistanceToBuilding(ap->pos, vision.dist) < vision.dist) {
-                canSeeInside = true;
             }
         }
     }
@@ -703,19 +743,66 @@ void Building::update(float dt, Ctx& ctx) {
     if (canSeeInside) {
         ceilingVisionTicker = vision.linger + 0.0001f;
     }
+    // player.ts: stairs flagged noCeilingReveal suppress the reveal (e.g.
+    // entering a cellar from an exterior stairwell).
+    if (ap && ap->noCeilingRevealTicker > 0.0f && !ceilingDead) {
+        ceilingVisionTicker = 0.0f;
+    }
 
     const bool visible = ceilingVisionTicker > 0.0f;
     ceilingFadeAlpha += stepToward(ceilingFadeAlpha, visible ? 0.0f : 1.0f,
                                    dt * (visible ? 12.0f : vision.fadeRate));
 
     // Immediately reveal a ceiling when on stairs and able to see the other layer.
-    if (canSeeInside && ap && (ap->layer & 2) != 0 && !sameLayerMask(ap->layer, layer)) {
+    if (canSeeInside && ap && ap->noCeilingRevealTicker <= 0.0f && (ap->layer & 2) != 0 &&
+        !sameLayerMask(ap->layer, layer)) {
         ceilingFadeAlpha = 0.0f;
     }
 
     for (auto* e : particleEmitters) {
         if (e) {
             e->enabled = occupied;
+        }
+    }
+
+    // building.ts sound emitters: 10 Hz volume update for the looping,
+    // positional ambience baked into the def (steam, potato waves, ...).
+    soundEmitterTicker += dt;
+    if (soundEmitterTicker > 0.1f) {
+        soundEmitterTicker = 0.0f;
+        audio::AudioManager* audio = ctx.audio();
+        if (audio) {
+            audioOwner = audio;
+            for (auto& emitter : soundEmitters) {
+                if (emitter.instance == audio::kInvalidSound && !emitter.sound.empty() &&
+                    audio->isSoundLoaded(emitter.sound, emitter.channel)) {
+                    audio::PlaySoundOptions opts;
+                    opts.channel = emitter.channel;
+                    opts.loop = true;
+                    opts.forceStart = true;
+                    opts.startSilent = true;
+                    emitter.instance = audio->playSound(emitter.sound, opts);
+                }
+                if (emitter.instance == audio::kInvalidSound || !ap) {
+                    continue;
+                }
+                const float dist = v2Length(v2Sub(ctx.camera().m_pos, emitter.pos));
+                const float distT =
+                    math::remap(dist, emitter.rangeMin, emitter.rangeMax, 1.0f, 0.0f);
+                const float volumeFalloff =
+                    std::pow(math::clamp(distT, 0.0f, 1.0f), emitter.falloff);
+                const float visibilityMult = math::lerp(ceilingFadeAlpha, 1.0f, 0.25f);
+                float volume = audio->baseVolume * emitter.volume * volumeFalloff * visibilityMult;
+                if (!math::sameAudioLayer(layer, ap->layer)) {
+                    volume = 0.0f;
+                }
+                if (volume < 0.003f) {
+                    volume = 0.0f;
+                }
+                // setVolume() multiplies by getTypeVolume("sound"), so this
+                // matches building.ts' baseVolume * getTypeVolume * ... term.
+                audio->setVolume(emitter.instance, volume, "sound");
+            }
         }
     }
 
@@ -764,11 +851,17 @@ bool Building::isInsideCeiling(const Collider& c) const {
 }
 
 float Building::getDistanceToBuilding(const Vec2& p, float maxDist) const {
-    if (!hasAabb) {
-        return maxDist;
+    // building.ts getDistanceToBuilding(): proximity is measured against the
+    // transformed ceiling zoomIn regions, not the whole building AABB.
+    float dist = maxDist;
+    for (const auto& zoomIn : ceilingRegions) {
+        Vec2 dir;
+        float pen = 0.0f;
+        if (colliderIntersectCircleRes(zoomIn, p, maxDist, &dir, &pen)) {
+            dist = math::clamp(maxDist - pen, 0.0f, dist);
+        }
     }
-    const Vec2 closest = clampPosToAabb(p, aabb.min, aabb.max);
-    return math::min(v2Length(v2Sub(p, closest)), maxDist);
+    return dist;
 }
 
 // ---------------------------------------------------------------------------

@@ -44,6 +44,11 @@ public:
 
     void build(pix::Factory* factory, pix::Container* root, const Vec2& design);
 
+    // Re-applies the icon sprite frames. The wheel is built in resetWorld()
+    // before the map's atlases are registered, so the first setFrame() calls
+    // miss; GameScene calls this after loadAtlasesForMap().
+    void refreshFrames();
+
     // Emote loadout (EmoteSlot Top/Right/Bottom/Left, i.e. JoinedMsg.emotes).
     // Only refreshes the wedges when the loadout actually changed, so it is
     // safe to call every frame.
@@ -84,6 +89,8 @@ public:
 
     const std::array<std::string, 4>& loadout() const { return _loadout; }
     int highlighted() const { return _highlighted; }
+    // Test/debug access: the on-screen button icon sprite.
+    pix::Sprite* buttonIcon() const { return _buttonIcon; }
 
 private:
     struct Wedge {

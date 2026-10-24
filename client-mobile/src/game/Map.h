@@ -97,7 +97,8 @@ public:
 
     // Ground surface classes (player submerge/tint + game logic). Port of
     // map.ts getGroundSurface.
-    enum class SurfaceType { Water, Sand, Grass };
+    // map.ts SurfaceType (defined in render/Defs.h).
+    using SurfaceType = ::surv::SurfaceType;
     struct GroundSurface {
         SurfaceType type = SurfaceType::Water;
         uint32_t waterColor = 0;
@@ -114,8 +115,10 @@ public:
     bool insideStructureStairs(const Collider& c) const;
     bool insideStructureMask(const Collider& c) const;
     bool insideBuildingCeiling(const Collider& c, bool checkVisible) const;
-    // M6: true when a layer-1 point is inside an underground structure layer.
-    bool isUnderground(const Vec2& pos, int layer) const;
+    // player.ts isUnderground(): true when a layer-1 point is outside every
+    // structure's second layer (the web default), used for the underground
+    // render fade and reverb. `rad` is Player::rad.
+    bool isUnderground(const Vec2& pos, int layer, float rad) const;
 
 private:
     bool _canvasMode = false;

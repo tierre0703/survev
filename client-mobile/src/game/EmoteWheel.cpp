@@ -247,6 +247,13 @@ void EmoteWheel::refreshWedges() {
     }
 }
 
+void EmoteWheel::refreshFrames() {
+    // Build-time setFrame() calls run before the map atlases are registered
+    // (GameScene builds the wheels in resetWorld(), the atlas load happens on
+    // the first MapMsg), so re-resolve them once the frames exist.
+    refreshWedges();
+}
+
 void EmoteWheel::setHudVisible(bool visible) {
     _hudVisible = visible;
     if (_button) {

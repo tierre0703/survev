@@ -246,7 +246,7 @@ void Map::update(float dt, GameWorld& ctx) {
     }
     for (auto* structure : structurePool.m_getPool()) {
         if (structure->active) {
-            // Structures only do debug rendering in the web client.
+            structure->update(dt, ctx);
         }
     }
 
@@ -349,12 +349,11 @@ Map::GroundSurface Map::getGroundSurface(const Vec2& pos, int layer) const {
     }
     if (surface) {
         GroundSurface out;
-        if (surface->type == "water") out.type = SurfaceType::Water;
-        else if (surface->type == "sand") out.type = SurfaceType::Sand;
-        else if (surface->type == "grass") out.type = SurfaceType::Grass;
-        else out.type = SurfaceType::Water;
-        out.waterColor = mapDef.colors.water;
-        out.rippleColor = mapDef.colors.waterRipple;
+        out.type = surfaceTypeFromName(surface->type);
+        // map.ts groundSurface(): a surface def may author its own water
+        // colours (e.g. the bunker pools); otherwise use the biome colours.
+        out.waterColor = surface->hasWaterColor ? surface->waterColor : mapDef.colors.water;
+        out.rippleColor = surface->hasRippleColor ? surface->rippleColor : mapDef.colors.waterRipple;
         return out;
     }
 
@@ -507,12 +506,16 @@ void Map::generateMinimapTexture(pix::Factory* factory, const Camera& camera) {
             return;
         }
         if (building) {
-            if (!def->hasBounding) {
+            // map.ts renderMap: prefer the first zoomIn region, then the
+            // mapHelpers bounding collider.
+            const bool hasZoomIn = !def->ceilingZoomIn.empty();
+            if (!hasZoomIn && !def->hasBounding) {
                 return;
             }
             MinimapObj mo;
             mo.zIdx = zIdx;
-            mo.col = colliderTransform(def->boundingCollider, objPos, math::oriToRad(ori), objScale);
+            mo.col = colliderTransform(hasZoomIn ? def->ceilingZoomIn[0] : def->boundingCollider,
+                                       objPos, math::oriToRad(ori), objScale);
             mo.shapeScale = def->map.scale > 0.0f ? def->map.scale : 1.0f;
             mo.color = def->map.hasColor ? def->map.color : 0x808080;
             renderList.push_back(mo);
@@ -577,22 +580,22 @@ float Map::getMinimapScale() const {
     return _mapTexture ? kMinimapTextureSize / std::max(width, height) : 0.0f;
 }
 
-bool Map::isUnderground(const Vec2& pos, int layer) const {
+bool Map::isUnderground(const Vec2& pos, int layer, float rad) const {
+    // player.ts isUnderground(): layer 1 is "inside a structure". Only the
+    // second structure layer is consulted (it carries the underground flag),
+    // and a layer-1 point that matches no structure defaults to underground.
     if (layer != 1) {
         return false;
     }
-    const Collider c = Collider::createCircle(pos, 1.0f);
     for (auto* structure : structurePool.m_getPool()) {
-        if (!structure->active) {
-            continue;
-        }
-        for (const auto& l : structure->layers) {
-            if (l.underground && colliderIntersect(l.collision, c)) {
-                return true;
+        if (structure->layers.size() >= 2) {
+            const Structure::Layer& l = structure->layers[1];
+            if (colliderIntersectCircle(l.collision, pos, rad)) {
+                return l.underground;
             }
         }
     }
-    return false;
+    return true;
 }
 
 } // namespace surv

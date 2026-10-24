@@ -85,6 +85,16 @@ TEST(emote_wheel_button_and_loadout) {
     // Hidden HUD never fires the button.
     fx.wheel.setHudVisible(false);
     CHECK(!fx.wheel.buttonHit(fx.wheel.buttonCenter().x, fx.wheel.buttonCenter().y));
+
+    // GameScene calls refreshFrames() once the map atlases are registered (the
+    // wheel is built before the first MapMsg). It must re-resolve the button
+    // icon frame, which the build-time pass could not find.
+    fx.wheel.setHudVisible(true);
+    fx.wheel.refreshFrames();
+    const auto* icon = static_cast<const pix::NullSprite*>(fx.wheel.buttonIcon());
+    CHECK(icon != nullptr);
+    CHECK(icon->visible);
+    CHECK_EQ(icon->frame, std::string("face-happy.img"));
 }
 
 TEST(emote_wheel_selects_and_closes) {

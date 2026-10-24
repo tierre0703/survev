@@ -33,8 +33,68 @@ struct MapDisplayDef {
     float scale = 1.0f;
 };
 
-// map.ts SurfaceType ("water" | "sand" | "grass"), used by decal defs.
-enum class SurfaceTypeDef { Water, Sand, Grass };
+// shared/defs/mapObjectsTyping.ts `SurfaceType`. Drives player submersion and
+// the `footstep_${surface.type}` sound group, so it must cover every floor
+// material the maps use (map.ts getGroundSurface).
+enum class SurfaceType {
+    Water,
+    Sand,
+    Grass,
+    Tile,
+    Asphalt,
+    Brick,
+    Stone,
+    Carpet,
+    Bunker,
+    Container,
+    Warehouse,
+    House,
+    Shack,
+    Snow,
+};
+
+// The web client stores the type as a lowercase string and passes it straight
+// into `playGroup("footstep_" + type)`; keep that spelling.
+inline const char* surfaceTypeName(SurfaceType type) {
+    switch (type) {
+        case SurfaceType::Water: return "water";
+        case SurfaceType::Sand: return "sand";
+        case SurfaceType::Grass: return "grass";
+        case SurfaceType::Tile: return "tile";
+        case SurfaceType::Asphalt: return "asphalt";
+        case SurfaceType::Brick: return "brick";
+        case SurfaceType::Stone: return "stone";
+        case SurfaceType::Carpet: return "carpet";
+        case SurfaceType::Bunker: return "bunker";
+        case SurfaceType::Container: return "container";
+        case SurfaceType::Warehouse: return "warehouse";
+        case SurfaceType::House: return "house";
+        case SurfaceType::Shack: return "shack";
+        case SurfaceType::Snow: return "snow";
+    }
+    return "grass";
+}
+
+inline SurfaceType surfaceTypeFromName(const std::string& name) {
+    if (name == "water") return SurfaceType::Water;
+    if (name == "sand") return SurfaceType::Sand;
+    if (name == "tile") return SurfaceType::Tile;
+    if (name == "asphalt") return SurfaceType::Asphalt;
+    if (name == "brick") return SurfaceType::Brick;
+    if (name == "stone") return SurfaceType::Stone;
+    if (name == "carpet") return SurfaceType::Carpet;
+    if (name == "bunker") return SurfaceType::Bunker;
+    if (name == "container") return SurfaceType::Container;
+    if (name == "warehouse") return SurfaceType::Warehouse;
+    if (name == "house") return SurfaceType::House;
+    if (name == "shack") return SurfaceType::Shack;
+    if (name == "snow") return SurfaceType::Snow;
+    return SurfaceType::Grass;
+}
+
+// decal.ts surface defs only use water/sand/grass; keep the old name for the
+// generated table and the decal code.
+using SurfaceTypeDef = SurfaceType;
 
 // One minimap shape (def.map.shapes entries and generated fallbacks).
 struct MapShapeDef {
@@ -48,6 +108,9 @@ struct StructureLayerDef {
     Vec2 pos;
     int ori = 0;
     bool inheritOri = true;
+    // structure.ts: `underground` defaults to `i == 1` when the def omits it,
+    // so the "defined" flag must be preserved.
+    bool hasUnderground = false;
     bool underground = false;
 };
 
@@ -70,6 +133,44 @@ struct BuildingImageDef {
     bool mirrorX = false;
     bool mirrorY = false;
     bool removeOnDamaged = false;
+};
+
+// building.ts `def.floor.surfaces[]` (building.ts `surfaces`): the floor
+// material under a building, used by map.ts getGroundSurface. The colliders
+// are authored in building-local space and transformed in Building::m_updateData.
+struct BuildingSurfaceDef {
+    std::string type;
+    std::vector<Collider> colliders;
+    bool hasWaterColor = false;
+    uint32_t waterColor = 0;
+    bool hasRippleColor = false;
+    uint32_t rippleColor = 0;
+};
+
+// structureDefs.ts `interiorSound`: the ambient track played inside a
+// structure (structure.ts updateInteriorSounds drives the two Ambiance
+// immediate-mode tracks from these fields).
+struct InteriorSoundDef {
+    std::string sound;
+    std::string soundAlt;
+    std::string filter;
+    float transitionTime = 1.0f;
+    float outsideMaxDist = 10.0f;
+    float outsideVolume = 0.0f;
+    bool hasUndergroundVolume = false;
+    float undergroundVolume = 1.0f;
+};
+
+// buildingDefs.ts `soundEmitters`: looping positional ambience baked into a
+// building (bathhouse steam, potato-mode waves).
+struct BuildingSoundEmitterDef {
+    std::string sound;
+    std::string channel;
+    Vec2 pos;
+    float rangeMin = 0.0f;
+    float rangeMax = 0.0f;
+    float falloff = 1.0f;
+    float volume = 1.0f;
 };
 
 // building.ts `ceiling.vision` (defaults applied in the def loader).
@@ -168,8 +269,13 @@ struct MapObjectDef {
     int zIdx = 0;
     std::vector<BuildingImageDef> floorImgs;
     std::vector<BuildingImageDef> ceilingImgs;
+    std::vector<BuildingSoundEmitterDef> soundEmitters;
     // ceiling.zoomRegions[].zoomIn (the reveal regions used for vision).
     std::vector<Collider> ceilingZoomIn;
+    std::vector<BuildingSurfaceDef> surfaces;
+    // structures
+    bool hasInteriorSound = false;
+    InteriorSoundDef interiorSound;
     CeilingVisionDef ceilingVision;
     std::string ceilingDestroyResidue;
     std::vector<BuildingEmitterDef> occupiedEmitters;

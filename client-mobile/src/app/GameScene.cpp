@@ -323,6 +323,14 @@ bool GameScene::init() {
     }
     _game->setMapCallback([this](const MapMsg& msg) {
         loadAtlasesForMap(msg.mapName);
+        // The emote/ping wheels are built in resetWorld(), before the map
+        // atlases are registered; re-resolve their icon frames now.
+        if (_emoteWheel) {
+            _emoteWheel->refreshFrames();
+        }
+        if (_pingWheel) {
+            _pingWheel->refreshFrames();
+        }
         if (_world) {
             // The world (and its terrain node) was attached by resetWorld()
             // before this MapMsg arrived; loadMap renders the terrain in place.

@@ -306,6 +306,12 @@ void PingWheel::setAmmoType(const std::string& ammoType) {
     refreshAmmoIcon();
 }
 
+void PingWheel::refreshFrames() {
+    // Same as EmoteWheel::refreshFrames: the wheel is built before the first
+    // MapMsg registers the atlases, so re-resolve the icons afterwards.
+    refreshIcons();
+}
+
 void PingWheel::setTeamMode(bool solo) {
     if (_solo == solo) {
         return;

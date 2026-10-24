@@ -28,6 +28,11 @@ public:
     // Track accessors (used by the game to trigger interior tracks).
     void setTrackSound(const std::string& name, const std::string& sound);
     void setTrackWeight(const std::string& name, float weight);
+    void setTrackFilter(const std::string& name, const std::string& filter);
+    // Test/debug accessors.
+    std::string trackSound(const std::string& name) const;
+    float trackWeight(const std::string& name) const;
+    std::string trackFilter(const std::string& name) const;
 
     bool introMusic = true;
 
@@ -45,6 +50,7 @@ private:
     };
 
     Track* getTrack(const std::string& name);
+    const Track* getTrack(const std::string& name) const;
 
     std::vector<Track> _tracks;
     float _soundUpdateThrottle = 0.0f;

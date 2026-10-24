@@ -64,6 +64,10 @@ public:
 
     void build(pix::Factory* factory, pix::Container* root, const Vec2& design);
 
+    // Re-applies the selector/button sprite frames after the map atlases load
+    // (the wheel is built in resetWorld(), before the first MapMsg).
+    void refreshFrames();
+
     // TeamMode::Solo (1) greys out the team-only emote selectors (medical and
     // ammo), like emote.ts's `disableInSolo`.
     void setTeamMode(bool solo);
@@ -102,6 +106,8 @@ public:
 
     // Fixed ping type of a selector (empty for the emote/close selectors).
     static const char* pingType(int selector);
+    // Test/debug access: the on-screen button icon sprite.
+    pix::Sprite* buttonIcon() const { return _buttonIcon; }
 
 private:
     struct Item {

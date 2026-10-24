@@ -66,3 +66,21 @@ node --experimental-transform-types tools/codegen_sound_defs.mjs
 - ✅ **Reverb/filters**: `AudioManager::update()` computes cathedral reverb volume from `activeLayer`/`underground`; `AxmolAudioBackend::update()` creates a silent reverb carrier and calls `ax::AudioEngine::setReverbProperties` with EAX parameters.
 - **UI sounds** (ambient lab, pickup pings, notifications) are not wired — no UI system in the C++ port yet (the Java UI screens handle this).
 - Volume/persisted settings UI (config) is M7 and lives in Java.
+
+## Structure interior ambience (2026-10-23)
+
+`structure.ts updateInteriorSounds` is now ported (M4_REMAINING §30.6):
+`MapObjectDef::interiorSound` is codegen'd from `structureDefs.ts` and
+`Structure::update` drives the immediate-mode `interior_0`/`interior_1` Ambiance
+tracks (distance + ceiling fade + underground/stair weights, `soundAlt`
+transition, enable fade, `filter`). `Ambiance` exposes `setTrackFilter` and
+`trackSound/trackWeight/trackFilter` accessors.
+
+Building `soundEmitters` (bathhouse steam, oasis waves) are also ported: the
+defs codegen into `MapObjectDef::soundEmitters` and `Building::update` runs the
+web's 10 Hz distance/fade/layer volume model, playing looped start-silent and
+stopping on `m_free()`.
+
+Still not ported: per-source EQ filters (`muffled`/`club` are plumbed but the
+axmol backend is reverb-only) and the audible on-device verification of the
+interior tracks/sound emitters.

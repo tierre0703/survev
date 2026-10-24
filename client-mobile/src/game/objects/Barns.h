@@ -28,6 +28,10 @@ class Factory;
 
 namespace surv {
 
+namespace audio {
+class AudioManager;
+}
+
 class GameWorld;
 class Gas;
 
@@ -162,10 +166,30 @@ public:
     struct Surface {
         std::string type;
         std::vector<Collider> colliders;
+        // Optional surface data (bunker water pools author their own water
+        // colours; map.ts falls back to the biome colours when unset).
+        bool hasWaterColor = false;
+        uint32_t waterColor = 0;
+        bool hasRippleColor = false;
+        uint32_t rippleColor = 0;
     };
     std::vector<Surface> surfaces;
     Collider aabb;
     bool hasAabb = false;
+    // building.ts soundEmitters: looping positional ambience created on isNew.
+    struct SoundEmitter {
+        audio::SoundHandle instance = audio::kInvalidSound;
+        std::string sound;
+        std::string channel;
+        Vec2 pos;
+        float rangeMin = 0.0f;
+        float rangeMax = 0.0f;
+        float falloff = 1.0f;
+        float volume = 1.0f;
+    };
+    std::vector<SoundEmitter> soundEmitters;
+    float soundEmitterTicker = 0.0f;
+    audio::AudioManager* audioOwner = nullptr;
     std::vector<Collider> ceilingRegions; // transformed ceiling zoomIn regions
     CeilingVisionDef vision;
     float ceilingVisionTicker = 0.0f;
@@ -670,8 +694,8 @@ public:
 // --- player.ts skeletal rendering -----------------------------------------
 class Player : public AbstractObject {
 public:
-    // Surface type enum (duplicated from Map::SurfaceType to avoid circular dep).
-    enum SurfaceType { Water, Sand, Grass };
+    // map.ts SurfaceType (shared with Map; see render/Defs.h).
+    using SurfaceType = ::surv::SurfaceType;
 
     struct GroundSurface {
         SurfaceType type = SurfaceType::Grass;
@@ -725,6 +749,9 @@ public:
     // player.ts isNearDoorError/doorErrorTicker: debounced door error sound.
     bool isNearDoorError = false;
     float doorErrorTicker = 0.0f;
+    // player.ts noCeilingRevealTicker: stairs flagged noCeilingReveal
+    // temporarily suppress ceiling reveals (building.ts update).
+    float noCeilingRevealTicker = 0.0f;
     // player.ts playedDryFire: one-shot dry-fire sound per fire-press.
     bool playedDryFire = false;
     // Active-player view bounds (player.ts activePlayer.viewAabb).
