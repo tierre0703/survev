@@ -2856,7 +2856,12 @@ filtering all use the same frame's state.
   particles.
 - `airdrop.ts`/`plane.ts`: retained fall loop, plane engine loop, airstrike
   zones instantiated from `UpdateMsg.airstrikeZones`.
+- Rotation convention: PIXI radians are passed unchanged to
+  `AxmolPixi::setRotation` (see the player body). Bullet/flare/projectile/plane
+  and loot rotations no longer negate the web numeric; negating mirrored
+  diagonal tracers into a "slash" and put the projectile trail in front of the
+  throw.
 
-Verification: `surv_tests` 186 tests / 2,839 assertions, 0 failures; client
+Verification: `surv_tests` 186 tests / 2,842 assertions, 0 failures; client
 vitest 11,768 pass; `lint:ci`; x86_64 native + APK; device quick play joined with
 an empty crash buffer.

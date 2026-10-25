@@ -171,6 +171,17 @@ TEST(bullet_trail_moves_and_collides) {
     CHECK(!b->alive);
     CHECK(b->collided);
 
+    // bullet.ts rotation: atan2(dir.x, dir.y) - PI/2. A diagonal tracer must
+    // not be mirrored across the x axis (the "slash" regression).
+    Bullet diagonal = data;
+    diagonal.pos = Vec2(200.0f, 200.0f);
+    diagonal.dir = Vec2(0.70710678f, 0.70710678f);
+    world.bulletBarn().spawn(&factory, diagonal);
+    world.bulletBarn().update(0.0f, world);
+    BulletVisual* d = world.bulletBarn().bullets.back();
+    const auto* dTrail = static_cast<pix::NullSprite*>(d->trail);
+    CHECK_NEAR(dTrail->rotation, -3.14159265358979f / 4.0f, 1e-4f);
+
     // The collided tracer fades out and is deactivated.
     for (int i = 0; i < 30; ++i) {
         world.bulletBarn().update(0.02f, world);
@@ -227,6 +238,15 @@ TEST(projectile_spin_and_trail) {
     CHECK(p->rot != 0.0f);
     CHECK(std::fabs(p->rotVel) < std::fabs(rotVel));
     CHECK(p->trail->isVisible());
+    // projectile.ts: sprite.rotation = rot and trail.rotation =
+    // -atan2(dir.y, dir.x), used verbatim by the pix adapter.
+    const auto* pSprite = static_cast<pix::NullSprite*>(p->sprite);
+    const auto* pTrail = static_cast<pix::NullSprite*>(p->trail);
+    CHECK_NEAR(pSprite->rotation, p->rot, 1e-6f);
+    p->dir = Vec2(0.70710678f, 0.70710678f);
+    p->lastPos = p->pos;
+    world.projectileBarn().update(0.0f, world);
+    CHECK_NEAR(pTrail->rotation, -3.14159265358979f / 4.0f, 1e-4f);
 }
 
 // ---------------------------------------------------------------------------
@@ -322,8 +342,8 @@ TEST(plane_reconcile_and_elevate) {
     CHECK_NEAR(plane->pos.x, 10.0f, 1e-4f);
     if (plane->sprite) {
         CHECK_EQ(asSprite(plane->sprite)->getFrame(), std::string("map-plane-01.img"));
-        // plane.ts rotation is PIXI (y-down); negated for the positive-Y world.
-        CHECK_NEAR(asSprite(plane->sprite)->rotation, -std::atan2(1.0f, 0.0f), 1e-4f);
+        // plane.ts rotation: atan2(planeDir.x, planeDir.y).
+        CHECK_NEAR(asSprite(plane->sprite)->rotation, std::atan2(1.0f, 0.0f), 1e-4f);
     }
 
     // Each frame advances along planeDir at planeVel.
@@ -388,9 +408,9 @@ TEST(flare_bullet_visual) {
     FlareVisual* f = world.flareBarn().bullets[0];
     CHECK(f->alive);
     CHECK(f->container != nullptr);
-    // flare.ts rotation is PIXI (y-down); negated for the positive-Y world.
+    // flare.ts rotation: atan2(dir.x, dir.y) - PI/2.
     CHECK_NEAR(static_cast<pix::NullContainer*>(f->container)->rotation,
-               -(std::atan2(0.0f, 1.0f) - 3.14159265358979f / 2.0f), 1e-4f);
+               std::atan2(0.0f, 1.0f) - 3.14159265358979f / 2.0f, 1e-4f);
     CHECK(f->flare != nullptr);
     CHECK(f->trail != nullptr);
     CHECK(f->speed > 0.0f);

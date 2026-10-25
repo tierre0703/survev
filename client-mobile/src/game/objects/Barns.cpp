@@ -1044,7 +1044,7 @@ void Loot::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx
         imgScale = def ? def->img.scale * 1.25f : 1.25f;
         const float innerScale = def ? def->lootInnerScale : 0.8f;
         sprite->setScale(innerScale, innerScale);
-        sprite->setRotation(def ? -def->lootRot : 0.0f);
+        sprite->setRotation(def ? def->lootRot : 0.0f);
         if (def && def->lootMirror) {
             sprite->setScale(-innerScale, innerScale);
         }
@@ -1491,7 +1491,8 @@ void ProjectileBarn::update(float dt, GameWorld& ctx) {
             }
             p->inWater = surface.type == Map::SurfaceType::Water;
         }
-        p->sprite->setRotation(-p->rot);
+        // projectile.ts: this.sprite.rotation = p.rot (same PIXI numeric).
+        p->sprite->setRotation(p->rot);
         p->sprite->setAlpha(p->inWater ? 0.3f : 1.0f);
 
         // projectile.ts trail: length/alpha scale with throw speed and height.
@@ -1502,7 +1503,9 @@ void ProjectileBarn::update(float dt, GameWorld& ctx) {
                 math::remap(p->posZ, 0.1f, maxHeight * 0.5f, 0.0f, 1.0f);
             const float len = def->trailMaxLength * trailT;
             p->trail->setScale(len, def->trailWidth);
-            p->trail->setRotation(std::atan2(p->dir.y, p->dir.x));
+            // projectile.ts: -atan2(dir.y, dir.x), the same numeric PIXI
+            // rotation the web client uses (see PlayerRender's body rotation).
+            p->trail->setRotation(-std::atan2(p->dir.y, p->dir.x));
             p->trail->setTint(def->trailTint);
             p->trail->setAlpha(def->trailAlpha * trailT);
             p->trail->setPosition(0.0f, 0.0f);
@@ -2021,8 +2024,9 @@ void BulletBarn::update(float dt, GameWorld& ctx) {
             const float screenScaleX = z > 0.0f ? (0.8f * trailLength * b->scale) / z : 0.0f;
             const float screenScaleY = z > 0.0f ? b->tracerWidth / z : 0.0f;
             ctx.renderer().addPIXIObj(b->trail, b->layer, 20, b->layer * 100000 + static_cast<int>(i));
-            // Container rotation in bullet.ts is angle - PI/2 in PIXI space.
-            b->trail->setRotation(-(std::atan2(b->dir.x, b->dir.y) - 3.14159265358979f / 2.0f));
+            // bullet.ts: atan2(dir.x, dir.y) - PI/2 (PIXI rotation, used
+            // verbatim by AxmolPixi::setRotation).
+            b->trail->setRotation(std::atan2(b->dir.x, b->dir.y) - 3.14159265358979f / 2.0f);
             b->trail->setPosition(b->pos.x, b->pos.y);
             b->trail->setScale(screenScaleX, screenScaleY);
             b->trail->setAlpha(b->trailAlpha);
@@ -2495,9 +2499,9 @@ void FlareBarn::addFlare(GameWorld& ctx, const Bullet& bullet) {
     b->speed = defSpeed * variance;
     b->distance = distance * variance + distAdj;
 
-    // flare.ts: atan2(b.dir.x, b.dir.y) - PI/2 is a PIXI (y-down) rotation;
-    // the world root is positive-Y, so negate it for the axmol y-up scene.
-    b->container->setRotation(-(std::atan2(b->dir.x, b->dir.y) - pi / 2.0f));
+    // flare.ts: atan2(b.dir.x, b.dir.y) - PI/2. Use the web numeric directly;
+    // AxmolPixi::setRotation accepts PIXI radians (see the player body).
+    b->container->setRotation(std::atan2(b->dir.x, b->dir.y) - pi / 2.0f);
 
     Player* player = ctx.playerBarn().getPlayerById(b->playerId);
     if (player && (player->layer & 2) != 0) {
@@ -2635,9 +2639,8 @@ void PlaneObj::init(GameWorld& ctx, const PlaneData& data, const Map& map) {
     }
     sprite->setFrame(spriteName);
     sprite->setVisible(true);
-    // plane.ts uses atan2(planeDir.x, planeDir.y) in PIXI (y-down) space;
-    // negate for the positive-Y axmol world.
-    sprite->setRotation(-std::atan2(planeDir.x, planeDir.y));
+    // plane.ts: atan2(planeDir.x, planeDir.y), same PIXI numeric.
+    sprite->setRotation(std::atan2(planeDir.x, planeDir.y));
 }
 void PlaneBarn::updatePlanes(GameWorld& ctx, const std::vector<PlaneData>& data) {
     for (auto* p : planes) {
