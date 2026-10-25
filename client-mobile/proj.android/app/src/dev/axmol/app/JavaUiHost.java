@@ -159,7 +159,6 @@ public class JavaUiHost {
     public void enterGame(int activePlayerId) {
         mInGame = true;
         hideLoadout();
-        hideTeam();
         hidePause();
         hideSettings();
         hideHelp();
@@ -167,6 +166,13 @@ public class JavaUiHost {
         hidePass();
         hideProfile();
         hideBackBtn();
+        if (mInTeam && mTeam != null) {
+            // Keep the team socket (and the room) alive for the post-match
+            // return; `returnToMenu` re-shows the team screen.
+            mTeam.hideForGame();
+        } else {
+            hideTeam();
+        }
         if (mMenu != null) {
             mMenu.hide();
         }
@@ -175,6 +181,18 @@ public class JavaUiHost {
 
     /** The match ended or failed: back to the menu, with a localized error. */
     public void returnToMenu(String errorL10nKey) {
+        // A team match returns to its room (web `teamMenu.onGameComplete`), not
+        // to the main menu: the team socket stayed alive while in game.
+        if (mInTeam && mTeam != null && mTeam.isInGame()) {
+            mInGame = false;
+            mTeam.onGameComplete();
+            if (errorL10nKey != null && !errorL10nKey.isEmpty()) {
+                mTeam.showMessage(Json.peekString(SurvBridge.getL10nJson(), errorL10nKey));
+            }
+            updateBackBtn();
+            Log.i(TAG, "returnToMenu (team room) error=" + errorL10nKey);
+            return;
+        }
         showMenu();
         if (errorL10nKey != null && !errorL10nKey.isEmpty() && mMenu != null) {
             mMenu.showMessage(Json.peekString(SurvBridge.getL10nJson(), errorL10nKey));
@@ -275,11 +293,17 @@ public class JavaUiHost {
         if (mSettings != null && mSettings.isOpen()) mSettings.syncFromConfig();
         if (mPass != null && mPass.isOpen()) mPass.refresh();
         if (mProfile != null && mProfile.isOpen()) mProfile.refresh();
+        if (mTeam != null && mTeam.isOpen()) mTeam.refresh();
         Log.i(TAG, "onConfigChanged " + key);
     }
 
     public boolean isInGame() { return mInGame; }
     public boolean isPauseOpen() { return mPause != null && mPause.isOpen(); }
+
+    /** Raw site_info for the Java team screen (menu owns the HTTP fetch). */
+    public String siteInfoJson() {
+        return mMenu != null ? mMenu.siteInfoJson() : "";
+    }
 
     // --- Settings ---
 
@@ -364,13 +388,24 @@ public class JavaUiHost {
     public void showTeam(boolean create, String roomCode) {
         mInTeam = true;
         ensureTeam();
-        mTeam.show();
+        mTeam.connect(create, roomCode != null ? roomCode : "");
         updateBackBtn();
-        if (create) {
-            mTeam.createTeam();
-        } else {
-            mTeam.setInviteCode(roomCode);
+    }
+
+    /** `survev://team/<code>` (or a pasted link) from AppActivity. */
+    public void openTeamInvite(String rawLink) {
+        String code = TeamLinks.extractCode(rawLink);
+        if (code.isEmpty()) {
+            Log.w(TAG, "ignoring team invite without a code: " + rawLink);
+            return;
         }
+        if (mInGame) {
+            Log.w(TAG, "ignoring team invite while in a match: " + code);
+            return;
+        }
+        showMenu();
+        showTeam(false, code);
+        Log.i(TAG, "opening team invite " + code);
     }
 
     public void hideTeam() {
@@ -511,7 +546,7 @@ public class JavaUiHost {
 
     private void ensureTeam() {
         if (mTeam == null) {
-            mTeam = new TeamFragment(mActivity, this, false);
+            mTeam = new TeamFragment(mActivity, this);
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             mContainer.addView(mTeam.root(), params);

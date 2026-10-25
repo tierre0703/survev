@@ -2614,3 +2614,70 @@ a standalone `uikit::Localization`:
   - after Log Out the pass screen shows `LEVEL -` and the localized
     `Log in to get quests!`; Sign In restores the quests.
 
+## 44. Session 43 - M8 team links + the real team protocol (2026-10-25)
+
+### 44.1 Why the team screen had to be rebuilt
+
+The Java team screen called `/api/team/create` and `/api/team/join`, which the
+server does not have, connected to a fabricated `ws://host:9001/team/<id>`, and
+parsed invented `roster`/`playerJoined` messages. The real protocol is the
+`/team_v2` JSON WebSocket on the **API** port (`server/src/teamMenu.ts`,
+`shared/types/team.ts`). Invite links could not work on top of that, so the
+screen was ported to the real protocol before adding links.
+
+### 44.2 Client
+
+- `TeamSocket` was rewritten without any WS library (the Gradle-free APK vendors
+  none): raw `Socket`/`SSLSocket`, HTTP Upgrade with `Sec-WebSocket-Key` +
+  Accept validation, masked client frames, server-frame parsing with
+  continuation reassembly, ping/pong/close, and a writer thread/queue. This
+  also fixes `NetworkOnMainThreadException` (send is called from UI actions) and
+  the old close-frame buffer overrun; `android.util.Base64` keeps API 24.
+- `TeamFragment` now speaks the real schema:
+  - `create`/`join` on open (`roomUrl` without `#`), player name from config;
+  - `state` -> room code/link, region, auto-fill, mode/max players, roster,
+    leader, in-game/finding flags, `lastError`;
+  - leader controls send `setRoomProps` (region cycle, mode cycle, auto-fill),
+    `kick` and `playGame` (version 1028 + region/zones);
+  - `joinGame` -> `SurvBridge.onJoinUrls(urls, joinToken)` and the match starts
+    through the normal C++ path;
+  - `kicked`/`error` -> localized message and back to the menu; `keepAlive`
+    every 10 s.
+  - the leader/non-leader Play states follow the web ("Waiting for leader",
+    "Finding game...", captcha-disabled).
+- The team socket stays connected through the match (`hideForGame`) so
+  `JavaUiHost.returnToMenu` can re-show the room and send `gameComplete`; other
+  paths (Leave, BACK, menu) close it.
+
+### 44.3 Invite links
+
+- `TeamLinks` builds `https://<webBaseUrl>/#CODE` (config `webBaseUrl`, default
+  `https://survev.io`), which browser players can open. Copy puts the link on
+  the Android clipboard; Share opens an `ACTION_SEND` chooser with the link.
+- The join field accepts the web link, `survev://team/CODE`,
+  `survev://team?code=CODE`, `#CODE` or a bare code
+  (`extractCode`). The manifest adds a `VIEW`/`BROWSABLE` filter for
+  `survev://team`; `AppActivity` handles both cold-start and `onNewIntent`
+  (`singleTask`) and calls `JavaUiHost.openTeamInvite`, which opens the join
+  screen for that code (ignored while in a match).
+- `server/src/teamMenu.ts` accepts the device session as
+  `Authorization: Bearer` (the native WS client has no cookie jar), so team
+  players keep their account stats just like the web.
+
+### 44.4 Verification
+
+- `surv_tests` 163 tests / 2,599 assertions; `lint:ci`; server `tsc`; x86_64 APK
+  (43 Java sources) green; `logcat -b crash` empty.
+- Emulator + dev API (`/team_v2` on :8000):
+  - Create Team -> `state` with `#5ifA`, link `https://survev.io/#5ifA`,
+    `Team Members (1/2)`, Play enabled; a second Node WS client joined and the
+    device roster updated to `2/2` with the joiner.
+  - Mode cycle on the leader (Squad/4 -> Duo/2) sent `setRoomProps`; a client
+    present in the room received the updated `maxPlayers`; Kick sent the
+    target `kicked` and the roster returned to 1/2.
+  - `adb shell am start -a VIEW -d survev://team/ukpi` -> `onNewIntent` ->
+    Join Team with `NodeLeader` (crown) + `RenamedPlayer (YOU)`, Play disabled
+    with "Waiting for leader".
+  - Paste `https://survev.io/#ukpi` into the join field -> same room/roster.
+  - Play -> `joinGame` -> match `4614` connected and received updates; the team
+    UI hid while the socket stayed open.

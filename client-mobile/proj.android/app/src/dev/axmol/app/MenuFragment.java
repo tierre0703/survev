@@ -107,6 +107,10 @@ public class MenuFragment {
     private boolean mMuted = false;
     private boolean mFindingGame = false;
     private String mApiBaseUrl = SurvApi.DEFAULT_API_BASE_URL;
+    // Raw /api/site_info response, shared with TeamFragment (which needs the
+    // region list and mode→teamMode table). C++ has no MenuScene on Android, so
+    // SurvBridge.getSiteInfoJson() is empty.
+    private String mSiteInfoJson = "";
     private boolean mNewsExpanded = false;
     private boolean mRegionDropdownOpen = false;
     private final LinearLayout mRegionDropdown;
@@ -577,6 +581,7 @@ public class MenuFragment {
                     return;
                 }
                 Log.i(TAG, "site_info response: " + json.substring(0, Math.min(json.length(), 200)));
+                mSiteInfoJson = json;
                 List<Json.PopEntry> parsed = Json.parsePops(json);
                 mPops.clear();
                 for (Json.PopEntry p : parsed) {
@@ -807,6 +812,9 @@ public class MenuFragment {
     // ===================== Public API ======================================
 
     public View root() { return mRoot; }
+
+    /** Last /api/site_info payload ("" until the first successful fetch). */
+    public String siteInfoJson() { return mSiteInfoJson; }
 
     public void show() {
         mRoot.setVisibility(View.VISIBLE);

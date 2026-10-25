@@ -40,8 +40,9 @@ proj.android/app/src/dev/axmol/app/
   JavaUiHost.java          — Owns all Java screens (menu/loadout/team/pause)
   MenuFragment.java        — Start menu with matchmaking
   LoadoutFragment.java     — Loadout editor
-  TeamFragment.java        — Team room
-  TeamSocket.java          — WebSocket for /team_v2
+  TeamFragment.java        — Team room (real /team_v2 protocol, invite links)
+  TeamSocket.java          — raw-socket WebSocket client for /team_v2
+  TeamLinks.java           — invite link build/parse (web link + survev:// deep link)
   AccountManager.java      — device login/session/profile (M8, no OAuth)
   ProfileFragment.java     — account name/stats/delete/logout screen
   PassFragment.java        — pass level/XP + quests/reroll (M8)
@@ -63,6 +64,11 @@ proj.android/app/src/dev/axmol/app/
   `MenuScene`, so `UiBridge::l10nJson()` builds its own `Localization` from the
   bundled `l10n/*.json` (config `language`). Do not remove that fallback: the
   Java UI would fall back to raw keys.
+- **Team links are web links** — `https://<webBaseUrl>/#CODE` (config key,
+  default `https://survev.io`) so browser players can join, plus a
+  `survev://team/CODE` deep link handled by `AppActivity`. The team socket is a
+  hand-written WebSocket client (`TeamSocket`) because no WS library is
+  vendored; it sends the device Bearer token so `/team_v2` sees the account.
 - **HUD stays in axmol + FairyGUI** (the world canvas); Java only covers
   out-of-game screens.
 - **C++ `Config`/`Loadout`/`Localization`/`Touch`** stay in C++ as the source

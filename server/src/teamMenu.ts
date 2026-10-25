@@ -421,7 +421,14 @@ export class TeamMenu {
                 wsRateLimit.ipConnected(ip!);
 
                 let userId: string | null = null;
-                const sessionId = getCookie(c, "session") ?? null;
+                // Web clients send the httpOnly session cookie; the native
+                // client uses `Authorization: Bearer` (device login), same as
+                // authMiddleware.
+                const authHeader = c.req.header("authorization");
+                const bearerToken = authHeader?.toLowerCase().startsWith("bearer ")
+                    ? authHeader.slice(7).trim()
+                    : null;
+                const sessionId = getCookie(c, "session") ?? (bearerToken || null);
 
                 if (sessionId) {
                     try {

@@ -155,6 +155,11 @@ public final class AccountManager {
         return mProfile.loggedIn;
     }
 
+    /** The raw device-session token, for the `/team_v2` Bearer handshake. */
+    public String getSessionToken() {
+        return mProfile.loggedIn ? mToken : "";
+    }
+
     /** True after an explicit Log Out (the device login is not re-run). */
     public boolean isSignedOut() {
         return "1".equals(readPref(PREF_SIGNED_OUT));

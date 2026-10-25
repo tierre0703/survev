@@ -230,7 +230,7 @@ a tiny JSON lib — axmol ships `rapidjson`).
 | M5 | Input + touch controls | Virtual joystick + aim/fire, camera follow, player moves/shoots correctly |
 | M6 | Audio + ambiance | SFX, gunshots, music, gas ambience correct |
 | M7 | UI layer (D1 resolved) | Gameplay HUD in axmol + FairyGUI; menu/loadout/team in Android Java (bridge-verified). See `ARCHITECTURE.md` §7 steps S1–S7 |
-| M8 | Account/API (optional) | Device login + profile (no OAuth), region latency, error reporting; team/quests in scope |
+| M8 | Account/API (optional) | Device login + profile, quests/pass, team rooms + invite links (no OAuth); region latency, error reporting |
 | M9 | Polish & release | Lifecycle, orientation, perf, crash-free soak test, store-ready APK/AAB |
 
 ## 8. Verification strategy

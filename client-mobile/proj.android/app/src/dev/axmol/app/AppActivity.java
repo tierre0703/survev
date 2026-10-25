@@ -26,6 +26,7 @@ THE SOFTWARE.
 package dev.axmol.app;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Build;
 import android.os.Looper;
@@ -90,6 +91,27 @@ public class AppActivity extends AxmolActivity {
         sCurrent = this;
         Log.i(TAG, "AppActivity onCreate, mFrameLayout=" + (mFrameLayout != null ? "OK" : "NULL"));
         installJavaUi();
+        handleDeepLink(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleDeepLink(intent);
+    }
+
+    /** `survev://team/<code>` invite links (AndroidManifest VIEW filter). */
+    private void handleDeepLink(Intent intent) {
+        if (intent == null || intent.getDataString() == null || mJavaUi == null) {
+            return;
+        }
+        String url = intent.getDataString();
+        if (!url.startsWith("survev://team")) {
+            return;
+        }
+        Log.i(TAG, "team deep link " + url);
+        mJavaUi.openTeamInvite(url);
     }
 
     @Override

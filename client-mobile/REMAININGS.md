@@ -10,17 +10,17 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25** — Session 42 finished the M8 quest/pass data:
-the Java pass screen now reads `/api/user/get_pass` (real level/XP/next unlock +
-two quest slots), rerolls quests through `/api/user/refresh_quest`, and the
-generated `GeneratedPassData` supplies the XP curve, unlock table and quest XP
-(`tools/codegen_pass_defs.mjs`). It also fixed the Java UI's localization: with
-no C++ `MenuScene` on Android, `UiBridge::l10nJson()` now builds a standalone
-`Localization` table from `l10n/*.json`, so pass/quest/item names are translated.
-Verified on the x86_64 emulator (pass load, quest reroll, logged-out state).
-Earlier: §41 M8 device login + profile (no OAuth), §40 HUD safe-area insets,
-§39 Low GFX surface tier + perf logs + `setConfigValue` JNI, §38 mid-match
-reconnection. **163 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25** — Session 43 finished M8 with **team links** and,
+on the way, replaced the mock team screen with the real `/team_v2` protocol: the
+Java `TeamSocket` is now a raw-socket WebSocket client (handshake, frames,
+writer queue), `TeamFragment` sends create/join/setRoomProps/playGame/kick/
+keepAlive/gameComplete and renders `state`/`joinGame`/`kicked`/`error`, the team
+socket sends the account Bearer token, and invites are `https://<webBaseUrl>/#CODE`
+links (copy/share) that can be pasted back or opened via `survev://team/<code>`.
+Verified on the x86_64 emulator: create, deep-link join, pasted-link join, mode
+cycling, kick, Play -> game join, roster/state sync with a second WS client.
+Earlier: §42 quest/pass data + Java l10n, §41 device login + profile, §40 HUD
+safe-area insets, §39 Low GFX tier + perf logs. **163 host tests pass, 0 fail.**
 
 ---
 
@@ -36,7 +36,7 @@ reconnection. **163 host tests pass, 0 fail.**
 | M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired; emote + team-ping wheels own their touches. |
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb + per-source EFX low-pass EQ (muffled/club) + structure interior ambience + building `soundEmitters`. UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
-| M8 | Accounts / API | **done except team links** | device login + profile + quests/pass data (no OAuth: persisted install id → session token), region latency test, client error reporting; team links still to do. |
+| M8 | Accounts / API | **done** | device login + profile, quests/pass data, team links (`/team_v2` protocol + invite links/deep links), region latency test, client error reporting. |
 | M9 | Polish & release | **started** | lifecycle: background/pause continuity (§36), mid-match reconnection (§38); perf/soak/store-ready AAB still to do. |
 
 ---
@@ -86,7 +86,7 @@ reconnection. **163 host tests pass, 0 fail.**
 | `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*` | ✅ |
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | ✅ |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ |
-| `client/src/ui/teamMenu.ts` → `ui/TeamMenu.*`, Java `TeamFragment.java` + `TeamSocket.java` | ✅ |
+| `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste) + `survev://team` deep links, kick/mode/region controls, team match stays connected |
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | ✅ |
 | `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | ✅ health/boost, weapon cards, ammo, alive/kills, kill feed, pickup message, kill leader, gas timer, game-over result overlay, squad health bars, gear/perk icons |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
@@ -361,8 +361,31 @@ reconnection. **163 host tests pass, 0 fail.**
         returned `{}` and every Java label fell back to English. It now builds a
         standalone `Localization` from `l10n/en.json` + `l10n/<locale>.json`
         (config `language`), and `setLanguage` updates it before notifying.
-- [ ] **M8 Accounts/API** (rest): team links; proxy detection is not applicable
-      to native.
+- [x] **M8 team links + real team protocol**:
+      - `TeamSocket` is a raw `Socket`/`SSLSocket` WebSocket client (no WS
+        library is vendored): HTTP Upgrade with optional `Authorization: Bearer`,
+        masked frames, fragmentation, ping/pong, close, and a writer queue so
+        the UI thread never writes to the socket.
+      - `TeamFragment` ports `teamMenu.ts`'s `/team_v2` messages: create/join,
+        setRoomProps (region/mode/auto-fill, leader), playGame, kick,
+        keepAlive (10 s), gameComplete; it renders state (roster/leader/in-game/
+        finding), joinGame (urls + per-player token -> `SurvBridge.onJoinUrls`),
+        kicked and error (localized). The old fake `/api/team/*` HTTP calls,
+        invented `roster`/`playerJoined` messages and hardcoded
+        `ws://127.0.0.1:9001/team/<id>` URL are gone.
+      - Team invite links use the web format `https://<webBaseUrl>/#CODE`
+        (config `webBaseUrl`, default `https://survev.io`): Copy puts the link on
+        the clipboard, Share opens the Android chooser. The join field accepts a
+        full link, `survev://team/CODE`, `?code=`, or a bare code
+        (`TeamLinks.extractCode`), and the manifest registers `survev://team`
+        deep links handled by `AppActivity` -> `JavaUiHost.openTeamInvite`.
+      - `server/src/teamMenu.ts` accepts the device session as
+        `Authorization: Bearer` in addition to the web `session` cookie.
+      - Team lifecycle: the socket stays alive during a team match
+        (`hideForGame`); `returnToMenu` re-shows the room after the match and
+        sends `gameComplete`, while ordinary menu/leave/back paths close it.
+- [x] **M8 Accounts/API**: login/profile/quests/pass/team links are done; proxy
+      detection is not applicable to native.
 - [x] **Lifecycle hardening (mid-match continuity)**:
       - Backgrounding and the in-game pause dialog keep the game socket.
         `Game::pause()` used to `close("background")` and `resume()` re-joined
@@ -600,3 +623,22 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   when opening the screen so the server rerolls expired slots. Reroll
   eligibility mirrors the web: `(!rerolled && !complete) || expired`; the
   server remains authoritative (`refresh_quest` can still return false).
+- `TeamSocket` is hand-written (no WS library): keep the writer queue
+  (`mOutgoing` + writer thread) — writing from the UI thread throws
+  `NetworkOnMainThreadException` — and keep the frame buffer/fragment/ping
+  handling. The server sends unmasked frames; client frames must be masked.
+- `/team_v2` is on the **API** port (`SurvApi.teamWsUrl()`), not the game port.
+  Join/state `roomUrl` is `#CODE` in state but the `join` message uses the code
+  **without** `#` (server rooms are keyed by code).
+- Invite links are web links (`https://<config webBaseUrl>/#CODE`), not the old
+  hardcoded download text; deep links are `survev://team/<code>`. Keep
+  `TeamLinks.extractCode` tolerant (bare code, `#`, web link, app link, `?code=`).
+- `server/src/teamMenu.ts` must accept the device session as a Bearer token;
+  the native team socket has no cookie jar. Keep both auth paths.
+- The team socket must survive a team match: `TeamFragment.hideForGame()` keeps
+  it, `JavaUiHost.returnToMenu` re-shows the room and `onGameComplete()` sends
+  the `gameComplete` message. Do not route that path through `showMenu()` (it
+  closes the socket and dissolves the room).
+- The Java team screen gets site_info from `MenuFragment.siteInfoJson()`:
+  `SurvBridge.getSiteInfoJson()` is empty on Android (no C++ MenuScene). Keep the
+  default Solo/Duo/Squad fallback for deep links that arrive before the fetch.

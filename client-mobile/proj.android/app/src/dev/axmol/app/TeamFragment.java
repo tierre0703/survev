@@ -1,17 +1,18 @@
 /****************************************************************************
- * TeamFragment.java — Team room screen (ARCHITECTURE.md §7, step S5b).
+ * TeamFragment.java - team room screen (client/src/ui/teamMenu.ts, /team_v2).
  *
- * Enhanced team room with:
- *   - Full roster display with player cards
- *   - Leader distinction (crown icon, gold accent, "LEADER" label)
- *   - Player ready/checkmark status
- *   - Ping/connection quality indicator per player
- *   - Copy invite code button with toast feedback
- *   - Share invite link via Android intent
- *   - Chat/message area stub
- *   - Play/Leave buttons
+ * One JSON WebSocket drives the screen (shared/types/team.ts):
+ *   client -> server: create, join, setRoomProps, playGame, kick, keepAlive,
+ *                     changeName, gameComplete
+ *   server -> client: state, joinGame, keepAlive, kicked, error
  *
- * Threading: WebSocket on background thread, UI updates delivered on UI thread.
+ * The invite link is a normal web link (`https://<webBaseUrl>/#CODE`) so browser
+ * players can join; the join field accepts that link, `survev://team/CODE` or a
+ * bare code (TeamLinks.extractCode). The socket sends the device account's
+ * Bearer token, so the server records team stats like the web cookie does.
+ *
+ * Threading: TeamSocket callbacks arrive on its reader thread; everything here
+ * posts to the UI handler before touching Views or SurvBridge.
  ****************************************************************************/
 package dev.axmol.app;
 
@@ -24,7 +25,6 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
-import android.text.TextUtils;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -38,657 +38,945 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class TeamFragment {
     private static final String TAG = "TeamFragment";
 
-    // Web team colors
-    private static final int TEAL        = 0xFF4FADA9;
-    private static final int TEAL_SHADOW = 0xFF37817E;
-    private static final int GREEN       = 0xFF83AF50;
-    private static final int GREEN_SHADOW= 0xFF5B7A38;
-    private static final int RED         = 0xFFE57373;
-    private static final int RED_SHADOW  = 0xFFC62828;
-    private static final int GREY        = 0xFF666666;
-    private static final int GOLD        = 0xFFFFD700;
-    private static final int PANEL_BG    = 0xF0000000;
-
-    // Ping colors
-    private static final int PING_GOOD    = 0xFF4CAF50; // green <100ms
-    private static final int PING_MEDIUM  = 0xFFFFC107; // yellow 100-200ms
-    private static final int PING_BAD     = 0xFFF44336; // red >200ms
+    private static final int TEAL = 0xFF4FADA9;
+    private static final int GREEN = 0xFF83AF50;
+    private static final int GREEN_SHADOW = 0xFF5B7A38;
+    private static final int RED = 0xFFE57373;
+    private static final int GREY = 0xFF666666;
+    private static final int GOLD = 0xFFFFD700;
+    private static final int PANEL_BG = 0xF01A1A2E;
 
     private final Activity mActivity;
-    private final FrameLayout mRoot;
     private final JavaUiHost mHost;
-    private final boolean mIsCreate;
+    private final FrameLayout mRoot;
+    private final Handler mHandler = new Handler(Looper.getMainLooper());
 
     // --- widgets ---
     private final TextView mTitleLabel;
-    private final EditText mInviteCodeInput;
+    private final TextView mCodeLabel;
+    private final TextView mLinkLabel;
     private final Button mCopyBtn;
     private final Button mShareBtn;
-    private final ScrollView mRosterScroll;
+    private final EditText mJoinInput;
+    private final Button mJoinBtn;
+    private final LinearLayout mJoinRow;
+    private final TextView mRosterHeader;
     private final LinearLayout mRosterList;
-    private final LinearLayout mChatArea;      // chat stub
-    private final EditText mChatInput;         // disabled stub
-    private final TextView mPropsText;
+    private final Button mRegionBtn;
+    private final Button mModeBtn;
+    private final Button mAutoFillBtn;
+    private final TextView mStatusText;
     private final Button mPlayBtn;
     private final Button mLeaveBtn;
-    private final TextView mStatusText;
 
     // --- state ---
     private boolean mOpen = false;
-    private String mTeamId = "";
-    private String mInviteCode = "";
-    private boolean mIsLeader = false;
-    private List<TeamMember> mMembers = new ArrayList<>();
+    private boolean mCreate = true;
+    private boolean mJoined = false;
+    private boolean mInGame = false;
+    private boolean mFindingGame = false;
+    private boolean mCaptchaEnabled = false;
+    private boolean mAutoFill = true;
+    private boolean mUserClosing = false;
+    private String mCode = "";
+    private String mRoomUrl = "";
+    private String mRegion = "na";
+    private String mPlayerName = "Player";
+    private int mLocalPlayerId = -1;
+    private int mGameModeIdx = 1;
+    private int mMaxPlayers = 4;
     private TeamSocket mWs = null;
-    private Handler mHandler = new Handler(Looper.getMainLooper());
 
-    public TeamFragment(Activity activity, JavaUiHost host, boolean isCreate) {
+    private final List<TeamPlayer> mPlayers = new ArrayList<TeamPlayer>();
+    private final List<Integer> mEnabledModes = new ArrayList<Integer>();
+    private final List<String> mRegions = new ArrayList<String>();
+    private final List<Integer> mSiteTeamModes = new ArrayList<Integer>();
+
+    private final Runnable mKeepAlive = new Runnable() {
+        @Override
+        public void run() {
+            if (!mOpen && !mInGame) {
+                return;
+            }
+            if (mJoined && mWs != null && mWs.isRunning()) {
+                mWs.send("{\"type\":\"keepAlive\"}");
+            }
+            mHandler.postDelayed(this, 10000);
+        }
+    };
+
+    public TeamFragment(Activity activity, JavaUiHost host) {
         mActivity = activity;
         mHost = host;
-        mIsCreate = isCreate;
 
         mRoot = new FrameLayout(activity);
         mRoot.setBackgroundColor(0xCC000000);
+        mRoot.setVisibility(View.GONE);
 
-        // Full-height ScrollView for landscape responsiveness
         ScrollView outerScroll = new ScrollView(activity);
         outerScroll.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Main panel
         LinearLayout panel = new LinearLayout(activity);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setGravity(Gravity.CENTER);
         panel.setBackgroundColor(PANEL_BG);
         panel.setPadding(dp(16), dp(14), dp(16), dp(14));
         FrameLayout.LayoutParams panelParams = new FrameLayout.LayoutParams(
-                dp(340), ViewGroup.LayoutParams.WRAP_CONTENT);
+                dp(390), ViewGroup.LayoutParams.WRAP_CONTENT);
         panelParams.gravity = Gravity.CENTER;
         panel.setLayoutParams(panelParams);
 
-        // Title row
+        // ===== Header =====
         mTitleLabel = new TextView(activity);
-        mTitleLabel.setText(isCreate ? "\uD83D\uDC65 Create Team" : "\uD83D\uDC65 Join Team");
+        mTitleLabel.setText("\uD83D\uDC65 Team");
         mTitleLabel.setTextColor(Color.WHITE);
         mTitleLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         mTitleLabel.setGravity(Gravity.CENTER);
-        mTitleLabel.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         panel.addView(mTitleLabel);
-
         addGap(panel, dp(8));
 
-        // === Invite Code Row ===
-        LinearLayout codeRow = new LinearLayout(activity);
-        codeRow.setOrientation(LinearLayout.HORIZONTAL);
-        codeRow.setGravity(Gravity.CENTER_VERTICAL);
+        // ===== Invite code + link =====
+        LinearLayout inviteRow = new LinearLayout(activity);
+        inviteRow.setOrientation(LinearLayout.HORIZONTAL);
+        inviteRow.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView codeLbl = new TextView(activity);
-        codeLbl.setText("Code:");
-        codeLbl.setTextColor(GOLD);
-        codeLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        codeRow.addView(codeLbl);
+        mCodeLabel = new TextView(activity);
+        mCodeLabel.setText("Invite code: ----");
+        mCodeLabel.setTextColor(GOLD);
+        mCodeLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        mCodeLabel.setTypeface(null, android.graphics.Typeface.BOLD);
+        mCodeLabel.setLayoutParams(new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        inviteRow.addView(mCodeLabel);
 
-        mInviteCodeInput = new EditText(activity);
-        mInviteCodeInput.setSingleLine(true);
-        mInviteCodeInput.setHint(isCreate ? "Generating..." : "Enter code");
-        mInviteCodeInput.setTextColor(Color.WHITE);
-        mInviteCodeInput.setHintTextColor(0xFF888888);
-        mInviteCodeInput.setBackgroundColor(0xFF333333);
-        mInviteCodeInput.setPadding(dp(8), dp(4), dp(8), dp(4));
-        mInviteCodeInput.setEnabled(!isCreate); // leader can't edit (auto-generated)
-        LinearLayout.LayoutParams inputLp = new LinearLayout.LayoutParams(
-                0, dp(36), 1f);
-        codeRow.addView(mInviteCodeInput, inputLp);
-
-        // Copy button
         mCopyBtn = new Button(activity);
-        mCopyBtn.setText("\uD83D\uDCCB");
+        mCopyBtn.setText("\uD83D\uDCCB Copy");
         mCopyBtn.setBackgroundColor(TEAL);
         mCopyBtn.setTextColor(Color.WHITE);
-        mCopyBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        LinearLayout.LayoutParams copyLp = new LinearLayout.LayoutParams(dp(40), dp(36));
-        copyLp.leftMargin = dp(4);
+        mCopyBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
         mCopyBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { copyInviteCode(); }
+            @Override public void onClick(View v) { copyInviteLink(); }
         });
-        codeRow.addView(mCopyBtn, copyLp);
+        inviteRow.addView(mCopyBtn, new LinearLayout.LayoutParams(dp(72), dp(34)));
 
-        // Share button
         mShareBtn = new Button(activity);
-        mShareBtn.setText("\u2797");
+        mShareBtn.setText("\u2797 Share");
         mShareBtn.setBackgroundColor(0xFF4A90D9);
         mShareBtn.setTextColor(Color.WHITE);
-        mShareBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        LinearLayout.LayoutParams shareLp = new LinearLayout.LayoutParams(dp(40), dp(36));
-        shareLp.leftMargin = dp(2);
+        mShareBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        LinearLayout.LayoutParams shareLp = new LinearLayout.LayoutParams(dp(76), dp(34));
+        shareLp.leftMargin = dp(4);
         mShareBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { shareInviteLink(); }
         });
-        codeRow.addView(mShareBtn, shareLp);
+        inviteRow.addView(mShareBtn, shareLp);
+        panel.addView(inviteRow);
 
-        panel.addView(codeRow);
+        mLinkLabel = new TextView(activity);
+        mLinkLabel.setTextColor(0xFFAAAAAA);
+        mLinkLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        mLinkLabel.setTextIsSelectable(true);
+        mLinkLabel.setPadding(0, dp(2), 0, dp(4));
+        panel.addView(mLinkLabel);
 
-        addGap(panel, dp(6));
+        // ===== Join input (only until connected) =====
+        mJoinRow = new LinearLayout(activity);
+        mJoinRow.setOrientation(LinearLayout.HORIZONTAL);
+        mJoinRow.setGravity(Gravity.CENTER_VERTICAL);
 
-        // === Roster (scrollable player list) ===
-        TextView rosterHeader = new TextView(activity);
-        rosterHeader.setText("Team Members (" + mMembers.size() + "/4)");
-        rosterHeader.setTextColor(0xFFAAAAAA);
-        rosterHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        panel.addView(rosterHeader);
+        mJoinInput = new EditText(activity);
+        mJoinInput.setSingleLine(true);
+        mJoinInput.setHint("Paste invite link or code");
+        mJoinInput.setTextColor(Color.WHITE);
+        mJoinInput.setHintTextColor(0xFF888888);
+        mJoinInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        mJoinInput.setBackgroundColor(0xFF333333);
+        mJoinInput.setPadding(dp(8), dp(4), dp(8), dp(4));
+        mJoinInput.setLayoutParams(new LinearLayout.LayoutParams(0, dp(38), 1f));
+        mJoinRow.addView(mJoinInput);
 
-        mRosterScroll = new ScrollView(activity);
-        mRosterScroll.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(140)));
-        
-        mRosterList = new LinearLayout(activity);
-        mRosterList.setOrientation(LinearLayout.VERTICAL);
-        mRosterScroll.addView(mRosterList);
-        panel.addView(mRosterScroll);
-
-        addGap(panel, dp(6));
-
-        // === Chat Area Stub ===
-        mChatArea = new LinearLayout(activity);
-        mChatArea.setOrientation(LinearLayout.VERTICAL);
-        mChatArea.setBackgroundColor(0x22FFFFFF);
-        mChatArea.setPadding(dp(6), dp(4), dp(6), dp(4));
-        
-        TextView chatLabel = new TextView(activity);
-        chatLabel.setText("\uD83D\uDCAC Team Chat");
-        chatLabel.setTextColor(0xFF888888);
-        chatLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        mChatArea.addView(chatLabel);
-        
-        ScrollView chatScroll = new ScrollView(activity);
-        chatScroll.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(60)));
-        
-        TextView chatMessages = new TextView(activity);
-        chatMessages.setText("Chat will be available in a future update.");
-        chatMessages.setTextColor(0xFF666666);
-        chatMessages.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        chatScroll.addView(chatMessages);
-        mChatArea.addView(chatScroll);
-        
-        mChatInput = new EditText(activity);
-        mChatInput.setHint("Coming soon...");
-        mChatInput.setEnabled(false);
-        mChatInput.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        mChatArea.addView(mChatInput);
-        
-        panel.addView(mChatArea);
-
-        // === Game Mode / Props ===
-        mPropsText = new TextView(activity);
-        mPropsText.setText("Mode: Squad | Region: Local");
-        mPropsText.setTextColor(0xFF999999);
-        mPropsText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        mPropsText.setGravity(Gravity.CENTER);
-        panel.addView(mPropsText);
+        mJoinBtn = new Button(activity);
+        mJoinBtn.setText("Join");
+        mJoinBtn.setBackgroundColor(TEAL);
+        mJoinBtn.setTextColor(Color.WHITE);
+        mJoinBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        mJoinBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { joinFromInput(); }
+        });
+        LinearLayout.LayoutParams joinLp = new LinearLayout.LayoutParams(dp(76), dp(38));
+        joinLp.leftMargin = dp(4);
+        mJoinRow.addView(mJoinBtn, joinLp);
+        panel.addView(mJoinRow);
 
         addGap(panel, dp(8));
 
-        // Status text
-        mStatusText = new TextView(activity);
-        mStatusText.setTextColor(0xFF808080);
-        mStatusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        mStatusText.setGravity(Gravity.CENTER);
-        panel.addView(mStatusText);
+        // ===== Roster =====
+        mRosterHeader = new TextView(activity);
+        mRosterHeader.setText("Team Members (0/4)");
+        mRosterHeader.setTextColor(0xFFAAAAAA);
+        mRosterHeader.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        panel.addView(mRosterHeader);
+
+        ScrollView rosterScroll = new ScrollView(activity);
+        rosterScroll.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(150)));
+        mRosterList = new LinearLayout(activity);
+        mRosterList.setOrientation(LinearLayout.VERTICAL);
+        rosterScroll.addView(mRosterList);
+        panel.addView(rosterScroll);
 
         addGap(panel, dp(6));
 
-        // === Action Buttons ===
+        // ===== Room properties (leader) =====
+        LinearLayout propsRow = new LinearLayout(activity);
+        propsRow.setOrientation(LinearLayout.HORIZONTAL);
+        mRegionBtn = makeSmallButton("Region: Local");
+        mRegionBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { cycleRegion(); }
+        });
+        propsRow.addView(mRegionBtn, smallParams(true));
+        mModeBtn = makeSmallButton("Mode: Squad");
+        mModeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { cycleMode(); }
+        });
+        propsRow.addView(mModeBtn, smallParams(false));
+        mAutoFillBtn = makeSmallButton("Auto-fill: ON");
+        mAutoFillBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { toggleAutoFill(); }
+        });
+        propsRow.addView(mAutoFillBtn, smallParams(false));
+        panel.addView(propsRow);
+
+        // ===== Status =====
+        mStatusText = new TextView(activity);
+        mStatusText.setTextColor(0xFFAAAAAA);
+        mStatusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        mStatusText.setGravity(Gravity.CENTER);
+        mStatusText.setPadding(0, dp(4), 0, dp(4));
+        panel.addView(mStatusText);
+
+        // ===== Actions =====
         LinearLayout btnRow = new LinearLayout(activity);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
-
         mPlayBtn = new Button(activity);
         mPlayBtn.setText("\u25B6 Play");
         mPlayBtn.setBackgroundColor(GREEN);
         mPlayBtn.setShadowLayer(dp(2), 0, dp(2), GREEN_SHADOW);
         mPlayBtn.setTextColor(Color.WHITE);
         mPlayBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        mPlayBtn.setEnabled(false); // Enable when team is ready
-        LinearLayout.LayoutParams playLp = new LinearLayout.LayoutParams(
-                0, dp(42), 1f);
+        mPlayBtn.setEnabled(false);
+        LinearLayout.LayoutParams playLp = new LinearLayout.LayoutParams(0, dp(42), 1f);
         playLp.rightMargin = dp(4);
         mPlayBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { startPlay(); }
+            @Override public void onClick(View v) { startGame(); }
         });
         btnRow.addView(mPlayBtn, playLp);
 
         mLeaveBtn = new Button(activity);
         mLeaveBtn.setText("Leave \u2716");
         mLeaveBtn.setBackgroundColor(RED);
-        mLeaveBtn.setShadowLayer(dp(2), 0, dp(2), RED_SHADOW);
         mLeaveBtn.setTextColor(Color.WHITE);
         mLeaveBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        LinearLayout.LayoutParams leaveLp = new LinearLayout.LayoutParams(
-                0, dp(42), 1f);
+        LinearLayout.LayoutParams leaveLp = new LinearLayout.LayoutParams(0, dp(42), 1f);
         leaveLp.leftMargin = dp(4);
         mLeaveBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { leaveTeam(); }
+            @Override public void onClick(View v) { leave(); }
         });
         btnRow.addView(mLeaveBtn, leaveLp);
-
         panel.addView(btnRow);
 
         outerScroll.addView(panel);
-
         mRoot.addView(outerScroll);
 
-        if (isCreate) {
-            createTeam();
+        loadSiteInfo("");
+        render();
+    }
+
+    public interface OnCloseListener {
+        void onClose();
+    }
+
+    private OnCloseListener mOnClose;
+
+    public void setOnClose(OnCloseListener listener) {
+        mOnClose = listener;
+    }
+
+    // --- public API ---------------------------------------------------------
+
+    public View root() {
+        return mRoot;
+    }
+
+    public boolean isOpen() {
+        return mOpen;
+    }
+
+    public boolean isInGame() {
+        return mInGame;
+    }
+
+    /** Entry point from the menu / deep link. */
+    public void connect(boolean create, String rawLink) {
+        closeSocket();
+        loadSiteInfo(mHost.siteInfoJson());
+        mCreate = create;
+        mCode = TeamLinks.extractCode(rawLink);
+        mRoomUrl = mCode.isEmpty() ? "" : "#" + mCode;
+        mPlayers.clear();
+        mJoined = false;
+        mInGame = false;
+        mFindingGame = false;
+        mCaptchaEnabled = false;
+        mAutoFill = true;
+        mUserClosing = false;
+        mLocalPlayerId = -1;
+        mMaxPlayers = 4;
+        mPlayerName = getPlayerName();
+        mRegion = defaultRegion();
+        mGameModeIdx = defaultGameMode();
+        mJoinInput.setText(create ? "" : mCode);
+        mJoinRow.setVisibility(create ? View.GONE : View.VISIBLE);
+        mStatusText.setText("");
+
+        show();
+        if (create) {
+            mTitleLabel.setText("\uD83D\uDC65 Create Team");
+            mJoinRow.setVisibility(View.GONE);
+            openSocket();
+        } else if (mCode.isEmpty()) {
+            mTitleLabel.setText("\uD83D\uDC65 Join Team");
+            setStatus(l10n("index-enter-invite", "Enter an invite link or team code."));
         } else {
-            mInviteCodeInput.requestFocus();
+            mTitleLabel.setText("\uD83D\uDC65 Join Team");
+            mJoinRow.setVisibility(View.GONE);
+            openSocket();
         }
+        render();
     }
 
-    // ===== Network Operations =====
-
-    public void createTeam() {
-        setStatus("Creating team...");
-        String apiBase = "http://127.0.0.1:8000";
-        SurvApi.createTeam(apiBase, new SurvApi.Callback() {
-            @Override public void onResult(String json) {
-                if (json == null) {
-                    setStatus("Failed to create team");
-                    return;
-                }
-                String teamId = Json.peekString(json, "teamId");
-                String code = Json.peekString(json, "inviteCode");
-                if (code != null && !code.isEmpty()) {
-                    mTeamId = teamId != null ? teamId : "";
-                    mInviteCode = code;
-                    mInviteCodeInput.setText(code);
-                    mIsLeader = true;
-                    connectWebSocket();
-                    setStatus("Team created! Waiting for players...");
-                    
-                    // Add self as member
-                    addMember("You", true, 0, true);
-                } else {
-                    String error = Json.peekString(json, "error");
-                    setStatus("Error: " + (error != null ? error : "Unknown"));
-                }
-            }
-        });
+    public void showMessage(String text) {
+        setStatus(text != null ? text : "");
     }
 
-    private void joinTeam(String code) {
-        if (code == null || code.trim().isEmpty()) {
-            setStatus("Please enter an invite code");
+    /** A match started from this team: hide the UI but keep the socket. */
+    public void hideForGame() {
+        if (mInGame) {
             return;
         }
-        setStatus("Joining team " + code.trim() + "...");
-        String apiBase = "http://127.0.0.1:8000";
-        SurvApi.joinTeam(apiBase, code.trim(), new SurvApi.Callback() {
-            @Override public void onResult(String json) {
-                if (json == null) {
-                    setStatus("Failed to join team");
-                    return;
-                }
-                String teamId = Json.peekString(json, "teamId");
-                String wsUrl = Json.peekString(json, "wsUrl");
-                if (teamId != null) {
-                    mTeamId = teamId;
-                    mInviteCode = code.trim();
-                    mInviteCodeInput.setText(code);
-                    mIsLeader = false;
-                    mInviteCodeInput.setEnabled(false);
-                    
-                    // Add members from response
-                    parseMembers(json);
-                    
-                    if (wsUrl != null) {
-                        connectToWebSocket(wsUrl);
+        mInGame = true;
+        mOpen = false;
+        mRoot.setVisibility(View.GONE);
+        Log.i(TAG, "team hidden for game");
+    }
+
+    /** Returning from a team match (web `onGameComplete`). */
+    public void onGameComplete() {
+        if (!mInGame) {
+            return;
+        }
+        mInGame = false;
+        if (mWs != null && mWs.isRunning()) {
+            mWs.send("{\"type\":\"gameComplete\"}");
+        }
+        mOpen = true;
+        mRoot.setVisibility(View.VISIBLE);
+        render();
+        Log.i(TAG, "team game complete");
+    }
+
+    public void refresh() {
+        render();
+    }
+
+    // --- UI construction helpers -------------------------------------------
+
+    private Button makeSmallButton(String label) {
+        Button b = new Button(mActivity);
+        b.setText(label);
+        b.setTextColor(Color.WHITE);
+        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        b.setBackgroundColor(0xFF3A3A3A);
+        b.setAllCaps(false);
+        return b;
+    }
+
+    private LinearLayout.LayoutParams smallParams(boolean first) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(32), 1f);
+        lp.rightMargin = first ? dp(4) : 0;
+        if (!first) {
+            lp.leftMargin = dp(2);
+        }
+        return lp;
+    }
+
+    // --- connection ---------------------------------------------------------
+
+    private void openSocket() {
+        setStatus(mCreate ? "Creating team..." : "Joining team...");
+        if (mCreate && mCode.isEmpty()) {
+            mRoomUrl = "";
+        }
+        String token = "";
+        AccountManager account = AccountManager.peek();
+        if (account != null) {
+            token = account.getSessionToken();
+        }
+        final TeamSocket ws = new TeamSocket();
+        mWs = ws;
+        boolean started = ws.connect(SurvApi.teamWsUrl(), token,
+                new TeamSocket.OnOpen() {
+                    @Override public void onOpen() {
+                        mHandler.post(new Runnable() {
+                            @Override public void run() {
+                                if (mWs != ws) return;
+                                sendHello(ws);
+                            }
+                        });
                     }
-                    setStatus("Joined team!");
-                } else {
-                    String error = Json.peekString(json, "error");
-                    setStatus("Error: " + (error != null ? error : "Invalid code"));
-                }
-            }
-        });
-    }
-
-    private void connectWebSocket() {
-        String wsUrl = "ws://127.0.0.1:9001/team/" + mTeamId;
-        connectToWebSocket(wsUrl);
-    }
-
-    private void connectToWebSocket(String url) {
-        TeamSocket ws = new TeamSocket();
-        boolean ok = ws.connect(url, new TeamSocket.OnMessage() {
-            @Override public void onMessage(String msg) {
-                Log.d(TAG, "Team WS msg: " + msg);
-                handleMessage(msg);
-            }
-        }, new TeamSocket.OnError() {
-            @Override public void onError(String reason) {
-                Log.i(TAG, "Team WS closed: " + reason);
-                mHandler.post(() -> setStatus("Connection error: " + reason));
-            }
-        });
-        if (ok) {
-            mWs = ws;
-            Log.i(TAG, "Team WS connected");
-            mHandler.post(() -> setStatus("Connected to team server"));
-            
-            // Send join message
-            String config = SurvBridge.getConfigJson();
-            String playerName = Json.peekString(config, "playerName");
-            if (playerName == null || playerName.isEmpty()) playerName = "Player";
-            ws.send("{\"type\":\"join\",\"name\":\"" + escapeJson(playerName) + "\"}");
-        } else {
-            setStatus("Failed to connect");
+                },
+                new TeamSocket.OnMessage() {
+                    @Override public void onMessage(final String text) {
+                        mHandler.post(new Runnable() {
+                            @Override public void run() {
+                                if (mWs == ws) handleMessage(text);
+                            }
+                        });
+                    }
+                },
+                new TeamSocket.OnError() {
+                    @Override public void onError(final String reason) {
+                        mHandler.post(new Runnable() {
+                            @Override public void run() {
+                                if (mWs == ws) handleSocketError(reason);
+                            }
+                        });
+                    }
+                });
+        if (!started) {
+            setStatus("Invalid team server URL.");
         }
     }
+
+    private void sendHello(TeamSocket ws) {
+        String name = SurvApi.escapeJson(mPlayerName);
+        if (mCreate) {
+            String msg = "{\"type\":\"create\",\"data\":{\"roomData\":{"
+                    + "\"roomUrl\":\"\",\"findingGame\":false,"
+                    + "\"region\":\"" + SurvApi.escapeJson(mRegion) + "\","
+                    + "\"autoFill\":" + (mAutoFill ? "true" : "false") + ","
+                    + "\"gameModeIdx\":" + mGameModeIdx + "},"
+                    + "\"playerData\":{\"name\":\"" + name + "\"}}}";
+            ws.send(msg);
+        } else {
+            String msg = "{\"type\":\"join\",\"data\":{\"roomUrl\":\""
+                    + SurvApi.escapeJson(mCode) + "\","
+                    + "\"playerData\":{\"name\":\"" + name + "\"}}}";
+            ws.send(msg);
+        }
+    }
+
+    private void handleSocketError(String reason) {
+        if (mUserClosing) {
+            return;
+        }
+        Log.w(TAG, "team socket error: " + reason);
+        if (mJoined) {
+            mHost.returnToMenu("index-lost-connection");
+        } else {
+            setStatus(l10n("index-lost-connection", "Lost connection to team."));
+            mJoinBtn.setEnabled(true);
+            if (!mCreate) {
+                mJoinRow.setVisibility(View.VISIBLE);
+            }
+        }
+    }
+
+    // --- protocol -----------------------------------------------------------
 
     private void handleMessage(String json) {
-        mHandler.post(() -> {
-            String type = Json.peekString(json, "type");
-            
-            if ("roster".equals(type)) {
-                parseMembers(json);
-            } else if ("playerJoined".equals(type)) {
-                String name = Json.peekString(json, "name");
-                boolean leader = "true".equals(Json.peekString(json, "isLeader"));
-                addMember(name, leader, 0, false);
-                toast(name + " joined the team");
-            } else if ("playerLeft".equals(type)) {
-                String name = Json.peekString(json, "name");
-                removeMember(name);
-                toast(name + " left the team");
-            } else if ("readyChanged".equals(type)) {
-                String name = Json.peekString(json, "name");
-                boolean ready = "true".equals(Json.peekString(json, "ready"));
-                updateReadyStatus(name, ready);
-            } else if ("startGame".equals(type)) {
-                String token = Json.peekString(json, "joinToken");
-                if (token != null) {
-                    List<String> urls = new ArrayList<String>();
-                    int at = json.indexOf("\"urls\"");
-                    if (at >= 0) {
-                        int arrStart = json.indexOf('[', at);
-                    }
-                    if (urls.isEmpty()) urls.add("ws://127.0.0.1:9001");
-                    SurvBridge.onJoinUrls(urls.toArray(new String[0]), token);
-                    hide();
-                    if (mHost != null) mHost.enterGame(0);
-                }
+        try {
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            String type = root.has("type") ? root.get("type").getAsString() : "";
+            JsonObject data = root.has("data") && root.get("data").isJsonObject()
+                    ? root.getAsJsonObject("data")
+                    : new JsonObject();
+
+            if ("state".equals(type)) {
+                applyState(data);
+            } else if ("joinGame".equals(type)) {
+                applyJoinGame(data);
+            } else if ("error".equals(type)) {
+                String err = data.has("type") ? data.get("type").getAsString() : "lost_conn";
+                Log.w(TAG, "team error: " + err);
+                closeSocket();
+                mHost.returnToMenu(errorL10nKey(err));
+            } else if ("kicked".equals(type)) {
+                closeSocket();
+                mHost.returnToMenu("index-team-kicked");
             }
-        });
+            // keepAlive: no-op
+        } catch (Exception e) {
+            Log.w(TAG, "team message parse failed: " + e.getMessage());
+        }
     }
 
-    // ===== Roster Management =====
+    private void applyState(JsonObject data) {
+        mJoined = true;
+        mHandler.removeCallbacks(mKeepAlive);
+        mHandler.postDelayed(mKeepAlive, 10000);
 
-    private void parseMembers(String json) {
-        mMembers.clear();
+        mLocalPlayerId = data.has("localPlayerId") ? data.get("localPlayerId").getAsInt() : -1;
+
+        JsonObject room = data.has("room") && data.get("room").isJsonObject()
+                ? data.getAsJsonObject("room")
+                : null;
+        if (room != null) {
+            String roomUrl = str(room, "roomUrl");
+            mRoomUrl = roomUrl;
+            mCode = roomUrl.startsWith("#") ? roomUrl.substring(1) : roomUrl;
+            mRegion = str(room, "region");
+            mAutoFill = bool(room, "autoFill", true);
+            mGameModeIdx = intVal(room, "gameModeIdx", 1);
+            mMaxPlayers = intVal(room, "maxPlayers", 4);
+            mFindingGame = bool(room, "findingGame", false);
+            mCaptchaEnabled = bool(room, "captchaEnabled", false);
+            if (room.has("enabledGameModeIdxs") && room.get("enabledGameModeIdxs").isJsonArray()) {
+                mEnabledModes.clear();
+                JsonArray modes = room.getAsJsonArray("enabledGameModeIdxs");
+                for (int i = 0; i < modes.size(); i++) {
+                    mEnabledModes.add(modes.get(i).getAsInt());
+                }
+            }
+            String lastError = str(room, "lastError");
+            if (!lastError.isEmpty()) {
+                setStatus(errorText(lastError));
+            } else {
+                setStatus(mFindingGame ? "Finding game..." : "");
+            }
+        }
+
+        mPlayers.clear();
+        if (data.has("players") && data.get("players").isJsonArray()) {
+            JsonArray players = data.getAsJsonArray("players");
+            for (int i = 0; i < players.size(); i++) {
+                JsonElement el = players.get(i);
+                if (el == null || !el.isJsonObject()) continue;
+                JsonObject p = el.getAsJsonObject();
+                TeamPlayer player = new TeamPlayer();
+                player.name = str(p, "name");
+                player.playerId = intVal(p, "playerId", -1);
+                player.isLeader = bool(p, "isLeader", false);
+                player.inGame = bool(p, "inGame", false);
+                mPlayers.add(player);
+            }
+        }
+
+        mJoinRow.setVisibility(View.GONE);
+        render();
+    }
+
+    private void applyJoinGame(JsonObject data) {
+        List<String> urls = new ArrayList<String>();
+        if (data.has("urls") && data.get("urls").isJsonArray()) {
+            JsonArray arr = data.getAsJsonArray("urls");
+            for (int i = 0; i < arr.size(); i++) {
+                urls.add(arr.get(i).getAsString());
+            }
+        }
+        String token = str(data, "joinToken");
+        if (urls.isEmpty() || token.isEmpty()) {
+            setStatus("Invalid join data from team server.");
+            return;
+        }
+        setStatus("Joining game...");
+        hideForGame();
+        SurvBridge.onJoinUrls(urls.toArray(new String[0]), token);
+    }
+
+    // --- rendering ----------------------------------------------------------
+
+    private void render() {
+        mTitleLabel.setText(mCreate ? "\uD83D\uDC65 Create Team" : "\uD83D\uDC65 Join Team");
+        mCodeLabel.setText(mCode.isEmpty() ? "Invite code: ----" : "Invite code: " + mCode);
+        String link = TeamLinks.inviteUrl(mCode);
+        mLinkLabel.setText(link);
+        boolean hasLink = !link.isEmpty();
+        mCopyBtn.setEnabled(hasLink);
+        mShareBtn.setEnabled(hasLink);
+        if (!mJoined) {
+            mJoinRow.setVisibility(mCreate ? View.GONE : View.VISIBLE);
+        }
+
+        // Roster
+        mRosterHeader.setText("Team Members (" + mPlayers.size() + "/" + mMaxPlayers + ")");
         mRosterList.removeAllViews();
-        
-        // Find members array
-        int at = json.indexOf("\"members\"");
-        if (at < 0) at = json.indexOf("\"roster\"");
-        if (at < 0) return;
-        
-        int colon = json.indexOf(':', at);
-        int arrStart = json.indexOf('[', colon);
-        if (arrStart < 0) return;
-        
-        // Parse member objects (simplified)
-        int depth = 0;
-        int objStart = -1;
-        for (int i = arrStart; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (c == '{') {
-                if (depth == 0) objStart = i;
-                depth++;
-            } else if (c == '}') {
-                depth--;
-                if (depth == 0 && objStart >= 0) {
-                    String obj = json.substring(objStart, i + 1);
-                    String name = Json.peekString(obj, "name");
-                    if (name != null) {
-                        boolean leader = "true".equals(Json.peekString(obj, "isLeader"));
-                        boolean ready = "true".equals(Json.peekString(obj, "ready"));
-                        int ping = 0;
-                        try { ping = Integer.parseInt(Json.peekString(obj, "ping")); } catch (Exception e) {}
-                        addMember(name, leader, ping, ready);
-                    }
-                    objStart = -1;
-                }
-            }
+        for (int i = 0; i < mPlayers.size(); i++) {
+            renderPlayer(mPlayers.get(i));
         }
-        
-        updateRosterHeader();
-        updatePlayButton();
-    }
-
-    private void addMember(String name, boolean isLeader, int ping, boolean ready) {
-        TeamMember m = new TeamMember();
-        m.name = name;
-        m.isLeader = isLeader;
-        m.ping = ping;
-        m.ready = ready;
-        m.isSelf = "You".equals(name) || name.equals(getPlayerName());
-        mMembers.add(m);
-        
-        renderMemberCard(m);
-        updateRosterHeader();
-        updatePlayButton();
-    }
-
-    private void removeMember(String name) {
-        for (int i = 0; i < mMembers.size(); i++) {
-            if (mMembers.get(i).name.equals(name)) {
-                mMembers.remove(i);
-                break;
-            }
+        if (mPlayers.isEmpty()) {
+            TextView hint = new TextView(mActivity);
+            hint.setText(mCreate ? "Waiting for players..." : "Connecting...");
+            hint.setTextColor(0xFF777777);
+            hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            mRosterList.addView(hint);
         }
-        rebuildRoster();
-        updatePlayButton();
-    }
 
-    private void updateReadyStatus(String name, boolean ready) {
-        for (TeamMember m : mMembers) {
-            if (m.name.equals(name)) {
-                m.ready = ready;
-                break;
-            }
+        // Room props
+        mRegionBtn.setText("Region: " + regionName(mRegion));
+        mModeBtn.setText("Mode: " + modeName(mGameModeIdx));
+        mAutoFillBtn.setText("Auto-fill: " + (mAutoFill ? "ON" : "OFF"));
+        boolean leader = isLeader();
+        setPropEnabled(mRegionBtn, leader && mJoined);
+        setPropEnabled(mModeBtn, leader && mJoined);
+        setPropEnabled(mAutoFillBtn, leader && mJoined);
+
+        // Play
+        boolean anyInGame = false;
+        for (int i = 0; i < mPlayers.size(); i++) {
+            anyInGame |= mPlayers.get(i).inGame;
         }
-        rebuildRoster();
-        updatePlayButton();
+        if (leader) {
+            boolean canPlay = !mFindingGame && !anyInGame && !mCaptchaEnabled;
+            mPlayBtn.setEnabled(canPlay);
+            mPlayBtn.setText(mFindingGame ? "Finding game..."
+                    : "Play (" + mPlayers.size() + ")");
+        } else {
+            mPlayBtn.setEnabled(false);
+            mPlayBtn.setText("Waiting for leader");
+        }
+        if (mCaptchaEnabled) {
+            mPlayBtn.setText("Captcha required");
+        }
     }
 
-    private void renderMemberCard(TeamMember m) {
+    private void renderPlayer(final TeamPlayer player) {
         LinearLayout card = new LinearLayout(mActivity);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(dp(8), dp(6), dp(8), dp(6));
-        
-        // Style based on role
+
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(m.isLeader ? 0x33FFD700 : 0x22FFFFFF);
+        bg.setColor(player.isLeader ? 0x33FFD700 : 0x22FFFFFF);
         bg.setCornerRadius(dp(6));
-        bg.setStroke(m.isSelf ? dp(2) : dp(1), m.isLeader ? GOLD : 0x33FFFFFF);
+        bg.setStroke(player.playerId == mLocalPlayerId ? dp(2) : dp(1),
+                player.isLeader ? GOLD : 0x33FFFFFF);
         card.setBackground(bg);
-        
-        // Leader crown / status icon
+
         TextView icon = new TextView(mActivity);
-        if (m.isLeader) {
-            icon.setText("\uD83D\uDC51"); // crown
-            icon.setTextColor(GOLD);
-        } else if (m.ready) {
-            icon.setText("\u2705"); // checkmark
-            icon.setTextColor(0xFF4CAF50);
-        } else {
-            icon.setText("\u23F3"); // hourglass
-            icon.setTextColor(0xFF999999);
-        }
-        icon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        icon.setText(player.isLeader ? "\uD83D\uDC51" : (player.inGame ? "\uD83C\uDFAE" : "\u2705"));
+        icon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         card.addView(icon);
-        
-        // Name
-        TextView nameView = new TextView(mActivity);
-        nameView.setText(m.name + (m.isLeader ? " (LEADER)" : "") + (m.isSelf ? " (YOU)" : ""));
-        nameView.setTextColor(m.isLeader ? GOLD : Color.WHITE);
-        nameView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        nameView.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        card.addView(nameView);
-        
-        // Ping indicator
-        View pingDot = new View(mActivity);
-        int dotSize = dp(10);
-        pingDot.setLayoutParams(new ViewGroup.LayoutParams(dotSize, dotSize));
-        GradientDrawable dotBg = new GradientDrawable();
-        dotBg.setShape(GradientDrawable.OVAL);
-        dotBg.setColor(getPingColor(m.ping));
-        pingDot.setBackground(dotBg);
-        card.addView(pingDot);
-        
-        // In-game badge
-        if (m.inGame) {
-            TextView ingameBadge = new TextView(mActivity);
-            ingameBadge.setText("IN GAME");
-            ingameBadge.setTextColor(0xFF4CAF70);
-            ingameBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
-            card.addView(ingameBadge);
-        }
-        
-        // Ready toggle (for non-leader self)
-        if (m.isSelf && !m.isLeader) {
-            Button readyToggle = new Button(mActivity);
-            readyToggle.setText(m.ready ? "\u2705 Ready" : "\u23F3 Not Ready");
-            readyToggle.setBackgroundColor(m.ready ? GREEN : GREY);
-            readyToggle.setTextColor(Color.WHITE);
-            readyToggle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
-            readyToggle.setOnClickListener(new View.OnClickListener() {
+
+        TextView name = new TextView(mActivity);
+        name.setText(player.name
+                + (player.playerId == mLocalPlayerId ? " (YOU)" : "")
+                + (player.inGame ? "  IN GAME" : ""));
+        name.setTextColor(player.isLeader ? GOLD : Color.WHITE);
+        name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        name.setPadding(dp(6), 0, 0, 0);
+        name.setLayoutParams(new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        card.addView(name);
+
+        if (isLeader() && player.playerId != mLocalPlayerId) {
+            Button kick = new Button(mActivity);
+            kick.setText("Kick");
+            kick.setBackgroundColor(0xFF8B3A3A);
+            kick.setTextColor(Color.WHITE);
+            kick.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+            kick.setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
-                    toggleReady();
+                    send("{\"type\":\"kick\",\"data\":{\"playerId\":" + player.playerId + "}}");
                 }
             });
-            card.addView(readyToggle);
+            card.addView(kick, new LinearLayout.LayoutParams(dp(56), dp(30)));
         }
-        
+
         mRosterList.addView(card);
     }
 
-    private void rebuildRoster() {
-        mRosterList.removeAllViews();
-        for (TeamMember m : mMembers) {
-            renderMemberCard(m);
-        }
-    }
+    // --- actions ------------------------------------------------------------
 
-    private void updateRosterHeader() {
-        // Find header by searching parent
-        int count = mRosterList.getChildCount();
-        // Update would need reference - simplified here
-    }
-
-    private void updatePlayButton() {
-        // Leader can always start, or everyone must be ready
-        boolean canPlay = mIsLeader && mMembers.size() >= 1;
-        if (!mIsLeader) {
-            canPlay = true; // Non-leaders just see the button disabled
-        }
-        mPlayBtn.setEnabled(canPlay);
-        if (canPlay && mMembers.size() >= 2) {
-            mPlayBtn.setText("\u25B6 Play (" + mMembers.size() + ")");
-        } else {
-            mPlayBtn.setText("\u25B6 Play");
-        }
-    }
-
-    private int getPingColor(int ping) {
-        if (ping < 100) return PING_GOOD;
-        if (ping < 200) return PING_MEDIUM;
-        return PING_BAD;
-    }
-
-    // ===== Actions =====
-
-    private void copyInviteCode() {
-        String code = mInviteCodeInput.getText().toString().trim();
+    private void joinFromInput() {
+        String code = TeamLinks.extractCode(mJoinInput.getText().toString());
         if (code.isEmpty()) {
-            toast("No code to copy");
+            setStatus(l10n("index-enter-invite", "Enter an invite link or team code."));
             return;
         }
-        
-        ClipboardManager clipboard = (ClipboardManager) mActivity.getSystemService(Context.CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText("invite code", code);
-        clipboard.setPrimaryClip(clip);
-        toast("Copied: " + code);
+        mCode = code;
+        mRoomUrl = "#" + code;
+        mCreate = false;
+        mJoinBtn.setEnabled(false);
+        mJoinInput.setText(code);
+        closeSocket();
+        openSocket();
+        render();
+    }
+
+    private void cycleRegion() {
+        if (!isLeader() || mRegions.isEmpty()) return;
+        int idx = mRegions.indexOf(mRegion);
+        mRegion = mRegions.get((idx + 1) % mRegions.size());
+        sendRoomProps();
+        render();
+    }
+
+    private void cycleMode() {
+        if (!isLeader() || mEnabledModes.isEmpty()) return;
+        int idx = mEnabledModes.indexOf(mGameModeIdx);
+        mGameModeIdx = mEnabledModes.get((idx + 1) % mEnabledModes.size());
+        sendRoomProps();
+        render();
+    }
+
+    private void toggleAutoFill() {
+        if (!isLeader()) return;
+        mAutoFill = !mAutoFill;
+        sendRoomProps();
+        render();
+    }
+
+    private void sendRoomProps() {
+        String msg = "{\"type\":\"setRoomProps\",\"data\":{"
+                + "\"roomUrl\":\"" + SurvApi.escapeJson(mRoomUrl) + "\","
+                + "\"findingGame\":" + (mFindingGame ? "true" : "false") + ","
+                + "\"region\":\"" + SurvApi.escapeJson(mRegion) + "\","
+                + "\"autoFill\":" + (mAutoFill ? "true" : "false") + ","
+                + "\"gameModeIdx\":" + mGameModeIdx + "}}";
+        send(msg);
+    }
+
+    private void startGame() {
+        if (!isLeader() || mFindingGame) return;
+        mFindingGame = true;
+        render();
+        String msg = "{\"type\":\"playGame\",\"data\":{"
+                + "\"version\":1028,"
+                + "\"region\":\"" + SurvApi.escapeJson(mRegion) + "\","
+                + "\"zones\":[\"" + SurvApi.escapeJson(mRegion) + "\"]}}";
+        send(msg);
+    }
+
+    private void copyInviteLink() {
+        String link = TeamLinks.inviteUrl(mCode);
+        if (link.isEmpty()) {
+            toast("No invite link yet");
+            return;
+        }
+        ClipboardManager clipboard = (ClipboardManager) mActivity.getSystemService(
+                Context.CLIPBOARD_SERVICE);
+        clipboard.setPrimaryClip(ClipData.newPlainText("team invite link", link));
+        toast("Copied: " + link);
     }
 
     private void shareInviteLink() {
-        String code = mInviteCodeInput.getText().toString().trim();
-        if (code.isEmpty()) {
-            toast("No code to share");
+        String link = TeamLinks.inviteUrl(mCode);
+        if (link.isEmpty()) {
+            toast("No invite link yet");
             return;
         }
-        
-        Intent shareIntent = new Intent(Intent.ACTION_SEND);
-        shareIntent.setType("text/plain");
-        shareIntent.putExtra(Intent.EXTRA_TEXT, 
-                "Join my Survev squad! Code: " + code + "\nDownload at https://survev.io");
-        mActivity.startActivity(Intent.createChooser(shareIntent, "Share Invite Code"));
+        Intent share = new Intent(Intent.ACTION_SEND);
+        share.setType("text/plain");
+        share.putExtra(Intent.EXTRA_TEXT, "Join my Survev squad! " + link);
+        mActivity.startActivity(Intent.createChooser(share, "Share Invite Link"));
     }
 
-    private void toggleReady() {
-        if (mWs != null && mWs.isRunning()) {
-            boolean newReady = false;
-            for (TeamMember m : mMembers) {
-                if (m.isSelf) {
-                    newReady = !m.ready;
-                    break;
-                }
-            }
-            mWs.send("{\"type\":\"setReady\",\"ready\":" + newReady + "}");
-        }
-    }
-
-    private void startPlay() {
-        if (mWs != null && mWs.isRunning()) {
-            mWs.send("{\"type\":\"startGame\"}");
-            setStatus("Starting game...");
+    private void leave() {
+        if (mOnClose != null) {
+            mOnClose.onClose();
         } else {
-            setStatus("Not connected to team server");
+            hide();
         }
+        mHost.leaveTeam();
     }
 
-    private void leaveTeam() {
+    public void hide() {
+        mUserClosing = true;
+        closeSocket();
+        mHandler.removeCallbacks(mKeepAlive);
+        mOpen = false;
+        mInGame = false;
+        mJoined = false;
+        mRoot.setVisibility(View.GONE);
+        Log.i(TAG, "team hide");
+    }
+
+    private void closeSocket() {
         if (mWs != null) {
-            mWs.send("{\"type\":\"leave\"}");
             mWs.close();
             mWs = null;
         }
-        hide();
-        if (mHost != null) mHost.hideTeam();
+        mHandler.removeCallbacks(mKeepAlive);
     }
 
-    // ===== Helpers =====
+    private void send(String json) {
+        if (mWs != null && mWs.isRunning()) {
+            mWs.send(json);
+        }
+    }
+
+    // --- helpers ------------------------------------------------------------
+
+    private boolean isLeader() {
+        for (int i = 0; i < mPlayers.size(); i++) {
+            TeamPlayer p = mPlayers.get(i);
+            if (p.playerId == mLocalPlayerId) {
+                return p.isLeader;
+            }
+        }
+        return mCreate && mJoined;
+    }
 
     private void setStatus(String text) {
-        mStatusText.setText(text);
-        Log.i(TAG, text);
+        mStatusText.setText(text != null ? text : "");
     }
 
-    private void toast(final String text) {
-        Toast.makeText(mActivity, text, Toast.LENGTH_SHORT).show();
+    private void setPropEnabled(Button b, boolean enabled) {
+        b.setEnabled(enabled);
+        b.setAlpha(enabled ? 1f : 0.55f);
     }
 
     private String getPlayerName() {
-        String config = SurvBridge.getConfigJson();
-        String name = Json.peekString(config, "playerName");
-        return (name != null && !name.isEmpty()) ? name : "Player";
+        String name = Json.peekString(SurvBridge.getConfigJson(), "playerName");
+        if (name != null && !name.isEmpty()) {
+            return name;
+        }
+        return "Player";
+    }
+
+    private void loadSiteInfo(String json) {
+        mRegions.clear();
+        mSiteTeamModes.clear();
+        mEnabledModes.clear();
+        try {
+            if (json == null || json.isEmpty()) {
+                throw new Exception("no site info");
+            }
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            if (root.has("pops") && root.get("pops").isJsonObject()) {
+                JsonObject pops = root.getAsJsonObject("pops");
+                for (String key : pops.keySet()) {
+                    mRegions.add(key);
+                }
+            }
+            if (root.has("modes") && root.get("modes").isJsonArray()) {
+                JsonArray modes = root.getAsJsonArray("modes");
+                for (int i = 0; i < modes.size(); i++) {
+                    JsonObject mode = modes.get(i).getAsJsonObject();
+                    mSiteTeamModes.add(intVal(mode, "teamMode", 1));
+                    if (bool(mode, "enabled", false) && intVal(mode, "teamMode", 1) > 1) {
+                        mEnabledModes.add(i);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "site info unavailable (" + e.getMessage() + "), using defaults");
+        }
+
+        // The native menu owns the HTTP fetch, and a deep link can arrive before
+        // it completes. The default deployment mode table is Solo/Duo/Squad, so
+        // keep the mode controls usable in that case.
+        if (mSiteTeamModes.isEmpty()) {
+            mSiteTeamModes.add(1);
+            mSiteTeamModes.add(2);
+            mSiteTeamModes.add(4);
+        }
+        if (mEnabledModes.isEmpty()) {
+            mEnabledModes.add(1);
+            mEnabledModes.add(2);
+        }
+    }
+
+    private String defaultRegion() {
+        String configured = Json.peekString(SurvBridge.getConfigJson(), "region");
+        if (configured != null && mRegions.contains(configured)) {
+            return configured;
+        }
+        if (!mRegions.isEmpty()) {
+            return mRegions.get(0);
+        }
+        return configured != null && !configured.isEmpty() ? configured : "na";
+    }
+
+    private int defaultGameMode() {
+        int configured = Json.peekInt(SurvBridge.getConfigJson(), "gameModeIdx");
+        if (mEnabledModes.contains(configured)) {
+            return configured;
+        }
+        if (!mEnabledModes.isEmpty()) {
+            return mEnabledModes.get(0);
+        }
+        return 1;
+    }
+
+    private String regionName(String region) {
+        String key = "index-" + region;
+        String text = l10n(key, null);
+        if (text != null && !text.isEmpty()) {
+            return text;
+        }
+        return region.isEmpty() ? "Local" : region;
+    }
+
+    private String modeName(int modeIdx) {
+        int teamMode = modeIdx >= 0 && modeIdx < mSiteTeamModes.size()
+                ? mSiteTeamModes.get(modeIdx)
+                : 4;
+        if (teamMode <= 1) return "Solo";
+        if (teamMode == 2) return "Duo";
+        return "Squad";
+    }
+
+    private String errorL10nKey(String error) {
+        if ("join_full".equals(error)) return "index-team-is-full";
+        if ("join_not_found".equals(error)) return "index-failed-joining-team";
+        if ("create_failed".equals(error)) return "index-failed-creating-team";
+        if ("join_failed".equals(error)) return "index-failed-joining-team";
+        if ("join_game_failed".equals(error)) return "index-failed-joining-game";
+        if ("find_game_error".equals(error) || "find_game_full".equals(error)) {
+            return "index-failed-finding-game";
+        }
+        if ("find_game_invalid_protocol".equals(error)) return "index-invalid-protocol";
+        if ("find_game_invalid_captcha".equals(error)) return "index-invalid-captcha";
+        if ("banned".equals(error)) return "index-ip-banned";
+        if ("behind_proxy".equals(error)) return "index-behind-proxy";
+        if ("rate_limited".equals(error)) return "index-rate-limited";
+        if ("kicked".equals(error)) return "index-team-kicked";
+        return "index-lost-connection";
+    }
+
+    private String errorText(String error) {
+        String key = errorL10nKey(error);
+        String text = l10n(key, null);
+        return text != null && !text.isEmpty() ? text : "Team error: " + error;
+    }
+
+    private String l10n(String key, String fallback) {
+        String text = Json.peekString(SurvBridge.getL10nJson(), key);
+        return text != null && !text.isEmpty() ? text : fallback;
+    }
+
+    private void show() {
+        mOpen = true;
+        mRoot.setVisibility(View.VISIBLE);
+        Log.i(TAG, "team show create=" + mCreate + " code=" + mCode);
+    }
+
+    private void toast(String text) {
+        Toast.makeText(mActivity, text, Toast.LENGTH_SHORT).show();
     }
 
     private void addGap(LinearLayout parent, int height) {
@@ -697,73 +985,29 @@ public class TeamFragment {
         parent.addView(gap);
     }
 
-    private String escapeJson(String s) {
-        if (s == null) return "";
-        StringBuilder out = new StringBuilder();
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            switch (c) {
-                case '"': out.append("\\\""); break;
-                case '\\': out.append("\\\\"); break;
-                case '\n': out.append("\\n"); break;
-                case '\r': out.append("\\r"); break;
-                default: out.append(c); break;
-            }
-        }
-        return out.toString();
+    private static String str(JsonObject obj, String key) {
+        JsonElement el = obj.get(key);
+        return el != null && !el.isJsonNull() ? el.getAsString() : "";
     }
 
-    // ===== Public API =====
-
-    public View root() { return mRoot; }
-
-    public void show() {
-        if (mOpen) return;
-        mOpen = true;
-        mRoot.setVisibility(View.VISIBLE);
-        
-        if (!mIsCreate) {
-            String code = mInviteCodeInput.getText().toString().trim();
-            if (!code.isEmpty()) {
-                joinTeam(code);
-            }
-        }
+    private static boolean bool(JsonObject obj, String key, boolean fallback) {
+        JsonElement el = obj.get(key);
+        return el != null && !el.isJsonNull() ? el.getAsBoolean() : fallback;
     }
 
-    public void hide() {
-        if (!mOpen) return;
-        mOpen = false;
-        mRoot.setVisibility(View.GONE);
-        
-        if (mWs != null) {
-            mWs.close();
-            mWs = null;
-        }
-    }
-
-    public boolean isOpen() { return mOpen; }
-
-    public void setInviteCode(String code) {
-        if (code != null && !code.isEmpty()) {
-            mInviteCodeInput.setText(code);
-            if (!mIsCreate) {
-                joinTeam(code);
-            }
-        }
+    private static int intVal(JsonObject obj, String key, int fallback) {
+        JsonElement el = obj.get(key);
+        return el != null && !el.isJsonNull() ? el.getAsInt() : fallback;
     }
 
     private int dp(int value) {
         return (int) (value * mActivity.getResources().getDisplayMetrics().density + 0.5f);
     }
 
-    // ===== Types =====
-
-    static class TeamMember {
+    static class TeamPlayer {
         String name;
+        int playerId;
         boolean isLeader;
-        boolean isSelf;
-        int ping;
-        boolean ready;
         boolean inGame;
     }
 }

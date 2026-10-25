@@ -30,6 +30,25 @@ public final class SurvApi {
     /** Default API origin (mirrors the C++ DevConfig.h `kApiBaseUrl`). */
     public static final String DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 
+    /**
+     * The `/team_v2` WebSocket endpoint, derived from the API origin (the web
+     * client proxies it there; native connects directly).
+     */
+    public static String teamWsUrl() {
+        String base = DEFAULT_API_BASE_URL;
+        if (base.startsWith("https://")) {
+            base = "wss://" + base.substring("https://".length());
+        } else if (base.startsWith("http://")) {
+            base = "ws://" + base.substring("http://".length());
+        } else {
+            base = "ws://" + base;
+        }
+        while (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+        return base + "/team_v2";
+    }
+
     private SurvApi() {}
 
     /**

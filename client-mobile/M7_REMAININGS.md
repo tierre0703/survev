@@ -223,12 +223,11 @@ returns to the menu. Keep screenshots few (each `screencap` is ~1 MB).
 
 ### T3. Team screen polish (`client/src/ui/teamMenu.ts`)
 
-- Roster/region/mode/auto-fill/Play are wired; remaining: the invite link
-  copy button, per-player kick, and the in-game rename flow.
-- `onPlay` → `gameScene->enterWithJoin(match.urls, match.joinToken)` works;
-  `GameScene` leaving a team game calls `TeamMenu::onGameComplete()`.
-- The web client shows `#msg-wait-reason` for non-leaders; the native screen
-  hides the Play button for non-leaders instead.
+- **Landed in Session 43** (see `REMAININGS.md` §3): the real `/team_v2`
+  protocol, invite-link copy/share/paste, `survev://team` deep links, per-player
+  kick and leader region/mode/auto-fill controls.
+- Remaining: the in-game rename flow (`changeName`), and the web's
+  `#msg-wait-reason` text (the native screen disables Play instead).
 
 ### T4. HUD completion (`client/src/ui/ui2.ts`)
 
