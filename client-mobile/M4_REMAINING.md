@@ -2861,7 +2861,11 @@ filtering all use the same frame's state.
   and loot rotations no longer negate the web numeric; negating mirrored
   diagonal tracers into a "slash" and put the projectile trail in front of the
   throw.
+- Player gun grip: the web `gunBarrel.anchor=(0.5,1)` is PIXI bottom-centre.
+  Axmol anchors originate bottom-left, so the native equivalent is
+  `(0.5,0)`; the old direct `(0.5,1)` put the grip at the muzzle and turned
+  the held gun 180 degrees around the hand.
 
-Verification: `surv_tests` 186 tests / 2,842 assertions, 0 failures; client
+Verification: `surv_tests` 187 tests / 2,846 assertions, 0 failures; client
 vitest 11,768 pass; `lint:ci`; x86_64 native + APK; device quick play joined with
 an empty crash buffer.

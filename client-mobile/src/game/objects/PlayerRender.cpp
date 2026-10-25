@@ -384,7 +384,11 @@ void Player::updateVisuals(Ctx& ctx) {
         objectSprites[i]->setVisible(false);
         if (gun) {
             skinSprite(gunSprites[i], weapon->worldImg.sprite, weapon->worldImg.tint, 1.0f);
-            gunSprites[i]->setAnchor(0.5f, 1.0f);
+            // player.ts uses the PIXI anchor (0.5, 1): bottom-centre / grip
+            // end. Axmol's anchor origin is bottom-left, so the equivalent is
+            // (0.5, 0); using 1 here put the grip at the muzzle and flipped
+            // the gun 180 degrees around the hand.
+            gunSprites[i]->setAnchor(0.5f, 0.0f);
             gunSprites[i]->setScale(weapon->worldImg.scale.x * 0.5f / scale, weapon->worldImg.scale.y * 0.5f / scale);
             gunContainers[i]->setRotation(pi / 2.0f);
             gunContainers[i]->setPosition((weapon->isDual ? -5.95f : -4.25f) + weapon->gunOffset.x,

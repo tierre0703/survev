@@ -615,6 +615,36 @@ Bullet makeBullet(uint16_t playerId, float x, float y) {
 }
 } // namespace
 
+// P1.3 follow-up: player.ts gunBarrel.anchor=(0.5,1) is the PIXI grip end.
+// The Axmol adapter uses bottom-left anchors, so the equivalent native anchor
+// is (0.5,0); a direct 1.0 put the grip at the muzzle (180-degree flip).
+TEST(player_gun_anchor_matches_grip) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(basicMap());
+
+    Player* p = addGunPlayer(world, "mosin", 100.0f, 100.0f);
+    ObjectData data;
+    data.__id = 1;
+    data.__type = ObjectType_Player;
+    data.pos = Vec2(100.0f, 100.0f);
+    data.dir = Vec2(1.0f, 0.0f);
+    data.layer = 0;
+    data.activeWeapon = "mosin";
+    p->m_updateData(data, true, true, world);
+    p->update(0.016f, world);
+
+    CHECK(p->gunSprites[1] != nullptr);
+    CHECK(p->gunContainers[1] != nullptr);
+    if (p->gunSprites[1] && p->gunContainers[1]) {
+        const auto* gun = static_cast<pix::NullSprite*>(p->gunSprites[1]);
+        CHECK_NEAR(gun->ay, 0.0f, 1e-6f);
+        CHECK_NEAR(static_cast<pix::NullContainer*>(p->gunContainers[1])->rotation,
+                   3.14159265358979f / 2.0f, 1e-6f);
+    }
+}
+
 // --- Match change (game.ts: a new MapMsg starts a new match) ---------------
 // Loading a second map into the same GameWorld must drop everything the first
 // match left behind: map.ts clear() empties the barns/creator, so a reused
