@@ -371,3 +371,110 @@ TEST(hud_death_panel_and_spectate_overlay) {
     CHECK(hud.overlayActionAt(640.0f, 266.0f) == Hud::OverlayAction::Leave);
     CHECK(hud.overlayActionAt(520.0f, 266.0f) == Hud::OverlayAction::None);
 }
+
+TEST(hud_prompt_announcement_and_faction_counts) {
+    Harness h;
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.update(0.016f, h.game, true);
+
+    hud.setInteractionPrompt("PICK UP FRAG");
+    auto* prompt = static_cast<const pix::NullText*>(hud.interactionPromptText());
+    CHECK(prompt != nullptr);
+    CHECK(prompt->visible);
+    CHECK_EQ(prompt->text, std::string("PICK UP FRAG"));
+    hud.setInteractionPrompt(std::string());
+    CHECK(!prompt->visible);
+
+    hud.showAnnouncement("ROLE ASSIGNED: LEADER");
+    auto* announcement = static_cast<const pix::NullText*>(hud.announcementText());
+    CHECK(announcement != nullptr);
+    CHECK(announcement->visible);
+    CHECK_EQ(announcement->text, std::string("ROLE ASSIGNED: LEADER"));
+    hud.update(4.0f, h.game, true);
+    CHECK(!announcement->visible);
+
+    // Faction mode: two alive counts instead of one total.
+    AliveCountsMsg alive;
+    alive.teamAliveCounts = {7, 3};
+    h.push(MsgType_AliveCounts, alive);
+    hud.setFactionMode(true);
+    hud.update(0.016f, h.game, true);
+    auto* aliveText = static_cast<const pix::NullText*>(hud.aliveText());
+    CHECK(aliveText != nullptr);
+    CHECK_EQ(aliveText->text, std::string("R 7   B 3"));
+
+    // JoinedMsg.started=false: waiting text stays visible even though the
+    // normal HUD is gated off until the match is playable.
+    hud.setWaitingForPlayers(true);
+    hud.update(0.016f, h.game, false);
+    auto* waiting = static_cast<const pix::NullText*>(hud.waitingText());
+    CHECK(waiting != nullptr);
+    CHECK(waiting->visible);
+    CHECK_EQ(waiting->text, std::string("WAITING FOR PLAYERS"));
+    hud.setWaitingForPlayers(false);
+    CHECK(!waiting->visible);
+}
+
+TEST(pickup_error_callback_and_success_sound) {
+    Harness h;
+    int errorType = -1;
+    std::string soundItem;
+    h.game.setPickupErrorCallback([&](int type) { errorType = type; });
+    h.game.setPickupSoundCallback([&](const std::string& item) { soundItem = item; });
+
+    PickupMsg error;
+    error.type = 0; // PickupMsgType.Full
+    error.item = "frag";
+    h.push(MsgType_Pickup, error);
+    CHECK_EQ(errorType, 0);
+
+    PickupMsg success;
+    success.type = 4; // PickupMsgType.Success
+    success.item = "mp5";
+    h.push(MsgType_Pickup, success);
+    CHECK_EQ(soundItem, std::string("mp5"));
+    CHECK_EQ(errorType, 0); // success does not fire the error toast
+}
+
+TEST(hud_local_kill_feed_and_toast) {
+    Harness h;
+    JoinedMsg joined;
+    joined.teamMode = 1;
+    joined.playerId = 42;
+    joined.started = true;
+    h.push(MsgType_Joined, joined);
+
+    UpdateMsg u;
+    u.activePlayerId = 42;
+    u.activePlayerIdDirty = true;
+    u.activePlayerData.healthDirty = true;
+    u.activePlayerData.health = 100.0f;
+    u.ack = 1;
+    h.push(MsgType_Update, u);
+
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.update(0.016f, h.game, true); // seed the kill counter at 0
+
+    KillMsg kill;
+    kill.damageType = DamageType_Player;
+    kill.killerId = 42;
+    kill.killCreditId = 42;
+    kill.targetId = 99;
+    kill.killed = true;
+    h.push(MsgType_Kill, kill);
+    hud.update(0.016f, h.game, true);
+
+    CHECK_EQ(h.game.localKills(), 1);
+    auto* row = static_cast<const pix::NullText*>(hud.killFeedRowText(0));
+    CHECK(row != nullptr);
+    CHECK(row->text.find("Player") != std::string::npos);
+    auto* toast = static_cast<const pix::NullText*>(hud.pickupMessageText());
+    CHECK(toast != nullptr);
+    CHECK(toast->text.find("YOU KILLED") != std::string::npos);
+}

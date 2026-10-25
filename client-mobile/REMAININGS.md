@@ -10,15 +10,17 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25 (P1.3 + P1.4 progress)** — bullet tracers now use the
+Latest recorded state: **2026-10-25 (P1.3 + P1.4)** — bullet tracers now use the
 per-def sprite palette/length/width with AP/saturated/suppressed modes and real
 collision FX (wall dust + hit groups, blood parented to players, pan/steelskin
 sparks); explosions use the generated burst/scatter/ripple/shake/lifetime table;
 projectiles spin, trail, water-fade and sort on stairs; loot has its outer ring
 and inner-art rotation/mirror; player nametags are teammate-only, faction patches
 and bleed/adrenaline emitters exist; airdrop fall/plane loops and airstrike zones
-are wired. The live HUD gained reserve ammo, bag counts and an in-match kill
-counter (inventory v2 polish still listed in P1.4). **186 host tests pass,
+are wired. The live HUD now also has the interaction prompt, error/rare-loot/
+perk/“You killed X” toasts, coloured kill-feed rows, faction alive counts,
+off-screen teammate arrows, role announcements, waiting-for-players and the
+pie-timer action label (perk-mode role picker remains). **190 host tests pass,
 0 fail.**
 
 ---
@@ -34,7 +36,7 @@ counter (inventory v2 polish still listed in P1.4). **186 host tests pass,
 | M4 | Rendering | **done (major FX)** | terrain/objects/buildings/particles/decals/gas/skeletal player; active layer + interpolation; bullet tracers/impacts, explosions, projectiles, loot rings, player patches/nametags and airstrike zones. Remaining exact-normal/colour nuances are P2. |
 | M5 | Input + touch | **done (touch)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; keyboard/mouse binds remain P1.6. |
 | M6 | Audio | **mostly done** | engine/mixer/ambience/reverb/EQ/interior sounds, channel semantics, startup volume/mute, menu music and the real sound keys; notification/team-join cues are web-focus-only and exact EQ timbre remains P2. |
-| M7 | UI layer | **partial** | Java menu/account/pass/team/loadout live; death/result + spectate overlay live in the C++ HUD; settings screen is real; live HUD has reserve ammo/bag counts/live kills; remaining inventory v2 polish is P1.4. |
+| M7 | UI layer | **mostly done** | Java menu/account/pass/team/loadout live; death/result + spectate overlay live in the C++ HUD; settings screen is real; live HUD has the full P1.4 set (reserve ammo, bag strip, prompts/toasts, coloured feed, arrows, faction counts, waiting text, pie label); only the perk-mode role picker remains. |
 | M8 | Accounts / API | **mostly done** | device login + profile, quests/pass, team links, authenticated quick play and correct disconnect reasons; captcha is unsupported for signed-out users (server skips it for the device session), OAuth is an intentional platform delta. |
 | M9 | Polish & release | **started** | release APK/AAB pipeline verified (§45); waiting on the 1:1 gameplay gate (§3.7), a physical-device soak and final store upload. |
 
@@ -362,17 +364,27 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         loot border and projectile spin/trail. Side-by-side screenshots remain a
         manual/device check.
 
-- [ ] **P1.4 Live inventory v2 / interaction HUD.**
-      **In progress.** The live HUD now has reserve ammo (`clip/reserve`),
-      an ammo/med/boost/nade bag strip and a live kill counter
-      (`Game::localKills`, not just GameOver). Weapon cards, scopes, quick-use
-      pills, pickup message, kill feed, gas timer, spectator count and the
-      death/result overlays were already live.
-      Still missing: nearby-item interaction prompt, error toasts,
-      "You killed X"/rare-loot/perk toasts, kill-feed colours, off-screen
-      teammate arrows, faction alive counters, role announcements, waiting-for-
-      players, pie-timer label and the role-selection menu. Acceptance is still
-      the full `ui.ts`/`ui2.ts` HUD at 1280×720.
+- [x] **P1.4 Live inventory v2 / interaction HUD.**
+      **Done (perk-mode role picker deferred to P1.7/P2).** The live HUD now
+      has reserve ammo (`clip/reserve`), an ammo/med/boost/nade bag strip and a
+      live kill counter (`Game::localKills`, not just GameOver); weapon cards,
+      scopes, quick-use pills, gas timer, spectator count and death/result
+      overlays were already live.
+      - Interaction prompt: nearest loot on the active audio layer
+        (`PICK UP <TYPE>`) above the health bar.
+      - Toasts: `PickupMsg` failures map to the ui2.ts messages (full bag,
+        already owned/equipped, better item, cannot fire, max perks); XP drops
+        show RARE LOOT; new perks show `PERK: <TYPE>`; local credited kills show
+        `YOU KILLED <name>`.
+      - Kill feed: six individually coloured rows (local killer green, local
+        target red, otherwise orange) rather than one monochrome text block.
+      - Faction modes show `R n   B n`; team arrows sit 300 px from the screen
+        centre for living/downed off-screen teammates; role announcements appear
+        under the kill leader; `WAITING FOR PLAYERS` is shown until
+        `JoinedMsg.started`; the pie timer now gets `RELOADING`/`USING`/
+        `REVIVING` labels from the active player action.
+      - Remaining in P1.7/P2: the perk-mode role-picker overlay (roles list,
+        selection/confirm, 20 s countdown) and exact CDN role art.
 
 - [x] **P1.5 Audio correctness and coverage.**
       **Done (web-focus-only cues excepted).**
@@ -486,9 +498,9 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 4. **P0.7 + P1.5** — settings/audio correctness (done; see §3.2/§3.3).
 5. **P1.1 + P1.2** — authenticated quick play/captcha + correct errors
    (done; see §3.3).
-6. **P1.3 + P1.4** — render feedback + live inventory HUD (P1.3 done; P1.4
-   in progress — see §3.3).
-7. **P1.6–P1.8** — input/metadata/team/account parity.
+6. **P1.3 + P1.4** - render feedback + live inventory HUD (done; only the
+   perk-mode role picker moved to P1.7/P2).
+7. **P1.6-P1.8** - input/metadata/team/account parity.
 8. **P2** — polish, then a physical-device soak and store upload.
 
 ### 3.7 Acceptance for "1:1 playable" (next milestone gate)
@@ -510,7 +522,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (186 tests, 0 failures expected)
+# host tests (190 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe

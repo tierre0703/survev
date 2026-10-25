@@ -73,6 +73,8 @@ public:
     const JoinInfo& getJoinInfo() const { return _joinInfo; }
     // True once the server has accepted us (JoinedMsg or first UpdateMsg).
     bool hasJoined() const { return _joined; }
+    // JoinedMsg.started: false means the match is still waiting for players.
+    bool hasStarted() const { return _started; }
     // True while the client is attempting to open the game socket.
     bool isConnecting() const { return _connecting; }
 
@@ -142,6 +144,10 @@ public:
     // ui-channel pickup sound; the headless host tests leave it unset.
     using PickupSoundCallback = std::function<void(const std::string& item)>;
     void setPickupSoundCallback(PickupSoundCallback cb) { _pickupSoundCb = std::move(cb); }
+    // Non-success PickupMsg types (ui2.ts displayPickupMessage: full bag,
+    // already owned/equipped, max perks, ...). The app maps the type to text.
+    using PickupErrorCallback = std::function<void(int type)>;
+    void setPickupErrorCallback(PickupErrorCallback cb) { _pickupErrorCb = std::move(cb); }
 
     // Headless state snapshot for replay verification.
     GameStateSnapshot snapshot() const;
@@ -232,6 +238,7 @@ private:
 
     GameScene* _scene = nullptr;
     PickupSoundCallback _pickupSoundCb;
+    PickupErrorCallback _pickupErrorCb;
     ConnectionFactory _factory;
 
     std::unique_ptr<Connection> _connection;

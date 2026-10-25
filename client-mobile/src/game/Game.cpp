@@ -496,10 +496,13 @@ void Game::handlePickup(NetBitStream& s) {
     m.deserialize(s);
     // Priority 1: play item pickup sound for the active player (player.ts ~line 2095),
     // routed through the app's audio callback so host tests stay silent.
-    if (m.type == PickupMsgType_Success && !m.item.empty()) {
+    // shared/net/net.ts PickupMsgType.Success == 4.
+    if (m.type == 4 && !m.item.empty()) {
         if (_pickupSoundCb) {
             _pickupSoundCb(m.item);
         }
+    } else if (_pickupErrorCb) {
+        _pickupErrorCb(m.type);
     }
 }
 

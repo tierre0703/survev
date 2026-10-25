@@ -51,6 +51,13 @@ struct GasHudState {
     float secondsLeft = 0.0f;
 };
 
+// ui.ts team arrows: a teammate outside the camera view.
+struct TeammateArrow {
+    Vec2 dir = Vec2(1.0f, 0.0f);
+    uint32_t tint = 0xffffff;
+    bool downed = false;
+};
+
 class Hud {
 public:
     // Web sizes (client/css/game.css).
@@ -103,6 +110,16 @@ public:
     void setSquadState(const std::vector<SquadMember>& members);
     // ui2.ts gear/perk slots: resolved atlas frames, gear then perks (max 7).
     void setGearState(const std::vector<std::string>& frames);
+    // ui.ts #ui-interaction: nearby item / action text ("" hides it).
+    void setInteractionPrompt(const std::string& text);
+    // ui.ts announcements (role assigned/dead, rare loot). Visible for seconds.
+    void showAnnouncement(const std::string& text, float seconds = 3.5f);
+    // game.ts faction mode: two alive counts (red/blue) instead of one total.
+    void setFactionMode(bool enabled) { _factionMode = enabled; }
+    // ui.ts off-screen teammate arrows around the screen edge.
+    void setTeammateArrows(const std::vector<TeammateArrow>& arrows);
+    // ui.ts #ui-waiting-text: shown after join until the match starts.
+    void setWaitingForPlayers(bool waiting);
 
     // ui.ts displayStats: result screen (victory/defeat, rank, team kills and
     // the local player's kills/damage/time). Called with GameOverMsg data.
@@ -216,6 +233,14 @@ public:
     const pix::Text* spectateCountText() const { return _specCountText; }
     const pix::Text* spectateStatsText() const { return _specStatsText; }
     const pix::Text* deathTitleText() const { return _overTitle; }
+    const pix::Text* interactionPromptText() const { return _promptText; }
+    const pix::Text* announcementText() const { return _announcementText; }
+    const pix::Text* aliveText() const { return _aliveText; }
+    const pix::Text* waitingText() const { return _waitingText; }
+    const pix::Text* pickupMessageText() const { return _pickupText; }
+    const pix::Text* killFeedRowText(int idx) const {
+        return (idx >= 0 && idx < 6) ? _killFeedRows[static_cast<size_t>(idx)] : nullptr;
+    }
 
 private:
     void layout(pix::Graphics* g, float w, float h) const;
@@ -354,6 +379,15 @@ private:
 
     pix::Text* _pickupText = nullptr;
     pix::Text* _killFeedText = nullptr;
+    std::array<pix::Text*, 6> _killFeedRows{};
+    pix::Text* _promptText = nullptr;
+    pix::Text* _announcementText = nullptr;
+    pix::Text* _waitingText = nullptr;
+    bool _waiting = false;
+    float _announcementTicker = 0.0f;
+    bool _factionMode = false;
+    std::array<pix::Graphics*, 3> _teamArrows{};
+    std::vector<TeammateArrow> _teamArrowState;
 
     Vec2 _design = Vec2(1280.0f, 720.0f);
     // Bottom-left of the minimap frame in the centred HUD container.
@@ -369,6 +403,12 @@ private:
     std::string _lastWeapon;
     std::string _lastPickup;
     std::string _lastFeed;
+    std::string _lastAliveText;
+    std::string _lastPrompt;
+    std::string _lastAnnouncement;
+    std::vector<std::string> _lastPerkTypes;
+    bool _perksInitialized = false;
+    int _lastLocalKills = -1;
     float _pickupTicker = 0.0f;
 };
 

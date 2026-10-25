@@ -2869,3 +2869,16 @@ filtering all use the same frame's state.
 Verification: `surv_tests` 187 tests / 2,846 assertions, 0 failures; client
 vitest 11,768 pass; `lint:ci`; x86_64 native + APK; device quick play joined with
 an empty crash buffer.
+
+## 49. Session 48 - P1.4 live HUD completion (2026-10-25)
+
+- Interaction prompt for the nearest loot on the active audio layer.
+- Pickup-error toasts (`PickupMsg` types), rare-loot/perk toasts, local
+  `YOU KILLED <name>` messages, and six individually coloured kill-feed rows.
+- Faction `R n / B n` alive counts, off-screen teammate arrows, role
+  announcements, waiting-for-players text, and pie-timer action labels.
+- Host tests cover the prompt, announcement expiry, faction counts, waiting
+  text, pickup error callback, and local kill feed/toast.
+
+Verification: `surv_tests` 190 tests / 2,868 assertions, 0 failures; x86_64
+native and APK builds installed and launched with an empty crash buffer.

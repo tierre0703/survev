@@ -36,6 +36,7 @@
 
 #include <set>
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <sstream>
 #include <string>
@@ -92,6 +93,19 @@ static void loadAtlasesForMap(const std::string& mapName) {
 static fairygui::GRoot* s_fguiRoot = nullptr;
 
 fairygui::GRoot* fguiRoot() { return s_fguiRoot; }
+
+// ui2.ts getPickupMessageText (PickupMsgType order).
+static const char* pickupErrorText(int type) {
+    switch (type) {
+        case 0: return "NOT ENOUGH SPACE";
+        case 1: return "ITEM ALREADY OWNED";
+        case 2: return "ITEM ALREADY EQUIPPED";
+        case 3: return "BETTER ITEM ALREADY EQUIPPED";
+        case 5: return "GUN CANNOT FIRE";
+        case 6: return "MAX PERKS EQUIPPED";
+        default: return "CANNOT PICK UP";
+    }
+}
 
 // ---------------------------------------------------------------------------
 // TouchPadGfx (touch.ts pad.img sprites) - legacy, no longer instantiated
@@ -362,6 +376,11 @@ bool GameScene::init() {
 
     _game->setPickupSoundCallback(
         [this](const std::string& item) { onPickupSound(item); });
+    _game->setPickupErrorCallback([this](int type) {
+        if (_hud) {
+            _hud->displayPickupMessage(pickupErrorText(type));
+        }
+    });
 
     // Android hardware back button / desktop Escape: pause/leave the game.
     auto* keyListener = ax::EventListenerKeyboard::create();
@@ -737,6 +756,9 @@ void GameScene::leaveGame() {
     _pendingFind = false;
     _findInFlight = false;
     ++_findGeneration;
+    if (_hud) {
+        _hud->setWaitingForPlayers(false);
+    }
     // An intentional leave cancels any pending reconnect.
     _reconnect = ReconnectState{};
     // game.ts free(): stop drawing the finished match's world (also hides a
@@ -862,7 +884,14 @@ void GameScene::onPickupSound(const std::string& item) {
     // player.ts playItemPickupSound: itemDef.sound.pickup on the ui channel.
     const DefProvider* provider = getDefProvider();
     const GameObjRenderDef* def = provider ? provider->gameObject(item) : nullptr;
-    if (!def || def->soundPickup.empty()) {
+    if (!def) {
+        return;
+    }
+    // game.ts: XP drops show a rare-loot message in addition to the pickup cue.
+    if (def->type == "xp" && _hud) {
+        _hud->displayPickupMessage("RARE LOOT");
+    }
+    if (def->soundPickup.empty()) {
         return;
     }
     audio::PlaySoundOptions opts;
@@ -1180,6 +1209,17 @@ void GameScene::update(float delta) {
                 opts.channel = "ui";
                 _audio->playSound(sound, opts);
             }
+            // kill_leader has its own top-centre HUD line; announcing it here
+            // would duplicate/spam every leader change.
+            if (_hud && ann.role != "kill_leader" &&
+                ann.playerId == _game->getLocalPlayerId()) {
+                std::string role = ann.role;
+                for (char& c : role) {
+                    c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+                }
+                _hud->showAnnouncement(ann.assigned ? "ROLE ASSIGNED: " + role
+                                                    : "ROLE LOST: " + role);
+            }
         }
     }
 
@@ -1317,6 +1357,67 @@ void GameScene::update(float delta) {
         const bool deadOrSpectating = _game->isLocalDead() || _game->isSpectating();
         if (deadOrSpectating && _touch) {
             _touch->hideAll();
+        }
+        _hud->setWaitingForPlayers(_inGame && _game->hasJoined() && !_game->hasStarted() &&
+                                   !_game->gameOver());
+        // ui.ts interaction prompt: nearest loot on the active layer. The
+        // server performs the actual pickup; this is only the touch hint.
+        if (_world && !deadOrSpectating) {
+            const Player* me = _world->activePlayer();
+            std::string prompt;
+            if (me && me->actionType == Action_None) {
+                const Loot* best = nullptr;
+                float bestDist = 0.0f;
+                for (const Loot* loot : _world->lootBarn().lootPool.m_getPool()) {
+                    if (!loot->active || !math::sameAudioLayer(loot->layer, me->layer)) {
+                        continue;
+                    }
+                    const float dist = v2Length(v2Sub(loot->pos, me->pos));
+                    if (dist <= loot->rad + 2.5f && (!best || dist < bestDist)) {
+                        best = loot;
+                        bestDist = dist;
+                    }
+                }
+                if (best && !best->type.empty()) {
+                    std::string name = best->type;
+                    std::replace(name.begin(), name.end(), '_', ' ');
+                    for (char& c : name) {
+                        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+                    }
+                    prompt = "PICK UP " + name;
+                }
+            }
+            _hud->setInteractionPrompt(prompt);
+            _hud->setFactionMode(_world->map().mapDef.factionMode);
+
+            // ui.ts off-screen teammate arrows.
+            std::vector<TeammateArrow> arrows;
+            const Vec2 screen = Vec2(_world->camera().m_screenWidth,
+                                     _world->camera().m_screenHeight);
+            const Vec2 center = Vec2(screen.x * 0.5f, screen.y * 0.5f);
+            for (uint16_t id : _game->getTeamPlayerIds()) {
+                if (id == _game->getActivePlayerId()) {
+                    continue;
+                }
+                const Player* mate = _world->playerBarn().getPlayerById(id);
+                if (!mate || !mate->active || mate->dead) {
+                    continue;
+                }
+                const Vec2 p = _world->camera().m_pointToScreen(mate->pos);
+                if (p.x >= 0.0f && p.x <= screen.x && p.y >= 0.0f && p.y <= screen.y) {
+                    continue;
+                }
+                Vec2 dir(p.x - center.x, center.y - p.y);
+                TeammateArrow arrow;
+                arrow.dir = v2NormalizeSafe(dir, Vec2(1.0f, 0.0f));
+                arrow.tint = mate->downed ? 0xffaa00 : 0xffffff;
+                arrow.downed = mate->downed;
+                arrows.push_back(arrow);
+            }
+            _hud->setTeammateArrows(arrows);
+        } else if (_hud) {
+            _hud->setInteractionPrompt(std::string());
+            _hud->setTeammateArrows({});
         }
         _hud->update(delta, *_game,
                      _inGame && _notifiedStarted && (_game->isPlaying() || _game->gameOver() != nullptr));
@@ -1492,7 +1593,19 @@ void GameScene::update(float delta) {
     if (_pieTimer && _game && isStarted()) {
         const auto& apd = _game->activePlayerData();
         if (apd.actionDirty && apd.actionDuration > 0.0f) {
-            _pieTimer->start("", apd.actionTime, apd.actionDuration);
+            // pieTimer.ts action labels (Reloading/Using/Reviving).
+            std::string label = "ACTION";
+            const Player* me = _world ? _world->activePlayer() : nullptr;
+            if (me) {
+                switch (me->actionType) {
+                    case Action_Reload:
+                    case Action_ReloadAlt: label = "RELOADING"; break;
+                    case Action_UseItem: label = "USING"; break;
+                    case Action_Revive: label = "REVIVING"; break;
+                    default: break;
+                }
+            }
+            _pieTimer->start(label, apd.actionTime, apd.actionDuration);
         }
         if (_pieTimer->isActive()) {
             _pieTimer->update(delta, _world ? _world->camera() : Camera(), false, 0.0f);

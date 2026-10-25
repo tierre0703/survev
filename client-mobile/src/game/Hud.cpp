@@ -386,6 +386,51 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _killFeedText->setColor(0xffc896, 0x000000, 1.0f, false);
     _killFeedText->setAnchor(1.0f, 0.0f);
     _root->addChild(_killFeedText);
+    // ui.ts kill feed rows are individually coloured: local kills green,
+    // deaths red, everyone else orange. One Text per row keeps a stable
+    // colour per entry (a single Text can only have one colour).
+    for (auto*& row : _killFeedRows) {
+        row = _factory->createText();
+        row->setFontSize(13.0f);
+        row->setColor(0xffc896, 0x000000, 1.0f, false);
+        row->setAnchor(1.0f, 1.0f);
+        row->setVisible(false);
+        _root->addChild(row);
+    }
+    // ui.ts interaction prompt (above the health bar).
+    _promptText = _factory->createText();
+    _promptText->setFontSize(16.0f);
+    _promptText->setColor(0xffe08a, 0x000000, 2.0f, true);
+    _promptText->setAnchor(0.5f, 0.5f);
+    _promptText->setVisible(false);
+    _root->addChild(_promptText);
+    // ui.ts role/event announcement (top centre, below the kill leader).
+    _announcementText = _factory->createText();
+    _announcementText->setFontSize(22.0f);
+    _announcementText->setColor(0xffd060, 0x000000, 2.0f, true);
+    _announcementText->setAnchor(0.5f, 1.0f);
+    _announcementText->setVisible(false);
+    _root->addChild(_announcementText);
+    _waitingText = _factory->createText();
+    _waitingText->setText("WAITING FOR PLAYERS");
+    _waitingText->setFontSize(28.0f);
+    _waitingText->setColor(0xffffff, 0x000000, 2.0f, true);
+    _waitingText->setAnchor(0.5f, 0.5f);
+    _waitingText->setVisible(false);
+    _root->addChild(_waitingText);
+    // ui.ts off-screen teammate arrows.
+    for (auto*& arrow : _teamArrows) {
+        arrow = _factory->createGraphics();
+        arrow->beginFill(0xffffff, 0.9f);
+        arrow->moveTo(10.0f, 0.0f);
+        arrow->lineTo(-7.0f, -7.0f);
+        arrow->lineTo(-3.0f, 0.0f);
+        arrow->lineTo(-7.0f, 7.0f);
+        arrow->closePath();
+        arrow->endFill();
+        arrow->setVisible(false);
+        _root->addChild(arrow);
+    }
 
     // One static layout pass (the web CSS boxes do not move during a match).
     // The HUD container is centred on the viewport (GameScene::resetWorld), and
@@ -536,7 +581,15 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _pickupText->setPosition(X(vw * 0.5f), Y(vh * 0.12f));
     // #ui-killfeed: right side, above the weapon cards.
     _killFeedText->setAnchor(1.0f, 1.0f);
+    _killFeedText->setVisible(false);
     _killFeedText->setPosition(X(boxX - 8.0f), Y(boxY + boxH + 8.0f));
+    for (int i = 0; i < 6; ++i) {
+        _killFeedRows[i]->setAnchor(1.0f, 1.0f);
+        _killFeedRows[i]->setPosition(X(boxX - 8.0f), Y(boxY + boxH + 8.0f - 16.0f * i));
+    }
+    _promptText->setPosition(X(vw * 0.5f), Y(vh * 0.2f));
+    _announcementText->setPosition(X(vw * 0.5f), Y(vh - 110.0f));
+    _waitingText->setPosition(X(vw * 0.5f), Y(vh * 0.62f));
 
     // The boost segments sit above the health block; update() repaints width.
     {
@@ -680,6 +733,20 @@ void Hud::setVisible(bool visible) {
     }
     show(_weaponBoxBg);
     show(_killFeedText);
+    for (auto* row : _killFeedRows) {
+        show(row);
+    }
+    if (_promptText) {
+        _promptText->setVisible(visible && !_lastPrompt.empty());
+    }
+    if (_announcementText) {
+        _announcementText->setVisible(visible && _announcementTicker > 0.0f);
+    }
+    for (size_t i = 0; i < _teamArrows.size(); ++i) {
+        if (_teamArrows[i]) {
+            _teamArrows[i]->setVisible(visible && !_bigMapVisible && i < _teamArrowState.size());
+        }
+    }
     for (auto* seg : _boostSegments) {
         show(seg);
     }
@@ -811,6 +878,11 @@ void Hud::setVisible(bool visible) {
     }
     if (_specStatsText) {
         _specStatsText->setVisible(spec && _specStatsShown);
+    }
+    // ui.ts #ui-waiting-text is independent of the normal HUD visibility: it
+    // shows after joining, before the match starts.
+    if (_waitingText) {
+        _waitingText->setVisible(_waiting && !_overShown && !_deathShown);
     }
     // Item pills own their visibility (empty inventory hides them); this also
     // runs after the big-map/result state changes so they never linger.
@@ -1102,6 +1174,59 @@ Hud::OverlayAction Hud::overlayActionAt(float designX, float designY) const {
     return OverlayAction::None;
 }
 
+void Hud::setWaitingForPlayers(bool waiting) {
+    _waiting = waiting;
+    if (_waitingText) {
+        _waitingText->setVisible(waiting && !_overShown && !_deathShown);
+    }
+}
+
+void Hud::setInteractionPrompt(const std::string& text) {
+    if (text == _lastPrompt) {
+        return;
+    }
+    _lastPrompt = text;
+    if (_promptText) {
+        _promptText->setText(text);
+        _promptText->setVisible(!text.empty() && _visible);
+    }
+}
+
+void Hud::showAnnouncement(const std::string& text, float seconds) {
+    _lastAnnouncement = text;
+    _announcementTicker = text.empty() ? 0.0f : std::max(seconds, 0.1f);
+    if (_announcementText) {
+        _announcementText->setText(text);
+        _announcementText->setVisible(!text.empty() && _visible);
+    }
+}
+
+void Hud::setTeammateArrows(const std::vector<TeammateArrow>& arrows) {
+    _teamArrowState = arrows;
+    if (!_built) {
+        return;
+    }
+    for (size_t i = 0; i < _teamArrows.size(); ++i) {
+        pix::Graphics* node = _teamArrows[i];
+        if (!node) {
+            continue;
+        }
+        const bool show = _visible && !_bigMapVisible && i < arrows.size();
+        node->setVisible(show);
+        if (!show) {
+            continue;
+        }
+        const TeammateArrow& arrow = arrows[i];
+        Vec2 dir = v2NormalizeSafe(arrow.dir, Vec2(1.0f, 0.0f));
+        node->setPosition(dir.x * 300.0f, dir.y * 300.0f);
+        // The arrow art points along local +x; Axmol's positive rotation is
+        // clockwise in the y-up design space, so use -angle to face `dir`.
+        node->setRotation(-std::atan2(dir.y, dir.x));
+        node->setTint(arrow.tint);
+        node->setAlpha(arrow.downed ? 0.55f : 0.9f);
+    }
+}
+
 void Hud::displayPickupMessage(const std::string& text) {
     _lastPickup = text;
     _pickupTicker = text.empty() ? 0.0f : 3.0f;
@@ -1201,6 +1326,16 @@ void Hud::update(float dt, const Game& game, bool visible) {
         return;
     }
     setVisible(visible);
+    if (_announcementTicker > 0.0f) {
+        _announcementTicker -= dt;
+        if (_announcementTicker <= 0.0f) {
+            _lastAnnouncement.clear();
+            if (_announcementText) {
+                _announcementText->setText(std::string());
+                _announcementText->setVisible(false);
+            }
+        }
+    }
 
     // Result / death / spectate state (ui.ts displayStats, showTeamAd and
     // setSpectating). GameOverMsg latches until the next match resets the HUD.
@@ -1279,6 +1414,25 @@ void Hud::update(float dt, const Game& game, bool visible) {
 
     const GameStateSnapshot snap = game.snapshot();
     const ActivePlayerData& apd = game.activePlayerData();
+
+    // ui2.ts perk acquisition toast. Suppress the initial join inventory.
+    {
+        std::vector<std::string> perks;
+        perks.reserve(apd.perks.size());
+        for (const auto& perk : apd.perks) {
+            perks.push_back(perk.type);
+        }
+        if (_perksInitialized) {
+            for (const auto& type : perks) {
+                if (std::find(_lastPerkTypes.begin(), _lastPerkTypes.end(), type) ==
+                    _lastPerkTypes.end()) {
+                    displayPickupMessage("PERK: " + type);
+                }
+            }
+        }
+        _lastPerkTypes = std::move(perks);
+        _perksInitialized = true;
+    }
 
     // --- Health: fill width = health%, colour from the ui2.ts steps ---
     const bool downed = snap.health < 0.0f;
@@ -1397,9 +1551,16 @@ void Hud::update(float dt, const Game& game, bool visible) {
     // --- Alive counter and kill counter (#ui-leaderboard-wrapper) ---
     const auto counts = game.aliveCounts();
     const int alive = std::accumulate(counts.begin(), counts.end(), 0);
-    if (alive != _lastAlive) {
-        _lastAlive = alive;
-        _aliveText->setText(std::to_string(alive));
+    std::string aliveText;
+    if (_factionMode && counts.size() >= 2) {
+        // ui.ts faction mode: red/blue counts instead of one total.
+        aliveText = "R " + std::to_string(counts[0]) + "   B " + std::to_string(counts[1]);
+    } else {
+        aliveText = std::to_string(alive);
+    }
+    if (aliveText != _lastAliveText) {
+        _lastAliveText = aliveText;
+        _aliveText->setText(aliveText);
     }
     int kills = game.localKills();
     if (const GameOverMsg* over = game.gameOver()) {
@@ -1413,6 +1574,22 @@ void Hud::update(float dt, const Game& game, bool visible) {
         _lastKills = kills;
         _killsText->setText(std::to_string(kills) + " K");
     }
+    // ui.ts "You killed X" feedback. Game::killFeed keeps the newest entry at
+    // the back; only show a toast when the local credited kill count grows.
+    if (!over && _lastLocalKills >= 0 && kills > _lastLocalKills) {
+        const uint16_t localId = game.getLocalPlayerId();
+        for (auto it = game.killFeed().rbegin(); it != game.killFeed().rend(); ++it) {
+            const uint16_t credit = it->message.killCreditId != 0 ? it->message.killCreditId
+                                                                  : it->message.killerId;
+            if (credit == localId && it->message.killed) {
+                const std::string target =
+                    it->targetName.empty() ? std::string("PLAYER") : it->targetName;
+                displayPickupMessage("YOU KILLED " + target);
+                break;
+            }
+        }
+    }
+    _lastLocalKills = kills;
 
     // --- Kill leader (game.ts msg.killLeaderDirty) ---
     std::string leaderText;
@@ -1425,16 +1602,41 @@ void Hud::update(float dt, const Game& game, bool visible) {
         _killLeaderText->setText(leaderText);
     }
 
-    // --- Kill feed (#ui-killfeed) ---
-    std::string feed;
-    for (const auto& entry : game.killFeed()) {
-        feed += entry.killerName.empty() ? entry.targetName
-                                         : entry.killerName + " -> " + entry.targetName;
-        feed += '\n';
+    // --- Kill feed (#ui-killfeed): one coloured row per entry ---
+    const auto& feed = game.killFeed();
+    std::string feedKey;
+    for (const auto& entry : feed) {
+        feedKey += std::to_string(entry.message.killerId) + ">" +
+            std::to_string(entry.message.targetId) + "|" + entry.killerName + "|" +
+            entry.targetName + ";";
     }
-    if (feed != _lastFeed) {
-        _lastFeed = feed;
-        _killFeedText->setText(feed);
+    if (feedKey != _lastFeed) {
+        _lastFeed = feedKey;
+        const uint16_t localId = game.getLocalPlayerId();
+        for (int i = 0; i < 6; ++i) {
+            pix::Text* row = _killFeedRows[static_cast<size_t>(i)];
+            if (!row) {
+                continue;
+            }
+            if (i >= static_cast<int>(feed.size())) {
+                row->setText(std::string());
+                row->setVisible(false);
+                continue;
+            }
+            const Game::KillFeedEntry& entry = feed[static_cast<size_t>(i)];
+            const std::string text = entry.killerName.empty()
+                ? entry.targetName
+                : entry.killerName + " -> " + entry.targetName;
+            row->setText(text);
+            if (localId != 0 && entry.message.killerId == localId) {
+                row->setColor(0x8fff8f, 0x000000, 1.0f, false);
+            } else if (localId != 0 && entry.message.targetId == localId) {
+                row->setColor(0xff8585, 0x000000, 1.0f, false);
+            } else {
+                row->setColor(0xffc896, 0x000000, 1.0f, false);
+            }
+            row->setVisible(_visible && !_bigMapVisible);
+        }
     }
 }
 
