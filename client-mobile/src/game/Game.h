@@ -151,6 +151,16 @@ public:
     uint16_t getCloseCode() const { return _closeCode; }
     const std::string& getCloseReason() const { return _closeReason; }
     const ActivePlayerData& activePlayerData() const { return _activePlayer; }
+    // Death stats from PlayerStatsMsg (team death while teammates are still
+    // alive) or the local entry in GameOverMsg. Null until the local player dies.
+    const PlayerStatsMsg* localStats() const { return _hasLocalStats ? &_localStats : nullptr; }
+    bool isLocalDead() const { return _hasLocalStats && _localStats.dead; }
+    // game.ts `m_spectating = m_activeId != m_localId`.
+    bool isSpectating() const {
+        return _activePlayerId != 0 && _localPlayerId != 0 && _activePlayerId != _localPlayerId;
+    }
+    // SpectateMsg action: 1 = Begin, 2 = Next, 3 = Prev (shared/net/spectateMsg.ts).
+    void sendSpectate(uint8_t action);
     struct KillFeedEntry {
         KillMsg message;
         std::string killerName, targetName;
@@ -248,6 +258,8 @@ private:
     // Players/objects persist across ticks, mirroring the web client's barns:
     // full objects create/update, partial objects update, and del lists remove.
     ActivePlayerData _activePlayer;
+    PlayerStatsMsg _localStats;
+    bool _hasLocalStats = false;
     std::unordered_map<uint16_t, PlayerInfo> _playersById;
     std::vector<uint16_t> _playerIds; // wire insertion order for playerStatus
     std::unordered_map<uint16_t, PlayerStatus> _playerStatus;

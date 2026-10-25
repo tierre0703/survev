@@ -239,8 +239,10 @@ public class GamePauseDialog {
         mSpectateBtn.setVisibility(View.GONE); // Hidden until player dies
         mSpectateBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                // Would open spectate options: Next/Prev teammate, View stats
-                Log.i(TAG, "Spectate options (stub)");
+                // spectateMsg.ts Begin; the C++ HUD takes over the spectating
+                // overlay once the server moves activePlayerId.
+                hide();
+                SurvBridge.spectate(1);
             }
         });
         card.addView(mSpectateBtn);
@@ -288,7 +290,11 @@ public class GamePauseDialog {
         outerScroll.addView(card);
 
         mRoot.addView(outerScroll);
-        
+
+        // A newly constructed dialog is hidden until show(); ensurePause() adds
+        // it to the overlay container before the user opens it.
+        mRoot.setVisibility(View.GONE);
+
         seedFromConfig();
     }
 
@@ -473,11 +479,7 @@ public class GamePauseDialog {
     public void setPlayerDead(boolean dead) {
         mIsDead = dead;
         mSpectateBtn.setVisibility(dead ? View.VISIBLE : View.GONE);
-        if (dead) {
-            mReturnBtn.setText("\uD83D\uDCF1 Spectate");
-        } else {
-            mReturnBtn.setText("\u25B6 Return to Game");
-        }
+        mReturnBtn.setText("\u25B6 Return to Game");
     }
     
     public void setStatus(String text) {

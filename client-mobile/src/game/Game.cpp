@@ -52,6 +52,8 @@ void Game::free() {
     _killLeaderId = 0;
     _killLeaderKills = 0;
     _activePlayer = ActivePlayerData{};
+    _localStats = PlayerStatsMsg{};
+    _hasLocalStats = false;
     _hasGameOver = false;
     _lastUrl.clear();
     _lastToken.clear();
@@ -147,7 +149,7 @@ void Game::update(float dt) {
     // close frame, so the client would sit in a frozen match forever. After
     // joining, silence for kConnectionTimeoutSeconds means the connection is
     // dead; synthesize the close the transport failed to report.
-    if (_connected && _joined && !_paused && !_timedOut &&
+    if (_connected && _joined && !_paused && !_timedOut && !_hasGameOver &&
         _elapsed - _lastMsgTime > kConnectionTimeoutSeconds) {
         _timedOut = true;
         if (_connection) {
@@ -183,6 +185,15 @@ void Game::sendInput(InputMsg& msg) {
     }
     msg.seq = static_cast<uint8_t>(_inputSeq);
     sendMessage(MsgType_Input, msg, 128);
+}
+
+void Game::sendSpectate(uint8_t action) {
+    if (!isConnected()) {
+        return;
+    }
+    SpectateMsg msg;
+    msg.action = action;
+    sendMessage(MsgType_Spectate, msg, 128);
 }
 
 void Game::onOpen() {
@@ -267,7 +278,17 @@ void Game::onServerMessage(uint8_t type, NetBitStream& s) {
             _aliveCounts = std::move(m.teamAliveCounts);
             break;
         }
-        case MsgType_PlayerStats: { PlayerStatsMsg m; m.deserialize(s); break; }
+        case MsgType_PlayerStats: {
+            PlayerStatsMsg m;
+            m.deserialize(s);
+            // Team death while teammates are still alive: the web shows the
+            // death/stats screen with a Spectate button immediately.
+            if (m.dead || m.playerId == _localPlayerId) {
+                _localStats = m;
+                _hasLocalStats = true;
+            }
+            break;
+        }
         case MsgType_RoleAnnouncement: {
             RoleAnnouncementMsg m;
             m.deserialize(s);
@@ -442,6 +463,15 @@ void Game::handleGameOver(NetBitStream& s) {
     GameOverMsg m;
     m.deserialize(s);
     _playing = false;
+    // Keep the local entry for the spectate stats panel / result fallback.
+    for (const auto& stats : m.playerStats) {
+        if (stats.playerId == _localPlayerId) {
+            _localStats = stats;
+            _localStats.dead = true;
+            _hasLocalStats = true;
+            break;
+        }
+    }
     _gameOver = std::move(m);
     _hasGameOver = true;
 }

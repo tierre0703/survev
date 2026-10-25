@@ -404,6 +404,15 @@ public:
         });
     }
 
+    void spectate(int action) override {
+        runOnGameThread([this, action] {
+            if (!_game) return;
+            if (Game* game = _game->getGame()) {
+                game->sendSpectate(static_cast<uint8_t>(action));
+            }
+        });
+    }
+
     void saveConfig() override {
         if (_menu) {
             _menu->saveConfig();
@@ -526,6 +535,10 @@ JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_onPauseGame(JNIEnv*, jclass
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_onResumeGame(JNIEnv*, jclass) {
     surv::uiBridge()->resumeGame();
+}
+
+JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_spectate(JNIEnv*, jclass, jint action) {
+    surv::uiBridge()->spectate(static_cast<int>(action));
 }
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setPlayerName(JNIEnv* env, jclass, jstring name) {

@@ -270,4 +270,104 @@ TEST(hud_action_bar_shows_inventory_state) {
     hud.update(0.016f, h.game, true);
     CHECK(hud.gameOverShown());
     CHECK(hud.hitTest(900.0f, 90.0f).kind == Hud::TapKind::None);
+    auto* reloadText = static_cast<const pix::NullText*>(hud.reloadButtonText());
+    CHECK(reloadText != nullptr && !reloadText->visible);
+}
+
+TEST(hud_death_panel_and_spectate_overlay) {
+    Harness h;
+    JoinedMsg joined;
+    joined.teamMode = 2;
+    joined.playerId = 42;
+    joined.started = true;
+    h.push(MsgType_Joined, joined);
+
+    UpdateMsg u;
+    u.activePlayerId = 42;
+    u.activePlayerIdDirty = true;
+    u.activePlayerData.healthDirty = true;
+    u.activePlayerData.health = 100.0f;
+    PlayerInfo me;
+    me.playerId = 42;
+    me.teamId = 2;
+    me.name = "Me";
+    u.playerInfos.push_back(me);
+    u.ack = 1;
+    h.push(MsgType_Update, u);
+
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.update(0.016f, h.game, true);
+    CHECK(!hud.deathPanelShown());
+    CHECK(!hud.spectating());
+
+    // Team death while a teammate is still alive: PlayerStatsMsg -> YOU DIED
+    // panel with SPECTATE + LEAVE.
+    PlayerStatsMsg stats;
+    stats.playerId = 42;
+    stats.dead = true;
+    stats.kills = 4;
+    stats.damageDealt = 321;
+    stats.damageTaken = 111;
+    stats.timeAlive = 95;
+    h.push(MsgType_PlayerStats, stats);
+    hud.update(0.016f, h.game, true);
+    CHECK(hud.deathPanelShown());
+    CHECK(hud.hitTest(520.0f, 266.0f).kind == Hud::TapKind::None);
+    CHECK(hud.overlayActionAt(520.0f, 266.0f) == Hud::OverlayAction::SpectateBegin);
+    CHECK(hud.overlayActionAt(760.0f, 266.0f) == Hud::OverlayAction::Leave);
+    auto* deathTitle = static_cast<const pix::NullText*>(hud.deathTitleText());
+    CHECK(deathTitle != nullptr);
+    CHECK_EQ(deathTitle->text, std::string("YOU DIED"));
+
+    // The server moves activePlayerId to a teammate: spectating overlay with
+    // the target name/count and the touch options.
+    UpdateMsg spec;
+    spec.activePlayerId = 77;
+    spec.activePlayerIdDirty = true;
+    spec.activePlayerData.spectatorCountDirty = true;
+    spec.activePlayerData.spectatorCount = 2;
+    PlayerInfo mate;
+    mate.playerId = 77;
+    mate.teamId = 2;
+    mate.name = "Mate";
+    spec.playerInfos.push_back(mate);
+    spec.ack = 2;
+    h.push(MsgType_Update, spec);
+    hud.update(0.016f, h.game, true);
+    CHECK(hud.spectating());
+    CHECK(!hud.deathPanelShown());
+    auto* label = static_cast<const pix::NullText*>(hud.spectateLabelText());
+    auto* count = static_cast<const pix::NullText*>(hud.spectateCountText());
+    CHECK(label != nullptr && count != nullptr);
+    CHECK_EQ(label->text, std::string("SPECTATING Mate"));
+    CHECK_EQ(count->text, std::string("2 SPECTATING"));
+    CHECK(hud.overlayActionAt(95.0f, 250.0f) == Hud::OverlayAction::SpectatePrev);
+    CHECK(hud.overlayActionAt(95.0f, 200.0f) == Hud::OverlayAction::SpectateNext);
+    CHECK(hud.overlayActionAt(95.0f, 150.0f) == Hud::OverlayAction::ToggleStats);
+    CHECK(hud.overlayActionAt(95.0f, 100.0f) == Hud::OverlayAction::Leave);
+
+    hud.toggleSpectateStats();
+    CHECK(hud.spectateStatsShown());
+    auto* specStats = static_cast<const pix::NullText*>(hud.spectateStatsText());
+    CHECK(specStats != nullptr);
+    CHECK(specStats->text.find("KILLS  4") != std::string::npos);
+    CHECK(specStats->text.find("DAMAGE  321") != std::string::npos);
+
+    // Final result replaces the spectate overlay; only LEAVE remains.
+    GameOverMsg over;
+    over.teamId = 2;
+    over.teamRank = 1;
+    over.gameOver = true;
+    over.winningTeamId = 2;
+    over.playerStats = {stats};
+    h.push(MsgType_GameOver, over);
+    hud.update(0.016f, h.game, true);
+    CHECK(hud.gameOverShown());
+    CHECK(!hud.spectating());
+    CHECK(!hud.deathPanelShown());
+    CHECK(hud.overlayActionAt(640.0f, 266.0f) == Hud::OverlayAction::Leave);
+    CHECK(hud.overlayActionAt(520.0f, 266.0f) == Hud::OverlayAction::None);
 }

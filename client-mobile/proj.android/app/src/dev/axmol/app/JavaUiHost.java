@@ -160,6 +160,7 @@ public class JavaUiHost {
         mInGame = true;
         hideLoadout();
         hidePause();
+        if (mPause != null) mPause.setPlayerDead(false);
         hideSettings();
         hideHelp();
         hideLeaderboard();
@@ -202,7 +203,11 @@ public class JavaUiHost {
 
     /** The active player died (show result screen / spectate prompt). */
     public void showResult() {
-        Log.i(TAG, "showResult");
+        ensurePause();
+        if (mPause != null) {
+            mPause.setPlayerDead(true);
+        }
+        Log.i(TAG, "showResult (pause spectate enabled)");
     }
 
     /** Every region probe finished (M8 pingTest): hand it to the menu. */

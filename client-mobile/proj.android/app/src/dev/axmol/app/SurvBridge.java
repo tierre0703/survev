@@ -58,6 +58,9 @@ public final class SurvBridge {
     /** The pause dialog closed. */
     public static native void onResumeGame();
 
+    /** SpectateMsg action from the pause dialog: 1=Begin, 2=Next, 3=Prev. */
+    public static native void spectate(int action);
+
     public static native void setPlayerName(String name);
 
     public static native void setRegion(String region);

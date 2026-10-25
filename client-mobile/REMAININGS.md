@@ -10,12 +10,12 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25 (P0.6)** — the loadout editor now lists the
-real owned items from `shared/defs` (outfit/melee/emote/heal/boost/player-icon/
-crosshair) with the web client's image tiles and tints, edits all **6** emote
-slots (4 wheel + win/death), picks crosshair types with a live preview, and
-confirms/acks new account items. P0.1 (touch action inputs) is also done; the
-1:1 audit still applies to P0.2+. **171 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25 (P0.4/P0.5)** — death now shows a
+stats panel with **SPECTATE**/**LEAVE**, spectating follows the server's
+active player and shows the spectated player's name, spectator count, prev/next,
+match stats and leave, and a normal match end (`GameOverMsg` + server close
+3000/0) keeps the result screen instead of reporting a disconnect. P0.1/P0.6
+are also done; the 1:1 audit still applies to P0.2+. **172 host tests pass, 0 fail.**
 
 ---
 
@@ -30,7 +30,7 @@ confirms/acks new account items. P0.1 (touch action inputs) is also done; the
 | M4 | Rendering | **mostly done** | terrain/island/obstacles/buildings/particles/decals/gas/skeletal player; missing active-layer wiring, interpolation, bullet/explosion/projectile/loot FX (§3 P0.2/P0.3/P1.3). |
 | M5 | Input + touch | **done (touch)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; keyboard/mouse binds remain P1.6. |
 | M6 | Audio | **mostly done** | engine/mixer/ambience/reverb/EQ/interior sounds; startup volume/mute, pause/menu restart and many action cues are missing (§3 P1.5). |
-| M7 | UI layer | **partial** | Java menu/account/pass/team/loadout live; live HUD lacks inventory v2/spectate/settings; `FguiHud` is dead on Android (§3 P0.4/P0.7, P1.4). |
+| M7 | UI layer | **partial** | Java menu/account/pass/team/loadout live; death/result + spectate overlay live in the C++ HUD; inventory v2/settings in the live HUD still missing; `FguiHud` is dead on Android (§3 P0.7, P1.4). |
 | M8 | Accounts / API | **mostly done** | device login + profile, quests/pass, team links; quickplay is unauthenticated, captcha unsupported, error reasons wrong (§3 P1.1/P1.2); OAuth is an intentional platform delta. |
 | M9 | Polish & release | **started** | release APK/AAB pipeline verified (§45); waiting on the 1:1 gameplay gate (§3.7), a physical-device soak and final store upload. |
 
@@ -53,7 +53,7 @@ confirms/acks new account items. P0.1 (touch action inputs) is also done; the
 | `client/src/renderer.ts` → `render/Renderer.*` | 🔶 transform/z-sort/mask ported; `setActiveLayer` is never called (P0.2) |
 | `client/src/map.ts` → `game/Map.*` | ✅ terrain, surfaces, pools, camera emitter, baked minimap texture, big map (`game/MapView`); river-shore surface is always sand (P2) |
 | `client/src/gas.ts` → `game/Gas.*` | ✅ |
-| `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | 🔶 dispatch/net is good; no match-over latch (P0.5), no entity/camera interpolation (P0.3) |
+| `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | 🔶 dispatch/net is good; match-over latch + death/spectate done (P0.4/P0.5); entity/camera interpolation missing (P0.3) |
 | `client/src/objects/objectPool.ts` → `game/objects/GameObject.h` | ✅ |
 | `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | 🔶 poses/animations faithful; team patch, heal/revive/AoE emitters, bleed particles, nametag gating, action-sound keys, radius/easing missing (P1.3) |
 | `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | 🔶 whiz sound only; per-def tracers + all impact FX missing (P1.3) |
@@ -79,11 +79,11 @@ confirms/acks new account items. P0.1 (touch action inputs) is also done; the
 | `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | 🔶 schema ported; most settings never written/applied (P0.7) |
 | `client/src/device.ts` → `ui/Device.*` | 🔶 simplified (no tablet/pixelRatio/MAX_TEXTURE_SIZE tiers) |
 | `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*` | 🔶 C++ table good; Java menu is hardcoded English and the language list uses invalid `zh`/`ja` (P0.7) |
-| `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | 🔶 join/reconnect good; quickplay auth/captcha, reason mapping and match-over latch gaps (P0.5/P1.1/P1.2) |
+| `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | 🔶 join/reconnect good; quickplay auth/captcha and reason mapping still P1.1/P1.2 (match-over latch done) |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | 🔶 Bearer/find_game and mode/region metadata gaps (P1.1/P1.7) |
 | `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste) + `survev://team` deep links, kick/mode/region controls, team match stays connected |
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack; source badges and the per-item lore modal remain P1.7 |
-| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, basic weapon/ammo, alive/kills (from `GameOverMsg` only), kill feed, kill leader, gas timer, result panel, squad bars, gear icons; most inventory v2/interaction/spectate pieces live only in dead `FguiHud` (P1.4) |
+| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, weapon/ammo, alive/kills, kill feed, kill leader, gas timer, death/result + spectate overlay done (P0.4); inventory v2/interaction prompts and most post-match stats detail still live only in dead `FguiHud` (P1.4) |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | 🔶 partial: barn exists but is constructed with a **null** sprite barn; `MapSprite` z-order/pulse not applied (P2) |
@@ -188,28 +188,34 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
       - Acceptance: motion is smooth at 33 Hz net sync; toggling interpolation
         changes behaviour after P0.7.
 
-- [ ] **P0.4 Death → stats → spectate.**
-      `PlayerStatsMsg` is parsed and discarded (`Game.cpp:270`); `SpectateMsg`
-      exists but is never sent (`Messages.h:261-273`); `JavaUiHost.showResult()`
-      is a no-op (`JavaUiHost.java:203-206`) and the pause-dialog Spectate button
-      is a stub (`GamePauseDialog.java:240-244`). Port `game.ts:1507-1513,709-724`
-      and `ui.ts:1633-1775`:
-      - show the death/team-eliminated panel with kills/damage/survival;
-      - send `SpectateMsg` Begin/Next/Prev and move the camera to teammates;
-      - add "Spectating <name>", spectator count, View Match Stats, Leave Game;
-      - gate input while spectating.
-      - Acceptance: die in duo/squad → panel → spectate a teammate → leave.
+- [x] **P0.4 Death → stats → spectate.**
+      **Done.** `Game` now stores `PlayerStatsMsg` (`localStats()`,
+      `isLocalDead()`) and forwards `SpectateMsg` Begin/Next/Prev
+      (`Game::sendSpectate`, the Java pause bridge and `game/Hud`).
+      - The C++ HUD (`showDeathPanel`) shows **YOU DIED** with kills, damage,
+        damage taken and survival time as soon as the team-death PlayerStats
+        arrives, with **SPECTATE** and **LEAVE GAME**.
+      - Once the server moves `activePlayerId` to a teammate/killer,
+        `Hud::update` shows the spectating overlay: **SPECTATING** plus the
+        target name, `N SPECTATING`, **PREV/NEXT** (team modes), **MATCH STATS**
+        toggle and **LEAVE GAME**. The camera follows the active player and the pads/input
+        are gated off while dead/spectating (`isLocalDead`, `isSpectating`).
+      - The final `GameOverMsg` replaces all of that with the result panel
+        (VICTORY/DEFEAT, rank, team kills, local stats) and a **LEAVE GAME**
+        button. The Java pause dialog's Spectate button now sends Begin too.
+      - Host tests cover the death panel, overlay hit tests, spectate name/count,
+        stats toggle and the final-result replacement.
+        Device: solo death → result panel → Leave verified; the team-death
+        spectate path needs a duo/squad teammate for a full on-device run.
 
-- [ ] **P0.5 Latch match-over so a finished match is not a "disconnect".**
-      The server sends `GameOverMsg` on every death and closes with **3000 +
-      reason** (`server/src/game/objects/player.ts:2546-2577`,
-      `server/src/game/gameProcess.ts:291-295`). The native client has no
-      `m_gameOver` latch: when the socket closes it runs the reconnect/error path
-      (`GameScene.cpp:1102-1149`), tears the world down and shows
-      "Host closed the connection" even after a normal game over. Port
-      `game.ts:188-200` (`connected && !m_gameOver && !displayingStats`) and keep
-      the result screen/world until the player leaves. Acceptance: finish a match
-      and see the result screen, not a disconnect error.
+- [x] **P0.5 Latch match-over so a finished match is not a "disconnect".**
+      **Done.** A normal end sends `GameOverMsg` and the server closes with
+      **3000/0** (`stop()` → `client.disconnect()`); `GameScene::update` now keeps
+      the world/result whenever `_game->gameOver() != nullptr` and never runs the
+      reconnect/URL-fallback/error path. The liveness watchdog also skips once
+      `_hasGameOver` is set. The result screen stays until **LEAVE GAME**.
+      Device: a solo match death showed the result panel while the socket closed
+      (`Disconnected: code=0 reason=`) instead of "Host closed the connection".
 
 - [x] **P0.6 Loadout editor: real items + all emote slots.**
       `LoadoutFragment.java` used to permanently hide the item grid
@@ -417,7 +423,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 ### 3.6 Suggested session order (each ends with a green `surv_tests` + device check)
 
 1. **P0.6** — real loadout (done; see §3.2).
-2. **P0.4 + P0.5** — death/stats/spectate + match-over latch.
+2. **P0.4 + P0.5** — death/stats/spectate + match-over latch (done).
 3. **P0.2 + P0.3** — active layer + interpolation: fixes bunkers and game feel.
 4. **P0.7 + P1.5** — settings/audio correctness (restart-verified).
 5. **P1.1 + P1.2** — authenticated quick play/captcha + correct errors.
@@ -444,7 +450,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (171 tests, 0 failures expected)
+# host tests (172 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -495,6 +501,11 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - The minimap bakes the **static** `MapMsg.objects` (not the live pools, which are empty during `loadMap`); the big map uses the same texture fitted to 640px
 - `Hud` hit tests (`minimapExpandHit`, `bigMapContains/CloseHit`) take design-space coords; widget positions are centred HUD coords
 - P0.1 action taps are one-shot edits queued in `game/InputActions` and cleared only after `Game::sendInput` runs (clearing at tap time loses taps that land between the 33 Hz sends)
+- A normal match end is `GameOverMsg` followed by the server's `stop()` close (3000/0): `GameScene::update` must keep the world/result when `Game::gameOver() != nullptr` and skip reconnect/URL fallback/error, and the liveness watchdog skips once `_hasGameOver` is set
+- `PlayerStatsMsg` (team death, teammates alive) is the death-panel source (`Game::localStats`); the final `GameOverMsg.playerStats` entry is used for the result. Do not discard it again (`Game.cpp` used to)
+- Spectating is server-driven: `Game::isSpectating()` is `activePlayerId != localPlayerId`; camera/active player follow `UpdateMsg.activePlayerIdDirty`. The HUD's PREV/NEXT send `SpectateMsg` 2/3 and are hidden in solo
+- `GamePauseDialog` starts `GONE` (ensurePause() can create it before the user opens it); `show()`/`hide()` own visibility. `showResult()` only enables the Spectate button
+- While `Game::isLocalDead()`/`isSpectating()`, gameplay inputs/pads and the emote/ping wheels are disabled and the HUD action bar is hidden; only the overlay buttons/minimap respond
 - Loadout item lists come from `codegen_render_defs.mjs` (`LoadoutItemDef` table) via `SurvBridge.getLoadoutItemsJson()`; never hardcode item IDs in `LoadoutFragment.java` again
 - Loadout item art is `Content/img/loadout/<type>.png`, generated by `tools/build-loadout-icons.mjs` from the web SVGs (`Content/` is gitignored; `sync-content.ps1` runs the tool). Java reads it as assets path `img/loadout/<type>.png`; melee rotation/mirror is baked into the PNG, outfit `lootImg.tint` is applied with a `ColorMatrix` (the web's SVG multiply filter)
 - The emote loadout is **6** slots (Top/Right/Bottom/Left/Win/Death): editing one merges into the existing array (`UiBridge::setLoadoutJson` only merges top-level keys) and must not replace the other five

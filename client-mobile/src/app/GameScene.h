@@ -300,6 +300,9 @@ private:
     TouchInput _touchInput;
     float _inputMsgTimeout = 0.0f;
     bool _shootStartPending = false;
+    // P0.4: the Java pause dialog shows Spectate after the local death; notify
+    // it once per match (UiHost::showResult).
+    bool _deadNotified = false;
 
     // P0.1 gameplay action buttons: taps/holds on the HUD controls queue into
     // `_pendingInputs` and drain into the next InputMsg (see updateInput()).

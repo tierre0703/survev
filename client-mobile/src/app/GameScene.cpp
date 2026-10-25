@@ -639,6 +639,7 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
     _inGame = true;
     _notifiedStarted = false;
     _joinElapsed = 0;
+    _deadNotified = false;
     _gameRoot->setVisible(true);
     _worldVisible = true;
     ensureBackdropVisible();
@@ -916,6 +917,14 @@ void GameScene::update(float delta) {
         }
     }
     _game->update(delta);
+    // P0.4: the Java pause dialog's Spectate button is enabled once the local
+    // player dies (the C++ HUD owns the in-game death/spectate overlay).
+    if (_inGame && !_deadNotified && _game->isLocalDead()) {
+        _deadNotified = true;
+        if (UiHost* host = uiHost()) {
+            host->showResult();
+        }
+    }
     // P0.1: a held weapon/item card turns into a drop after kLongPressSeconds.
     if (_hudPress.id >= 0) {
         _hudPress.elapsed += delta;
@@ -1113,48 +1122,57 @@ void GameScene::update(float delta) {
     const bool lostSocket = !_game->isConnected()
         && (_game->getCloseCode() != 0 || _game->hasJoined());
     if (_inGame && lostSocket) {
-        // Mid-match drop: rejoin the same game (the server keeps the seat).
-        if (tryReconnect()) {
-            return;
-        }
-        // If the server never accepted us, try the next advertised URL with the
-        // same join token (main.ts joinGame()) before giving up.
-        if (!_reconnect.active && _awaitingJoin && !_game->hasJoined()
-            && _joinRetryIndex + 1 < _joinRetryUrls.size()) {
+        // A normal match end sends GameOverMsg and then closes with 3000 (the
+        // server stopTicker) or an empty reason. Keep the result screen/world
+        // until the player taps Leave; do not reconnect or show a disconnect.
+        if (_game->gameOver() != nullptr) {
             _awaitingJoin = false;
-            const size_t next = _joinRetryIndex + 1;
-            const std::vector<std::string> urls = _joinRetryUrls;
-            const std::string token = _joinRetryToken;
-            AXLOGW("Join failed (code={}); trying next url", _game->getCloseCode());
-            tryJoinUrls(urls, token, next);
-            return;
-        }
-        _awaitingJoin = false;
-        static const struct {
-            uint16_t code;
-            const char* key;
-        } kCloseKeys[] = {
-            {4001, "index-invalid-token"},      {4002, "index-invalid-protocol"},
-            {4003, "index-invalid-packet"},     {4004, "index-behind-proxy"},
-            {4005, "index-player-not-found"},   {4006, "index-ip-banned"},
-            {4007, "index-rate-limited"},       {4008, "index-server-crashed"},
-            {4009, "index-server-restart"},     {4010, "index-invalid-captcha"},
-            {4011, "index-failed-finding-game"},
-        };
-        const char* key = "index-host-closed";
-        // Once a rejoin was attempted, a late server rejection (the window ran
-        // out -> invalid_token) is still a lost connection, not a bad token.
-        if (_reconnect.attempt == 0) {
-            for (const auto& entry : kCloseKeys) {
-                if (entry.code == _game->getCloseCode()) {
-                    key = entry.key;
-                    break;
+            _reconnect = ReconnectState{};
+        } else {
+            // Mid-match drop: rejoin the same game (the server keeps the seat).
+            if (tryReconnect()) {
+                return;
+            }
+            // If the server never accepted us, try the next advertised URL with
+            // the same join token (main.ts joinGame()) before giving up.
+            if (!_reconnect.active && _awaitingJoin && !_game->hasJoined()
+                && _joinRetryIndex + 1 < _joinRetryUrls.size()) {
+                _awaitingJoin = false;
+                const size_t next = _joinRetryIndex + 1;
+                const std::vector<std::string> urls = _joinRetryUrls;
+                const std::string token = _joinRetryToken;
+                AXLOGW("Join failed (code={}); trying next url", _game->getCloseCode());
+                tryJoinUrls(urls, token, next);
+                return;
+            }
+            _awaitingJoin = false;
+            static const struct {
+                uint16_t code;
+                const char* key;
+            } kCloseKeys[] = {
+                {4001, "index-invalid-token"},      {4002, "index-invalid-protocol"},
+                {4003, "index-invalid-packet"},     {4004, "index-behind-proxy"},
+                {4005, "index-player-not-found"},   {4006, "index-ip-banned"},
+                {4007, "index-rate-limited"},       {4008, "index-server-crashed"},
+                {4009, "index-server-restart"},     {4010, "index-invalid-captcha"},
+                {4011, "index-failed-finding-game"},
+            };
+            const char* key = "index-host-closed";
+            // Once a rejoin was attempted, a late server rejection (the window
+            // ran out -> invalid_token) is still a lost connection, not a bad
+            // token.
+            if (_reconnect.attempt == 0) {
+                for (const auto& entry : kCloseKeys) {
+                    if (entry.code == _game->getCloseCode()) {
+                        key = entry.key;
+                        break;
+                    }
                 }
             }
+            setError(key, "Connection lost");
+            leaveGame();
+            if (onMatchEnded) onMatchEnded(key);
         }
-        setError(key, "Connection lost");
-        leaveGame();
-        if (onMatchEnded) onMatchEnded(key);
     } else if (_game->hasJoined()) {
         _awaitingJoin = false;
     }
@@ -1224,6 +1242,10 @@ void GameScene::update(float delta) {
                 pushFrame(perk.type);
             }
             _hud->setGearState(frames);
+        }
+        const bool deadOrSpectating = _game->isLocalDead() || _game->isSpectating();
+        if (deadOrSpectating && _touch) {
+            _touch->hideAll();
         }
         _hud->update(delta, *_game,
                      _inGame && _notifiedStarted && (_game->isPlaying() || _game->gameOver() != nullptr));
@@ -1357,9 +1379,10 @@ void GameScene::update(float delta) {
     // frame (cheap, it only rebuilds when the JoinedMsg emotes changed).
     if (_emoteWheel && _game) {
         const bool playing = _inGame && _notifiedStarted && _game->isPlaying();
+        const bool deadOrSpectating = _game->isLocalDead() || _game->isSpectating();
         _emoteWheel->setLoadout(_game->emotes());
         _emoteWheel->setTeamMode(_game->teamMode() == 1);
-        _emoteWheel->setHudVisible(playing);
+        _emoteWheel->setHudVisible(playing && !deadOrSpectating);
         _emoteWheel->update(delta);
     }
     // Team-ping wheel: same visibility, sharing the emote throttle (the web
@@ -1367,6 +1390,7 @@ void GameScene::update(float delta) {
     // follows the equipped weapon's ammo type each frame.
     if (_pingWheel && _game) {
         const bool playing = _inGame && _notifiedStarted && _game->isPlaying();
+        const bool deadOrSpectating = _game->isLocalDead() || _game->isSpectating();
         std::string ammoType;
         const ActivePlayerData& apd = _game->activePlayerData();
         if (apd.curWeapIdx >= 0 && apd.curWeapIdx < static_cast<int>(apd.weapons.size())) {
@@ -1381,7 +1405,7 @@ void GameScene::update(float delta) {
         }
         _pingWheel->setTeamMode(_game->teamMode() == 1);
         _pingWheel->setAmmoType(ammoType);
-        _pingWheel->setHudVisible(playing);
+        _pingWheel->setHudVisible(playing && !deadOrSpectating);
         _pingWheel->setGreyed(_emoteWheel && !_emoteWheel->canSend());
         _pingWheel->update(delta);
         if (!_pingWheel->visible()) {
@@ -1477,7 +1501,8 @@ void GameScene::update(float delta) {
 
     // S6: the pause menu is now Java (GamePauseDialog).
     // The C++ _overlay is never created; skip the isOpen check.
-    if (_game->isPlaying() && _game->getActivePlayerId() != 0) {
+    if (_game->isPlaying() && _game->getActivePlayerId() != 0
+        && !_game->isSpectating() && !_game->isLocalDead()) {
         updateInput(delta);
     }
     // Dual joysticks: Touch::m_update reads the pad centres that getMovement/
@@ -1541,6 +1566,36 @@ void GameScene::onTouchBegan(float x, float y, int id) {
     // S6: _overlay is never created; the Java GamePauseDialog is the
     // actual pause. Don't block touches because of a null overlay.
     if (!_inGame || !_notifiedStarted) return;
+    // P0.4 result/death/spectate overlays are modal; route their buttons before
+    // any world/map interaction.
+    if (_hud && _game && (_hud->overlayShown() || _hud->spectating())) {
+        const Vec2 design = screenToDesign(x, y);
+        switch (_hud->overlayActionAt(design.x, design.y)) {
+            case Hud::OverlayAction::SpectateBegin:
+                _game->sendSpectate(1);
+                return;
+            case Hud::OverlayAction::SpectateNext:
+                _game->sendSpectate(2);
+                return;
+            case Hud::OverlayAction::SpectatePrev:
+                _game->sendSpectate(3);
+                return;
+            case Hud::OverlayAction::ToggleStats:
+                _hud->toggleSpectateStats();
+                return;
+            case Hud::OverlayAction::Leave:
+                returnToMenu();
+                return;
+            case Hud::OverlayAction::None:
+                break;
+        }
+        // The death/result panel dims the whole screen: swallow every touch so
+        // it cannot move/fire behind it. The spectating overlay is not modal
+        // (the minimap/big map stay usable).
+        if (_hud->overlayShown()) {
+            return;
+        }
+    }
     // Big map: swallow the touch; tapping outside (or the close button) closes.
     if (_hud && _hud->bigMapVisible()) {
         const Vec2 design = screenToDesign(x, y);
@@ -1605,6 +1660,11 @@ void GameScene::onTouchBegan(float x, float y, int id) {
             _pingWheel->open(_pingWheel->buttonCenter());
             return;
         }
+    }
+    // Dead or spectating: the gameplay pads/action bar are hidden and the
+    // overlay buttons were handled above. The minimap/big map stay usable.
+    if (_game->isSpectating() || _game->isLocalDead()) {
+        return;
     }
     // P0.1 gameplay action buttons (reload/interact/heal/boost/scope/swap and
     // the weapon cards). Hit-tested before the pads, like the web's DOM buttons

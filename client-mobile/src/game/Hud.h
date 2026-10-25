@@ -21,6 +21,7 @@
 // nodes and reads the Game snapshot, so `surv_tests` exercises it with
 // NullPixi.
 #include "../core/Vec2.h"
+#include "../net/Messages.h"
 #include "../render/PixiLike.h"
 #include "EmoteManager.h"
 #include "MapView.h"
@@ -109,6 +110,29 @@ public:
     bool gameOverShown() const { return _overShown; }
     static std::string formatTime(uint16_t seconds);
 
+    // P0.4 death/spectate. PlayerStatsMsg arrives when the local player dies in
+    // a team match and teammates are still alive (the web showTeamAd screen);
+    // it shows the local stats with SPECTATE/LEAVE. Hud::update() swaps this for
+    // the final result when GameOverMsg lands and shows the spectating overlay
+    // once the server moves activePlayerId to a teammate.
+    void showDeathPanel(const PlayerStatsMsg& stats);
+    bool deathPanelShown() const { return _deathShown; }
+    bool spectating() const { return _spectating; }
+    bool overlayShown() const { return _overShown || _deathShown; }
+    // True while the result/death panel is visible (touches are modal).
+    enum class OverlayAction {
+        None,
+        SpectateBegin,
+        SpectateNext,
+        SpectatePrev,
+        ToggleStats,
+        Leave,
+    };
+    OverlayAction overlayActionAt(float designX, float designY) const;
+    // Spectate stats panel toggle (ui.ts toggleLocalStats / View Match Stats).
+    void toggleSpectateStats();
+    bool spectateStatsShown() const { return _specStatsShown; }
+
     // map.ts renderMap(): show the baked minimap texture under the frame.
     void setMinimap(pix::RenderTexture* texture, float mapWidth, float mapHeight);
     // ui.ts createPing / mapSprite.ts: draw the active minimap ping sprites.
@@ -188,6 +212,10 @@ public:
     const pix::Text* weaponSlotText(int idx) const {
         return (idx >= 0 && idx < 4) ? _weaponSlots[idx] : nullptr;
     }
+    const pix::Text* spectateLabelText() const { return _specLabel; }
+    const pix::Text* spectateCountText() const { return _specCountText; }
+    const pix::Text* spectateStatsText() const { return _specStatsText; }
+    const pix::Text* deathTitleText() const { return _overTitle; }
 
 private:
     void layout(pix::Graphics* g, float w, float h) const;
@@ -241,7 +269,39 @@ private:
     pix::Text* _overTitle = nullptr;
     pix::Text* _overRank = nullptr;
     pix::Text* _overStats = nullptr;
+    pix::Graphics* _overSpectateBg = nullptr;
+    pix::Text* _overSpectateText = nullptr;
+    pix::Graphics* _overLeaveBg = nullptr;
+    pix::Text* _overLeaveText = nullptr;
+    Rect _overSpectateRect;
+    Rect _overLeaveRect;
     bool _overShown = false;
+    bool _deathShown = false;
+    bool _spectating = false;
+    PlayerStatsMsg _localStats;
+    bool _hasLocalStats = false;
+
+    // Spectating overlay (ui.ts setSpectating / #ui-spectate-options).
+    pix::Text* _specLabel = nullptr;
+    pix::Text* _specCountText = nullptr;
+    pix::Graphics* _specPrevBg = nullptr;
+    pix::Text* _specPrevText = nullptr;
+    pix::Graphics* _specNextBg = nullptr;
+    pix::Text* _specNextText = nullptr;
+    pix::Graphics* _specStatsBg = nullptr;
+    pix::Text* _specStatsTextBtn = nullptr;
+    pix::Graphics* _specLeaveBg = nullptr;
+    pix::Text* _specLeaveText = nullptr;
+    Rect _specPrevRect;
+    Rect _specNextRect;
+    Rect _specStatsRect;
+    Rect _specLeaveRect;
+    pix::Graphics* _specStatsPanel = nullptr;
+    pix::Text* _specStatsText = nullptr;
+    bool _specStatsShown = false;
+    bool _specCanCycle = false;
+    uint8_t _specCount = 0;
+    std::string _specName;
 
     // Squad bars (top-left, team modes).
     struct SquadRow {

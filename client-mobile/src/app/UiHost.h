@@ -78,6 +78,8 @@ public:
     virtual void quitGame() = 0;
     virtual void pauseGame() = 0;
     virtual void resumeGame() = 0;
+    // SpectateMsg action from the Java pause dialog: 1=Begin, 2=Next, 3=Prev.
+    virtual void spectate(int action) { (void)action; }
     // Persist the config blob (Java calls this before backgrounding).
     virtual void saveConfig() {}
     // The bundled news entries as JSON (the Java menu's news column).

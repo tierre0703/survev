@@ -121,7 +121,7 @@ const std::string& Hud::weaponType(int slot) const {
 }
 
 Hud::TapResult Hud::hitTest(float designX, float designY) const {
-    if (!_built || !_visible || _overShown || _bigMapVisible) {
+    if (!_built || !_visible || _overShown || _deathShown || _spectating || _bigMapVisible) {
         return TapResult{};
     }
     // Rects are stored in the centred HUD container.
@@ -261,6 +261,61 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _overStats->setLocalZOrder(952);
     _overStats->setVisible(false);
     _root->addChild(_overStats);
+
+    // P0.4 overlay buttons: the final result has LEAVE; the team-death panel has
+    // SPECTATE + LEAVE. Positions are panel-local (the panel is centred).
+    const auto makeOverlayButton = [this](pix::Graphics*& bg, pix::Text*& text,
+                                          float fontSize) {
+        bg = _factory->createGraphics();
+        bg->setLocalZOrder(953);
+        _root->addChild(bg);
+        text = _factory->createText();
+        text->setFontSize(fontSize);
+        text->setColor(0xffffff, 0x000000, 1.5f, false);
+        text->setAnchor(0.5f, 0.5f);
+        text->setLocalZOrder(954);
+        _root->addChild(text);
+    };
+    makeOverlayButton(_overSpectateBg, _overSpectateText, 18.0f);
+    makeOverlayButton(_overLeaveBg, _overLeaveText, 18.0f);
+    _overSpectateText->setText("SPECTATE");
+    _overLeaveText->setText("LEAVE GAME");
+    _overSpectateRect = Rect{-220.0f, -118.0f, 200.0f, 48.0f};
+    _overLeaveRect = Rect{20.0f, -118.0f, 200.0f, 48.0f};
+    _overSpectateText->setPosition(-120.0f, -94.0f);
+    _overLeaveText->setPosition(120.0f, -94.0f);
+
+    // Spectating overlay: label/count at the top centre and the touch options
+    // stacked bottom-left (game.css #ui-spectate-options mobile).
+    _specLabel = _factory->createText();
+    _specLabel->setFontSize(22.0f);
+    _specLabel->setColor(0x66ffff, 0x000000, 2.0f, true);
+    _specLabel->setAnchor(0.5f, 0.5f);
+    _specLabel->setLocalZOrder(920);
+    _root->addChild(_specLabel);
+    _specCountText = _factory->createText();
+    _specCountText->setFontSize(14.0f);
+    _specCountText->setColor(0xffd060, 0x000000, 2.0f, true);
+    _specCountText->setAnchor(0.5f, 0.5f);
+    _specCountText->setLocalZOrder(920);
+    _root->addChild(_specCountText);
+    makeOverlayButton(_specPrevBg, _specPrevText, 15.0f);
+    makeOverlayButton(_specNextBg, _specNextText, 15.0f);
+    makeOverlayButton(_specStatsBg, _specStatsTextBtn, 15.0f);
+    makeOverlayButton(_specLeaveBg, _specLeaveText, 15.0f);
+    _specPrevText->setText("PREV");
+    _specNextText->setText("NEXT");
+    _specStatsTextBtn->setText("MATCH STATS");
+    _specLeaveText->setText("LEAVE GAME");
+    _specStatsPanel = _factory->createGraphics();
+    _specStatsPanel->setLocalZOrder(920);
+    _root->addChild(_specStatsPanel);
+    _specStatsText = _factory->createText();
+    _specStatsText->setFontSize(15.0f);
+    _specStatsText->setColor(0xffffff, 0x000000, 1.0f, false);
+    _specStatsText->setAnchor(0.0f, 1.0f);
+    _specStatsText->setLocalZOrder(921);
+    _root->addChild(_specStatsText);
 
     // #ui-bottom-right: four weapon cards.
     _weaponBoxBg = _factory->createGraphics();
@@ -416,6 +471,54 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
                 kSmallPillWidth, kPillHeight);
     placeButton(_swapBg, _swapText, _swapRect, vw * 0.6016f, vh * 0.3833f,
                 kSmallPillWidth, kPillHeight);
+
+    // P0.4 spectating overlay: label/count top-centre and a bottom-left option
+    // stack over the (now hidden) movement pad.
+    _specLabel->setPosition(X(vw * 0.5f), Y(vh - 64.0f));
+    _specCountText->setPosition(X(vw * 0.5f), Y(vh - 94.0f));
+    const auto placeOverlayButton = [&](pix::Graphics* bg, pix::Text* text, Rect& rect,
+                                        float cx, float cy, float w, float h) {
+        rect = Rect{X(cx - w * 0.5f), Y(cy - h * 0.5f), w, h};
+        text->setPosition(X(cx), Y(cy));
+        if (bg) bg->setVisible(false);
+        if (text) text->setVisible(false);
+    };
+    placeOverlayButton(_specPrevBg, _specPrevText, _specPrevRect, 95.0f, 250.0f, 150.0f, 42.0f);
+    placeOverlayButton(_specNextBg, _specNextText, _specNextRect, 95.0f, 200.0f, 150.0f, 42.0f);
+    placeOverlayButton(_specStatsBg, _specStatsTextBtn, _specStatsRect, 95.0f, 150.0f, 150.0f,
+                       42.0f);
+    placeOverlayButton(_specLeaveBg, _specLeaveText, _specLeaveRect, 95.0f, 100.0f, 150.0f,
+                       42.0f);
+    _specStatsPanel->setVisible(false);
+    _specStatsPanel->setPosition(X(185.0f), Y(70.0f));
+    _specStatsText->setVisible(false);
+    _specStatsText->setPosition(X(195.0f), Y(258.0f));
+
+    const auto paintOverlayButton = [](pix::Graphics* bg, const Rect& rect, uint32_t color) {
+        if (!bg) return;
+        bg->clear();
+        bg->beginFill(color, 0.92f);
+        bg->drawRect(rect.x, rect.y, rect.w, rect.h);
+        bg->endFill();
+        bg->lineStyle(2.0f, 0xffffff, 0.45f);
+        bg->drawRect(rect.x, rect.y, rect.w, rect.h);
+        bg->setPosition(0.0f, 0.0f);
+        bg->setVisible(false);
+    };
+    paintOverlayButton(_overSpectateBg, _overSpectateRect, 0x50afab);
+    paintOverlayButton(_overLeaveBg, _overLeaveRect, 0xcc3333);
+    paintOverlayButton(_specPrevBg, _specPrevRect, 0x50afab);
+    paintOverlayButton(_specNextBg, _specNextRect, 0x50afab);
+    paintOverlayButton(_specStatsBg, _specStatsRect, 0x50afab);
+    paintOverlayButton(_specLeaveBg, _specLeaveRect, 0xcc3333);
+    if (_specStatsPanel) {
+        _specStatsPanel->clear();
+        _specStatsPanel->beginFill(0x000000, 0.7f);
+        _specStatsPanel->drawRect(0.0f, 0.0f, 250.0f, 190.0f);
+        _specStatsPanel->endFill();
+        _specStatsPanel->lineStyle(2.0f, 0xffffff, 0.4f);
+        _specStatsPanel->drawRect(0.0f, 0.0f, 250.0f, 190.0f);
+    }
 
     // #ui-bottom-center-2: pickup message just below the centre.
     _pickupText->setAnchor(0.5f, 0.0f);
@@ -624,7 +727,7 @@ void Hud::setVisible(bool visible) {
             _gearIcons[i]->setVisible(visible && !_gearFrames[i].empty());
         }
     }
-    const bool over = visible && _overShown;
+    const bool over = visible && (_overShown || _deathShown);
     if (_overBackdrop) {
         _overBackdrop->setVisible(over);
     }
@@ -635,10 +738,67 @@ void Hud::setVisible(bool visible) {
         _overTitle->setVisible(over);
     }
     if (_overRank) {
-        _overRank->setVisible(over);
+        _overRank->setVisible(visible && _overShown);
     }
     if (_overStats) {
         _overStats->setVisible(over);
+    }
+    if (_overSpectateBg) {
+        _overSpectateBg->setVisible(visible && _deathShown && !_overShown);
+    }
+    if (_overSpectateText) {
+        _overSpectateText->setVisible(visible && _deathShown && !_overShown);
+    }
+    if (_overLeaveBg) {
+        _overLeaveBg->setVisible(over);
+    }
+    if (_overLeaveText) {
+        _overLeaveText->setVisible(over);
+    }
+    // The final result panel has only LEAVE, centred; the death panel has
+    // SPECTATE + LEAVE side by side.
+    if (_overLeaveText) {
+        _overLeaveText->setPosition(_overShown ? 0.0f : 120.0f, -94.0f);
+    }
+    if (_overLeaveBg) {
+        _overLeaveBg->setPosition(_overShown ? -120.0f : 0.0f, 0.0f);
+    }
+    const bool spec = visible && _spectating && !_overShown && !_deathShown;
+    if (_specLabel) {
+        _specLabel->setVisible(spec);
+    }
+    if (_specCountText) {
+        _specCountText->setVisible(spec && _specCount > 0);
+    }
+    if (_specPrevBg) {
+        _specPrevBg->setVisible(spec && _specCanCycle);
+    }
+    if (_specPrevText) {
+        _specPrevText->setVisible(spec && _specCanCycle);
+    }
+    if (_specNextBg) {
+        _specNextBg->setVisible(spec && _specCanCycle);
+    }
+    if (_specNextText) {
+        _specNextText->setVisible(spec && _specCanCycle);
+    }
+    if (_specStatsBg) {
+        _specStatsBg->setVisible(spec);
+    }
+    if (_specStatsTextBtn) {
+        _specStatsTextBtn->setVisible(spec);
+    }
+    if (_specLeaveBg) {
+        _specLeaveBg->setVisible(spec);
+    }
+    if (_specLeaveText) {
+        _specLeaveText->setVisible(spec);
+    }
+    if (_specStatsPanel) {
+        _specStatsPanel->setVisible(spec && _specStatsShown);
+    }
+    if (_specStatsText) {
+        _specStatsText->setVisible(spec && _specStatsShown);
     }
     // Item pills own their visibility (empty inventory hides them); this also
     // runs after the big-map/result state changes so they never linger.
@@ -859,8 +1019,75 @@ void Hud::showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t lo
     _overStats->setText(text);
 
     _overShown = true;
+    _deathShown = false;
+    _spectating = false;
+    if (_overLeaveText) _overLeaveText->setText("LEAVE GAME");
     _bigMapVisible = false;
     setVisible(_visible);
+}
+
+void Hud::showDeathPanel(const PlayerStatsMsg& stats) {
+    if (!_built) {
+        return;
+    }
+    _localStats = stats;
+    _hasLocalStats = true;
+    _overShown = false;
+    _deathShown = true;
+    _spectating = false;
+    if (_overTitle) {
+        _overTitle->setText("YOU DIED");
+        _overTitle->setColor(0xff6a6a, 0x000000, 2.0f, true);
+    }
+    if (_overRank) {
+        _overRank->setText("");
+    }
+    std::string text = "Kills: " + std::to_string(stats.kills);
+    text += "   Damage: " + std::to_string(stats.damageDealt);
+    text += "\nDamage taken: " + std::to_string(stats.damageTaken);
+    text += "\nSurvived: " + formatTime(stats.timeAlive);
+    if (_overStats) {
+        _overStats->setText(text);
+    }
+    if (_overLeaveText) _overLeaveText->setText("LEAVE GAME");
+    _bigMapVisible = false;
+    setVisible(_visible);
+}
+
+void Hud::toggleSpectateStats() {
+    _specStatsShown = !_specStatsShown;
+    if (_specStatsText && _hasLocalStats) {
+        std::string text = "KILLS  " + std::to_string(_localStats.kills);
+        text += "\nDAMAGE  " + std::to_string(_localStats.damageDealt);
+        text += "\nTAKEN  " + std::to_string(_localStats.damageTaken);
+        text += "\nSURVIVED  " + formatTime(_localStats.timeAlive);
+        _specStatsText->setText(text);
+    }
+    setVisible(_visible);
+}
+
+Hud::OverlayAction Hud::overlayActionAt(float designX, float designY) const {
+    if (!_built || !_visible) {
+        return OverlayAction::None;
+    }
+    const float px = designX - _design.x * 0.5f;
+    const float py = designY - _design.y * 0.5f;
+    if (_overShown) {
+        const Rect leave{-100.0f, -118.0f, 200.0f, 48.0f};
+        return leave.contains(px, py) ? OverlayAction::Leave : OverlayAction::None;
+    }
+    if (_deathShown) {
+        if (_overSpectateRect.contains(px, py)) return OverlayAction::SpectateBegin;
+        if (_overLeaveRect.contains(px, py)) return OverlayAction::Leave;
+        return OverlayAction::None;
+    }
+    if (_spectating) {
+        if (_specCanCycle && _specPrevRect.contains(px, py)) return OverlayAction::SpectatePrev;
+        if (_specCanCycle && _specNextRect.contains(px, py)) return OverlayAction::SpectateNext;
+        if (_specStatsRect.contains(px, py)) return OverlayAction::ToggleStats;
+        if (_specLeaveRect.contains(px, py)) return OverlayAction::Leave;
+    }
+    return OverlayAction::None;
 }
 
 void Hud::displayPickupMessage(const std::string& text) {
@@ -876,7 +1103,8 @@ void Hud::updateActionButtons() {
     if (!_built) {
         return;
     }
-    const bool base = _visible && !_overShown && !_bigMapVisible;
+    const bool base = _visible && !_overShown && !_deathShown && !_spectating &&
+        !_bigMapVisible;
     const auto itemLabel = [](const std::string& item) -> std::string {
         if (item == "healthkit") return "MEDKIT";
         if (item == "painkiller") return "PILLS";
@@ -897,7 +1125,7 @@ void Hud::updateActionButtons() {
     std::string key = base ? "1" : "0";
     key += "|" + healLabel + "|" + boostLabel + "|" + scopeText + "|" +
         std::to_string(_equippedSlot);
-    if (key == _actionKey) {
+    if (key == _actionKey && base) {
         return;
     }
     _actionKey = key;
@@ -962,16 +1190,66 @@ void Hud::update(float dt, const Game& game, bool visible) {
     }
     setVisible(visible);
 
-    // Result screen (ui.ts displayStats): GameOverMsg latches until the next
-    // match resets the HUD.
-    if (const GameOverMsg* over = game.gameOver()) {
+    // Result / death / spectate state (ui.ts displayStats, showTeamAd and
+    // setSpectating). GameOverMsg latches until the next match resets the HUD.
+    const GameOverMsg* over = game.gameOver();
+    if (over) {
         if (!_overShown) {
-            showGameOver(*over, game.teamIdForPlayer(game.getLocalPlayerId()), game.getLocalPlayerId());
+            showGameOver(*over, game.teamIdForPlayer(game.getLocalPlayerId()),
+                         game.getLocalPlayerId());
         }
-    } else if (_overShown) {
-        _overShown = false;
-        setVisible(_visible);
+        _deathShown = false;
+        _spectating = false;
+    } else {
+        if (_overShown) {
+            _overShown = false;
+        }
+        const PlayerStatsMsg* stats = game.localStats();
+        if (stats && stats->dead) {
+            _localStats = *stats;
+            _hasLocalStats = true;
+        }
+        const bool wasSpectating = _spectating;
+        const bool spectating = game.isSpectating();
+        if (spectating) {
+            _spectating = true;
+            _deathShown = false;
+            if (!wasSpectating) {
+                _specStatsShown = false;
+            }
+            std::string name = "Player";
+            const auto it = game.allPlayerInfo().find(game.getActivePlayerId());
+            if (it != game.allPlayerInfo().end() && !it->second.name.empty()) {
+                name = it->second.name;
+            }
+            if (name != _specName) {
+                _specName = name;
+                if (_specLabel) {
+                    _specLabel->setText("SPECTATING " + name);
+                }
+            }
+            const uint8_t count = game.activePlayerData().spectatorCount;
+            if (count != _specCount) {
+                _specCount = count;
+                if (_specCountText) {
+                    _specCountText->setText(count > 0
+                            ? std::to_string(count) + " SPECTATING"
+                            : std::string());
+                }
+            }
+            _specCanCycle = game.teamMode() != 1;
+        } else {
+            _spectating = false;
+            if (stats && stats->dead) {
+                if (!_deathShown) {
+                    showDeathPanel(*stats);
+                }
+            } else if (_deathShown) {
+                _deathShown = false;
+            }
+        }
     }
+    setVisible(_visible);
 
     // Transient messages fade on their own timer, even while hidden (the web
     // client keeps the state and only hides the DOM).
