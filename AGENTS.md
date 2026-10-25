@@ -155,6 +155,7 @@ Always run from `client-mobile/` with Node's type stripping:
 node --experimental-transform-types tools/codegen_defs.mjs src/net/generatedDefs.inc
 node --experimental-transform-types tools/codegen_render_defs.mjs   # -> src/render/GeneratedDefs.cpp
 node --experimental-transform-types tools/codegen_sound_defs.mjs    # -> src/audio/GeneratedSoundDefs.cpp
+node --experimental-transform-types tools/codegen_pass_defs.mjs    # -> proj.android/app/src/dev/axmol/app/GeneratedPassData.java
 node tools/gen_reference.mjs                                        # tests/ReferenceData.h fixtures
 node tools/build-atlas.mjs --res low                                # sprite atlases -> Content/atlas
 ```

@@ -2550,3 +2550,67 @@ Key behaviours:
   - restart keeps the session (`profile loaded` only, no device login);
     signed-out restart logs `device login skipped (signed out)`.
   - uninstall/reinstall recovers the same account through ANDROID_ID.
+
+## 43. Session 42 - M8 quests/battle pass + Java localization (2026-10-25)
+
+### 43.1 Scope
+
+The remaining M8 data surface (`client/src/ui/pass.ts`): real pass level/XP,
+the next unlock item, both server quest slots and the reroll flow. The old
+`PassFragment` was a static mock (invented 50-tier rewards, fake quests and a
+demo premium purchase) and the web client has no premium purchase at all.
+
+### 43.2 Pass + quests
+
+- `AccountManager.getPass(tryRefreshQuests, cb)` calls
+  `/api/user/get_pass` with the Bearer session and parses
+  `{ pass: {type,level,xp,unlocks,newItems}, quests: [...] }` into
+  `PassInfo`/`QuestInfo`; `refreshQuest(idx, cb)` posts
+  `/api/user/refresh_quest` and reports the server's `success`.
+- `tools/codegen_pass_defs.mjs` generates
+  `proj.android/app/src/dev/axmol/app/GeneratedPassData.java` from the real
+  `shared/defs` (`PassDefs`, `QuestDefs`, `passUtil.getPassMaxLevel`):
+  per-level XP curve, sparse level -> item unlock table, quest XP and the
+  `timed` flag. Display names are l10n (`pass_*`, `quest_*`, `game-<item>`).
+- `PassFragment` was rewritten around the real data:
+  - pass name + `LEVEL n` + `xp/next XP` bar (two weighted segments, so the fill
+    is `xp/next`, not `ratio/(1+ratio)`);
+  - "Next reward (Lv n+1): <item>" using `getNextPassUnlockItemId` semantics;
+  - quest rows with name, XP, progress bar/counter, completion state and the
+    web's refresh eligibility `(!rerolled && !complete) || expired`; a confirm
+    dialog calls `refresh_quest` and re-fetches;
+  - a 1 s ticker updates the quest countdown labels while the screen is open;
+  - logged-out state shows the localized `quest-login-prompt` instead of fake
+    data. Opening the screen always sends `tryRefreshQuests=true`.
+- The demo premium purchase / claim buttons and the invented tier list were
+  removed (the server's `set_pass_unlock` is a no-op, so there is nothing to
+  claim).
+
+### 43.3 Java localization fix
+
+`UiBridge::l10nJson()` returned `"{}"` whenever `_menu == nullptr` - and Android
+installs the bridge with `installUiBridge(nullptr, gameScene)` (no C++ menu).
+Every Java label silently used its English fallback; the pass screen exposed it
+as raw keys (`PASS_SURVIVR2`, `quest_club_kills`). The bridge now lazily builds
+a standalone `uikit::Localization`:
+
+- `l10n/en.json` registered eagerly, `l10n/<language>.json` loaded through
+  `Files::readText` (the same loader MenuScene uses);
+- locale from the config `language`; `setLanguage` updates the table **before**
+  `config.setString`, so the config listener's Java refresh sees the new table.
+
+### 43.4 Verification
+
+- `surv_tests` 163 tests / 2,599 assertions, 0 failures; root `lint:ci`;
+  x86_64 native + APK (42 Java sources) green; `logcat -b crash` empty.
+- Live API (dev `tsx watch`, bundle Postgres), emulator `x86_64`:
+  - pass open logs `pass loaded: type=pass_survivr2 level=1 xp=0 quests=2`;
+    the UI shows `SURVEVR PASS 2`, `LEVEL 1`, `0/50 XP`,
+    `Next reward (Lv 2): Rainy Day`, `Kill enemies at: Club` (+40 XP) and
+    `Destroy furniture` (+30 XP);
+  - tapping Refresh -> confirm rerolls idx 0 (`Kill enemies at: Club` ->
+    `Kill enemies at: Docks`), the row shows "Rerolled once this season." and
+    loses its Refresh button;
+  - after Log Out the pass screen shows `LEVEL -` and the localized
+    `Log in to get quests!`; Sign In restores the quests.
+

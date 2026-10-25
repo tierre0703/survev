@@ -24,6 +24,7 @@
 #include "../audio/AudioManager.h"
 #include "../net/Api.h"
 #include "../ui/Config.h"
+#include "../ui/Files.h"
 #include "../ui/L10nJson.h"
 #include "../ui/Loadout.h"
 #include "../ui/NewsJson.h"
@@ -208,6 +209,15 @@ public:
     }
 
     void setLanguage(const std::string& locale) override {
+        // The Java UI reads `getL10nJson()`; keep the standalone table (used
+        // when there is no C++ MenuScene on Android) in sync before the config
+        // listener re-renders the Java screens.
+        if (!_standaloneLocalization) {
+            ensureStandaloneLocalization();
+        }
+        if (_standaloneLocalization) {
+            _standaloneLocalization->setLocale(locale);
+        }
         config().setString("language", locale);
     }
 
@@ -248,7 +258,14 @@ public:
     }
 
     std::string l10nJson() override {
-        return _menu ? uikit::l10nTableToJson(_menu->localization().flattened()) : std::string("{}");
+        if (_menu) {
+            return uikit::l10nTableToJson(_menu->localization().flattened());
+        }
+        // Android has no C++ MenuScene (`installUiBridge(nullptr, gameScene)`),
+        // so the Java UI needs its own Localization instance. Load it lazily
+        // from the bundled l10n assets using the config language.
+        ensureStandaloneLocalization();
+        return uikit::l10nTableToJson(_standaloneLocalization->flattened());
     }
 
     std::string loadoutJson() override {
@@ -324,10 +341,30 @@ public:
     }
 
 private:
+    // Java-only builds have no C++ MenuScene to own the l10n tables; build the
+    // same tables here from the bundled assets (ARCHITECTURE.md A5.3).
+    void ensureStandaloneLocalization() {
+        if (_standaloneLocalization) {
+            return;
+        }
+        _standaloneLocalization = std::make_unique<uikit::Localization>();
+        const std::string english = uikit::Files::readText("l10n/en.json");
+        if (!english.empty()) {
+            _standaloneLocalization->registerEnglish(english);
+        } else {
+            AXLOGW("Missing l10n/en.json; Java UI strings fall back to keys");
+        }
+        _standaloneLocalization->setLoader([](const std::string& locale) {
+            return uikit::Files::readText("l10n/" + locale + ".json");
+        });
+        _standaloneLocalization->setLocale(config().getString("language", "en"));
+    }
+
     MenuScene* _menu = nullptr;
     GameScene* _game = nullptr;
     std::unique_ptr<uikit::UserDefaultConfigStorage> _standaloneStorage;
     std::unique_ptr<uikit::Config> _standaloneConfig;
+    std::unique_ptr<uikit::Localization> _standaloneLocalization;
 };
 
 namespace {

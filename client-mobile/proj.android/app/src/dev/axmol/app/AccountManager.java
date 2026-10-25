@@ -23,6 +23,7 @@ import android.content.SharedPreferences;
 import android.provider.Settings;
 import android.util.Log;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -79,6 +80,29 @@ public final class AccountManager {
 
     public interface SimpleCallback {
         void onResult(boolean success);
+    }
+
+    /** Parsed `/api/user/get_pass` (shared/types/user.ts GetPassResponse). */
+    public static final class PassInfo {
+        public String type = "";
+        public int level = 1;
+        public int xp = 0;
+        public boolean newItems = false;
+        public final List<QuestInfo> quests = new ArrayList<QuestInfo>();
+    }
+
+    public static final class QuestInfo {
+        public int idx;
+        public String type = "";
+        public int progress;
+        public int target;
+        public boolean complete;
+        public boolean rerolled;
+        public long timeToRefresh;
+    }
+
+    public interface PassCallback {
+        void onResult(boolean success, PassInfo pass);
     }
 
     private final Activity mActivity;
@@ -253,6 +277,95 @@ public final class AccountManager {
             @Override
             public void onResult(int code, String json) {
                 callback.onResult(code == 200);
+            }
+        });
+    }
+
+    /**
+     * Loads the battle pass + quests (`/api/user/get_pass`, web
+     * `account.getPass`). `tryRefreshQuests` lets the server reroll expired
+     * slots; callers pass true when opening the pass screen.
+     */
+    public void getPass(final boolean tryRefreshQuests, final PassCallback callback) {
+        if (!mProfile.loggedIn || mToken.isEmpty()) {
+            callback.onResult(false, null);
+            return;
+        }
+        String body = "{\"tryRefreshQuests\":" + (tryRefreshQuests ? "true" : "false") + "}";
+        SurvApi.userPost(mApiBaseUrl, "get_pass", mToken, body, new SurvApi.StatusCallback() {
+            @Override
+            public void onResult(int code, String json) {
+                if (code != 200 || json == null) {
+                    callback.onResult(false, null);
+                    return;
+                }
+                try {
+                    JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+                    if (!root.has("success") || !root.get("success").getAsBoolean()) {
+                        callback.onResult(false, null);
+                        return;
+                    }
+
+                    PassInfo pass = new PassInfo();
+                    JsonObject p = root.getAsJsonObject("pass");
+                    if (p != null) {
+                        pass.type = jsonString(p, "type");
+                        pass.level = jsonInt(p, "level", 1);
+                        pass.xp = jsonInt(p, "xp", 0);
+                        pass.newItems = jsonBool(p, "newItems");
+                    }
+
+                    JsonArray quests = root.getAsJsonArray("quests");
+                    if (quests != null) {
+                        for (int i = 0; i < quests.size(); i++) {
+                            JsonElement el = quests.get(i);
+                            if (el == null || !el.isJsonObject()) {
+                                continue;
+                            }
+                            JsonObject q = el.getAsJsonObject();
+                            QuestInfo quest = new QuestInfo();
+                            quest.idx = jsonInt(q, "idx", 0);
+                            quest.type = jsonString(q, "type");
+                            quest.progress = jsonInt(q, "progress", 0);
+                            quest.target = Math.max(1, jsonInt(q, "target", 1));
+                            quest.complete = jsonBool(q, "complete");
+                            quest.rerolled = jsonBool(q, "rerolled");
+                            quest.timeToRefresh = Math.max(0, jsonLong(q, "timeToRefresh"));
+                            pass.quests.add(quest);
+                        }
+                    }
+
+                    Log.i(TAG, "pass loaded: type=" + pass.type + " level=" + pass.level
+                            + " xp=" + pass.xp + " quests=" + pass.quests.size());
+                    callback.onResult(true, pass);
+                } catch (Exception e) {
+                    Log.w(TAG, "get_pass parse failed: " + e.getMessage());
+                    callback.onResult(false, null);
+                }
+            }
+        });
+    }
+
+    /** Rerolls one quest slot (`/api/user/refresh_quest`). */
+    public void refreshQuest(int idx, final SimpleCallback callback) {
+        if (!mProfile.loggedIn || mToken.isEmpty()) {
+            callback.onResult(false);
+            return;
+        }
+        String body = "{\"idx\":" + idx + "}";
+        SurvApi.userPost(mApiBaseUrl, "refresh_quest", mToken, body, new SurvApi.StatusCallback() {
+            @Override
+            public void onResult(int code, String json) {
+                boolean success = false;
+                if (code == 200 && json != null) {
+                    try {
+                        JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+                        success = root.has("success") && root.get("success").getAsBoolean();
+                    } catch (Exception e) {
+                        Log.w(TAG, "refresh_quest parse failed: " + e.getMessage());
+                    }
+                }
+                callback.onResult(success);
             }
         });
     }
@@ -475,6 +588,18 @@ public final class AccountManager {
             return Math.max(0, el.getAsLong());
         } catch (Exception e) {
             return 0;
+        }
+    }
+
+    private static int jsonInt(JsonObject obj, String key, int fallback) {
+        JsonElement el = obj.get(key);
+        if (el == null || el.isJsonNull()) {
+            return fallback;
+        }
+        try {
+            return el.getAsInt();
+        } catch (Exception e) {
+            return fallback;
         }
     }
 }

@@ -44,6 +44,8 @@ proj.android/app/src/dev/axmol/app/
   TeamSocket.java          — WebSocket for /team_v2
   AccountManager.java      — device login/session/profile (M8, no OAuth)
   ProfileFragment.java     — account name/stats/delete/logout screen
+  PassFragment.java        — pass level/XP + quests/reroll (M8)
+  GeneratedPassData.java   — generated pass/quest tables (codegen_pass_defs.mjs)
   GamePauseDialog.java     — In-game pause overlay
   SurvApi.java             — HTTP client (site_info + find_game + user/device)
   Json.java                — Minimal JSON reader
@@ -57,6 +59,10 @@ proj.android/app/src/dev/axmol/app/
   browser OAuth callback; `AccountManager` persists a device id (ANDROID_ID with
   a random fallback) and exchanges it for a Bearer session at
   `/api/auth/device`. The web keeps its Discord/Google flow.
+- **Java l10n is served by a standalone C++ table** — Android has no C++
+  `MenuScene`, so `UiBridge::l10nJson()` builds its own `Localization` from the
+  bundled `l10n/*.json` (config `language`). Do not remove that fallback: the
+  Java UI would fall back to raw keys.
 - **HUD stays in axmol + FairyGUI** (the world canvas); Java only covers
   out-of-game screens.
 - **C++ `Config`/`Loadout`/`Localization`/`Touch`** stay in C++ as the source

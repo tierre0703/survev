@@ -10,15 +10,17 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25** — Session 41 landed the first half of M8
-accounts **without OAuth**: the native client logs in with a persisted device id
-(`POST /api/auth/device` -> `Authorization: Bearer` session), and the new Java
-`ProfileFragment` manages the account name (first-login prompt + 10 day
-cooldown), reset stats, delete and log out. Verified on the x86_64 emulator
-(login, rename, logout/sign-in, delete + fresh account, reinstall recovery).
-Earlier: §40 HUD safe-area insets, §39 Low GFX surface tier + perf logs +
-`setConfigValue` JNI, §38 mid-match reconnection, §37 find_game retry + FPS
-overlay. **163 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25** — Session 42 finished the M8 quest/pass data:
+the Java pass screen now reads `/api/user/get_pass` (real level/XP/next unlock +
+two quest slots), rerolls quests through `/api/user/refresh_quest`, and the
+generated `GeneratedPassData` supplies the XP curve, unlock table and quest XP
+(`tools/codegen_pass_defs.mjs`). It also fixed the Java UI's localization: with
+no C++ `MenuScene` on Android, `UiBridge::l10nJson()` now builds a standalone
+`Localization` table from `l10n/*.json`, so pass/quest/item names are translated.
+Verified on the x86_64 emulator (pass load, quest reroll, logged-out state).
+Earlier: §41 M8 device login + profile (no OAuth), §40 HUD safe-area insets,
+§39 Low GFX surface tier + perf logs + `setConfigValue` JNI, §38 mid-match
+reconnection. **163 host tests pass, 0 fail.**
 
 ---
 
@@ -34,7 +36,7 @@ overlay. **163 host tests pass, 0 fail.**
 | M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired; emote + team-ping wheels own their touches. |
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb + per-source EFX low-pass EQ (muffled/club) + structure interior ambience + building `soundEmitters`. UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
-| M8 | Accounts / API | **mostly done** | device login + profile screen (no OAuth: persisted install id → session token), region latency test, client error reporting; quests/pass data + team links still to do. |
+| M8 | Accounts / API | **done except team links** | device login + profile + quests/pass data (no OAuth: persisted install id → session token), region latency test, client error reporting; team links still to do. |
 | M9 | Polish & release | **started** | lifecycle: background/pause continuity (§36), mid-match reconnection (§38); perf/soak/store-ready AAB still to do. |
 
 ---
@@ -97,7 +99,7 @@ overlay. **163 host tests pass, 0 fail.**
 | `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ weapons/ammo in `game/Hud`, gear/perks in `ui/FguiHud` (not built by the live scene yet) |
 | `client/src/emote.ts` (emote/ping system) | ✅ see the emote row above |
 | `client/src/ui/pieTimer.ts` (action progress circle) | ✅ `ui/FguiPieTimer` driven by `ActivePlayerData.actionTime` |
-| `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | 🔶 profile part in Java `ProfileFragment` (name/reset/delete/logout); pass + quests still static (M8) |
+| `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ✅ `ProfileFragment` + `PassFragment` (real level/XP, next unlock, quest reroll); `GeneratedPassData` carries the defs |
 | `client/src/account.ts` | ✅ Java `AccountManager` + `SurvApi` device login/session/profile/username/logout/reset/delete/loadout push |
 | `client/src/crosshair.ts` (custom crosshair) | ✅ screen-space crosshair sprite from the loadout style/colour/size/stroke (rasterized `crosshairDefs` styles, 0/1/2 stroke buckets) |
 | `client/src/pingTest.ts` (pre-game latency check) | ✅ `net/PingTest` (echo cadence/retry/complete + `bestRegion`/zones, host-tested); the probe list comes from `net/Regions` (`tools/codegen_regions.mjs`, the native `PING_TEST_URLS`), and the Java menu shows the ms and auto-selects the closest region |
@@ -347,8 +349,20 @@ overlay. **163 host tests pass, 0 fail.**
         account name is mirrored into an empty/unmodified `playerName` field and
         follows later renames (`playerNameAccount` binding) while a hand-typed
         name is left alone.
-- [ ] **M8 Accounts/API** (rest): quests/pass data (`PassFragment` is still
-      static), team links; proxy detection is not applicable to native.
+- [x] **M8 quests + battle pass**: `/api/user/get_pass` drives the Java
+      `PassFragment` (level, XP bar, next unlock from `PassDefs`, both quest
+      slots with real progress/target/XP), `/api/user/refresh_quest` backs the
+      per-quest reroll (confirm dialog, then re-fetch), and `get_pass` with
+      `tryRefreshQuests` runs on every open. `tools/codegen_pass_defs.mjs` emits
+      `GeneratedPassData.java` with the XP curve, sparse unlock table and quest
+      XP/timed flags, so the client stays in sync with `shared/defs`; display
+      names come from l10n (`pass_*`, `quest_*`, `game-<item>`).
+      - Android has no C++ `MenuScene`, so `UiBridge::l10nJson()` previously
+        returned `{}` and every Java label fell back to English. It now builds a
+        standalone `Localization` from `l10n/en.json` + `l10n/<locale>.json`
+        (config `language`), and `setLanguage` updates it before notifying.
+- [ ] **M8 Accounts/API** (rest): team links; proxy detection is not applicable
+      to native.
 - [x] **Lifecycle hardening (mid-match continuity)**:
       - Backgrounding and the in-game pause dialog keep the game socket.
         `Game::pause()` used to `close("background")` and `resume()` re-joined
@@ -446,6 +460,7 @@ Regenerate after touching `shared/defs` or web sources:
 node --experimental-transform-types tools/codegen_defs.mjs src/net/generatedDefs.inc
 node --experimental-transform-types tools/codegen_render_defs.mjs
 node --experimental-transform-types tools/codegen_sound_defs.mjs
+node --experimental-transform-types tools/codegen_pass_defs.mjs
 node tools/gen_reference.mjs
 node tools/build-atlas.mjs --res low
 node tools/build-gui-icons.mjs
@@ -573,3 +588,15 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - Log Out must latch `signedOut` and skip the automatic device login; delete
   account starts a **fresh** device account (the device id outlives the user).
   Both behaviours mirror the web reload + login menu without an OAuth flow.
+- `GeneratedPassData.java` is generated from `shared/defs` by
+  `tools/codegen_pass_defs.mjs`; never hand-edit it. Regenerate after any change
+  to `passDefs.ts`/`questDefs.ts` (XP curve, unlock table, quest XP/timed).
+  Display names are l10n keys (`pass_*`, `quest_*`, `game-<item>`), not defs.
+- Android has **no C++ MenuScene**, so `UiBridge::l10nJson()` owns a standalone
+  `Localization` (English + `l10n/<language>.json` via `Files::readText`). Do not
+  revert it to `_menu ? ... : "{}"`: every Java label would silently fall back
+  to English keys. `setLanguage` updates that table before notifying Java.
+- Pass XP/level come from `/api/user/get_pass`; `tryRefreshQuests` must be true
+  when opening the screen so the server rerolls expired slots. Reroll
+  eligibility mirrors the web: `(!rerolled && !complete) || expired`; the
+  server remains authoritative (`refresh_quest` can still return false).

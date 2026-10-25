@@ -49,6 +49,9 @@ public class JavaUiHost {
             if (mMenu != null) {
                 mMenu.onAccountChanged(profile);
             }
+            if (mPass != null && mPass.isOpen()) {
+                mPass.refresh();
+            }
             if (!profile.slug.isEmpty() && !profile.slug.equals(mLastSlug)) {
                 mLastSlug = profile.slug;
                 mAutoPromptedName = false;
