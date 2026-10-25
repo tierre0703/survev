@@ -552,6 +552,10 @@ struct LoadoutItemDef {
     std::string lore;
     std::string sprite; // loot/emote/crosshair texture name
     int rarity = 0;
+    // Outfit loot art is a white silhouette tinted by lootImg.tint (the web
+    // applies an SVG multiply filter). The native loadout tile applies the same
+    // multiply with a ColorMatrix.
+    uint32_t tint = 0xffffff;
 };
 
 class DefProvider {

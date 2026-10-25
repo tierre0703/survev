@@ -15,15 +15,23 @@
 package dev.axmol.app;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.util.Log;
+import android.util.LruCache;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -33,6 +41,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -53,6 +62,28 @@ public class LoadoutFragment {
     private static final int PANEL_BG    = 0xFF2A2A2A;
     private static final int GOLD        = 0xFFD4A843;
 
+    // Customize list metrics from the web CSS (.customize-list-item 96px with a
+    // 64px item image; selected has a 5px #00ff00 border). The Android panel is
+    // narrower, so the tiles are 92dp and 3 per row.
+    private static final int TILE_DP = 92;
+    private static final int TILE_IMAGE_DP = 64;
+    private static final int TILE_MARGIN_DP = 5;
+    private static final int ITEM_PAGE_SIZE = 9; // 3 rows x 3 columns
+    private static final String[] CATEGORY_ICONS = {
+            "loadout-outfit", "loadout-melee", "loadout-emote", "loadout-heal",
+            "loadout-boost", "loadout-player-icon", "loadout-crosshair",
+    };
+
+    // Decoded item art (Content/img/loadout/<type>.png) is shared across
+    // refreshes; keep roughly 4 MB of bitmaps.
+    private static final LruCache<String, Bitmap> sBitmapCache =
+            new LruCache<String, Bitmap>(4 * 1024 * 1024) {
+                @Override
+                protected int sizeOf(String key, Bitmap value) {
+                    return value.getByteCount();
+                }
+            };
+
     private final Activity mActivity;
     private final FrameLayout mRoot;
     private final LinearLayout mCategoryRow;
@@ -69,9 +100,10 @@ public class LoadoutFragment {
     
     // Crosshair editor widgets
     private final LinearLayout mCrosshairEditor;
-    private final TextView mCrosshairPreview;
+    private final ImageView mCrosshairPreview;
     private final LinearLayout mColorPickerRow;
     private final Button[] mColorButtons;
+    private String mCrosshairType = "crosshair_default";
     private final Button mSizeBtn;
     private final Button mStrokeBtn;
 
@@ -174,6 +206,12 @@ public class LoadoutFragment {
         for (int i = 0; i < mCategories.length; i++) {
             final int catIdx = i;
             Button catBtn = makeCatButton(catLabels[i], i == 0);
+            Drawable catIcon = scaledDrawable(
+                    loadAssetBitmap("gui/" + CATEGORY_ICONS[i] + ".png", 4), 16);
+            if (catIcon != null) {
+                catBtn.setCompoundDrawablesWithIntrinsicBounds(null, catIcon, null, null);
+                catBtn.setCompoundDrawablePadding(dp(1));
+            }
             catBtn.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -237,14 +275,14 @@ public class LoadoutFragment {
         mCrosshairEditor.setBackgroundColor(0xFF333333);
         mCrosshairEditor.setVisibility(View.GONE);
         
-        // Preview area
-        mCrosshairPreview = new TextView(activity);
-        mCrosshairPreview.setText("+");
-        mCrosshairPreview.setTextColor(Color.RED);
-        mCrosshairPreview.setTextSize(TypedValue.COMPLEX_UNIT_SP, 36);
-        mCrosshairPreview.setGravity(Gravity.CENTER);
+        // Preview area: the real crosshair sprite, tinted by the picked colour
+        // (web #modal-content-right-crosshair / customize-crosshair-image).
+        mCrosshairPreview = new ImageView(activity);
+        mCrosshairPreview.setScaleType(ImageView.ScaleType.FIT_CENTER);
         mCrosshairPreview.setPadding(0, dp(12), 0, dp(12));
-        mCrosshairEditor.addView(mCrosshairPreview);
+        LinearLayout.LayoutParams previewLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(128));
+        mCrosshairEditor.addView(mCrosshairPreview, previewLp);
         
         // Color picker row
         TextView colorLbl = new TextView(activity);
@@ -526,6 +564,7 @@ public class LoadoutFragment {
 
             mSizeBtn.setText(SIZE_LABELS[mCrosshairSize]);
             mStrokeBtn.setText(STROKE_LABELS[mCrosshairStroke]);
+            if (!selectedType.isEmpty()) mCrosshairType = selectedType;
             updateCrosshairPreview();
             updateColorSelection();
         } else if ("emote".equals(cat)) {
@@ -536,6 +575,9 @@ public class LoadoutFragment {
             for (int i = 0; i < EMOTE_SLOT_COUNT; i++) {
                 mEmoteSlotButtons[i].setBackgroundColor(
                         i == mEmoteSlot ? SELECT_GREEN : 0xFF3A3A3A);
+                Drawable icon = scaledDrawable(loadItemBitmap(emotes.get(i)), 22);
+                mEmoteSlotButtons[i].setCompoundDrawablesWithIntrinsicBounds(null, icon, null, null);
+                mEmoteSlotButtons[i].setCompoundDrawablePadding(dp(2));
             }
         } else {
             if (loadout != null) {
@@ -615,6 +657,108 @@ public class LoadoutFragment {
         Log.i(TAG, "confirmed " + types.size() + " new item(s)");
     }
 
+    // --- Item art (Content/img/loadout/<type>.png, generated from the web SVGs) ---
+
+    private Bitmap loadAssetBitmap(String path) {
+        return loadAssetBitmap(path, 1);
+    }
+
+    private Bitmap loadAssetBitmap(String path, int sampleSize) {
+        final int sample = Math.max(1, sampleSize);
+        final String key = path + "@" + sample;
+        Bitmap cached = sBitmapCache.get(key);
+        if (cached != null) return cached;
+        try (InputStream in = mActivity.getAssets().open(path)) {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inSampleSize = sample;
+            Bitmap bitmap = BitmapFactory.decodeStream(in, null, options);
+            if (bitmap != null) sBitmapCache.put(key, bitmap);
+            return bitmap;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Bitmap loadItemBitmap(String type) {
+        if (type == null || type.isEmpty()) return null;
+        return loadAssetBitmap("img/loadout/" + type + ".png");
+    }
+
+    // Web outfit art is a white silhouette with an SVG multiply filter
+    // (helpers.getSvgFilterForTint); the same matrix works on the PNG.
+    private void tintImage(ImageView view, int tint) {
+        if (tint == 0xFFFFFF) {
+            view.clearColorFilter();
+            return;
+        }
+        ColorMatrix matrix = new ColorMatrix(new float[] {
+                Color.red(tint) / 255f, 0, 0, 0, 0,
+                0, Color.green(tint) / 255f, 0, 0, 0,
+                0, 0, Color.blue(tint) / 255f, 0, 0,
+                0, 0, 0, 1, 0,
+        });
+        view.setColorFilter(new ColorMatrixColorFilter(matrix));
+    }
+
+    private Drawable scaledDrawable(Bitmap bitmap, int sizeDp) {
+        if (bitmap == null) return null;
+        int px = dp(sizeDp);
+        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, px, px, true);
+        BitmapDrawable drawable = new BitmapDrawable(mActivity.getResources(), scaled);
+        drawable.setBounds(0, 0, px, px);
+        return drawable;
+    }
+
+    // One square art tile from the web customize list (web: .customize-list-item
+    // with a 64px item image and a 5px green selected border).
+    private View makeItemTile(final ItemEntry entry, boolean selected) {
+        FrameLayout tile = new FrameLayout(mActivity);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(TILE_DP), dp(TILE_DP));
+        lp.setMargins(dp(TILE_MARGIN_DP), dp(TILE_MARGIN_DP), dp(TILE_MARGIN_DP), 0);
+        tile.setLayoutParams(lp);
+
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(0x66000000);
+        background.setStroke(dp(selected ? 4 : 1), selected ? 0xFF00FF00 : 0xFF3A3A3A);
+        tile.setBackground(background);
+        tile.setAlpha(selected ? 1.0f : 0.8f);
+        tile.setContentDescription(entry.displayName);
+
+        Bitmap bitmap = loadItemBitmap(entry.type);
+        if (bitmap != null) {
+            ImageView image = new ImageView(mActivity);
+            FrameLayout.LayoutParams ilp = new FrameLayout.LayoutParams(
+                    dp(TILE_IMAGE_DP), dp(TILE_IMAGE_DP), Gravity.CENTER);
+            image.setLayoutParams(ilp);
+            image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            image.setImageBitmap(bitmap);
+            if ("outfit".equals(entry.category)) {
+                tintImage(image, entry.tint);
+            }
+            tile.addView(image);
+        } else {
+            TextView fallback = new TextView(mActivity);
+            fallback.setText(entry.displayName);
+            fallback.setTextColor(entry.rarityColor);
+            fallback.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+            fallback.setGravity(Gravity.CENTER);
+            fallback.setPadding(dp(4), dp(4), dp(4), dp(4));
+            tile.addView(fallback, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
+
+        final String cat = mCategories[mSelectedCat];
+        final int slot = mEmoteSlot;
+        tile.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                selectItem(cat, entry.type, slot);
+                showItemDetail(entry);
+            }
+        });
+        return tile;
+    }
+
     private void refreshGrid(String category, String selectedType) {
         mGrid.removeAllViews();
 
@@ -624,60 +768,32 @@ public class LoadoutFragment {
         sortItems(items, mSortMode);
 
         // Paginate
-        final int pageSize = 12;
+        final int pageSize = ITEM_PAGE_SIZE;
         int pages = (items.size() + pageSize - 1) / pageSize;
         if (pages < 1) pages = 1;
         if (mPage >= pages) mPage = pages - 1;
         mPrevBtn.setEnabled(mPage > 0);
         mNextBtn.setEnabled(mPage + 1 < pages);
 
-        // Build grid rows (4 per row)
+        // Build grid rows (3 per row, matching the web's 96px tiles in the
+        // mobile modal width).
         int start = mPage * pageSize;
         int end = Math.min(start + pageSize, items.size());
 
         LinearLayout currentRow = null;
         for (int i = start; i < end; i++) {
-            int col = (i - start) % 4;
+            int col = (i - start) % 3;
             if (col == 0) {
                 currentRow = new LinearLayout(mActivity);
                 currentRow.setOrientation(LinearLayout.HORIZONTAL);
-                currentRow.setPadding(0, dp(3), 0, 0);
+                currentRow.setGravity(Gravity.CENTER);
                 mGrid.addView(currentRow);
             }
 
             final ItemEntry entry = items.get(i);
-            String label = entry.displayName;
-            if ("crosshair".equals(category) && label.startsWith("Style ")) {
-                label = label.substring("Style ".length());
-            }
             boolean isSelected = entry.type.equals(selectedType);
-
-            Button itemBtn = new Button(mActivity);
-            itemBtn.setText(label);
-            
-            // Background: selected gets green, otherwise use rarity color (darkened)
-            int bgColor = isSelected ? SELECT_GREEN : 0xFF3A3A3A;
-            itemBtn.setBackgroundColor(bgColor);
-            
-            // Text color: use rarity color for unselected, white for selected
-            itemBtn.setTextColor(isSelected ? Color.WHITE : entry.rarityColor);
-            itemBtn.setSingleLine(true);
-            
-            final String cat = mCategories[mSelectedCat];
-            final int slot = mEmoteSlot;
-            itemBtn.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    selectItem(cat, entry.type, slot);
-                    showItemDetail(entry);
-                }
-            });
-
             if (currentRow != null) {
-                LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
-                        0, dp(40), 1f);
-                ilp.setMargins(dp(2), 0, dp(2), 0);
-                currentRow.addView(itemBtn, ilp);
+                currentRow.addView(makeItemTile(entry, isSelected));
             }
         }
         
@@ -800,16 +916,30 @@ public class LoadoutFragment {
     // --- Crosshair helpers ---
     
     private void updateCrosshairPreview() {
-        mCrosshairPreview.setTextColor(Color.parseColor(CROSSHAIR_COLORS[mCrosshairColorIdx]));
-        float sizeMult[] = {0.7f, 1.0f, 1.4f};
-        float baseSize = 36 * sizeMult[mCrosshairSize];
-        mCrosshairPreview.setTextSize(TypedValue.COMPLEX_UNIT_SP, baseSize);
-        
-        // Adjust stroke via shadow layer simulation
-        int strokeWidth[] = {0, 1, 2};
-        mCrosshairPreview.setShadowLayer(
-            strokeWidth[mCrosshairStroke], 0, 0, 
-            Color.parseColor(CROSSHAIR_COLORS[mCrosshairColorIdx]));
+        // Bake stroke buckets are generated for the in-game sprite; reuse the
+        // same art here so the preview matches the selected stroke.
+        Bitmap bitmap = loadAssetBitmap(
+                "gui/crosshair/" + mCrosshairType + "_s" + mCrosshairStroke + ".png", 2);
+        if (bitmap == null) {
+            bitmap = loadItemBitmap(mCrosshairType);
+        }
+        mCrosshairPreview.setImageBitmap(bitmap);
+        int color = Color.parseColor(CROSSHAIR_COLORS[mCrosshairColorIdx]);
+        if (bitmap != null) {
+            ColorMatrix matrix = new ColorMatrix(new float[] {
+                    Color.red(color) / 255f, 0, 0, 0, 0,
+                    0, Color.green(color) / 255f, 0, 0, 0,
+                    0, 0, Color.blue(color) / 255f, 0, 0,
+                    0, 0, 0, 1, 0,
+            });
+            mCrosshairPreview.setColorFilter(new ColorMatrixColorFilter(matrix));
+        } else {
+            mCrosshairPreview.clearColorFilter();
+        }
+        float[] sizeMult = {0.7f, 1.0f, 1.4f};
+        float scale = sizeMult[mCrosshairSize];
+        mCrosshairPreview.setScaleX(scale);
+        mCrosshairPreview.setScaleY(scale);
     }
     
     private void updateColorSelection() {
@@ -851,6 +981,7 @@ public class LoadoutFragment {
         int rarityColor;
         String description;
         String sprite;
+        int tint = 0xFFFFFF;
     }
 
     // Reads the C++ item snapshot: [{"type","category","name","lore","sprite",
@@ -886,6 +1017,11 @@ public class LoadoutFragment {
                     e.rarity = obj.has("rarity") ? obj.get("rarity").getAsInt() : 0;
                 } catch (Exception ignored) {
                     e.rarity = 0;
+                }
+                try {
+                    e.tint = obj.has("tint") ? obj.get("tint").getAsInt() : 0xFFFFFF;
+                } catch (Exception ignored) {
+                    e.tint = 0xFFFFFF;
                 }
                 e.rarityColor = getRarityFromInt(e.rarity);
                 mItems.add(e);

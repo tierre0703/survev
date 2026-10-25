@@ -317,6 +317,10 @@ public:
             rarity.kind = uikit::JsonValue::Kind::Number;
             rarity.number = def.rarity;
             item.object["rarity"] = std::move(rarity);
+            uikit::JsonValue tint;
+            tint.kind = uikit::JsonValue::Kind::Number;
+            tint.number = def.tint;
+            item.object["tint"] = std::move(tint);
             out.array.push_back(std::move(item));
         }
         return uikit::jsonToString(out);

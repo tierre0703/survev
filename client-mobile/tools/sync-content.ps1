@@ -25,6 +25,12 @@ Write-Host 'Rasterizing crosshair icons (Content/gui/crosshair)...'
 & node --experimental-transform-types (Join-Path $PSScriptRoot 'build-crosshair-icons.mjs')
 if ($LASTEXITCODE -ne 0) { throw "build-crosshair-icons.mjs failed ($LASTEXITCODE)" }
 
+# Loadout item art (public/img/loot|emotes|particles|crosshairs/*.svg) for the
+# Java customize screen.
+Write-Host 'Rasterizing loadout item icons (Content/img/loadout)...'
+& node --experimental-transform-types (Join-Path $PSScriptRoot 'build-loadout-icons.mjs')
+if ($LASTEXITCODE -ne 0) { throw "build-loadout-icons.mjs failed ($LASTEXITCODE)" }
+
 # The web client ships Roboto Condensed as woff2, which axmol cannot load; keep
 # a TTF copy under Content/fonts (requires Python + fontTools/brotli).
 if (Test-Path (Join-Path $source 'fonts\roboto-condensed-latin-400-normal.woff2')) {

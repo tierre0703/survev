@@ -12,9 +12,10 @@ This file is a **summary/index**; the detailed work orders live in:
 
 Latest recorded state: **2026-10-25 (P0.6)** — the loadout editor now lists the
 real owned items from `shared/defs` (outfit/melee/emote/heal/boost/player-icon/
-crosshair), edits all **6** emote slots (4 wheel + win/death), picks crosshair
-types, and confirms/acks new account items. P0.1 (touch action inputs) is also
-done; the 1:1 audit still applies to P0.2+. **171 host tests pass, 0 fail.**
+crosshair) with the web client's image tiles and tints, edits all **6** emote
+slots (4 wheel + win/death), picks crosshair types with a live preview, and
+confirms/acks new account items. P0.1 (touch action inputs) is also done; the
+1:1 audit still applies to P0.2+. **171 host tests pass, 0 fail.**
 
 ---
 
@@ -81,7 +82,7 @@ done; the 1:1 audit still applies to P0.2+. **171 host tests pass, 0 fail.**
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | 🔶 join/reconnect good; quickplay auth/captcha, reason mapping and match-over latch gaps (P0.5/P1.1/P1.2) |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | 🔶 Bearer/find_game and mode/region metadata gaps (P1.1/P1.7) |
 | `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste) + `survev://team` deep links, kick/mode/region controls, team match stays connected |
-| `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 real owned items from `shared/defs` (`getLoadoutItemsJson`), 6 emote slots, crosshair type picker, new-item confirm/ack; item art/lore animation and source badges remain P1.7 |
+| `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack; source badges and the per-item lore modal remain P1.7 |
 | `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, basic weapon/ammo, alive/kills (from `GameOverMsg` only), kill feed, kill leader, gas timer, result panel, squad bars, gear icons; most inventory v2/interaction/spectate pieces live only in dead `FguiHud` (P1.4) |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
@@ -229,11 +230,17 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
       - `AccountManager` feeds `account.items` into the C++ validator and keeps
         its status; new items show a confirm banner (`set_item_status` 1) and
         opening a category acks its items (status 2).
-      - Not done (tracked in P1.7): per-item art (SVG loot/emote sprites), source
-        badges and the full per-item lore modal; the native list uses text +
-        rarity colours. Acceptance: outfit/melee/heal/boost/emotes/crosshair
-        change, persist across an app restart, and join with them (verified on
-        the x86_64 emulator).
+      - Item art is generated from the web SVGs by `tools/build-loadout-icons.mjs`
+        (`Content/img/loadout/<type>.png`); the Java grid renders 3×3 image tiles
+        with the web's 64px art / 96px tile look, a green selected border and
+        outfit tint via the same multiply colour matrix the web SVG filter uses.
+        Melee loot rotation/mirroring is baked into the PNG. Category tabs use
+        the web's `gui/loadout-*.png` icons, the crosshair preview/tiles show the
+        real crosshair art, and emote slots show their emote art.
+      - Not done (tracked in P1.7): item source badges and the full per-item lore
+        modal. Acceptance: outfit/melee/heal/boost/emotes/crosshair change,
+        persist across an app restart, and join with them (verified on the
+        x86_64 emulator).
 
 - [ ] **P0.7 Make settings real (persist + apply).**
       `SettingsModal.java:198-296` only relabels toggles and calls
@@ -354,8 +361,9 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
       - News images/date/badge, play spinner/lockout (web backoff), leaderboard
         entry point (`LeaderboardModal` exists but is unreachable), Help content
         (currently describes non-existent features), attributions/HoF/changelog.
-      - Crosshair type picker (30 types) + item art/rarity/lore and the item
-        confirm-on-acquire flow; menu character preview (`opponentDisplay.ts`).
+      - Item source badges and the per-item lore modal; menu character preview
+        (`opponentDisplay.ts`). (Crosshair types, item art and the
+        confirm-on-acquire flow are done in P0.6.)
       - Use `GameConfig.protocolVersion` instead of `"version":1028`.
       - Acceptance: menu looks/behaves like the web at 1280×720 and honours
         `site_info` + locale.
@@ -462,6 +470,7 @@ node --experimental-transform-types tools/codegen_pass_defs.mjs
 node tools/gen_reference.mjs
 node tools/build-atlas.mjs --res low
 node tools/build-gui-icons.mjs
+node --experimental-transform-types tools/build-loadout-icons.mjs
 ```
 
 Regenerate the latency-test targets after changing `regions`:
@@ -487,6 +496,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - `Hud` hit tests (`minimapExpandHit`, `bigMapContains/CloseHit`) take design-space coords; widget positions are centred HUD coords
 - P0.1 action taps are one-shot edits queued in `game/InputActions` and cleared only after `Game::sendInput` runs (clearing at tap time loses taps that land between the 33 Hz sends)
 - Loadout item lists come from `codegen_render_defs.mjs` (`LoadoutItemDef` table) via `SurvBridge.getLoadoutItemsJson()`; never hardcode item IDs in `LoadoutFragment.java` again
+- Loadout item art is `Content/img/loadout/<type>.png`, generated by `tools/build-loadout-icons.mjs` from the web SVGs (`Content/` is gitignored; `sync-content.ps1` runs the tool). Java reads it as assets path `img/loadout/<type>.png`; melee rotation/mirror is baked into the PNG, outfit `lootImg.tint` is applied with a `ColorMatrix` (the web's SVG multiply filter)
 - The emote loadout is **6** slots (Top/Right/Bottom/Left/Win/Death): editing one merges into the existing array (`UiBridge::setLoadoutJson` only merges top-level keys) and must not replace the other five
 - The crosshair type is the nested `{"crosshair":{"type":...}}` shape; a flat `{"crosshair":"..."}` is ignored by `ui::Loadout::validated`
 - `AccountManager` re-pushes `account.items` when the loadout opens (`LoadoutFragment.show`): the profile fetch can finish before `installUiBridge`, so the early `setAccountItems` call is a no-op and the C++ owned set would stay at `unlock_default`

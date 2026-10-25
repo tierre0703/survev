@@ -163,6 +163,7 @@ node --experimental-transform-types tools/codegen_sound_defs.mjs    # -> src/aud
 node --experimental-transform-types tools/codegen_pass_defs.mjs    # -> proj.android/app/src/dev/axmol/app/GeneratedPassData.java
 node tools/gen_reference.mjs                                        # tests/ReferenceData.h fixtures
 node tools/build-atlas.mjs --res low                                # sprite atlases -> Content/atlas
+node --experimental-transform-types tools/build-loadout-icons.mjs   # loadout item art -> Content/img/loadout
 ```
 
 `Content/` is gitignored; run `build-atlas.mjs` before packaging an APK. Generated

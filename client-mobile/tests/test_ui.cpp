@@ -174,6 +174,8 @@ TEST(ui_loadout_item_metadata_table) {
         CHECK_EQ(outfit->category, std::string("outfit"));
         CHECK_EQ(outfit->name, std::string("Basic Outfit"));
         CHECK(!outfit->sprite.empty());
+        // Outfit art is a white silhouette tinted by lootImg.tint (web filter).
+        CHECK_EQ(outfit->tint, 0xF8C574u);
     }
     const auto* emote = find("emote_happyface");
     CHECK(emote != nullptr);

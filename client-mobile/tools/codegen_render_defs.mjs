@@ -599,7 +599,7 @@ for (const type of gameTypes) {
     const sprite = def.lootImg?.sprite || def.img?.sprite || def.texture || "";
     loadoutEntries += `    {${str(type)},${str(def.type)},${str(def.name || "")},${str(def.lore || "")},${
         str(sprite)
-    },${n(def.rarity, 0)}},\n`;
+    },${n(def.rarity, 0)},${n(def.lootImg?.tint, 0xffffff)}},\n`;
 }
 
 const boneInit = (p) => `{${vec(p?.pivot)},${fp(p?.rot)},${vec(p?.pos)}}`;
@@ -998,6 +998,7 @@ struct RawBulletRender { float distance, speed, variance; const char* tracerColo
 struct RawEmote { const char* type; const char* texture; const char* sound; const char* channel; const char* name; int teamOnly; int category; };
 struct RawLoadoutItem {
     const char* type; const char* category; const char* name; const char* lore; const char* sprite; int rarity;
+    unsigned tint;
 };
 struct RawPing {
     const char* type; const char* texture; const char* mapTexture; const char* sound; const char* soundLeader;
@@ -1386,6 +1387,7 @@ ${
             d.lore = r.lore ? r.lore : "";
             d.sprite = r.sprite ? r.sprite : "";
             d.rarity = r.rarity;
+            d.tint = r.tint;
             _loadoutItems.push_back(std::move(d));
         }
         _planes.reserve(2);
