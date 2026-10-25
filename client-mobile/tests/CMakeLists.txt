@@ -22,6 +22,7 @@ add_executable(surv_tests
     test_messages.cpp
     test_game.cpp
     test_touch_input.cpp
+    test_input_actions.cpp
     test_render.cpp
     test_objects.cpp
     test_audio.cpp

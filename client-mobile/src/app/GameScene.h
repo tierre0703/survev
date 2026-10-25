@@ -1,6 +1,7 @@
 #pragma once
 #include "axmol.h"
 #include "../game/Game.h"
+#include "../game/InputActions.h"
 #include "../game/TouchInput.h"
 #include "../net/ErrorLog.h"
 #include "../net/Net.h"
@@ -98,7 +99,7 @@ public:
     // Input callbacks -> Touch
     void onTouchBegan(float x, float y, int id);
     void onTouchMoved(float x, float y, int id);
-    void onTouchEnded(int id);
+    void onTouchEnded(float x, float y, int id);
 
     // Android hardware back button / desktop Escape: navigate back.
     bool handleBackPressed();
@@ -299,6 +300,29 @@ private:
     TouchInput _touchInput;
     float _inputMsgTimeout = 0.0f;
     bool _shootStartPending = false;
+
+    // P0.1 gameplay action buttons: taps/holds on the HUD controls queue into
+    // `_pendingInputs` and drain into the next InputMsg (see updateInput()).
+    InputActions _pendingInputs;
+    // A touch driving a weapon card (tap = equip, hold = drop/drag-swap). `kind`
+    // is a Hud::TapKind kept as int so this header stays independent of Hud.h.
+    struct HudPress {
+        int id = -1;
+        int kind = 0;
+        int slot = -1;
+        float elapsed = 0.0f;
+        Vec2 downScreen;
+        Vec2 pos;
+    };
+    HudPress _hudPress;
+    // A weapon-card touch that moves this far (screen px) is a joystick drag,
+    // not a card tap: it is handed to Touch so aiming still works over the
+    // bottom-right weapon cards.
+    static constexpr float kHudDragHandoffPx = 18.0f;
+    // Applies a completed HUD tap (short tap) or long-press drop.
+    void finishHudPress(bool longPress);
+    // Sends a DropItemMsg (ui2.ts `drop` uiEvent) and its ui sound.
+    void sendHudDrop(const std::string& item, uint8_t weapIdx, bool playSound);
 
     // Emote wheel (game/EmoteWheel.h): the on-screen emote button + radial
     // loadout selector. Owned by the per-match world (raw pix nodes).

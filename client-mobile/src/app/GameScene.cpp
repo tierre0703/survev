@@ -255,14 +255,16 @@ bool GameScene::init() {
             onTouchMoved(p.x, webY(p), t->getID() & 3);
         }
     };
-    listener->onTouchesEnded = [this](const std::vector<ax::Touch*>& touches, ax::Event*) {
+    listener->onTouchesEnded = [this, webY](const std::vector<ax::Touch*>& touches, ax::Event*) {
         for (auto* t : touches) {
-            onTouchEnded(t->getID() & 3);
+            const ax::Vec2 p = t->getLocation();
+            onTouchEnded(p.x, webY(p), t->getID() & 3);
         }
     };
-    listener->onTouchesCancelled = [this](const std::vector<ax::Touch*>& touches, ax::Event*) {
+    listener->onTouchesCancelled = [this, webY](const std::vector<ax::Touch*>& touches, ax::Event*) {
         for (auto* t : touches) {
-            onTouchEnded(t->getID() & 3);
+            const ax::Vec2 p = t->getLocation();
+            onTouchEnded(p.x, webY(p), t->getID() & 3);
         }
     };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
@@ -465,6 +467,8 @@ void GameScene::resetWorld() {
     _pingWheel.reset();
     _pingTouchId = -1;
     _bigMapTouchId = -1;
+    _hudPress = HudPress{};
+    _pendingInputs.clear();
     _pingTargetValid = false;
     _hud.reset();
     _world.reset();
@@ -912,6 +916,13 @@ void GameScene::update(float delta) {
         }
     }
     _game->update(delta);
+    // P0.1: a held weapon/item card turns into a drop after kLongPressSeconds.
+    if (_hudPress.id >= 0) {
+        _hudPress.elapsed += delta;
+        if (!_game->isPlaying()) {
+            _hudPress = HudPress{};
+        }
+    }
     // M8: region latency test (client/src/pingTest.ts). Echo every region's
     // `/ptc` socket while the Java menu is up, then hand the results back once.
     if (_pingTest) {
@@ -1504,12 +1515,24 @@ void GameScene::updateInput(float dt) {
     // server still observes the press.
     _shootStartPending = _shootStartPending || msg.shootStart;
 
+    // Merge the HUD's one-shot actions (reload/interact/equip/use-item) into the
+    // message. They stay queued until a send actually happens.
+    _pendingInputs.applyTo(msg);
+
     // Send at the server's net-sync/input rate rather than once per frame.
     _inputMsgTimeout -= dt;
     if (_inputMsgTimeout < 0.0f) {
         msg.shootStart = _shootStartPending;
         _shootStartPending = false;
+        if (!_pendingInputs.empty() && isDevLogEnabled()) {
+            std::string actions;
+            for (uint8_t input : _pendingInputs.inputs()) {
+                actions += std::to_string(static_cast<int>(input)) + ",";
+            }
+            AXLOGI("[input] actions={} useItem={}", actions, _pendingInputs.useItem());
+        }
         _game->sendInput(msg);
+        _pendingInputs.clear();
         _inputMsgTimeout = 1.0f / kNetSyncTps;
     }
 }
@@ -1583,12 +1606,136 @@ void GameScene::onTouchBegan(float x, float y, int id) {
             return;
         }
     }
+    // P0.1 gameplay action buttons (reload/interact/heal/boost/scope/swap and
+    // the weapon cards). Hit-tested before the pads, like the web's DOM buttons
+    // above the canvas. A weapon-card touch that turns into a drag is handed
+    // back to Touch (see onTouchMoved), so the pads still work under the cards.
+    if (_hud && _game->isPlaying()) {
+        const Vec2 design = screenToDesign(x, y);
+        const Hud::TapResult tap = _hud->hitTest(design.x, design.y);
+        switch (tap.kind) {
+            case Hud::TapKind::None:
+                break;
+            // Immediate actions (ui.ts touch listeners fire on touchstart).
+            case Hud::TapKind::Reload:
+                _pendingInputs.press(Input_Reload);
+                return;
+            case Hud::TapKind::Interact:
+                // game.ts: interactionTouched adds both Interact and Cancel.
+                _pendingInputs.press(Input_Interact);
+                _pendingInputs.press(Input_Cancel);
+                return;
+            case Hud::TapKind::SwapWeapons:
+                _pendingInputs.press(Input_SwapWeapSlots);
+                return;
+            // Item/weapon controls: tap on release, long-press drops (the web's
+            // touch cards only bind tap-to-use; drop is the mouse right-click
+            // action, so the native touch HUD uses a hold).
+            case Hud::TapKind::Heal:
+            case Hud::TapKind::Boost:
+            case Hud::TapKind::ScopeNext:
+            case Hud::TapKind::WeaponSlot:
+                _hudPress = HudPress{id, static_cast<int>(tap.kind), tap.slot, 0.0f,
+                                     Vec2(x, y), design};
+                return;
+        }
+    }
     _touch->touches[id].active = true;
     _touch->touches[id].posDown = Vec2(x, y);
     _touch->touches[id].pos = Vec2(x, y);
 }
 
+void GameScene::sendHudDrop(const std::string& item, uint8_t weapIdx, bool playSound) {
+    if (!_game || item.empty() || item == "fists") {
+        return;
+    }
+    DropItemMsg drop;
+    drop.item = item;
+    drop.weapIdx = weapIdx;
+    _game->sendMessage(MsgType_DropItem, drop, 128);
+    if (playSound && _audio) {
+        audio::PlaySoundOptions opts;
+        opts.channel = "ui";
+        _audio->playSound("loot_drop_01", opts);
+    }
+}
+
+void GameScene::finishHudPress(bool longPress) {
+    const Hud::TapKind kind = static_cast<Hud::TapKind>(_hudPress.kind);
+    const int slot = _hudPress.slot;
+    const Vec2 release = _hudPress.pos;
+    _hudPress = HudPress{};
+    if (!_hud || !_game || !_game->isPlaying()) {
+        return;
+    }
+    switch (kind) {
+        case Hud::TapKind::Heal:
+            if (longPress) {
+                sendHudDrop(_hud->healItem(), 0, true);
+            } else {
+                _pendingInputs.use(_hud->healItem());
+            }
+            break;
+        case Hud::TapKind::Boost:
+            if (longPress) {
+                sendHudDrop(_hud->boostItem(), 0, true);
+            } else {
+                _pendingInputs.use(_hud->boostItem());
+            }
+            break;
+        case Hud::TapKind::ScopeNext:
+            if (longPress) {
+                sendHudDrop(_hud->scopeType(), 0, true);
+            } else if (!_hud->scopeType().empty()) {
+                _pendingInputs.press(Input_EquipNextScope);
+            }
+            break;
+        case Hud::TapKind::WeaponSlot: {
+            if (!longPress) {
+                const uint8_t input = inputForWeaponSlot(slot);
+                if (input != Input_Count) {
+                    _pendingInputs.press(input);
+                }
+                break;
+            }
+            // ui.ts weapon drag: dropping one gun card onto the other swaps the
+            // primary/secondary slots; anywhere else drops the gun.
+            int target = -1;
+            const Hud::TapResult under = _hud->hitTest(release.x, release.y);
+            if (under.kind == Hud::TapKind::WeaponSlot) {
+                target = under.slot;
+            }
+            if ((slot == WeaponSlot_Primary && target == WeaponSlot_Secondary) ||
+                (slot == WeaponSlot_Secondary && target == WeaponSlot_Primary)) {
+                _pendingInputs.press(Input_SwapWeapSlots);
+            } else if (!_hud->weaponType(slot).empty()) {
+                sendHudDrop(_hud->weaponType(slot), static_cast<uint8_t>(slot), true);
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
 void GameScene::onTouchMoved(float x, float y, int id) {
+    if (id == _hudPress.id) {
+        _hudPress.pos = screenToDesign(x, y);
+        // Moving off a weapon card means the player is aiming (the cards sit
+        // over the bottom-right joystick): hand the touch to Touch so a drag
+        // fires/aims instead of equipping. A stationary tap still equips.
+        if (static_cast<Hud::TapKind>(_hudPress.kind) == Hud::TapKind::WeaponSlot) {
+            const float dx = x - _hudPress.downScreen.x;
+            const float dy = y - _hudPress.downScreen.y;
+            if (dx * dx + dy * dy > kHudDragHandoffPx * kHudDragHandoffPx) {
+                _touch->touches[id].active = true;
+                _touch->touches[id].posDown = _hudPress.downScreen;
+                _touch->touches[id].pos = Vec2(x, y);
+                _hudPress = HudPress{};
+            }
+        }
+        return;
+    }
     if (id == _bigMapTouchId) {
         return;
     }
@@ -1638,7 +1785,12 @@ void GameScene::onTouchMoved(float x, float y, int id) {
     }
 }
 
-void GameScene::onTouchEnded(int id) {
+void GameScene::onTouchEnded(float x, float y, int id) {
+    if (id == _hudPress.id) {
+        _hudPress.pos = screenToDesign(x, y);
+        finishHudPress(_hudPress.elapsed >= Hud::kLongPressSeconds);
+        return;
+    }
     if (id == _bigMapTouchId) {
         _bigMapTouchId = -1;
         return;

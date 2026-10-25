@@ -2,8 +2,10 @@
 
 #include "Game.h"
 #include "EmoteManager.h"
+#include "../net/generatedDefs.inc"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <numeric>
 
@@ -54,6 +56,102 @@ uint32_t Hud::healthColor(float health, bool downed) {
     return (static_cast<uint32_t>(mix(a.r, b.r)) << 16) |
            (static_cast<uint32_t>(mix(a.g, b.g)) << 8) |
            static_cast<uint32_t>(mix(a.b, b.b));
+}
+
+int Hud::bagCount(const std::vector<uint16_t>& inventory, const char* type) {
+    if (!type || type[0] == '\0') {
+        return 0;
+    }
+    for (size_t i = 0; i < defs::kBagSizeKeys.size(); ++i) {
+        if (defs::kBagSizeKeys[i] == type) {
+            return i < inventory.size() ? static_cast<int>(inventory[i]) : 0;
+        }
+    }
+    return 0;
+}
+
+std::string Hud::healItemFor(const std::vector<uint16_t>& inventory, float health) {
+    const int bandage = bagCount(inventory, "bandage");
+    const int healthkit = bagCount(inventory, "healthkit");
+    // One quick-use pill for both heal items (the web shows a loot grid; touch
+    // gets a single best-item button until the inventory v2 HUD lands). Prefer
+    // the small bandage for a top-up, the med kit when badly hurt.
+    if (healthkit > 0 && (health < 50.0f || bandage == 0)) {
+        return "healthkit";
+    }
+    if (bandage > 0) {
+        return "bandage";
+    }
+    return healthkit > 0 ? "healthkit" : std::string();
+}
+
+std::string Hud::boostItemFor(const std::vector<uint16_t>& inventory, float boost) {
+    const int soda = bagCount(inventory, "soda");
+    const int pills = bagCount(inventory, "painkiller");
+    // Soda is the cheap top-up; pills are worth it at low boost (ui2.ts shows
+    // both strips and lets the player pick, the touch HUD uses one button).
+    if (pills > 0 && (boost < 50.0f || soda == 0)) {
+        return "painkiller";
+    }
+    if (soda > 0) {
+        return "soda";
+    }
+    return pills > 0 ? "painkiller" : std::string();
+}
+
+std::string Hud::scopeLabel(const std::string& scope) {
+    if (scope.empty()) {
+        return "SCOPE";
+    }
+    std::string out = scope;
+    const std::string suffix = "scope";
+    if (out.size() > suffix.size() &&
+        out.compare(out.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        out.resize(out.size() - suffix.size());
+    }
+    for (char& c : out) {
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
+    return "SCOPE " + out;
+}
+
+const std::string& Hud::weaponType(int slot) const {
+    static const std::string kEmpty;
+    return (slot >= 0 && slot < 4) ? _weaponTypes[static_cast<size_t>(slot)] : kEmpty;
+}
+
+Hud::TapResult Hud::hitTest(float designX, float designY) const {
+    if (!_built || !_visible || _overShown || _bigMapVisible) {
+        return TapResult{};
+    }
+    // Rects are stored in the centred HUD container.
+    const float px = designX - _design.x * 0.5f;
+    const float py = designY - _design.y * 0.5f;
+    if (_reloadRect.contains(px, py)) {
+        return TapResult{TapKind::Reload, -1};
+    }
+    if (_interactRect.contains(px, py)) {
+        return TapResult{TapKind::Interact, -1};
+    }
+    // Item pills are only tappable while the pill is shown (empty bag hides it).
+    if (!_healItem.empty() && _healRect.contains(px, py)) {
+        return TapResult{TapKind::Heal, -1};
+    }
+    if (!_boostItem.empty() && _boostRect.contains(px, py)) {
+        return TapResult{TapKind::Boost, -1};
+    }
+    if (!_scopeType.empty() && _scopeRect.contains(px, py)) {
+        return TapResult{TapKind::ScopeNext, -1};
+    }
+    if (_swapRect.contains(px, py)) {
+        return TapResult{TapKind::SwapWeapons, -1};
+    }
+    for (int i = 0; i < 4; ++i) {
+        if (_weaponRect[i].contains(px, py)) {
+            return TapResult{TapKind::WeaponSlot, i};
+        }
+    }
+    return TapResult{};
 }
 
 void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design) {
@@ -167,13 +265,51 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     // #ui-bottom-right: four weapon cards.
     _weaponBoxBg = _factory->createGraphics();
     _root->addChild(_weaponBoxBg);
-    for (auto*& slot : _weaponSlots) {
-        slot = _factory->createText();
-        slot->setFontSize(13.0f);
-        slot->setColor(0xdcdcdc, 0x000000, 1.0f, false);
-        slot->setAnchor(0.0f, 0.0f);
-        _root->addChild(slot);
+    for (int i = 0; i < 4; ++i) {
+        _weaponSlotBg[i] = _factory->createGraphics();
+        _root->addChild(_weaponSlotBg[i]);
+        _weaponSlots[i] = _factory->createText();
+        _weaponSlots[i]->setFontSize(13.0f);
+        _weaponSlots[i]->setColor(0xdcdcdc, 0x000000, 1.0f, false);
+        _weaponSlots[i]->setAnchor(0.0f, 0.0f);
+        _root->addChild(_weaponSlots[i]);
     }
+
+    // P0.1 touch action controls: reload, interact, quick-use heal/boost, scope
+    // cycle and weapon-slot swap. Labels are written by updateActionButtons().
+    const auto makeButton = [this](pix::Graphics*& bg, pix::Text*& text, float fontSize) {
+        bg = _factory->createGraphics();
+        _root->addChild(bg);
+        text = _factory->createText();
+        text->setFontSize(fontSize);
+        text->setColor(0xffffff, 0x000000, 1.5f, false);
+        text->setAnchor(0.5f, 0.5f);
+        _root->addChild(text);
+    };
+    makeButton(_reloadBg, _reloadText, 15.0f);
+    makeButton(_interactBg, _interactText, 18.0f);
+    makeButton(_healBg, _healText, 13.0f);
+    makeButton(_boostBg, _boostText, 13.0f);
+    makeButton(_scopeBg, _scopeText, 13.0f);
+    makeButton(_swapBg, _swapText, 13.0f);
+    _reloadText->setText("RELOAD");
+    _interactText->setText("USE");
+    _swapText->setText("SWAP");
+
+    // P0.1 action controls follow the HUD; updateActionButtons() hides the
+    // pills whose item is not in the bag.
+    _reloadBg->setVisible(false);
+    _reloadText->setVisible(false);
+    _interactBg->setVisible(false);
+    _interactText->setVisible(false);
+    _healBg->setVisible(false);
+    _healText->setVisible(false);
+    _boostBg->setVisible(false);
+    _boostText->setVisible(false);
+    _scopeBg->setVisible(false);
+    _scopeText->setVisible(false);
+    _swapBg->setVisible(false);
+    _swapText->setVisible(false);
 
     // #ui-bottom-center-2 pickup message and #ui-killfeed.
     _pickupText = _factory->createText();
@@ -245,7 +381,41 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         const float y = boxY + boxH - 6.0f - static_cast<float>(i) * (kWeaponSlotHeight + 2.0f);
         _weaponSlots[i]->setAnchor(0.0f, 1.0f);
         _weaponSlots[i]->setPosition(X(boxX + 8.0f), Y(y));
+        // Tap/long-press target: the full card row (ui2.ts ui-weapon-id-N).
+        _weaponRect[i] = Rect{X(boxX + 2.0f),
+                              Y(y - kWeaponSlotHeight * 0.5f),
+                              boxW - 4.0f,
+                              kWeaponSlotHeight};
     }
+
+    // P0.1 touch action controls. (cx, cy) are design-space bottom-left points.
+    const auto placeButton = [&](pix::Graphics* bg, pix::Text* text, Rect& rect,
+                                 float cx, float cy, float w, float h) {
+        rect = Rect{X(cx - w * 0.5f), Y(cy - h * 0.5f), w, h};
+        text->setPosition(X(cx), Y(cy));
+        if (bg) {
+            bg->setVisible(false);
+        }
+        if (text) {
+            text->setVisible(false);
+        }
+    };
+    // Reload sits right of the health bar (#ui-reload-button-container).
+    placeButton(_reloadBg, _reloadText, _reloadRect, hudX + hudW + 54.0f, 90.0f,
+                kReloadButtonWidth, kReloadButtonHeight);
+    // Interaction/revive/loot tap target (#ui-interaction, touch layout).
+    placeButton(_interactBg, _interactText, _interactRect, vw * 0.3125f, vh * 0.4167f,
+                kInteractButtonWidth, kInteractButtonHeight);
+    // Quick-use consumables and scope/swap pills, above the left pad and clear
+    // of the emote/ping buttons on the right.
+    placeButton(_healBg, _healText, _healRect, vw * 0.4766f, vh * 0.4528f,
+                kPillWidth, kPillHeight);
+    placeButton(_boostBg, _boostText, _boostRect, vw * 0.4766f, vh * 0.3833f,
+                kPillWidth, kPillHeight);
+    placeButton(_scopeBg, _scopeText, _scopeRect, vw * 0.6016f, vh * 0.4528f,
+                kSmallPillWidth, kPillHeight);
+    placeButton(_swapBg, _swapText, _swapRect, vw * 0.6016f, vh * 0.3833f,
+                kSmallPillWidth, kPillHeight);
 
     // #ui-bottom-center-2: pickup message just below the centre.
     _pickupText->setAnchor(0.5f, 0.0f);
@@ -366,6 +536,9 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
 }
 
 void Hud::setVisible(bool visible) {
+    if (_visible != visible) {
+        _actionKey.clear();
+    }
     if (!_built) {
         _visible = visible;
         return;
@@ -398,6 +571,17 @@ void Hud::setVisible(bool visible) {
     for (auto* slot : _weaponSlots) {
         show(slot);
     }
+    for (auto* bg : _weaponSlotBg) {
+        show(bg);
+    }
+    // P0.1 action controls; the item pills own their visibility in
+    // updateActionButtons() (empty bag = hidden).
+    show(_reloadBg);
+    show(_reloadText);
+    show(_interactBg);
+    show(_interactText);
+    show(_swapBg);
+    show(_swapText);
     if (!visible) {
         show(_pickupText);
     }
@@ -456,6 +640,9 @@ void Hud::setVisible(bool visible) {
     if (_overStats) {
         _overStats->setVisible(over);
     }
+    // Item pills own their visibility (empty inventory hides them); this also
+    // runs after the big-map/result state changes so they never linger.
+    updateActionButtons();
 }
 
 void Hud::setMinimap(pix::RenderTexture* texture, float mapWidth, float mapHeight) {
@@ -685,6 +872,90 @@ void Hud::displayPickupMessage(const std::string& text) {
     }
 }
 
+void Hud::updateActionButtons() {
+    if (!_built) {
+        return;
+    }
+    const bool base = _visible && !_overShown && !_bigMapVisible;
+    const auto itemLabel = [](const std::string& item) -> std::string {
+        if (item == "healthkit") return "MEDKIT";
+        if (item == "painkiller") return "PILLS";
+        std::string out = item;
+        for (char& c : out) {
+            c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+        }
+        return out;
+    };
+    const std::string healLabel = _healItem.empty()
+        ? std::string()
+        : itemLabel(_healItem) + " x" + std::to_string(_healCount);
+    const std::string boostLabel = _boostItem.empty()
+        ? std::string()
+        : itemLabel(_boostItem) + " x" + std::to_string(_boostCount);
+    const std::string scopeText = scopeLabel(_scopeType);
+
+    std::string key = base ? "1" : "0";
+    key += "|" + healLabel + "|" + boostLabel + "|" + scopeText + "|" +
+        std::to_string(_equippedSlot);
+    if (key == _actionKey) {
+        return;
+    }
+    _actionKey = key;
+
+    const auto paint = [this](pix::Graphics* bg, pix::Text* text, const Rect& rect,
+                              bool shown, uint32_t fill, float alpha,
+                              const std::string& label) {
+        if (!bg || !text) {
+            return;
+        }
+        bg->setVisible(shown);
+        text->setVisible(shown);
+        if (!shown) {
+            return;
+        }
+        bg->clear();
+        bg->beginFill(fill, alpha);
+        bg->drawRect(0.0f, 0.0f, rect.w, rect.h);
+        bg->endFill();
+        bg->lineStyle(2.0f, 0xffffff, 0.35f);
+        bg->drawRect(0.0f, 0.0f, rect.w, rect.h);
+        bg->setPosition(rect.x, rect.y);
+        text->setText(label);
+    };
+
+    paint(_reloadBg, _reloadText, _reloadRect, base, 0x000000, 0.4f, "RELOAD");
+    paint(_interactBg, _interactText, _interactRect, base, 0x000000, 0.4f, "USE");
+    paint(_healBg, _healText, _healRect, base && !_healItem.empty(), 0x000000, 0.4f, healLabel);
+    paint(_boostBg, _boostText, _boostRect, base && !_boostItem.empty(), 0x000000, 0.4f,
+          boostLabel);
+    paint(_scopeBg, _scopeText, _scopeRect, base && !_scopeType.empty(), 0x000000, 0.4f,
+          scopeText);
+    paint(_swapBg, _swapText, _swapRect, base, 0x000000, 0.4f, "SWAP");
+
+    // Weapon cards: dim background, brighter for the equipped slot (ui2.ts
+    // weapon-state opacity). The text itself is painted by update().
+    for (int i = 0; i < 4; ++i) {
+        pix::Graphics* bg = _weaponSlotBg[i];
+        if (!bg) {
+            continue;
+        }
+        bg->setVisible(base);
+        if (!base) {
+            continue;
+        }
+        const bool equipped = i == _equippedSlot;
+        bg->clear();
+        bg->beginFill(equipped ? 0xffffff : 0x000000, equipped ? 0.2f : 0.22f);
+        bg->drawRect(0.0f, 0.0f, _weaponRect[i].w, _weaponRect[i].h);
+        bg->endFill();
+        if (equipped) {
+            bg->lineStyle(2.0f, 0xffffff, 0.55f);
+            bg->drawRect(0.0f, 0.0f, _weaponRect[i].w, _weaponRect[i].h);
+        }
+        bg->setPosition(_weaponRect[i].x, _weaponRect[i].y);
+    }
+}
+
 void Hud::update(float dt, const Game& game, bool visible) {
     if (!_built) {
         return;
@@ -780,6 +1051,33 @@ void Hud::update(float dt, const Game& game, bool visible) {
         }
     }
     _ammoText->setText(ammoText);
+
+    // --- P0.1 action controls: equipped slot, quick-use items, scopes ---
+    _weaponTypes.fill(std::string());
+    for (int i = 0; i < 4; ++i) {
+        if (i < slotCount) {
+            _weaponTypes[static_cast<size_t>(i)] = apd.weapons[static_cast<size_t>(i)].type;
+        }
+    }
+    _equippedSlot = apd.curWeapIdx;
+    _healItem = healItemFor(apd.inventory, health);
+    _boostItem = boostItemFor(apd.inventory, boost);
+    _healCount = _healItem.empty() ? 0 : bagCount(apd.inventory, _healItem.c_str());
+    _boostCount = _boostItem.empty() ? 0 : bagCount(apd.inventory, _boostItem.c_str());
+    _scopeType.clear();
+    if (!apd.scope.empty()) {
+        _scopeType = apd.scope;
+    } else {
+        for (const auto& key : defs::kBagSizeKeys) {
+            const std::string name(key);
+            if (name.size() > 5 && name.compare(name.size() - 5, 5, "scope") == 0 &&
+                bagCount(apd.inventory, name.c_str()) > 0) {
+                _scopeType = name;
+                break;
+            }
+        }
+    }
+    updateActionButtons();
 
     // --- Alive counter and kill counter (#ui-leaderboard-wrapper) ---
     const auto counts = game.aliveCounts();

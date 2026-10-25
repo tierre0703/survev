@@ -10,16 +10,11 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25 (1:1 audit)** — a full read of every `client/src`
-module against the live native code found that the protocol/simulation/render
-primitives, account/pass/team, audio engine and release pipeline are close to
-1:1, but the client is **not yet a 1:1 playable game**: gameplay action inputs
-(loot/reload/heal/equip/drop), the renderer active layer, entity/camera
-interpolation, death/spectate/result, a real loadout editor and applied settings
-are missing. The old checklist in this file was too optimistic (some ✅ features
-only exist in the dead `FguiHud`); **§3 has been rewritten from the audit as the
-new P0/P1/P2 TO-DO list**. Store packaging (§45) remains verified. **163 host
-tests pass, 0 fail.**
+Latest recorded state: **2026-10-25 (P0.1)** — the touch client now sends gameplay
+action inputs: reload, interact/cancel, equip slot 1–4 (tap the weapon cards),
+throwable throw, quick-use heal/boost, scope cycling, weapon-slot swap, and
+drop (long-press a card/pill). The previous 1:1 audit still applies to P0.2+;
+**170 host tests pass, 0 fail.**
 
 ---
 
@@ -32,7 +27,7 @@ tests pass, 0 fail.**
 | M2 | Shared core ports (bit-exact) | **done** | `BitBuffer`, `Vec2/MathUtil/Collider`, message classes, TS-generated fixtures. |
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
 | M4 | Rendering | **mostly done** | terrain/island/obstacles/buildings/particles/decals/gas/skeletal player; missing active-layer wiring, interpolation, bullet/explosion/projectile/loot FX (§3 P0.2/P0.3/P1.3). |
-| M5 | Input + touch | **partial** | move/aim/fire only; all loot/reload/heal/equip/scope/drop inputs are missing (§3 P0.1). |
+| M5 | Input + touch | **done (touch)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; keyboard/mouse binds remain P1.6. |
 | M6 | Audio | **mostly done** | engine/mixer/ambience/reverb/EQ/interior sounds; startup volume/mute, pause/menu restart and many action cues are missing (§3 P1.5). |
 | M7 | UI layer | **partial** | Java menu/account/pass/team live; live HUD lacks inventory v2/spectate/settings; `FguiHud` is dead on Android (§3 P0.4/P0.7, P1.4). |
 | M8 | Accounts / API | **mostly done** | device login + profile, quests/pass, team links; quickplay is unauthenticated, captcha unsupported, error reasons wrong (§3 P1.1/P1.2); OAuth is an intentional platform delta. |
@@ -79,7 +74,7 @@ tests pass, 0 fail.**
 | `client/src/soundDefs.ts` → `audio/GeneratedSoundDefs.cpp` (codegen) | ✅ generated |
 | `client/src/ambiance.ts` → `audio/Ambiance.*` | 🔶 in-game tracks faithful; no menu ambience, no restart after pause (P1.5) |
 | `client/lib/createJS.ts` → `audio/AxmolAudioBackend.h` | 🔶 channel `maxInstances`/coalesce/delay/detune/loop retention ignored (P1.5) |
-| `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | 🔶 pads/aim-line good; move/aim style + sensitivity never applied (P0.7) |
+| `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | 🔶 pads/aim-line good; move/aim style + sensitivity never applied (P0.7); gameplay actions now come from `game/InputActions` + the `game/Hud` action bar (P0.1 done) |
 | `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | 🔶 schema ported; most settings never written/applied (P0.7) |
 | `client/src/device.ts` → `ui/Device.*` | 🔶 simplified (no tablet/pixelRatio/MAX_TEXTURE_SIZE tiers) |
 | `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*` | 🔶 C++ table good; Java menu is hardcoded English and the language list uses invalid `zh`/`ja` (P0.7) |
@@ -141,21 +136,32 @@ the dead `ui/FguiHud` (Android builds only `GameScene`; `MenuScene`/`FguiHud`/
 
 These make the game unplayable or visibly wrong in normal play. Do them first.
 
-- [ ] **P0.1 Send the gameplay action inputs and add their HUD buttons.**
+- [x] **P0.1 Send the gameplay action inputs and add their HUD buttons.**
       `InputMsg.addInput`/`useItem` exist (`net/Messages.h:118-132`) and
       `Input_Interact/Reload/Use/UseBandage/...`/`Action_UseItem` are in
-      `core/GameConfig.h:69-101`, but **nothing calls them**:
-      `TouchInput::build` only fills move/aim/shoot (`src/game/TouchInput.h:44-70`)
-      and `GameScene::updateInput` sends that (`src/app/GameScene.cpp:1489-1514`).
-      Port the web's `game.ts:565-656`/`ui.ts:388-399`/`ui2.ts:266-331`:
-      - Reload (tap reload, auto-reload) and reload-alt.
-      - Interact (loot/open/revive), Use (heal/boost), Use bandage/medkit/soda/pills.
-      - Equip slot 1–4, next/prev/last weapon, next scope, stow, swap weapon slots (drag).
-      - Drop item (`DropItemMsg`), use-item (`useItem`), cancel action.
-      - Add the on-screen reload + interaction buttons and hit-test/route them from
-        `GameScene::onTouchBegan` (web `index.html:174-179`, `ui.ts:388-399`).
-      - Acceptance: loot, reload, heal, revive, switch/throw/drop weapons and
-        scopes all work on device and the server sees the action inputs.
+      `core/GameConfig.h:69-101`, but **nothing called them**:
+      `TouchInput::build` only filled move/aim/shoot (`src/game/TouchInput.h:44-70`)
+      and `GameScene::updateInput` sent that (`src/app/GameScene.cpp:1489-1514`).
+      **Done** (port of `game.ts:565-656`/`ui.ts:388-399`/`ui2.ts:266-331`):
+      - `game/InputActions.h` queues one-shot actions and drains them into the
+        next `InputMsg` (a tap between the 33 Hz sends is not lost); the
+        `InputMsg` 7-entry cap/dedupe matches the web.
+      - `game/Hud` now draws a RELOAD pill, a USE pill (Interact+Cancel, like the
+        web touch listener), quick-use HEAL/BOOST pills (best available
+        bandage/medkit and soda/pills from `ActivePlayerData.inventory`), a
+        SCOPE pill (next scope), a SWAP pill, and highlights the equipped weapon
+        card.
+      - Tap a weapon card to equip slots 1–4 (throwable taps twice to throw);
+        long-press a card/pill to `DropItemMsg`; dropping gun slot 1 onto 2 (or
+        vice versa) sends `SwapWeapSlots`, matching the web desktop drag.
+      - `GameScene::onTouchBegan` routes the hit test before the joystick pads.
+        A weapon-card touch that turns into a drag is handed to `Touch`, so the
+        cards can overlap the bottom-right aim pad without breaking aiming.
+      - Not on touch yet: next/prev/last-weapon buttons and stow (tap the melee
+        slot to stow); these stay with the keyboard/bind work in P1.6. Auto
+        reload is server-side (no client input).
+      - Acceptance is device-checked in the next pass: loot, reload, heal,
+        revive, switch/throw/drop weapons and scopes reach the server.
 
 - [ ] **P0.2 Wire `Renderer::setActiveLayer` (underground/bunker rendering).**
       `Renderer::setActiveLayer` exists (`src/render/Renderer.h:38`) but has **zero
@@ -388,7 +394,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 
 ### 3.6 Suggested session order (each ends with a green `surv_tests` + device check)
 
-1. **P0.1 + P0.6** — action inputs + real loadout: makes it a playable BR.
+1. **P0.6** — real loadout (P0.1 is done: action inputs + HUD action controls).
 2. **P0.4 + P0.5** — death/stats/spectate + match-over latch.
 3. **P0.2 + P0.3** — active layer + interpolation: fixes bunkers and game feel.
 4. **P0.7 + P1.5** — settings/audio correctness (restart-verified).
@@ -416,7 +422,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (163 tests, 0 failures expected)
+# host tests (170 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -465,6 +471,8 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - The masked ping layer and the minimap clip must be created **lazily** (`MapView::setPings` / `setCenter`, not HUD build): a ClippingNode created at build time crashed axmol's GL renderer on device
 - The minimap bakes the **static** `MapMsg.objects` (not the live pools, which are empty during `loadMap`); the big map uses the same texture fitted to 640px
 - `Hud` hit tests (`minimapExpandHit`, `bigMapContains/CloseHit`) take design-space coords; widget positions are centred HUD coords
+- P0.1 action taps are one-shot edits queued in `game/InputActions` and cleared only after `Game::sendInput` runs (clearing at tap time loses taps that land between the 33 Hz sends)
+- P0.1 weapon-card taps equip, but a card touch that moves >`kHudDragHandoffPx` is handed to `Touch` (the cards overlap the bottom-right aim pad, so claiming every drag would break aiming)
 - `MapMsg` place positions are normalized (0..1); do not divide by map width/height again
 - Place names are drawn as HUD text in `MapView`, not baked into the RenderTexture (text-in-RT did not show on device)
 - Map dot styles (role icon/dead/downed scale + outer ring + z bump) come from `mapDotStyle`; keep it in sync with `ui.ts updatePlayerMapSprites`

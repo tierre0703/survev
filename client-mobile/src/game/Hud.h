@@ -10,6 +10,13 @@
 //   #ui-bottom-center-2  pickup message, below the centre
 //   #ui-killfeed         kill feed, right side
 //
+// Touch action controls (P0.1): reload + interaction buttons (#ui-reload-button
+// and the touch #ui-interaction tap target), a quick-use heal/boost pair, a
+// scope cycle pill, a weapon-slot swap pill, and the four weapon cards as
+// tap-to-equip / long-press-to-drop targets. The web drives these through
+// DOM buttons; the native HUD exposes hitTest() so GameScene can route a touch
+// into the InputActions queue instead of the joystick pads.
+//
 // Engine-independent like the rest of `src/game`: it only uses pix::Factory
 // nodes and reads the Game snapshot, so `surv_tests` exercises it with
 // NullPixi.
@@ -56,6 +63,35 @@ public:
     static constexpr float kWeaponSlotWidth = 160.0f;
     static constexpr float kWeaponSlotHeight = 30.0f;
 
+    // P0.1 action controls (design px, bottom-left origin).
+    static constexpr float kReloadButtonWidth = 108.0f;
+    static constexpr float kReloadButtonHeight = 44.0f;
+    static constexpr float kInteractButtonWidth = 180.0f;
+    static constexpr float kInteractButtonHeight = 56.0f;
+    static constexpr float kPillWidth = 160.0f;
+    static constexpr float kPillHeight = 42.0f;
+    static constexpr float kSmallPillWidth = 110.0f;
+    // Long-press a pill/weapon card to drop instead of use/equip (the web's
+    // touch UI only binds tap-to-use; drop is a native touch affordance for the
+    // mouse right-click action in ui2.ts itemActions).
+    static constexpr float kLongPressSeconds = 0.45f;
+
+    // Result of a HUD action hit test (design coords).
+    enum class TapKind {
+        None,
+        Reload,
+        Interact,
+        Heal,
+        Boost,
+        ScopeNext,
+        SwapWeapons,
+        WeaponSlot,
+    };
+    struct TapResult {
+        TapKind kind = TapKind::None;
+        int slot = -1;
+    };
+
     // Builds every node under `root`; `design` is the design-space rect.
     void build(pix::Factory* factory, pix::Container* root, const Vec2& design);
 
@@ -95,6 +131,28 @@ public:
     bool bigMapContains(float designX, float designY) const;
     bool bigMapCloseHit(float designX, float designY) const;
 
+    // P0.1: action controls. `designX/Y` are HUD design-space coords (0..1280,
+    // 0..720 bottom-left); only live while the HUD is visible and no result
+    // screen/map is open. Touch order is buttons first, then weapon cards.
+    TapResult hitTest(float designX, float designY) const;
+
+    // ui2.ts loot/scope strip helpers, reduced to the single quick-use pills the
+    // touch HUD shows. `inventory` is ActivePlayerData.inventory (kBagSizeKeys
+    // order). Returns "" when the item is not in the bag.
+    static int bagCount(const std::vector<uint16_t>& inventory, const char* type);
+    static std::string healItemFor(const std::vector<uint16_t>& inventory, float health);
+    static std::string boostItemFor(const std::vector<uint16_t>& inventory, float boost);
+    // "SCOPE 4X" for 4xscope, "SCOPE" when no scope is equipped.
+    static std::string scopeLabel(const std::string& scope);
+
+    // Currently selected quick-use items ("" = empty bag/hidden pill). The pills
+    // feed these to InputActions::use; long-press drops them.
+    const std::string& healItem() const { return _healItem; }
+    const std::string& boostItem() const { return _boostItem; }
+    const std::string& scopeType() const { return _scopeType; }
+    // Weapon type in a slot ("" = empty), used for Long-press DropItemMsg.
+    const std::string& weaponType(int slot) const;
+
     // #ui-pickup-message: shows 	ext for 3s (ui2.ts pickup duration).
     void displayPickupMessage(const std::string& text);
 
@@ -121,9 +179,31 @@ public:
     const pix::Sprite* gearIcon(int idx) const {
         return (idx >= 0 && idx < kGearIconCount) ? _gearIcons[static_cast<size_t>(idx)] : nullptr;
     }
+    const pix::Text* reloadButtonText() const { return _reloadText; }
+    const pix::Text* interactButtonText() const { return _interactText; }
+    const pix::Text* healButtonText() const { return _healText; }
+    const pix::Text* boostButtonText() const { return _boostText; }
+    const pix::Text* scopeButtonText() const { return _scopeText; }
+    const pix::Text* swapButtonText() const { return _swapText; }
+    const pix::Text* weaponSlotText(int idx) const {
+        return (idx >= 0 && idx < 4) ? _weaponSlots[idx] : nullptr;
+    }
 
 private:
     void layout(pix::Graphics* g, float w, float h) const;
+
+    struct Rect {
+        float x = 0.0f;
+        float y = 0.0f;
+        float w = 0.0f;
+        float h = 0.0f;
+        bool contains(float px, float py) const {
+            return px >= x && px <= x + w && py >= y && py <= y + h;
+        }
+    };
+
+    // Repaints the P0.1 action controls from the state update() sampled.
+    void updateActionButtons();
 
     pix::Factory* _factory = nullptr;
     pix::Container* _root = nullptr;
@@ -180,6 +260,36 @@ private:
     pix::Container* _weaponBox = nullptr;
     pix::Graphics* _weaponBoxBg = nullptr;
     pix::Text* _weaponSlots[4] = {nullptr, nullptr, nullptr, nullptr};
+
+    // P0.1 action controls.
+    pix::Graphics* _reloadBg = nullptr;
+    pix::Text* _reloadText = nullptr;
+    pix::Graphics* _interactBg = nullptr;
+    pix::Text* _interactText = nullptr;
+    pix::Graphics* _healBg = nullptr;
+    pix::Text* _healText = nullptr;
+    pix::Graphics* _boostBg = nullptr;
+    pix::Text* _boostText = nullptr;
+    pix::Graphics* _scopeBg = nullptr;
+    pix::Text* _scopeText = nullptr;
+    pix::Graphics* _swapBg = nullptr;
+    pix::Text* _swapText = nullptr;
+    pix::Graphics* _weaponSlotBg[4] = {nullptr, nullptr, nullptr, nullptr};
+    Rect _reloadRect;
+    Rect _interactRect;
+    Rect _healRect;
+    Rect _boostRect;
+    Rect _scopeRect;
+    Rect _swapRect;
+    Rect _weaponRect[4];
+    std::array<std::string, 4> _weaponTypes{};
+    std::string _healItem;
+    std::string _boostItem;
+    std::string _scopeType;
+    int _healCount = 0;
+    int _boostCount = 0;
+    int _equippedSlot = -1;
+    std::string _actionKey;
 
     pix::Text* _pickupText = nullptr;
     pix::Text* _killFeedText = nullptr;
