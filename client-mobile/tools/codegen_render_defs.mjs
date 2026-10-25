@@ -29,6 +29,7 @@ const { v2 } = await import(pathToFile(sharedDir, "utils/v2.ts"));
 const { IdlePoses, Animations } = await import(pathToFile(clientDir, "src/animData.ts"));
 const { collider } = await import(pathToFile(sharedDir, "utils/collider.ts"));
 const { coldet } = await import(pathToFile(sharedDir, "utils/coldet.ts"));
+const { ExplosionEffectDefs } = await import(pathToFile(sharedDir, "defs/explosionEffectDefs.ts"));
 
 const mapTypes = MapObjectDefs.getAllTypes();
 const gameTypes = GameObjectDefs.getAllTypes();
@@ -399,8 +400,8 @@ for (let i = 0; i < mapTypes.length; i++) {
             def.door?.sound?.unlock,
         )
     },${str(def.button?.sound?.on)},${str(def.button?.sound?.off)},${str(def.sound?.explode)},${
-        surface ? 1 : 0
-    },${surfaceTypeId},${n(surface?.data?.waterColor, 0)},${
+        str(def.sound?.bullet)
+    },${surface ? 1 : 0},${surfaceTypeId},${n(surface?.data?.waterColor, 0)},${
         n(
             surface?.data?.rippleColor,
             0,
@@ -537,6 +538,25 @@ for (const type of gameTypes) {
     if (!def) continue;
     const img = def.lootImg || def.img || null;
     const atk = def.attack || null;
+    // loot.ts: the item's outer ring, tint (falls back to the ammo's dark tint),
+    // inner art scale/rotation/mirror.
+    const lootImg = def.lootImg || null;
+    let lootBorderTint = lootImg?.borderTint ?? 0;
+    if (lootImg && lootImg.borderTint === undefined && def.ammo) {
+        try {
+            const ammo = GameObjectDefs.typeToDef(def.ammo);
+            if (ammo?.lootImg?.tintDark !== undefined) lootBorderTint = ammo.lootImg.tintDark;
+        } catch {
+            // unknown ammo type: keep the default black ring tint
+        }
+    }
+    const lootBorder = lootImg?.border || "";
+    const lootInnerScale = lootImg?.innerScale ?? 0.8;
+    const lootRot = lootImg?.rot ?? 0;
+    const lootMirror = !!lootImg?.mirror;
+    // projectile.ts: throwable trail + spin/physics.
+    const trailDef = def.trail || null;
+    const throwPhysics = def.throwPhysics || {};
     if (def.unlocks || def.ammoType) {
         playerEntries += `        _gameObjs.at(${str(type)}).unlocks={${(def.unlocks || []).map(str).join(",")}};
         _gameObjs.at(${str(type)}).ammoType=${str(def.ammoType || "")};\n`;
@@ -553,7 +573,13 @@ for (const type of gameTypes) {
         n(def.mapIndicator?.pulseTint, 0xffffff)
     },${str(def.sound?.reload)},${str(def.sound?.reloadAlt)},${str(def.sound?.deploy)},${str(def.sound?.use)},${
         str(def.sound?.pickup)
-    }},\n`;
+    },${str(lootBorder)},${n(lootBorderTint, 0)},${f(lootInnerScale, 0.8)},${f(lootRot, 0)},${lootMirror ? 1 : 0},${
+        str(def.explosionEffectType || "")
+    },${trailDef ? 1 : 0},${f(trailDef?.maxLength, 0)},${f(trailDef?.width, 0)},${f(trailDef?.alpha, 1)},${
+        n(trailDef?.tint, 0xffffff)
+    },${f(throwPhysics.speed, 20)},${f(throwPhysics.spinVel, 0)},${f(throwPhysics.spinDrag, 1)},${
+        throwPhysics.randomizeSpinDir ? 1 : 0
+    },${def.alwaysRenderOntop ? 1 : 0},${f(def.rad, 1)}},\n`;
     if (
         !def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack"
         && !def.frozenSprites
@@ -850,6 +876,7 @@ const { BulletDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/bull
 let gameConfigArrays = "";
 let tracerNamesCount = 0;
 let bulletNamesCount = 0;
+let explosionEffectCount = 0;
 {
     const planeEntries = [
         ["Airdrop", GameConfig.airdrop],
@@ -914,7 +941,26 @@ let bulletNamesCount = 0;
                 flareColor,
                 0xffffff,
             )
-        },${f(b.maxFlareScale, 1)}},\n`;
+        },${f(b.maxFlareScale, 1)},${b.suppressed ? 1 : 0}},\n`;
+    }
+    gameConfigArrays += `};\n`;
+
+    const effectNames = Object.keys(ExplosionEffectDefs || {});
+    explosionEffectCount = effectNames.length;
+    gameConfigArrays += `static const char* const kExplosionEffect_names[] = {${effectNames.map(str).join(",")}};\n`;
+    gameConfigArrays += `static const RawExplosionEffect kExplosionEffects[] = {\n`;
+    for (const name of effectNames) {
+        const e = ExplosionEffectDefs[name] || {};
+        const burst = e.burst || {};
+        const sound = burst.sound || {};
+        const scatter = e.scatter || null;
+        gameConfigArrays += `    {${str(name)},${str(burst.particle || "")},${f(burst.scale, 1)},${
+            str(sound.grass || "")
+        },${str(sound.water || "")},${f(sound.detune, 0)},${f(sound.volume, 1)},${str(scatter?.particle || "")},${
+            n(scatter?.count, 0)
+        },${f(scatter?.speed?.min, 0)},${f(scatter?.speed?.max, 0)},${n(e.rippleCount, 0)},${f(e.shakeStr, 0)},${
+            f(e.shakeDur, 0)
+        },${f(e.lifetime, 1)}},\n`;
     }
     gameConfigArrays += `};\n`;
 }
@@ -952,6 +998,7 @@ struct RawMapObj {
     const char* hitParticle; const char* punchSound;
     const char* doorSoundChange; const char* doorSoundOpen; const char* doorSoundClose; const char* doorSoundUnlock;
     const char* buttonSoundOn; const char* buttonSoundOff; const char* explodeSound;
+    const char* bulletSound;
     int hasSurface, surfaceType; unsigned surfaceWaterColor, surfaceRippleColor;
     int hasGore; float goreFadeStart, goreFadeEnd, goreFadePow, goreFadeSpeed;
     int goreHasTint; unsigned goreTint; int goreHasAlpha; float goreAlpha;
@@ -991,7 +1038,11 @@ struct RawGameObj { const char* type; const char* category; RawImg img; int hasI
     const char* playerHit; const char* punchSound; int useThrowParticles;
     const char* bulletType; float barrelLength;
     const char* mapIndicatorSprite; unsigned mapIndicatorTint; int mapIndicatorPulse; unsigned mapIndicatorPulseTint;
-    const char* soundReload; const char* soundReloadAlt; const char* soundDeploy; const char* soundUse; const char* soundPickup; };
+    const char* soundReload; const char* soundReloadAlt; const char* soundDeploy; const char* soundUse; const char* soundPickup;
+    const char* lootBorder; unsigned lootBorderTint; float lootInnerScale, lootRot; int lootMirror;
+    const char* explosionEffectType;
+    int hasTrail; float trailMaxLength, trailWidth, trailAlpha; unsigned trailTint;
+    float throwSpeed, spinVel, spinDrag; int randomizeSpinDir, alwaysRenderOntop; float projectileRad; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -1008,7 +1059,13 @@ struct RawEmitter {
 };
 struct RawPlane { float actionOffset; float planeVel, planeRad, soundRangeMult, soundRangeDelta, soundRangeMax, fallOff; };
 struct RawTracer { unsigned regular, saturated, chambered, apSaturated; float alphaRate, alphaMin; };
-struct RawBulletRender { float distance, speed, variance; const char* tracerColor; float tracerWidth, tracerLength; unsigned flareColor; float maxFlareScale; };
+struct RawBulletRender { float distance, speed, variance; const char* tracerColor; float tracerWidth, tracerLength; unsigned flareColor; float maxFlareScale; int suppressed; };
+struct RawExplosionEffect {
+    const char* name; const char* burstParticle; float burstScale;
+    const char* grassSound; const char* waterSound; float detune, volume;
+    const char* scatterParticle; int scatterCount; float scatterSpeedMin, scatterSpeedMax;
+    int rippleCount; float shakeStr, shakeDur, lifetime;
+};
 struct RawEmote { const char* type; const char* texture; const char* sound; const char* channel; const char* name; int teamOnly; int category; };
 struct RawLoadoutItem {
     const char* type; const char* category; const char* name; const char* lore; const char* sprite; int rarity;
@@ -1053,6 +1110,25 @@ static BulletRenderDef toBulletRender(const RawBulletRender& r) {
     d.tracerLength = r.tracerLength;
     d.flareColor = r.flareColor;
     d.maxFlareScale = r.maxFlareScale;
+    d.suppressed = r.suppressed != 0;
+    return d;
+}
+static ExplosionEffectRenderDef toExplosionEffect(const RawExplosionEffect& r) {
+    ExplosionEffectRenderDef d;
+    d.burstParticle = r.burstParticle ? r.burstParticle : "";
+    d.burstScale = r.burstScale;
+    d.grassSound = r.grassSound ? r.grassSound : "";
+    d.waterSound = r.waterSound ? r.waterSound : "";
+    d.detune = r.detune;
+    d.volume = r.volume;
+    d.scatterParticle = r.scatterParticle ? r.scatterParticle : "";
+    d.scatterCount = r.scatterCount;
+    d.scatterSpeedMin = r.scatterSpeedMin;
+    d.scatterSpeedMax = r.scatterSpeedMax;
+    d.rippleCount = r.rippleCount;
+    d.shakeStr = r.shakeStr;
+    d.shakeDur = r.shakeDur;
+    d.lifetime = r.lifetime;
     return d;
 }
 
@@ -1149,6 +1225,7 @@ public:
             d.buttonSoundOn = r.buttonSoundOn ? r.buttonSoundOn : "";
             d.buttonSoundOff = r.buttonSoundOff ? r.buttonSoundOff : "";
             d.explodeSound = r.explodeSound ? r.explodeSound : "";
+            d.bulletSound = r.bulletSound ? r.bulletSound : "";
             d.hasSurface = r.hasSurface != 0;
             d.surfaceType = r.surfaceType == 2
                 ? SurfaceTypeDef::Grass
@@ -1323,6 +1400,23 @@ public:
             d.soundDeploy = r.soundDeploy ? r.soundDeploy : "";
             d.soundUse = r.soundUse ? r.soundUse : "";
             d.soundPickup = r.soundPickup ? r.soundPickup : "";
+            d.lootBorder = r.lootBorder ? r.lootBorder : "";
+            d.lootBorderTint = r.lootBorderTint;
+            d.lootInnerScale = r.lootInnerScale;
+            d.lootRot = r.lootRot;
+            d.lootMirror = r.lootMirror != 0;
+            d.explosionEffectType = r.explosionEffectType ? r.explosionEffectType : "";
+            d.hasTrail = r.hasTrail != 0;
+            d.trailMaxLength = r.trailMaxLength;
+            d.trailWidth = r.trailWidth;
+            d.trailAlpha = r.trailAlpha;
+            d.trailTint = r.trailTint;
+            d.throwSpeed = r.throwSpeed;
+            d.spinVel = r.spinVel;
+            d.spinDrag = r.spinDrag;
+            d.randomizeSpinDir = r.randomizeSpinDir != 0;
+            d.alwaysRenderOntop = r.alwaysRenderOntop != 0;
+            d.projectileRad = r.projectileRad;
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}
@@ -1427,6 +1521,9 @@ ${
         for (int i = 0; i < ${bulletCount}; ++i) {
             _bullets[kBulletRender_names[i]] = toBulletRender(kBulletRender[i]);
         }
+        for (int i = 0; i < ${explosionEffectCount}; ++i) {
+            _explosionEffects[kExplosionEffect_names[i]] = toExplosionEffect(kExplosionEffects[i]);
+        }
     }
 
     const MapObjectDef* mapObject(const std::string& type) const override {
@@ -1469,6 +1566,10 @@ ${
         auto it = _bullets.find(type);
         return it == _bullets.end() ? nullptr : &it->second;
     }
+    const ExplosionEffectRenderDef* explosionEffect(const std::string& type) const override {
+        auto it = _explosionEffects.find(type);
+        return it == _explosionEffects.end() ? nullptr : &it->second;
+    }
     const EmoteRenderDef* emote(const std::string& type) const override {
         auto it = _emotes.find(type);
         return it == _emotes.end() ? nullptr : &it->second;
@@ -1492,6 +1593,7 @@ private:
     std::unordered_map<std::string, ParticleDef> _particles;
     std::unordered_map<std::string, TracerColorDef> _tracers;
     std::unordered_map<std::string, BulletRenderDef> _bullets;
+    std::unordered_map<std::string, ExplosionEffectRenderDef> _explosionEffects;
     std::unordered_map<std::string, EmoteRenderDef> _emotes;
     std::unordered_map<std::string, PingRenderDef> _pings;
     std::unordered_map<std::string, RoleRenderDef> _roles;

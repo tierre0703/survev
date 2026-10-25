@@ -2837,3 +2837,26 @@ filtering all use the same frame's state.
 - Device (x86_64 emulator): quick-play joined a match and ran for 12 s with
   `logcat -b crash` empty. Bunker entry and an interpolation on/off comparison
   are still pending.
+
+## 48. Session 47 - P1.3 render feedback parity (2026-10-25)
+
+- `bullet.ts`: real travelling tracer sprite (per-def palette/width/length,
+  AP/chambered/saturated, suppressed fade), obstacle/player segment collision,
+  wall dust + def bullet hit group, parented blood/pan sparks, stairs layer.
+- `explosion.ts`: the `ExplosionEffectDefs` table moved to
+  `shared/defs/explosionEffectDefs.ts` and is generated into
+  `ExplosionEffectRenderDef`; `ExplosionBarn` now spawns burst/scatter physics
+  particles, water ripples, camera shake and indoor bomb suppression instead of
+  the old orange circle.
+- `projectile.ts`: spin/drag, trail sprite (length/width/alpha/tint), water
+  alpha, stairs z-order and always-on-top bomb_iron.
+- `loot.ts`: generated outer ring (border/borderTint), inner scale/rotation/
+  mirror.
+- `player.ts`: same-group-only nametags, faction patch, last-stand/bleed
+  particles.
+- `airdrop.ts`/`plane.ts`: retained fall loop, plane engine loop, airstrike
+  zones instantiated from `UpdateMsg.airstrikeZones`.
+
+Verification: `surv_tests` 186 tests / 2,839 assertions, 0 failures; client
+vitest 11,768 pass; `lint:ci`; x86_64 native + APK; device quick play joined with
+an empty crash buffer.

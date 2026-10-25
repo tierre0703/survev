@@ -10,14 +10,15 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25 (P1.1/P1.2)** — quick play is authenticated
-with the device session (Bearer, server also accepts the cookie), sends
-`playerCount:1`, the real `protocolVersion` and the selected region's zones;
-team `playGame` uses the same version/zones and allows logged-in players through
-captcha-enabled rooms. Disconnect reasons now come from the server's reason
-string (the invented 4001–4011 codes are gone), with localized messages and
-error dialogs for invalid protocol/IP ban/behind proxy/account ban. P0.1–P1.5
-are also done; the 1:1 audit continues at P1.3/P1.4. **182 host tests pass,
+Latest recorded state: **2026-10-25 (P1.3 + P1.4 progress)** — bullet tracers now use the
+per-def sprite palette/length/width with AP/saturated/suppressed modes and real
+collision FX (wall dust + hit groups, blood parented to players, pan/steelskin
+sparks); explosions use the generated burst/scatter/ripple/shake/lifetime table;
+projectiles spin, trail, water-fade and sort on stairs; loot has its outer ring
+and inner-art rotation/mirror; player nametags are teammate-only, faction patches
+and bleed/adrenaline emitters exist; airdrop fall/plane loops and airstrike zones
+are wired. The live HUD gained reserve ammo, bag counts and an in-match kill
+counter (inventory v2 polish still listed in P1.4). **186 host tests pass,
 0 fail.**
 
 ---
@@ -30,10 +31,10 @@ are also done; the 1:1 audit continues at P1.3/P1.4. **182 host tests pass,
 | M1 | Asset pipeline | **done** | atlases, GUI PNGs (4x), Roboto Condensed TTF, l10n. |
 | M2 | Shared core ports (bit-exact) | **done** | `BitBuffer`, `Vec2/MathUtil/Collider`, message classes, TS-generated fixtures. |
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
-| M4 | Rendering | **mostly done** | terrain/island/obstacles/buildings/particles/decals/gas/skeletal player; active layer + player/camera/projectile interpolation done; missing bullet/explosion/projectile/loot FX (§3 P1.3). |
+| M4 | Rendering | **done (major FX)** | terrain/objects/buildings/particles/decals/gas/skeletal player; active layer + interpolation; bullet tracers/impacts, explosions, projectiles, loot rings, player patches/nametags and airstrike zones. Remaining exact-normal/colour nuances are P2. |
 | M5 | Input + touch | **done (touch)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; keyboard/mouse binds remain P1.6. |
 | M6 | Audio | **mostly done** | engine/mixer/ambience/reverb/EQ/interior sounds, channel semantics, startup volume/mute, menu music and the real sound keys; notification/team-join cues are web-focus-only and exact EQ timbre remains P2. |
-| M7 | UI layer | **partial** | Java menu/account/pass/team/loadout live; death/result + spectate overlay live in the C++ HUD; settings screen is real (persist + apply); inventory v2 in the live HUD still missing; `FguiHud` is dead on Android (§3 P1.4). |
+| M7 | UI layer | **partial** | Java menu/account/pass/team/loadout live; death/result + spectate overlay live in the C++ HUD; settings screen is real; live HUD has reserve ammo/bag counts/live kills; remaining inventory v2 polish is P1.4. |
 | M8 | Accounts / API | **mostly done** | device login + profile, quests/pass, team links, authenticated quick play and correct disconnect reasons; captcha is unsupported for signed-out users (server skips it for the device session), OAuth is an intentional platform delta. |
 | M9 | Polish & release | **started** | release APK/AAB pipeline verified (§45); waiting on the 1:1 gameplay gate (§3.7), a physical-device soak and final store upload. |
 
@@ -58,19 +59,19 @@ are also done; the 1:1 audit continues at P1.3/P1.4. **182 host tests pass,
 | `client/src/gas.ts` → `game/Gas.*` | ✅ |
 | `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | ✅ dispatch/net, match-over latch + death/spectate, player/camera/projectile interpolation (P0.3); no local-rotation input policy yet (P1.6) |
 | `client/src/objects/objectPool.ts` → `game/objects/GameObject.h` | ✅ |
-| `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | 🔶 poses/animations faithful; team patch, heal/revive/AoE emitters, bleed particles, nametag gating, action-sound keys, radius/easing missing (P1.3) |
-| `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | 🔶 whiz sound only; per-def tracers + all impact FX missing (P1.3) |
-| `client/src/objects/explosion.ts` → `objects/Barns.*` (ExplosionBarn) + `GameWorld.cpp` | 🔶 sound map only; visuals are one orange circle, no particles/shake/ripples (P1.3) |
+| `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | ✅ poses/animations faithful; faction patch, last-stand/bleed particles, same-group nametags and real action-sound keys; minor radius/easing nuances P2 |
+| `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | ✅ travelling tracer sprite, per-def palette/width/length, suppression, collision FX + hit groups, blood/pan sparks, stairs layer |
+| `client/src/objects/explosion.ts` → `objects/Barns.*` (ExplosionBarn) + `GameWorld.cpp` | ✅ generated burst/scatter/ripple/shake/lifetime/indoor suppression; physics particles |
 | `client/src/objects/shot.ts` → `objects/Barns.*` (ShotBarn) | 🔶 fire sound; no last/alt/team variants, cycle/pull timing or casings (P1.3/P2) |
 | `client/src/objects/obstacle.ts` → `objects/Barns.*` | 🔶 door/button/destroy sounds, particles and button sprite swap missing (P1.3/P2) |
 | `client/src/objects/building.ts` → `objects/Barns.*` | 🔶 ceiling reveal/sounds partial; puzzle FX and ceiling debris particles missing (P2) |
-| `client/src/objects/loot.ts` → `objects/Barns.*` | 🔶 no rarity border/outer ring or drop sound (P1.3) |
+| `client/src/objects/loot.ts` → `objects/Barns.*` | ✅ rarity border/outer ring, inner-art scale/rotation/mirror, tint |
 | `client/src/objects/decal.ts` → `objects/Barns.*` | ✅ |
 | `client/src/objects/deadBody.ts` → `objects/Barns.*` | ✅ (interpolation P0.3) |
-| `client/src/objects/projectile.ts` → `objects/Barns.*` | 🔶 static sprite; spin/trail/bounce/water/ondemand ordering missing (P1.3) |
+| `client/src/objects/projectile.ts` → `objects/Barns.*` | ✅ spin/drag, throwable trail, water alpha, stairs z-order, always-on-top bomb; collision bounce sounds remain P2 |
 | `client/src/objects/smoke.ts` → `objects/Barns.*` | ✅ |
-| `client/src/objects/airdrop.ts` → `objects/Barns.*` | 🔶 fall loop restarted every frame; ripple delay missing (P1.3) |
-| `client/src/objects/plane.ts` → `objects/Barns.*` | 🔶 engine sound unused; airstrike zones never instantiated (P1.3) |
+| `client/src/objects/airdrop.ts` → `objects/Barns.*` | ✅ retained fall-loop handle, chute/crash FX, ripples |
+| `client/src/objects/plane.ts` → `objects/Barns.*` | ✅ plane engine loop and airstrike zones instantiated |
 | `client/src/objects/flare.ts` → `objects/Barns.*` | 🔶 additive blend is a no-op (P2) |
 | `client/src/objects/structure.ts` → `objects/Structure.*` | ✅ bounds/masks/stairs/map icons + `interiorSound` ambience tracks |
 | `client/src/objects/particles.ts` → `objects/Barns.*` (ParticleBarn + Emitter) | ✅ near line-for-line; static colour per def (P2) |
@@ -331,43 +332,47 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         dialogs are unit-verified / compile-verified, and the stock bundle's
         normal host-closed path stays localized.
 
-- [ ] **P1.3 Rendering feedback parity (biggest visual gap).**
-      - Bullet tracers: per-def colour/length/width/comet trail, AP/sat/chambered
-        tints, suppression fade (`bullet.ts:92-181,235-242`); native is a hardcoded
-        2 px line (`Barns.cpp:1497-1535`).
-      - Bullet impact FX: wall dust + `sound.bullet`, blood parented to players,
-        pan/steelskin sparks, hit sounds (`bullet.ts:33-54,377-458`); native never
-        collision-tests bullets.
-      - Explosions: burst/scatter particles, water ripples, per-type lifetime,
-        camera shake, indoor bomb suppression (`explosion.ts:110-255,355-716`);
-        native is one orange circle (`Barns.cpp:1559-1588`).
-      - Projectiles: spin/drag, trail, bounce sound/particles, water alpha 0.3,
-        stair z-order, always-on-top/indoor hide (`projectile.ts:28-398`); native
-        is a static sprite (`Barns.cpp:1288-1304`).
-      - Loot: rarity border/outer ring + drop sound (`loot.ts:106-151`); native has
-        no border (`Barns.cpp:923-936`).
-      - Player: heal/revive/AoE emitters, last-stand aura, team patch, bleed
-        particles, nametags only for same-group teammates
-        (`player.ts:856-857,992-1027,1984-2074`; native
-        `PlayerRender.cpp:729-741,804-859`, `Barns.cpp:1605-1608`).
-      - Airdrop/plane/airstrike: airdrop fall loop handle (native still restarts
-        the sound every frame, `Barns.cpp`), plane engine loop is now wired
-        (P1.5), `msg.airstrikeZones` (parsed at `Messages.h:1314`) is still never
-        instantiated (`GameWorld::applyUpdate`), and `Camera::m_addShake` has no
-        explosion trigger (the `screenShake` gate + per-frame apply are done).
-      - Acceptance: screenshot/side-by-side each effect; no sound spam.
+- [x] **P1.3 Rendering feedback parity (biggest visual gap).**
+      **Done (minor exact-normal/timbre details stay P2).**
+      - Bullet tracers: `BulletVisual` is a real travelling sprite
+        (`player-bullet-trail-02.img`) with per-def length/width, tracer palette
+        (regular/AP/chambered/saturated), suppressed alpha fade, combat-stim
+        particles and revenant-style whiz audio. It now collision-tests obstacles
+        and players (`colliderIntersectSegmentRes`), spawns wall dust + the
+        def bullet hit group, parented blood/`player_bullet_hit` and
+        pan/steelskin sparks, and updates the stairs layer like bullet.ts.
+      - Explosions: the shared `explosionEffectDefs.ts` table is generated into
+        `ExplosionEffectRenderDef` (burst particle/scale, grass/water sounds,
+        detune/volume, scatter count/speed, ripple count, shake/lifetime).
+        `ExplosionBarn` spawns bursts/scatter physics particles, water ripples,
+        camera shake, indoor `bomb_iron` suppression and lifetime, replacing the
+        old orange circle.
+      - Projectiles: sprint rotation/drag, throwable trail (length/width/alpha/
+        tint), water alpha 0.3, `posZ` scale/order, stairs layer and
+        always-on-top bomb_iron behaviour.
+      - Loot: generated `lootBorder`/`lootBorderTint`/`lootInnerScale`/`lootRot`/
+        `lootMirror`; the outer ring is a child sprite behind the item art.
+      - Player: same-group-only nametags (30 px below), faction patch sprite,
+        last-stand/adrenaline and bleed particles (heal/haste emitters were
+        already wired).
+      - Airdrop/plane/airstrike: a retained falling-loop handle (chute once),
+        plane engine loop, and `msg.airstrikeZones` now instantiate map zones;
+        camera shake is triggered from explosions.
+      - Host tests cover the generated explosion table, bullet travel/collision,
+        loot border and projectile spin/trail. Side-by-side screenshots remain a
+        manual/device check.
 
 - [ ] **P1.4 Live inventory v2 / interaction HUD.**
-      Port `ui2.ts` into `game/Hud` (not the dead `FguiHud`):
-      reserve ammo (`N/∞`), weapon slot strip with icons/binds/ammo and tap-to-
-      switch + drag swap, loot/ammo/heal/throwable counts (orange at max, dim at
-      0), scopes strip, interaction prompt (icon/text/tap), pickup/error toasts,
-      "You killed X" + in-match kill counter (currently only from `GameOverMsg`),
-      rare-loot/perk toasts, kill feed colours, off-screen teammate arrows, faction
-      alive counters, gas/role announcements, spectator count, "waiting for
-      players", pie-timer label and role-selection menu (`ui.ts`/`ui2.ts`
-      references in the audit; `Hud.cpp:650-802`, `GameScene.cpp:1153-1218`).
-      Acceptance: full HUD matches `ui.ts`/`ui2.ts` at 1280×720.
+      **In progress.** The live HUD now has reserve ammo (`clip/reserve`),
+      an ammo/med/boost/nade bag strip and a live kill counter
+      (`Game::localKills`, not just GameOver). Weapon cards, scopes, quick-use
+      pills, pickup message, kill feed, gas timer, spectator count and the
+      death/result overlays were already live.
+      Still missing: nearby-item interaction prompt, error toasts,
+      "You killed X"/rare-loot/perk toasts, kill-feed colours, off-screen
+      teammate arrows, faction alive counters, role announcements, waiting-for-
+      players, pie-timer label and the role-selection menu. Acceptance is still
+      the full `ui.ts`/`ui2.ts` HUD at 1280×720.
 
 - [x] **P1.5 Audio correctness and coverage.**
       **Done (web-focus-only cues excepted).**
@@ -481,7 +486,8 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 4. **P0.7 + P1.5** — settings/audio correctness (done; see §3.2/§3.3).
 5. **P1.1 + P1.2** — authenticated quick play/captcha + correct errors
    (done; see §3.3).
-6. **P1.3 + P1.4** — render feedback + live inventory HUD.
+6. **P1.3 + P1.4** — render feedback + live inventory HUD (P1.3 done; P1.4
+   in progress — see §3.3).
 7. **P1.6–P1.8** — input/metadata/team/account parity.
 8. **P2** — polish, then a physical-device soak and store upload.
 
@@ -504,7 +510,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (182 tests, 0 failures expected)
+# host tests (186 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -577,6 +583,11 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - Player/projectile interpolation is `visualPos(Old)` + `posInterpTicker / camera.m_interpInterval` seeded in `m_updateData` (`isNew ? data.pos : pos/dir`); the camera follows `activePlayer->visualPos`. Do not draw or follow raw `pos`
 - A duplicated net update re-seeds `visualPosOld`/`visualDirOld` from the current net position and restarts the ticker (web `player.ts:508-515`); it must not slide back to the previous sample
 - `config.interpolation` lives on the scene (`GameScene::_interpolationEnabled`) and is re-applied by `resetWorld()`, because each match builds a new `GameWorld` camera; `UiBridge::setConfigValue("interpolation")` pushes it through `runOnGameThread`
+- Bullet rendering is `BulletVisual::trail` (`player-bullet-trail-02.img`) with world scale divided by `camera.m_z()`; do not go back to a Graphics line. Collision/impact FX belongs in `BulletBarn::update` (obstacles + players, blood parented to the victim), because the server only sends the spawn event.
+- Explosion visuals come from the generated `ExplosionEffectRenderDef` table (`shared/defs/explosionEffectDefs.ts`); do not reintroduce the old orange-circle `ExplosionBarn` drawing.
+- Loot's outer ring is a separate `borderSprite` child at index 0; the item art keeps `lootInnerScale`/mirror/rotation and the ring tint comes from `lootBorderTint` (ammo's `tintDark` fallback at codegen).
+- Player nametags are visible only for same-group, non-active teammates (30 px below); faction patches are only drawn in `factionMode` and use the 2 team colors.
+- Airdrops own one looping `airdrop_fall_01` handle (chute once); plane/fighter loops and `msg.airstrikeZones` are created from the UpdateMsg, and `ExplosionBarn` drives `Camera::m_addShake`.
 - All runtime game.ts settings (interpolation/screenShake/localRotation/anonPlayerNames/touch styles/aim line + volumes/mute) are applied by `AndroidUiBridge::applyGameSettings` at install and after `setConfigValue`; `GameScene`/`GameWorld` keep them so a rebuilt match world gets the same flags
 - Settings JSON values are numbers/bools: Java must use `Json.peekFloat`/`peekBool` (not `peekString`); the language list is `SurvBridge.getLocalesJson()` (`ui::kLocales`), never a hand-written Java array
 - `Touch` defaults to web `anywhere`; `GameScene::setTouchSettings` validates `locked`/`anywhere` and applies move/aim style + aim line live (the Java buttons persist the same keys)

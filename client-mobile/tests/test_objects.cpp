@@ -12,6 +12,7 @@
 #include "render/Defs.h"
 #include "render/GeneratedDefs.h"
 
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -109,6 +110,123 @@ TEST(game_object_sound_fields) {
         // Some guns carry a separate alt-reload sound.
         CHECK(mp220->soundReloadAlt.empty() || mp220->soundReloadAlt != mp220->soundReload);
     }
+}
+
+// P1.3: generated explosion effect table (burst/scatter/ripple/shake/lifetime).
+TEST(explosion_effect_defs_provider) {
+    installGeneratedDefs();
+    const DefProvider* provider = getDefProvider();
+    CHECK(provider != nullptr);
+    if (!provider) {
+        return;
+    }
+    const ExplosionEffectRenderDef* frag = provider->explosionEffect("frag");
+    CHECK(frag != nullptr);
+    if (frag) {
+        CHECK_EQ(frag->burstParticle, std::string("explosionBurst"));
+        CHECK_NEAR(frag->burstScale, 1.0f, 1e-4f);
+        CHECK_NEAR(frag->lifetime, 2.0f, 1e-4f);
+        CHECK_NEAR(frag->shakeStr, 0.2f, 1e-4f);
+        CHECK_EQ(frag->rippleCount, 10);
+    }
+    const ExplosionEffectRenderDef* snowball = provider->explosionEffect("snowball");
+    CHECK(snowball != nullptr);
+    if (snowball) {
+        CHECK_EQ(snowball->scatterParticle, std::string("snowball_impact"));
+        CHECK_EQ(snowball->scatterCount, 5);
+    }
+    const GameObjRenderDef* explosion = provider->gameObject("explosion_frag");
+    CHECK(explosion != nullptr);
+    if (explosion) {
+        CHECK_EQ(explosion->explosionEffectType, std::string("frag"));
+    }
+}
+
+// P1.3: bullet.ts moves the tracer to the server distance and stops on impact.
+TEST(bullet_trail_moves_and_collides) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(basicMap());
+    world.camera().m_screenWidth = 800.0f;
+    world.camera().m_screenHeight = 600.0f;
+
+    Bullet data;
+    data.playerId = 2;
+    data.bulletType = "bullet_mosin";
+    data.pos = Vec2(100.0f, 100.0f);
+    data.dir = Vec2(1.0f, 0.0f);
+    data.layer = 0;
+    data.clipDistance = true;
+    data.distance = 10.0f;
+    world.bulletBarn().spawn(&factory, data);
+    CHECK_EQ(world.bulletBarn().bullets.size(), size_t(1));
+    BulletVisual* b = world.bulletBarn().bullets[0];
+    CHECK(b->trail != nullptr);
+    CHECK(b->alive);
+    CHECK_NEAR(b->speed, getDefProvider()->bullet("bullet_mosin")->speed, 1e-3f);
+
+    world.bulletBarn().update(0.1f, world);
+    CHECK_NEAR(b->pos.x, 110.0f, 1e-4f);
+    CHECK(!b->alive);
+    CHECK(b->collided);
+
+    // The collided tracer fades out and is deactivated.
+    for (int i = 0; i < 30; ++i) {
+        world.bulletBarn().update(0.02f, world);
+    }
+    CHECK(!b->active);
+    CHECK(!b->trail->isVisible());
+}
+
+// P1.3: loot.ts outer ring + inner art rotation/scale.
+TEST(loot_border_and_art) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(basicMap());
+    Loot* loot = world.lootBarn().lootPool.m_alloc();
+    CHECK(loot != nullptr);
+    if (!loot) {
+        return;
+    }
+    ObjectData data;
+    data.type = "mp5";
+    data.pos = Vec2(120.0f, 120.0f);
+    data.layer = 0;
+    loot->m_updateData(data, true, true, world);
+    CHECK(loot->borderSprite != nullptr);
+    CHECK(loot->borderSprite->isVisible());
+    CHECK_EQ(static_cast<pix::NullSprite*>(loot->borderSprite)->frame,
+             std::string("loot-circle-outer-01.img"));
+    CHECK_NEAR(static_cast<pix::NullSprite*>(loot->sprite)->sx, 0.8f, 1e-4f);
+}
+
+// P1.3: projectile.ts spins the sprite and creates a trail for throwables.
+TEST(projectile_spin_and_trail) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(basicMap());
+    world.camera().m_screenWidth = 800.0f;
+    world.camera().m_screenHeight = 600.0f;
+
+    Projectile* p = world.projectileBarn().projectilePool.m_alloc();
+    ObjectData data;
+    data.type = "potato_cannonball";
+    data.pos = Vec2(100.0f, 100.0f);
+    data.dir = Vec2(1.0f, 0.0f);
+    data.layer = 0;
+    data.posZ = 2.0f;
+    p->m_updateData(data, true, true, world);
+    CHECK(p->trail != nullptr);
+    CHECK(p->rotVel != 0.0f);
+    const float rotVel = p->rotVel;
+    p->lastPos = Vec2(98.0f, 100.0f);
+    world.projectileBarn().update(0.1f, world);
+    CHECK(p->rot != 0.0f);
+    CHECK(std::fabs(p->rotVel) < std::fabs(rotVel));
+    CHECK(p->trail->isVisible());
 }
 
 // ---------------------------------------------------------------------------

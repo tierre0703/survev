@@ -175,6 +175,8 @@ void GameWorld::loadMap(const MapMsg& msg) {
     _particleBarn->clear();
     _decalBarn->decalPool.clear();
     _airdropBarn->airdropPool.clear();
+    _explosionBarn->explosionPool.clear();
+    _explosionBarn->physicsParticles.clear();
     for (auto* plane : _planeBarn->planes) {
         if (plane->soundInstance != audio::kInvalidSound && _audio) {
             _audio->stopSound(plane->soundInstance);
@@ -378,6 +380,9 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
 
     // plane.ts: reconcile the plane list from each update.
     _planeBarn->updatePlanes(*this, msg.planes);
+    for (const auto& zone : msg.airstrikeZones) {
+        _planeBarn->createAirstrikeZone(zone);
+    }
 
     _activePlayer = _playerBarn->getPlayerById(_activePlayerId);
     // game.ts `m_activePlayer.m_setLocalData(msg.activePlayerData)`: the zoom

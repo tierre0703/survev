@@ -241,6 +241,7 @@ private:
     pix::Text* _healthText = nullptr;
     pix::Graphics* _boostSegments[4] = {nullptr, nullptr, nullptr, nullptr};
     pix::Text* _ammoText = nullptr;
+    pix::Text* _lootCountsText = nullptr;
 
     pix::Container* _mapBox = nullptr;
     pix::Graphics* _mapFrame = nullptr;

@@ -38,6 +38,8 @@ void Game::free() {
     _activePlayerId = 0;
     _localPlayerId = 0;
     _teamMode = 0;
+    _anonPlayerNames = false;
+    _localKills = 0;
     _started = false;
     _joined = false;
     _emotes = _joinInfo.emotes;
@@ -465,6 +467,9 @@ void Game::handleKill(NetBitStream& s) {
     KillMsg m;
     m.deserialize(s);
     _killFeed.push_back({m, displayName(m.killerId), displayName(m.targetId), 8.0f});
+    if (m.killed && (m.killCreditId != 0 ? m.killCreditId : m.killerId) == _localPlayerId) {
+        ++_localKills;
+    }
     if (_killFeed.size() > 6) _killFeed.erase(_killFeed.begin());
     if (m.killed) _playerStatus[m.targetId].dead = true;
 }

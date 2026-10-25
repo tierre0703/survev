@@ -99,6 +99,8 @@ public:
     uint16_t getActivePlayerId() const { return _activePlayerId; }
     uint16_t getLocalPlayerId() const { return _localPlayerId; }
     bool isPlaying() const { return _playing; }
+    // In-match kill counter (Hud "N K"): killed credits for the local player.
+    int localKills() const { return _localKills; }
     bool isConnected() const {
         return _connection && _connection->state() == ConnectionState::Open;
     }
@@ -254,6 +256,7 @@ private:
     uint16_t _localPlayerId = 0;
     uint8_t _teamMode = 0;
     bool _anonPlayerNames = false;
+    int _localKills = 0;
     bool _started = false;
     JoinInfo _joinInfo;
     bool _joined = false;

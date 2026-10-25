@@ -238,6 +238,8 @@ struct MapObjectDef {
     std::string buttonSoundOn;
     std::string buttonSoundOff;
     std::string explodeSound;
+    // obstacle.ts def.sound.bullet (bullet impact hit group).
+    std::string bulletSound;
 
     // decalDefs (decal.ts): `surface` recolours getGroundSurface for decals
     // painted over water; `gore` fades that water colour with the gore level.
@@ -452,6 +454,26 @@ struct GameObjRenderDef {
     std::string soundDeploy;
     std::string soundUse;
     std::string soundPickup;
+    // loot.ts lootImg border/inner art (the outer ring behind the item art).
+    std::string lootBorder;
+    uint32_t lootBorderTint = 0;
+    float lootInnerScale = 0.8f;
+    float lootRot = 0.0f;
+    bool lootMirror = false;
+    // gameObjects/explosionsDefs.ts explosionEffectType (frag/barrel/...).
+    std::string explosionEffectType;
+    // throwableDefs: projectile trail/physics (projectile.ts).
+    bool hasTrail = false;
+    float trailMaxLength = 0.0f;
+    float trailWidth = 0.0f;
+    float trailAlpha = 1.0f;
+    uint32_t trailTint = 0xffffff;
+    float throwSpeed = 20.0f;
+    float spinVel = 0.0f;
+    float spinDrag = 1.0f;
+    bool randomizeSpinDir = false;
+    bool alwaysRenderOntop = false;
+    float projectileRad = 1.0f;
     // gunDefs.bulletType + barrelLength (touch.ts LineSprites aim-line range).
     std::string bulletType;
     float barrelLength = 0.0f;
@@ -499,6 +521,26 @@ struct BulletRenderDef {
     float tracerLength = 0.0f;
     uint32_t flareColor = 0xffffff;
     float maxFlareScale = 1.0f;
+    bool suppressed = false;
+};
+
+// client/src/objects/explosion.ts ExplosionEffectDefs (moved to
+// shared/defs/explosionEffectDefs.ts for the native codegen).
+struct ExplosionEffectRenderDef {
+    std::string burstParticle;
+    float burstScale = 1.0f;
+    std::string grassSound;
+    std::string waterSound;
+    float detune = 0.0f;
+    float volume = 1.0f;
+    std::string scatterParticle;
+    int scatterCount = 0;
+    float scatterSpeedMin = 0.0f;
+    float scatterSpeedMax = 0.0f;
+    int rippleCount = 0;
+    float shakeStr = 0.0f;
+    float shakeDur = 0.0f;
+    float lifetime = 1.0f;
 };
 
 // A [min,max] range or a constant (both stored as min==max for constants).
@@ -594,6 +636,8 @@ public:
     virtual const PlaneDef* plane(int /*type*/) const { return nullptr; }
     virtual const TracerColorDef* tracerColor(const std::string&) const { return nullptr; }
     virtual const BulletRenderDef* bullet(const std::string&) const { return nullptr; }
+    // client/src/objects/explosion.ts ExplosionEffectDefs.
+    virtual const ExplosionEffectRenderDef* explosionEffect(const std::string&) const { return nullptr; }
     // shared/defs/gameObjects/emoteDefs.ts (world emotes + emote wheel).
     virtual const EmoteRenderDef* emote(const std::string& /*type*/) const { return nullptr; }
     // shared/defs/gameObjects/pingDefs.ts (team pings + minimap markers).

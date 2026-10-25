@@ -86,9 +86,10 @@ void Player::m_init() {
     teamId = 0;
     gunRecoil = {};
     healEffect = false;
+    lastStandEffect = false;
     hasteType = HasteType_None;
     hasteSeq = -1;
-    healEmitter = hasteEmitter = nullptr;
+    healEmitter = hasteEmitter = adrenalineEmitter = nullptr;
     auraVisible = false;
     paramsCached = false;
     cachedActionType = -1;
@@ -125,7 +126,8 @@ void Player::m_free() {
     if (container) container->setVisible(false);
     if (healEmitter) healEmitter->stop();
     if (hasteEmitter) hasteEmitter->stop();
-    healEmitter = hasteEmitter = nullptr;
+    if (adrenalineEmitter) adrenalineEmitter->stop();
+    healEmitter = hasteEmitter = adrenalineEmitter = nullptr;
     auraVisible = false;
 }
 
@@ -155,6 +157,7 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
     scale = data.scale;
     wearingPan = data.wearingPan;
     healEffect = data.healEffect;
+    lastStandEffect = data.lastStandEffect;
     // player.ts: zoomDirty assigns m_localData.m_zoom and clears zoomFast so the
     // next scope change lerps in quickly.
     if (data.zoomDirty) {
@@ -249,6 +252,10 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
             objectSprites[i] = sprite(boneContainers[i]);
         }
         meleeSprite = sprite(boneContainers[1]);
+        // player.ts faction patch (rendered on the body in faction modes).
+        patchSprite = sprite(bodyContainer);
+        patchSprite->setAnchor(0.5f, 0.5f);
+        patchSprite->setVisible(false);
         // player.ts: a frozen/body-effect sprite, a submerge body sprite (with
         // its own limb sprites) and the aura container + circle.
         bodyEffectSprite = sprite(bodyContainer);
@@ -264,11 +271,12 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
         auraCircle->setScale(0.125f, 0.125f);
         auraContainer->setVisible(false);
         nameText = factory->createText();
-        nameText->setAnchor(0.5f, -1.0f);
+        nameText->setAnchor(0.5f, 0.5f);
         nameText->setScale(0.5f, 0.5f);
         nameText->setColor(0xffffff, 0x000000, 1.0f, true);
         // World text is y-up like the camera root now (no counter-flip).
         nameText->setFlipY(false);
+        nameText->setVisible(false);
         container->addChild(nameText);
     }
     if (isNew || data.animSeq != animSeq) playAnim(data.animType, data.animSeq);
@@ -346,6 +354,23 @@ void Player::updateVisuals(Ctx& ctx) {
     flakSprite->setAlpha(0.7f);
     skinSprite(steelskinSprite, "loot-melee-pan-black.img", 0xffffff, 0.4f, hasPerk("steelskin") && !ghillie);
     steelskinSprite->setAnchor(0.575f, 0.5f);
+    if (patchSprite) {
+        if (ctx.map().mapDef.factionMode && !ghillie) {
+            const bool potato = ctx.map().mapDef.potatoMode;
+            const std::string frames[2] = {
+                potato ? "player-patch-01po.img" : "player-patch-01.img",
+                potato ? "player-patch-02po.img" : "player-patch-02.img",
+            };
+            const int teamIdx = std::abs(static_cast<int>(teamId) - 1) % 2;
+            patchSprite->setFrame(frames[teamIdx]);
+            patchSprite->setRotation(-(math::deg2rad(3.0f) + pi * 0.5f));
+            patchSprite->setScale(0.25f, 0.25f);
+            patchSprite->setTint(potato ? 0xffffff : (teamIdx == 0 ? 0xcc0000u : 0x7effu));
+            patchSprite->setVisible(true);
+        } else {
+            patchSprite->setVisible(false);
+        }
+    }
     const auto* pan = item("pan");
     if (wearingPan && pan) heldSprite(hipSprite, pan->hipImg);
     else hipSprite->setVisible(false);
@@ -740,6 +765,40 @@ void Player::update(float dt, Ctx& ctx) {
         }
     }
 
+    // player.ts: downed players (and trick_drain) drip blood every 1 s (3 s for
+    // trick_drain); the particles are parented to the player container.
+    {
+        bool trickDrain = false;
+        for (const auto& perk : perks) {
+            if (perk.type == "trick_drain") {
+                trickDrain = true;
+                break;
+            }
+        }
+        if (!dead && ((downed && actionType == Action_None) || trickDrain)) {
+            bleedTicker -= dt;
+            if (bleedTicker < 0.0f) {
+                bleedTicker = trickDrain ? 3.0f : 1.0f;
+                Vec2 vel = v2Rotate(v2Neg(dir), (randf() - 0.5f) * pi / 3.0f);
+                vel.y *= -1.0f;
+                ctx.particleBarn().addParticle(
+                    ctx.factory(), "bloodSplat", renderLayer, Vec2(), v2Mul(vel, ctx.camera().m_ppu),
+                    1.0f, randf() * pi * 2.0f, container, renderZOrd + 1);
+                if (ap == this && ctx.audio()) {
+                    audio::PlaySoundOptions opts;
+                    opts.channel = "hits";
+                    opts.hasSoundPos = true;
+                    opts.soundPos = pos;
+                    opts.fallOff = 3.0f;
+                    opts.hasLayer = true;
+                    opts.layer = layer;
+                    opts.filter = "muffled";
+                    ctx.audio()->playSound("player_bullet_hit_02", opts);
+                }
+            }
+        }
+    }
+
     // Cache position for next frame's movement delta.
     posOld = pos;
     // Published for player skins (obstacle.ts reads renderLayer/renderZOrd/renderZIdx).
@@ -774,6 +833,25 @@ void Player::update(float dt, Ctx& ctx) {
         if (e) { e->pos = v2Add(pos, Vec2(0.0f, 0.1f)); e->layer = renderLayer; e->zOrd = zOrd + 1; }
     };
     emitter(healEmitter, healEffect, "heal_basic");
+    if (lastStandEffect) {
+        if (!adrenalineEmitter) {
+            EmitterOptions opts;
+            opts.pos = pos;
+            opts.layer = renderLayer;
+            opts.rateMult = 0.33f;
+            opts.hasColor = true;
+            opts.color = 0x4da6ff;
+            adrenalineEmitter = ctx.particleBarn().addEmitter(ctx.factory(), "boost_basic", opts);
+        }
+    } else if (adrenalineEmitter) {
+        adrenalineEmitter->stop();
+        adrenalineEmitter = nullptr;
+    }
+    if (adrenalineEmitter) {
+        adrenalineEmitter->pos = v2Add(pos, Vec2(0.0f, 0.1f));
+        adrenalineEmitter->layer = renderLayer;
+        adrenalineEmitter->zOrd = zOrd + 1;
+    }
     const char* hasteTypes[] = {"", "windwalk", "takedown", "inspire"};
     const int haste = std::clamp(hasteType, 0, 3);
     emitter(hasteEmitter, haste != 0, hasteTypes[haste]);

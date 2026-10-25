@@ -37,6 +37,7 @@ class Gas;
 
 struct Bullet; // shared/net Messages.h
 class Emitter; // particles.ts
+class Particle; // particles.ts
 
 // --- obstacle.ts -----------------------------------------------------------
 class Obstacle : public AbstractObject {
@@ -229,6 +230,7 @@ public:
 
     pix::Container* container = nullptr;
     pix::Sprite* sprite = nullptr;
+    pix::Sprite* borderSprite = nullptr;
     Emitter* emitter = nullptr;
 
     void m_init() override;
@@ -344,15 +346,27 @@ class Projectile : public AbstractObject {
 public:
     std::string type;
     Vec2 pos;
+    Vec2 dir;
+    Vec2 lastPos;
     // projectile.ts visualPosOld/posInterpTicker (render lags net updates).
     Vec2 visualPosOld;
     float posInterpTicker = 0.0f;
     float posZ = 0.0f;
+    float posZOld = 0.0f;
     int layer = 0;
     int ori = 0;
     float imgScale = 1.0f;
+    float rot = 0.0f;
+    float rotVel = 0.0f;
+    float rotDrag = 1.0f;
+    bool inWater = false;
+    bool alwaysRenderOntop = false;
+    bool playHitSfx = true;
+    uint16_t lastSoundObjId = 0;
+    bool isVisible = true;
     pix::Container* container = nullptr;
     pix::Sprite* sprite = nullptr;
+    pix::Sprite* trail = nullptr;
 
     void m_init() override;
     void m_free() override;
@@ -428,6 +442,10 @@ public:
     bool isNew = false;
     float fallTicker = 0.0f;
     float rad = 1.0f;
+    bool chuteDeployed = false;
+    float soundUpdateThrottle = 0.0f;
+    audio::SoundHandle fallInstance = audio::kInvalidSound;
+    audio::AudioManager* audioOwner = nullptr;
 
     void m_init() override;
     void m_free() override;
@@ -517,12 +535,16 @@ public:
     pix::Graphics* airstrikeZoneGfx = nullptr;
 
     void updatePlanes(GameWorld& ctx, const std::vector<struct PlaneData>& data);
+    void createAirstrikeZone(const struct Airstrike& data);
     void update(float dt, GameWorld& ctx);
 };
 
 // --- bullet.ts (visual only) ----------------------------------------------
 struct BulletVisual {
     bool active = false;
+    bool alive = false;
+    bool collided = false;
+    float scale = 1.0f;
     Vec2 startPos;
     Vec2 pos;
     Vec2 dir;
@@ -530,12 +552,25 @@ struct BulletVisual {
     int layer = 0;
     float distance = 0.0f;
     bool clipDistance = false;
+    float speed = 0.0f;
     float speedMult = 1.0f;
     float distanceMult = 1.0f;
     uint16_t playerId = 0;
+    int reflectCount = 0;
+    uint16_t reflectObjId = 0;
+    bool damageSelf = false;
+    bool suppressed = false;
+    bool combatStims = false;
+    float particleTicker = 0.0f;
     float t = 0.0f;
     bool whizHeard = false;
-    pix::Graphics* gfx = nullptr;
+    float tracerLength = 0.0f;
+    float tracerWidth = 1.0f;
+    float tracerAlphaRate = 0.0f;
+    float tracerAlphaMin = 0.0f;
+    float trailAlpha = 1.0f;
+    uint32_t tint = 0xffffff;
+    pix::Sprite* trail = nullptr;
 };
 
 class BulletBarn {
@@ -555,6 +590,12 @@ public:
     std::string type;
     int layer = 0;
     float t = 0.0f;
+    float lifetime = 1.0f;
+    bool done = false;
+    bool burstDone = false;
+    bool renderVisuals = true;
+    float soundUpdateThrottle = 0.0f;
+    audio::SoundHandle soundInstance = audio::kInvalidSound;
     pix::Container* container = nullptr;
     pix::Graphics* gfx = nullptr;
 
@@ -564,9 +605,24 @@ public:
     void update(float dt, Ctx& ctx);
 };
 
+// explosion.ts PhysicsParticle: scatter particles bounce off walls/players.
+struct ExplosionPhysicsParticle {
+    bool active = false;
+    Vec2 pos;
+    Vec2 vel;
+    int layer = 0;
+    Particle* particle = nullptr;
+    float ticker = 0.0f;
+    int colCount = 0;
+
+    void init(const Vec2& p, const Vec2& v, int l, Particle* part);
+    void update(float dt, GameWorld& ctx);
+};
+
 class ExplosionBarn {
 public:
     Pool<ExplosionObj> explosionPool;
+    std::vector<ExplosionPhysicsParticle> physicsParticles;
     void update(float dt, GameWorld& ctx);
 };
 
@@ -730,6 +786,7 @@ public:
     float scale = 1.0f;
     bool wearingPan = false;
     bool healEffect = false;
+    bool lastStandEffect = false;
     // player.ts m_localData.m_zoom (player.ts m_getZoom): the effective view
     // radius step, fed by ObjectData.zoom when zoomDirty. 0 = unscoped default.
     float zoom = 0.0f;
@@ -739,6 +796,7 @@ public:
     std::array<float, 2> gunRecoil{};
     Emitter* healEmitter = nullptr;
     Emitter* hasteEmitter = nullptr;
+    Emitter* adrenalineEmitter = nullptr;
     std::vector<ObjectData::Perk> perks;
     bool dead = false;
     bool downed = false;
@@ -822,6 +880,7 @@ public:
     pix::Sprite* meleeSprite = nullptr;
     pix::Sprite* flakSprite = nullptr;
     pix::Sprite* steelskinSprite = nullptr;
+    pix::Sprite* patchSprite = nullptr;
     std::array<pix::Sprite*, 4> limbSprites{};
     std::array<pix::Container*, 2> gunContainers{};
     std::array<pix::Sprite*, 2> gunSprites{}, magSprites{}, objectSprites{};

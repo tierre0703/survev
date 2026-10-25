@@ -3,6 +3,7 @@
 #include "Game.h"
 #include "EmoteManager.h"
 #include "../net/generatedDefs.inc"
+#include "../render/Defs.h"
 
 #include <algorithm>
 #include <cctype>
@@ -187,6 +188,14 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _ammoText->setColor(0xffffff, 0x000000, 2.0f, true);
     _ammoText->setAnchor(0.0f, 1.0f);
     _root->addChild(_ammoText);
+
+    // ui2.ts bag strip: reserve ammo / heals / boosts / throwables, under the
+    // equipped-ammo readout.
+    _lootCountsText = _factory->createText();
+    _lootCountsText->setFontSize(13.0f);
+    _lootCountsText->setColor(0xffffff, 0x000000, 2.0f, true);
+    _lootCountsText->setAnchor(0.0f, 1.0f);
+    _root->addChild(_lootCountsText);
 
     // #ui-map-wrapper: minimap frame + alive / kill counters (top right).
     // The baked map texture is attached by setMinimap() once the MapMsg lands.
@@ -404,6 +413,8 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _healthText->setPosition(X(vw * 0.5f), Y(hudY + hudH * 0.5f));
     _ammoText->setAnchor(0.0f, 1.0f);
     _ammoText->setPosition(X(hudX + hudW + 12.0f), Y(hudY + hudH));
+    _lootCountsText->setAnchor(0.0f, 1.0f);
+    _lootCountsText->setPosition(X(hudX + hudW + 12.0f), Y(hudY + hudH - 20.0f));
 
     // #ui-map-wrapper: minimap frame + alive/kill counters, top right.
     const float mm = kMinimapSize;
@@ -659,6 +670,7 @@ void Hud::setVisible(bool visible) {
     show(_healthFill);
     show(_healthText);
     show(_ammoText);
+    show(_lootCountsText);
     show(_mapFrame);
     show(_aliveText);
     show(_killsText);
@@ -1327,7 +1339,33 @@ void Hud::update(float dt, const Game& game, bool visible) {
             start = end == std::string::npos ? weaponKey.size() : end + 1;
         }
     }
+    // ui2.ts reserve ammo: equipped clip + the bag count for its ammo type.
+    std::string reserveText;
+    if (apd.curWeapIdx >= 0 && apd.curWeapIdx < slotCount) {
+        const auto& weap = apd.weapons[static_cast<size_t>(apd.curWeapIdx)];
+        const GameObjRenderDef* def = getDefProvider() ? getDefProvider()->gameObject(weap.type) : nullptr;
+        if (def && !def->ammoType.empty()) {
+            reserveText = std::to_string(bagCount(apd.inventory, def->ammoType.c_str()));
+        }
+    }
+    if (!ammoText.empty()) {
+        ammoText += "/" + (reserveText.empty() ? std::string("0") : reserveText);
+    }
     _ammoText->setText(ammoText);
+
+    // ui2.ts bag strip approximation: reserve ammo and consumable counts.
+    int ammoCount = 0;
+    for (const char* ammo : {"9mm", "45acp", "556mm", "762mm", "308sub", "12gauge", "9mm_cursed"}) {
+        ammoCount += bagCount(apd.inventory, ammo);
+    }
+    const int heals = bagCount(apd.inventory, "bandage") + bagCount(apd.inventory, "healthkit");
+    const int boosts = bagCount(apd.inventory, "soda") + bagCount(apd.inventory, "painkiller");
+    const int throwables = bagCount(apd.inventory, "frag") + bagCount(apd.inventory, "mirv") +
+        bagCount(apd.inventory, "smoke") + bagCount(apd.inventory, "strobe") +
+        bagCount(apd.inventory, "snowball") + bagCount(apd.inventory, "potato");
+    _lootCountsText->setText("AMMO " + std::to_string(ammoCount) + "  MED " + std::to_string(heals) +
+                             "  BOOST " + std::to_string(boosts) + "  NADE " +
+                             std::to_string(throwables));
 
     // --- P0.1 action controls: equipped slot, quick-use items, scopes ---
     _weaponTypes.fill(std::string());
@@ -1363,7 +1401,7 @@ void Hud::update(float dt, const Game& game, bool visible) {
         _lastAlive = alive;
         _aliveText->setText(std::to_string(alive));
     }
-    int kills = 0;
+    int kills = game.localKills();
     if (const GameOverMsg* over = game.gameOver()) {
         for (const auto& stats : over->playerStats) {
             if (stats.playerId == game.getLocalPlayerId()) {
