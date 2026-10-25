@@ -10,17 +10,17 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25** — Session 43 finished M8 with **team links** and,
-on the way, replaced the mock team screen with the real `/team_v2` protocol: the
-Java `TeamSocket` is now a raw-socket WebSocket client (handshake, frames,
-writer queue), `TeamFragment` sends create/join/setRoomProps/playGame/kick/
-keepAlive/gameComplete and renders `state`/`joinGame`/`kicked`/`error`, the team
-socket sends the account Bearer token, and invites are `https://<webBaseUrl>/#CODE`
-links (copy/share) that can be pasted back or opened via `survev://team/<code>`.
-Verified on the x86_64 emulator: create, deep-link join, pasted-link join, mode
-cycling, kick, Play -> game join, roster/state sync with a second WS client.
-Earlier: §42 quest/pass data + Java l10n, §41 device login + profile, §40 HUD
-safe-area insets, §39 Low GFX tier + perf logs. **163 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25** — Session 44 continued Perf/polish: the render-resolution
+tier is now a four-step battery scale (**Full 1.00 / Medium 0.85 / Low 0.75 /
+Potato 0.60**) cycled from the pause dialog and persisted as `renderScale`; the
+startup path always re-applies it (Full clears a stale fixed surface). A 60 s
+soak summary (`[perf] soak 60s fps min/avg/max frame=WxH`, plus a low-FPS hint)
+now complements the 5 s fps/frame logs. Verified on the emulator: every tier
+changes the GL frame (960x540 -> 816x459 -> 720x405 -> 576x324), survives a
+restart, and Medium held min 57.6 / avg 59.3 / max 60.3 fps over a minute.
+Earlier: §43 team rooms + invite links, §42 quest/pass data + Java l10n, §41
+device login + profile, §40 HUD safe-area insets. **163 host tests pass, 0
+fail.**
 
 ---
 
@@ -37,7 +37,7 @@ safe-area insets, §39 Low GFX tier + perf logs. **163 host tests pass, 0 fail.*
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb + per-source EFX low-pass EQ (muffled/club) + structure interior ambience + building `soundEmitters`. UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
 | M8 | Accounts / API | **done** | device login + profile, quests/pass data, team links (`/team_v2` protocol + invite links/deep links), region latency test, client error reporting. |
-| M9 | Polish & release | **started** | lifecycle: background/pause continuity (§36), mid-match reconnection (§38); perf/soak/store-ready AAB still to do. |
+| M9 | Polish & release | **started** | lifecycle: background/pause continuity (§36), mid-match reconnection (§38); render/battery tiers + soak instrumentation (§44); real-device soak and store-ready AAB still to do. |
 
 ---
 
@@ -424,13 +424,20 @@ safe-area insets, §39 Low GFX tier + perf logs. **163 host tests pass, 0 fail.*
         the seat until the player dies.
       - The other lifecycle item (menu HTTP retries) landed in §37.
 - [x] **Perf tooling + Low GFX tier (Perf/polish)**:
-      - "Low GFX" now renders into a 75% EGL surface
+      - "Low GFX" renders into a 75% EGL surface
         (`RenderScale.java` -> `AxmolGLSurfaceView.getHolder().setFixedSize`);
         the compositor upscales it, so the layout is unchanged while fill-rate
         drops. Persisted as `renderScale`, applied at launch by
         `AndroidUiBridge::setScenes` and toggled from the pause dialog.
+      - **Four battery tiers** (Session 44): Full 1.00 / Medium 0.85 / Low 0.75 /
+        Potato 0.60. The pause dialog's `GFX: <tier>` button cycles them,
+        applies immediately, persists `renderScale`, and labels the current tier
+        (green below Full); startup always re-applies the tier so Full also
+        clears a stale fixed surface.
       - `debug.surv_debug=1` logs `[perf] fps=…` and any frame-size change every
-        5 s (plus the existing axmol stats overlay via "Show FPS").
+        5 s (plus the existing axmol stats overlay via "Show FPS"), and a
+        `[perf] soak 60s fps min/avg/max frame=WxH` summary every minute
+        (5 s samples, not per-frame spikes) with a below-45-fps hint.
       - `SurvBridge.setConfigValue` was declared in Java but never implemented in
         C++ (the sensitivity sliders would throw `UnsatisfiedLinkError`); it now
         writes the config with the JSON type preserved and saves it. The slider
@@ -447,8 +454,12 @@ safe-area insets, §39 Low GFX tier + perf logs. **163 host tests pass, 0 fail.*
         keep their screen-space offsets (they sit far from the edges).
       - `debug.surv_debug=1` logs `[perf] safe area …` / `[perf] HUD fitted …`
         only when an inset exists, so a cutout is verifiable from logcat.
-- [ ] **Perf/polish (rest)**: 60 fps soak on real mid-range hardware, battery
-      tiers beyond Low GFX, and further UI polish from device testing
+- [x] **Battery/render tiers + soak instrumentation** (Session 44): four
+      surface tiers, pause-dialog cycling, persistence, startup re-apply, and the
+      60 s min/avg/max soak log.
+- [ ] **Perf/polish (rest)**: 60 fps soak on a real mid-range device (the
+      emulator holds ~59 fps at Medium), and further UI polish from device
+      testing.
 - [ ] **Store-ready APK/AAB**
 
 ### Out of scope (deliberately not ported)
@@ -579,16 +590,19 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   rejections must fall through to the localized error.
   `Game::onError` synthesizes `close(1006, "error")` when an open fails so the
   reconnect/URL fallback is not stuck on a socket that never opened.
-- "Low GFX" is an EGL **surface** scale (`RenderScale.apply` ->
-  `SurfaceHolder.setFixedSize`), not a design-resolution change: (0,0) clears it
-  back to the view size. It must run on the UI thread and needs the view to be
-  measured (it retries 10x50 ms).
+- The GFX tiers are an EGL **surface** scale (`RenderScale.apply` ->
+  `SurfaceHolder.setFixedSize`), not a design-resolution change: Full (0,0)
+  clears it back to the view size, Medium 0.85 / Low 0.75 / Potato 0.60 are the
+  cycle. It must run on the UI thread and needs the view to be measured (it
+  retries 10x50 ms). Startup applies the persisted scale **even at Full** so a
+  stale fixed surface from a previous launch is cleared.
 - `SurvBridge.setConfigValue` keeps the JSON type (number/bool/string) and saves;
   Java settings screens depend on it and the C++ config reads the keys with
   getFloat/getBool.
-- `[perf]` fps/frame logs are gated on `debug.surv_debug=1`; applying the Low GFX
-  tier logs one line at startup (`RenderScale` + `[perf] render scale`) even
-  without the switch, which is how the persisted tier is verified.
+- `[perf]` fps/frame/soak logs are gated on `debug.surv_debug=1`; applying a
+  tier logs one line (`RenderScale` + `[perf] render scale`) even without the
+  switch, which is how the persisted tier is verified. The 60 s soak summary
+  uses the 5 s fps samples (not per-frame `secondsPerFrame` spikes).
 - The HUD is fitted/centred in `RenderView::getSafeAreaRect()`, not the viewport:
   keep that in `GameScene::layoutHud` (build + every resize) so notches and
   system bars never cover HUD widgets. The world stays full-bleed and the touch

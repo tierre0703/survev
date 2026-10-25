@@ -56,7 +56,7 @@ public class GamePauseDialog {
     private final TextView mMoveSensLabel;
     private final SeekBar mAimSensSlider;
     private final TextView mAimSensLabel;
-    private final Button mLowGraphicsBtn;
+    private final Button mRenderTierBtn;
     private final Button mShowFpsBtn;
     private final Button mMuteBtn;
     private final Button mReturnBtn;
@@ -67,7 +67,7 @@ public class GamePauseDialog {
     // --- state ---
     private boolean mMuted = false;
     private boolean mShowFps = false;
-    private boolean mLowGraphics = false;
+    private float mRenderScale = RenderScale.FULL;
     private boolean mIsDead = false; // Set externally when player dies
 
     public GamePauseDialog(Activity activity, JavaUiHost host) {
@@ -209,11 +209,11 @@ public class GamePauseDialog {
         LinearLayout togglesRow = new LinearLayout(activity);
         togglesRow.setOrientation(LinearLayout.HORIZONTAL);
 
-        mLowGraphicsBtn = makeToggleButton("Low GFX");
-        mLowGraphicsBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { toggleLowGraphics(); }
+        mRenderTierBtn = makeToggleButton("GFX: Full");
+        mRenderTierBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { cycleRenderTier(); }
         });
-        togglesRow.addView(mLowGraphicsBtn, halfParams());
+        togglesRow.addView(mRenderTierBtn, halfParams());
 
         mShowFpsBtn = makeToggleButton("Show FPS");
         mShowFpsBtn.setOnClickListener(new View.OnClickListener() {
@@ -362,21 +362,23 @@ public class GamePauseDialog {
     }
 
     /**
-     * "Low GFX": renders into a 75% EGL surface (RenderScale) and persists the
-     * tier as `renderScale`; the C++ config applies it again on the next launch.
+     * "GFX" cycles the render-resolution tiers (Full/Medium/Low/Potato) and
+     * persists the tier as `renderScale`; the C++ config applies it again on the
+     * next launch. Lower tiers shrink the EGL surface, so layout/HUD sizes are
+     * unchanged but fill-rate (and battery use) drop.
      */
-    private void toggleLowGraphics() {
-        mLowGraphics = !mLowGraphics;
-        applyLowGraphics();
-        final float scale = mLowGraphics ? RenderScale.LOW : RenderScale.FULL;
-        RenderScale.apply(scale);
-        SurvBridge.setConfigValue("renderScale", String.valueOf(scale));
+    private void cycleRenderTier() {
+        mRenderScale = RenderScale.next(mRenderScale);
+        RenderScale.apply(mRenderScale);
+        SurvBridge.setConfigValue("renderScale", String.valueOf(mRenderScale));
         SurvBridge.saveConfig();
+        updateRenderTierButton();
     }
 
-    private void applyLowGraphics() {
-        mLowGraphicsBtn.setText(mLowGraphics ? "Low GFX \u2713" : "Low GFX");
-        mLowGraphicsBtn.setBackgroundColor(mLowGraphics ? GREEN : GREY);
+    private void updateRenderTierButton() {
+        final String tier = RenderScale.tierName(mRenderScale);
+        mRenderTierBtn.setText("GFX: " + tier);
+        mRenderTierBtn.setBackgroundColor(mRenderScale < 0.999f ? GREEN : GREY);
     }
 
     private void toggleMute() {
@@ -417,8 +419,8 @@ public class GamePauseDialog {
         mShowFps = Json.peekBool(config, "showFps", false);
         applyShowFps();
 
-        mLowGraphics = RenderScale.persisted() < 0.999f;
-        applyLowGraphics();
+        mRenderScale = RenderScale.persisted();
+        updateRenderTierButton();
 
         String master = Json.peekString(config, "masterVolume");
         if (master != null) {

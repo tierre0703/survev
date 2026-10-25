@@ -923,7 +923,8 @@ void GameScene::update(float delta) {
         _reconnect.elapsed += delta;
     }
     // Perf/polish: with `debug.surv_debug=1` print the frame rate and the GL frame
-    // size every 5 s (and on any frame-size change, e.g. the "Low GFX" tier).
+    // size every 5 s (and on any frame-size change, e.g. a GFX tier change), plus
+    // a 60 s soak summary for device perf runs.
     if (isDevLogEnabled()) {
         auto* director = ax::Director::getInstance();
         auto* renderView = director->getRenderView();
@@ -934,10 +935,43 @@ void GameScene::update(float delta) {
         }
         _perfLogTick += delta;
         if (_perfLogTick >= 5.0f) {
+            const float window = _perfLogTick;
             _perfLogTick = 0.0f;
             const float secondsPerFrame = director->getSecondsPerFrame();
-            AXLOGI("[perf] fps={:.1f} frame={}x{}", secondsPerFrame > 0.0f ? 1.0f / secondsPerFrame : 0.0f,
+            const float fps = secondsPerFrame > 0.0f ? 1.0f / secondsPerFrame : 0.0f;
+            if (fps > 0.0f) {
+                if (_perfSoakSamples == 0 || fps < _perfSoakMin) {
+                    _perfSoakMin = fps;
+                }
+                if (fps > _perfSoakMax) {
+                    _perfSoakMax = fps;
+                }
+                _perfSoakSum += fps;
+                ++_perfSoakSamples;
+            }
+            AXLOGI("[perf] fps={:.1f} frame={}x{}", fps,
                    static_cast<int>(frame.x), static_cast<int>(frame.y));
+
+            // Soak summary over 5 s samples (not per-frame spikes): 12 samples
+            // per minute, which is what a "60 fps soak" report should show.
+            _perfSoakTick += window;
+            if (_perfSoakTick >= 60.0f) {
+                if (_perfSoakSamples > 0) {
+                    const float avg = _perfSoakSum / static_cast<float>(_perfSoakSamples);
+                    AXLOGI("[perf] soak {:.0f}s fps min={:.1f} avg={:.1f} max={:.1f} frame={}x{}",
+                           _perfSoakTick, _perfSoakMin, avg, _perfSoakMax,
+                           static_cast<int>(frame.x), static_cast<int>(frame.y));
+                    if (avg < 45.0f) {
+                        AXLOGW("[perf] soak: average below 45 fps; choose a lower GFX tier in the "
+                               "pause menu (Medium/Low/Potato)");
+                    }
+                }
+                _perfSoakTick = 0.0f;
+                _perfSoakMin = 0.0f;
+                _perfSoakMax = 0.0f;
+                _perfSoakSum = 0.0f;
+                _perfSoakSamples = 0;
+            }
         }
     }
     if (_findInFlight) {

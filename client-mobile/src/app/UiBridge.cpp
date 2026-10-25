@@ -115,14 +115,14 @@ public:
             }
         }
 
-        // Render-resolution tier (pause dialog "Low GFX"). The surface scale is
-        // applied on the Java side; the config lives here, so hand it over once.
+        // Render-resolution (battery) tier: Full/Medium/Low/Potato. The surface
+        // scale is applied on the Java side; the config lives here, so hand it
+        // over once. Apply even at Full so a stale fixed surface size (e.g. a
+        // Low tier from the previous launch) is cleared.
         const float renderScale = config().getFloat("renderScale", 1.0f);
-        if (renderScale < 0.999f) {
-            ax::JniHelper::callStaticVoidMethod(kRenderScaleClass, "apply",
-                                                static_cast<float>(renderScale));
-            AXLOGI("[perf] render scale {:.2f} at startup", renderScale);
-        }
+        ax::JniHelper::callStaticVoidMethod(kRenderScaleClass, "apply",
+                                            static_cast<float>(renderScale));
+        AXLOGI("[perf] render scale {:.2f} at startup", renderScale);
     }
 
     // Android has no C++ MenuScene (AppDelegate passes nullptr), but the Java

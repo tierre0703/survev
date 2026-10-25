@@ -2681,3 +2681,58 @@ screen was ported to the real protocol before adding links.
   - Paste `https://survev.io/#ukpi` into the join field -> same room/roster.
   - Play -> `joinGame` -> match `4614` connected and received updates; the team
     UI hid while the socket stayed open.
+
+## 45. Session 44 - render tiers + soak instrumentation (2026-10-25)
+
+### 45.1 Battery/render tiers
+
+The single "Low GFX" toggle is now a four-step surface scale in
+`RenderScale.java`:
+
+| Tier | Scale | Pixels vs Full (16:9) | Pause button |
+|---|---|---|---|
+| Full | 1.00 | 100% | `GFX: Full` |
+| Medium | 0.85 | ~72% | `GFX: Medium` |
+| Low | 0.75 | ~56% | `GFX: Low` |
+| Potato | 0.60 | ~36% | `GFX: Potato` |
+
+- `RenderScale.tierName`/`next` drive the pause dialog's `GFX: <tier>` button
+  (`GamePauseDialog`), which cycles and persists `renderScale` through
+  `SurvBridge.setConfigValue` + `saveConfig`; the button is green below Full.
+- `AndroidUiBridge::setScenes` now calls `RenderScale.apply` **unconditionally**
+  at startup (previously only when <1): Full therefore clears a stale fixed
+  surface from a previous launch, and every launch logs
+  `[perf] render scale <scale> at startup` (C++) and
+  `render tier <name> [scale] (surface from view)` (Java).
+- `RenderScale.apply` reports the tier name and both resolutions in logcat, so a
+  device run shows the fill-rate change directly.
+
+### 45.2 Soak instrumentation
+
+With `debug.surv_debug=1`, `GameScene::update` keeps the 5 s
+`[perf] fps=... frame=WxH` line and adds a 60 s summary built from those 5 s
+samples (12 per window, so per-frame stalls do not distort it):
+
+```
+[perf] soak 60s fps min=57.6 avg=59.3 max=60.3 frame=816x459
+```
+
+If the average is below 45 fps it also logs a hint to choose a lower GFX tier.
+Frame-size changes are logged as they happen (tier changes or a resize).
+
+### 45.3 Verification
+
+- `surv_tests` 163 tests / 2,599 assertions; `lint:ci`; x86_64 native + APK
+  (43 Java sources); `logcat -b crash` empty.
+- Emulator (960x540 view) with `debug.surv_debug=1`:
+  - Pause dialog cycles `GFX: Full -> Medium -> Low -> Potato -> Full` and logs
+    `render tier Medium 0.85 (816x459 from 960x540)`, `Low 0.75 (720x405)`,
+    `Potato 0.6 (576x324)`, `Full (960x540)`, each followed by
+    `[perf] frame size ...`.
+  - Force-stop/restart with Medium persisted: `[perf] render scale 0.85 at
+    startup` + `render tier Medium ...` before the first frame; the saved Full
+    restores `960x540`.
+  - 60 s solo soak at Medium: `fps min=57.6 avg=59.3 max=60.3
+    frame=816x459` (emulator, not representative of real mid-range hardware).
+- Still to do: validate the soak on a physical mid-range device (the only
+  remaining perf/polish item) and the store-ready AAB.

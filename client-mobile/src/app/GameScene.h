@@ -274,6 +274,12 @@ private:
     // Perf/polish instrumentation (`debug.surv_debug=1`): fps + GL frame size.
     float _perfLogTick = 0.0f;
     ax::Vec2 _perfFrameSize;
+    // 60 s soak window summary (min/avg/max fps), for device perf runs.
+    float _perfSoakTick = 0.0f;
+    float _perfSoakMin = 0.0f;
+    float _perfSoakMax = 0.0f;
+    float _perfSoakSum = 0.0f;
+    int _perfSoakSamples = 0;
 
     // Priority 5: a dropped mid-match socket reclaims the same match through the
     // server's rejoin ticket (server/src/game/game.ts) before falling back to the
