@@ -10,14 +10,15 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25** — Session 40 continued Perf/polish: the HUD
-now fits inside the device **safe area** (notch / rounded corners / system bars)
-via `RenderView::getSafeAreaRect()`, while the world stays full-bleed; verified
-with the emulator's cutout overlay (`safe area x=128 1152x720` -> HUD fitted).
-`debug.surv_debug=1` also logs the safe rect when it differs from the viewport.
-Earlier: §39 Low GFX surface tier + perf logs + `setConfigValue` JNI, §38
-mid-match reconnection, §37 find_game retry + FPS overlay, §36 background/pause
-continuity, §35 error reporting. **163 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25** — Session 41 landed the first half of M8
+accounts **without OAuth**: the native client logs in with a persisted device id
+(`POST /api/auth/device` -> `Authorization: Bearer` session), and the new Java
+`ProfileFragment` manages the account name (first-login prompt + 10 day
+cooldown), reset stats, delete and log out. Verified on the x86_64 emulator
+(login, rename, logout/sign-in, delete + fresh account, reinstall recovery).
+Earlier: §40 HUD safe-area insets, §39 Low GFX surface tier + perf logs +
+`setConfigValue` JNI, §38 mid-match reconnection, §37 find_game retry + FPS
+overlay. **163 host tests pass, 0 fail.**
 
 ---
 
@@ -33,7 +34,7 @@ continuity, §35 error reporting. **163 host tests pass, 0 fail.**
 | M5 | Input + touch | **mostly done** | move/aim/fire → `InputMsg`; dual pads render at the web's scale (`PadGraphicsAxmol`), aim-line dots wired; emote + team-ping wheels own their touches. |
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb + per-source EFX low-pass EQ (muffled/club) + structure interior ambience + building `soundEmitters`. UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
-| M8 | Accounts / API | **started** | region latency test (`net/PingTest` + `net/Regions` codegen) and client error reporting (`net/ErrorLog` + Java crash handler); login/profile/quests/pass still to do. |
+| M8 | Accounts / API | **mostly done** | device login + profile screen (no OAuth: persisted install id → session token), region latency test, client error reporting; quests/pass data + team links still to do. |
 | M9 | Polish & release | **started** | lifecycle: background/pause continuity (§36), mid-match reconnection (§38); perf/soak/store-ready AAB still to do. |
 
 ---
@@ -96,11 +97,12 @@ continuity, §35 error reporting. **163 host tests pass, 0 fail.**
 | `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ weapons/ammo in `game/Hud`, gear/perks in `ui/FguiHud` (not built by the live scene yet) |
 | `client/src/emote.ts` (emote/ping system) | ✅ see the emote row above |
 | `client/src/ui/pieTimer.ts` (action progress circle) | ✅ `ui/FguiPieTimer` driven by `ActivePlayerData.actionTime` |
-| `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ❌ **not ported** (M8) |
+| `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | 🔶 profile part in Java `ProfileFragment` (name/reset/delete/logout); pass + quests still static (M8) |
+| `client/src/account.ts` | ✅ Java `AccountManager` + `SurvApi` device login/session/profile/username/logout/reset/delete/loadout push |
 | `client/src/crosshair.ts` (custom crosshair) | ✅ screen-space crosshair sprite from the loadout style/colour/size/stroke (rasterized `crosshairDefs` styles, 0/1/2 stroke buckets) |
 | `client/src/pingTest.ts` (pre-game latency check) | ✅ `net/PingTest` (echo cadence/retry/complete + `bestRegion`/zones, host-tested); the probe list comes from `net/Regions` (`tools/codegen_regions.mjs`, the native `PING_TEST_URLS`), and the Java menu shows the ms and auto-selects the closest region |
 | `client/src/errorLogs.ts` (client error reporting) | ✅ `net/ErrorLog` (sample/budget/throttle host-tested) + `SurvApi.reportError` crash handler in `AppActivity`; `debug.surv_debug=1` sends a startup probe |
-| `client/src/account.ts` / `proxy.ts` | ❌ **not ported** (M8 accounts; `proxy.ts` is web-only) |
+| `client/src/account.ts` / `proxy.ts` | 🔶 `AccountManager.java` (device login/session/profile, see above); `proxy.ts` is web-only |
 | `client/src/sdk/*` (ad/partner SDK) | ❌ out of scope |
 | `client/src/debug/*` | ❌ **not ported** (dev tooling) |
 | `client/stats/*` (leaderboard web pages) | ❌ separate app |
@@ -320,9 +322,33 @@ continuity, §35 error reporting. **163 host tests pass, 0 fail.**
         uses the budgeted C++ reporter through `SurvBridge.reportError`.
       - `debug.surv_debug=1` (the EQ trace switch) sends one `startup_probe`
         error at launch, which is how the pipeline is verified on device.
-- [ ] **M8 Accounts/API** (rest): login/profile, team links, quests/pass
-      (`PassFragment` is still static), proxy detection (not applicable to
-      native)
+- [x] **M8 device login + profile** (the native client deliberately has no
+      OAuth browser flow — one stable identity per install):
+      - Server: `POST /api/auth/device` (`routes/user/auth/device.ts`) accepts
+        the client's persisted `deviceId`, creates the user on first use
+        (`authId = "device:<id>"`, generated `Player xxxxxx`, slug, default
+        unlocks) and returns `{ success, token }`. `authMiddleware` now also
+        accepts `Authorization: Bearer <token>` (web keeps the httpOnly
+        `session` cookie); `setSessionTokenCookie` returns the token for this.
+      - Client: `AccountManager.java` keeps `deviceId`/`sessionToken` in the
+        `survev_account` SharedPreferences (not the gameplay config — its
+        number/bool coercion would corrupt an all-digit ANDROID_ID). ANDROID_ID
+        is the stable device id (random UUID fallback) so a reinstall recovers
+        the same account; the session token auto-logs in on later launches and
+        a 401 falls back to a fresh device login. Log Out latches
+        `signedOut` (device login is skipped until Sign In).
+      - Profile (`ProfileFragment.java` + `SurvApi.userPost`): account name
+        (first-login prompt, rename with the server's 10 day cooldown, server
+        error codes mapped to the web's messages), reset stats (`RESET STATS`),
+        delete account (`DELETE`, then a fresh device account), log out/sign in.
+        The account loadout returned by `/api/user/profile` is applied through
+        `SurvBridge.setLoadout`, and the loadout screen pushes edits on close.
+      - Menu: a `👤` top-bar button (green when signed in) opens the profile; the
+        account name is mirrored into an empty/unmodified `playerName` field and
+        follows later renames (`playerNameAccount` binding) while a hand-typed
+        name is left alone.
+- [ ] **M8 Accounts/API** (rest): quests/pass data (`PassFragment` is still
+      static), team links; proxy detection is not applicable to native.
 - [x] **Lifecycle hardening (mid-match continuity)**:
       - Backgrounding and the in-game pause dialog keep the game socket.
         `Game::pause()` used to `close("background")` and `resume()` re-joined
@@ -529,3 +555,21 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   keep that in `GameScene::layoutHud` (build + every resize) so notches and
   system bars never cover HUD widgets. The world stays full-bleed and the touch
   pads keep screen-space offsets; do not "fix" those into the safe rect.
+- The native account is a **device credential, not OAuth**: `AccountManager`
+  persists `deviceId`/`sessionToken`/`signedOut`/`playerNameAccount` in the
+  `survev_account` SharedPreferences, *not* `SurvBridge` config (its float/bool
+  coercion truncates an all-digit ANDROID_ID). A reinstall must keep resolving
+  to the same user via ANDROID_ID (random UUID is only the fallback).
+- `authMiddleware` accepts `Authorization: Bearer <session>` **in addition to**
+  the web's httpOnly `session` cookie; do not drop either path.
+  `POST /api/auth/device` is rate limited by `AuthRouter` (5/min/IP) like the
+  other auth routes, and returns the token in the body because native has no
+  cookie jar.
+- The first account login prompts for a name (`usernameSet == false`) and the
+  profile screen closes itself after it is set (`mProfileOpenedForName`); the
+  name prompt must never fire while in a match. The menu field only follows the
+  account name while `playerNameAccount` matches it — a hand-typed
+  `playerName` is user-owned and must not be overwritten.
+- Log Out must latch `signedOut` and skip the automatic device login; delete
+  account starts a **fresh** device account (the device id outlives the user).
+  Both behaviours mirror the web reload + login menu without an OAuth flow.

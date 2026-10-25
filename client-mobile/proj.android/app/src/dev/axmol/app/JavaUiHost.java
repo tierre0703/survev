@@ -32,8 +32,57 @@ public class JavaUiHost {
     private HelpModal mHelp;
     private LeaderboardModal mLeaderboard;
     private PassFragment mPass;
+    private ProfileFragment mProfile;
     private boolean mInGame = false;
     private boolean mInTeam = false;
+    // Web `profileUi.onLogin`: the first login opens the set-name prompt once.
+    private boolean mAutoPromptedName = false;
+    // The profile screen was opened only for that prompt: close it once set.
+    private boolean mProfileOpenedForName = false;
+    // Detect a different account (sign out/in, delete) so it can prompt again.
+    private String mLastSlug = "";
+
+    /** Device account state -> menu chrome + the one-time name prompt. */
+    private final AccountManager.Listener mAccountListener = new AccountManager.Listener() {
+        @Override
+        public void onAccountChanged(AccountManager.Profile profile) {
+            if (mMenu != null) {
+                mMenu.onAccountChanged(profile);
+            }
+            if (!profile.slug.isEmpty() && !profile.slug.equals(mLastSlug)) {
+                mLastSlug = profile.slug;
+                mAutoPromptedName = false;
+            }
+            if (mProfileOpenedForName && profile.loggedIn && profile.usernameSet) {
+                mProfileOpenedForName = false;
+                hideProfile();
+                if (mMenu != null) {
+                    mMenu.show();
+                }
+            }
+            if (!mAutoPromptedName && profile.loggedIn && !profile.usernameSet
+                    && !mInGame && !mInTeam) {
+                mAutoPromptedName = true;
+                // Post so a showMenu() later in the same call stack (install)
+                // cannot immediately hide the prompt again.
+                mContainer.post(new Runnable() {
+                    @Override public void run() {
+                        if (!mInGame) {
+                            mProfileOpenedForName = true;
+                            showProfile();
+                        }
+                    }
+                });
+            }
+        }
+
+        @Override
+        public void onAccountError(String error) {
+            if (mMenu != null) {
+                mMenu.onAccountError(error);
+            }
+        }
+    };
 
     // Back arrow button: always-on-top, top-left corner. Visible when a sub-screen
     // (loadout, team, settings, help, leaderboard, pause) is open.
@@ -48,6 +97,10 @@ public class JavaUiHost {
     public void install() {
         Log.i(TAG, "install() called");
         mContainer.setVisibility(View.VISIBLE);
+
+        // Starts the M8 device login on first use (AccountManager.ensureLoaded)
+        // and keeps the menu's account chrome in sync.
+        AccountManager.get(mActivity).addListener(mAccountListener);
 
         // Back arrow button: added directly to the container (which is the Java
         // overlay layer). The container is setClickable(false) so touches pass
@@ -91,6 +144,7 @@ public class JavaUiHost {
         hideHelp();
         hideLeaderboard();
         hidePass();
+        hideProfile();
         hideBackBtn();
         ensureMenu();
         mMenu.show();
@@ -108,6 +162,7 @@ public class JavaUiHost {
         hideHelp();
         hideLeaderboard();
         hidePass();
+        hideProfile();
         hideBackBtn();
         if (mMenu != null) {
             mMenu.hide();
@@ -175,6 +230,10 @@ public class JavaUiHost {
             updateBackBtn();
             return true;
         }
+        if (mProfile != null && mProfile.isOpen()) {
+            hideProfile();
+            return true;
+        }
         if (mLoadout != null && mLoadout.isOpen()) {
             hideLoadout();
             updateBackBtn();
@@ -196,6 +255,7 @@ public class JavaUiHost {
                        || (mHelp != null && mHelp.isOpen())
                        || (mLeaderboard != null && mLeaderboard.isOpen())
                        || (mPass != null && mPass.isOpen())
+                       || (mProfile != null && mProfile.isOpen())
                        || (mLoadout != null && mLoadout.isOpen())
                        || (mTeam != null && mTeam.isOpen());
         if (anyOpen) {
@@ -211,6 +271,7 @@ public class JavaUiHost {
         if (mLoadout != null && mLoadout.isOpen()) mLoadout.refresh();
         if (mSettings != null && mSettings.isOpen()) mSettings.syncFromConfig();
         if (mPass != null && mPass.isOpen()) mPass.refresh();
+        if (mProfile != null && mProfile.isOpen()) mProfile.refresh();
         Log.i(TAG, "onConfigChanged " + key);
     }
 
@@ -266,6 +327,19 @@ public class JavaUiHost {
 
     public void hidePass() {
         if (mPass != null) mPass.hide();
+        updateBackBtn();
+    }
+
+    // --- Account / Profile (M8) ---
+
+    public void showProfile() {
+        ensureProfile();
+        mProfile.show();
+        updateBackBtn();
+    }
+
+    public void hideProfile() {
+        if (mProfile != null) mProfile.hide();
         updateBackBtn();
     }
 
@@ -404,6 +478,22 @@ public class JavaUiHost {
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             mContainer.addView(mPass.root(), params);
+        }
+    }
+
+    private void ensureProfile() {
+        if (mProfile == null) {
+            mProfile = new ProfileFragment(mActivity);
+            mProfile.setOnClose(new ProfileFragment.OnCloseListener() {
+                @Override
+                public void onClose() {
+                    hideProfile();
+                    if (mMenu != null) mMenu.show();
+                }
+            });
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            mContainer.addView(mProfile.root(), params);
         }
     }
 

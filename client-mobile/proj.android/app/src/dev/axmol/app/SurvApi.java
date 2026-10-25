@@ -141,13 +141,96 @@ public final class SurvApi {
         }).start();
     }
 
+    /**
+     * M8 device login (no OAuth): POSTs the persisted install id and receives a
+     * session token for `userPost`.
+     */
+    public static void deviceLogin(final String apiBaseUrl, final String deviceId,
+                                   final StatusCallback callback) {
+        String body = "{\"deviceId\":\"" + escapeJson(deviceId) + "\"}";
+        postAsync(apiBaseUrl + "/api/auth/device", body, null, callback);
+    }
+
+    /**
+     * Calls an authenticated `/api/user/<action>` endpoint. `token` is the
+     * device-login session token; it is sent as `Authorization: Bearer` because
+     * the native client has no cookie jar (server: authMiddleware).
+     */
+    public static void userPost(final String apiBaseUrl, final String action,
+                                final String token, final String requestBody,
+                                final StatusCallback callback) {
+        postAsync(apiBaseUrl + "/api/user/" + action, requestBody, token, callback);
+    }
+
     // --- Simple callback interface (no lambdas, Java 8 compatible) ----------
 
     public interface Callback {
         void onResult(String json);
     }
 
+    /**
+     * Status-aware callback for the M8 account calls: `httpCode` is the HTTP
+     * status (or -1 on a transport error) and `json` the response body.
+     */
+    public interface StatusCallback {
+        void onResult(int httpCode, String json);
+    }
+
     // --- HTTP helpers -------------------------------------------------------
+
+    private static void postAsync(final String urlString, final String body,
+                                  final String token, final StatusCallback callback) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final HttpResult result = httpPostWithToken(urlString, body, token);
+                AppActivity activity = AppActivity.current();
+                if (activity != null) {
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            callback.onResult(result.code, result.body);
+                        }
+                    });
+                }
+            }
+        }).start();
+    }
+
+    private static final class HttpResult {
+        int code = -1;
+        String body = null;
+    }
+
+    private static HttpResult httpPostWithToken(String urlString, String body, String token) {
+        HttpResult result = new HttpResult();
+        try {
+            URL url = new URL(urlString);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setConnectTimeout(TIMEOUT_MS);
+            conn.setReadTimeout(TIMEOUT_MS);
+            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            if (token != null && !token.isEmpty()) {
+                conn.setRequestProperty("Authorization", "Bearer " + token);
+            }
+            conn.setDoOutput(true);
+            OutputStreamWriter writer = new OutputStreamWriter(conn.getOutputStream(), "UTF-8");
+            writer.write(body);
+            writer.close();
+            int code = conn.getResponseCode();
+            result.code = code;
+            result.body = readStream(code >= 200 && code < 300
+                    ? conn.getInputStream()
+                    : conn.getErrorStream());
+            if (code < 200 || code >= 300) {
+                Log.w(TAG, "POST " + urlString + " -> " + code + " " + result.body);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "POST " + urlString + " failed: " + e.getMessage());
+        }
+        return result;
+    }
 
     private static String httpGet(String urlString) {
         try {
@@ -194,8 +277,18 @@ public final class SurvApi {
 
     private static String readStream(HttpURLConnection conn) {
         try {
+            return readStream(conn.getInputStream());
+        } catch (Exception e) {
+            Log.w(TAG, "read stream failed: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private static String readStream(java.io.InputStream stream) {
+        if (stream == null) return null;
+        try {
             BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream(), "UTF-8"));
+                    new InputStreamReader(stream, "UTF-8"));
             StringBuilder out = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {

@@ -28,6 +28,20 @@ export type UsernameResponse =
         result: "failed" | "invalid" | "taken" | "change_time_not_expired";
     };
 
+/**
+ * Native device login (no OAuth): the client posts its persisted install id and
+ * receives a session token for `Authorization: Bearer <token>`.
+ */
+export type DeviceLoginResponse =
+    | {
+        success: true;
+        token: string;
+    }
+    | {
+        success: false;
+        error: "invalid_device";
+    };
+
 //
 // PASS
 //

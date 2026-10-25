@@ -86,6 +86,7 @@ public class MenuFragment {
     private final TextView mNewsText;
     private final TextView mSettingsBtn;
     private final TextView mMuteBtn;
+    private final TextView mProfileBtn;
     private final TextView mPassBtn;
     private final TextView mNewsBtn;
     private final ScrollView mNewsScrollView;
@@ -160,6 +161,18 @@ public class MenuFragment {
         mTopBarRow.addView(mPlayerCountLbl, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+        mProfileBtn = makeIconButton("\uD83D\uDC64", 0xFF444444, 0xFF2B2B2B, 16);
+        mProfileBtn.setContentDescription("Account");
+        mProfileBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                animatePress(v);
+                if (mHost != null) mHost.showProfile();
+            }
+        });
+        LinearLayout.LayoutParams profileLp = new LinearLayout.LayoutParams(dp(32), dp(32));
+        profileLp.leftMargin = dp(8);
+        mTopBarRow.addView(mProfileBtn, profileLp);
+
         mSettingsBtn = makeIconButton("\u2699", 0xFF666666, 0xFF444444, 20);
         mSettingsBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -201,7 +214,13 @@ public class MenuFragment {
         mName.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override public void onFocusChange(View v, boolean hasFocus) {
                 if (!hasFocus) {
-                    SurvBridge.setPlayerName(mName.getText().toString().trim());
+                    String name = mName.getText().toString().trim();
+                    SurvBridge.setPlayerName(name);
+                    // A hand-edited name stops following future account renames.
+                    AccountManager account = AccountManager.peek();
+                    if (account != null && !name.equals(account.getBoundPlayerName())) {
+                        account.unbindPlayerName();
+                    }
                 }
             }
         });
@@ -806,6 +825,56 @@ public class MenuFragment {
         }
         mMuted = Json.peekBool(config, "muteAudio", false);
         updateMuteButton();
+        AccountManager account = AccountManager.peek();
+        if (account != null) {
+            updateAccountButton(account.getProfile());
+        }
+    }
+
+    /** AccountManager -> menu chrome (called on the UI thread). */
+    public void onAccountChanged(AccountManager.Profile profile) {
+        updateAccountButton(profile);
+    }
+
+    public void onAccountError(String error) {
+        Log.w(TAG, "account error " + error);
+        if ("account_offline".equals(error)) {
+            setStatus("Account: cannot reach the server");
+        }
+    }
+
+    /**
+     * The account name doubles as the default in-game name (web `playerName`
+     * stays an independent local setting, so only fill it when it is empty).
+     */
+    private void updateAccountButton(AccountManager.Profile profile) {
+        if (mProfileBtn == null || profile == null) {
+            return;
+        }
+        mProfileBtn.setTextColor(profile.loggedIn ? 0xFF7FD858 : 0xFFAAAAAA);
+        mProfileBtn.setContentDescription(profile.loggedIn
+                ? ("Account: " + profile.username)
+                : "Account: not signed in");
+
+        AccountManager account = AccountManager.peek();
+        if (account == null) {
+            return;
+        }
+        if (profile.loggedIn && profile.usernameSet) {
+            String current = mName.getText().toString().trim();
+            String bound = account.getBoundPlayerName();
+            // The field follows the account until the player edits it by hand
+            // (web keeps `playerName` separate, but an auto-created account has
+            // no other name to use).
+            boolean follows = current.isEmpty() ? bound.isEmpty() : current.equals(bound);
+            if (!mName.hasFocus() && follows && !current.equals(profile.username)) {
+                mName.setText(profile.username);
+                SurvBridge.setPlayerName(profile.username);
+            }
+            if (follows) {
+                account.bindPlayerName(profile.username);
+            }
+        }
     }
 
     public void showMessage(String text) {

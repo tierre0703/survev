@@ -69,7 +69,7 @@ app.use(
         origin: "*",
         credentials: true,
         allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowHeaders: ["Origin", "Content-Type", "Accept", "X-Requested-With"],
+        allowHeaders: ["Origin", "Content-Type", "Accept", "X-Requested-With", "Authorization"],
         maxAge: 3600,
     }),
 );

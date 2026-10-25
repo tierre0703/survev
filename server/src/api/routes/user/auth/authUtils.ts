@@ -58,7 +58,10 @@ export async function setSessionTokenCookie(userId: string, c: Context) {
         expires: session.expiresAt,
         domain: cookieDomain,
     });
-    return session;
+    // Native clients have no cookie jar, so they get the token in the response
+    // body and send it back as `Authorization: Bearer <token>` (authMiddleware
+    // accepts both). Web callers keep using the cookie and ignore this field.
+    return { session, token: sessionToken };
 }
 
 export async function logoutUser(c: Context, sessionId: string) {
@@ -76,6 +79,26 @@ export function deleteSessionTokenCookie(c: Context) {
         maxAge: 0,
         domain: cookieDomain,
     });
+}
+
+export async function generateAvailableUsername() {
+    let username = "";
+    let slug = "";
+
+    while (true) {
+        username = `Player ${generateId(6)}`;
+        slug = sanitizeSlug(username);
+
+        const slugTaken = await db.query.usersTable.findFirst({
+            where: eq(usersTable.slug, slug),
+            columns: {
+                id: true,
+            },
+        });
+        if (!slugTaken) break;
+    }
+
+    return { username, slug };
 }
 
 type Provider = "discord" | "google";
@@ -98,23 +121,7 @@ export async function handleAuthUser(c: Context, provider: Provider, authId: str
         return;
     }
 
-    let generateUsername = true;
-
-    let username = "";
-    let slug = "";
-
-    while (generateUsername) {
-        username = `Player ${generateId(6)}`;
-        slug = sanitizeSlug(username);
-
-        const slugTaken = await db.query.usersTable.findFirst({
-            where: eq(usersTable.slug, slug),
-            columns: {
-                id: true,
-            },
-        });
-        generateUsername = !!slugTaken;
-    }
+    const { username, slug } = await generateAvailableUsername();
 
     const linkedProvider = provider === "discord" ? { linkedDiscord: true } : { linkedGoogle: true };
 

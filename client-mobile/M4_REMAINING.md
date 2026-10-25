@@ -2463,3 +2463,90 @@ viewport:
   at 720x405 (Low GFX on), no crash. The socket then closed (bundle server, which
   predates the rejoin support) and the client took the expected
   `index-host-closed` path back to the menu; `logcat -b crash` empty.
+
+## 42. Session 41 - M8 device login and profile (2026-10-25)
+
+### 42.1 Scope
+
+M8 was the last unchecked priority. Its web shape (Discord/Google OAuth) does
+not exist on Android: there is no browser callback into the app and no cookie
+jar in the native HTTP client. The adopted identity is therefore **the install**:
+a persisted device id creates/looks up one account, and the session token is a
+Bearer credential. Everything else mirrors `client/src/account.ts` +
+`client/src/ui/profileUi.ts`.
+
+### 42.2 Server
+
+- `POST /api/auth/device` (`server/src/api/routes/user/auth/device.ts`):
+  validates `deviceId` (`[A-Za-z0-9_-]{6,128}`), finds the user by
+  `authId = "device:<deviceId>"`, creates one on first use via
+  `createNewUser` (generated `Player xxxxxx` + unique slug, default unlocks,
+  `linked: false` - no external provider), and answers
+  `{ "success": true, "token": "<session>" }`. It inherits the AuthRouter's
+  database and 5/min/IP rate-limit middleware.
+- `authMiddleware` accepts the token as `Authorization: Bearer <session>` as
+  well as the web's httpOnly `session` cookie. `setSessionTokenCookie` now
+  returns `{ session, token }` so device login can put the token in the body.
+- `generateAvailableUsername()` was extracted from `handleAuthUser` so OAuth and
+  device users share the same "Player xxxxxx" collision loop.
+- CORS allows the `Authorization` header (harmless for web, correct for any
+  non-cookie client).
+
+### 42.3 Java client
+
+| File | Role |
+|---|---|
+| `AccountManager.java` | device id + session + profile state machine; profile/username/logout/reset/delete/loadout calls; listeners |
+| `ProfileFragment.java` | account screen: name (first-login prompt + cooldown), reset stats, delete, log out/sign in |
+| `SurvApi.java` | `deviceLogin` + `userPost` (status-aware `StatusCallback`, Bearer header) |
+| `JavaUiHost.java` | owns/hides the profile screen, back handling, one-time name prompt, auto-close after naming |
+| `MenuFragment.java` | top-bar account button, account error line, player-name mirroring |
+| `LoadoutFragment.java` | pushes the loadout on close (`AccountManager.pushLoadout`) |
+
+Key behaviours:
+
+- Credentials live in the `survev_account` SharedPreferences, deliberately not
+  in `SurvBridge` config: `setConfigValue` parses numeric strings as floats, so
+  an all-digit ANDROID_ID would be corrupted. ANDROID_ID is the stable id
+  (random UUID fallback) - **reinstall resolves to the same account**.
+- Startup: existing token -> `/api/user/profile`; 401 -> clear + device login;
+  no token -> device login. A network failure leaves the token and offers
+  "Retry sign-in" in the profile.
+- Log Out invalidates the server session, clears the token and latches
+  `signedOut` so the next launch does not silently log in again; Sign In
+  clears the latch and device-logs in.
+- Delete Account posts `/api/user/delete`, then device-logs in again, creating a
+  fresh account (the device id outlives the user) and prompting for a name.
+- `/api/user/profile` returns the account loadout; it is applied through
+  `SurvBridge.setLoadout` (the C++ validator still normalizes it). Loadout edits
+  are pushed once when the loadout screen closes (avoids the 40/min endpoint
+  limit while dragging the crosshair controls).
+- The menu name field (`playerName`) is separate from the account name, like the
+  web. It is auto-filled while empty and follows renames only while
+  `playerNameAccount` still matches it; editing the field unbinds it. The
+  first login opens a "Set your account name" dialog (never during a match) and
+  closes the profile screen once the name is set.
+
+### 42.4 Verification
+
+- `pnpm --filter @survev/server typecheck`, root `pnpm lint:ci` green.
+- `surv_tests`: 163 tests / 2,599 assertions, 0 failures.
+- x86_64 `libSurvevMobile.so` + `SurvevMobile-debug.apk` (41 Java sources);
+  `logcat -b crash` empty.
+- Live API (dev `tsx watch` on `:8000`, bundle Postgres):
+  - `POST /api/auth/device` twice for one id -> same user (same slug);
+    invalid id -> `400 {"success":false,"error":"invalid_device"}`.
+  - `Bearer` profile: 200 with profile/items/loadout; bogus token -> 401.
+  - username: `success`, then `change_time_not_expired`; profile shows
+    `usernameSet=true` and the 10 day counter.
+  - logout invalidates the token (profile 401); delete removes the user and the
+    next device login creates a new slug; test accounts cleaned up afterwards.
+- Emulator (`x86_64`, `adb reverse tcp:8000`), UI dumps via `uiautomator`:
+  - first launch: device id + login, "Set your account name" dialog; entering a
+    name sets it and the profile screen closes; the menu field follows it.
+  - profile: name/slug/cooldown ("Name change available in 9d 23h"), reset,
+    delete, log out all render and work; Log Out -> "Not signed in" + Sign In;
+    Sign In restores the name; delete (typo `DELETE`) validates then recreates.
+  - restart keeps the session (`profile loaded` only, no device login);
+    signed-out restart logs `device login skipped (signed out)`.
+  - uninstall/reinstall recovers the same account through ANDROID_ID.

@@ -42,8 +42,10 @@ proj.android/app/src/dev/axmol/app/
   LoadoutFragment.java     — Loadout editor
   TeamFragment.java        — Team room
   TeamSocket.java          — WebSocket for /team_v2
+  AccountManager.java      — device login/session/profile (M8, no OAuth)
+  ProfileFragment.java     — account name/stats/delete/logout screen
   GamePauseDialog.java     — In-game pause overlay
-  SurvApi.java             — HTTP client (site_info + find_game)
+  SurvApi.java             — HTTP client (site_info + find_game + user/device)
   Json.java                — Minimal JSON reader
 ```
 
@@ -51,6 +53,10 @@ proj.android/app/src/dev/axmol/app/
 - **No OkHttp** — `SurvApi.java` and `TeamSocket.java` use pure Java stdlib
   (`java.net.HttpURLConnection`) to keep the Gradle-free APK pipeline working.
 - **No WebView** — all UI is native Android Views.
+- **Accounts are device-scoped, not OAuth** — the native app cannot complete a
+  browser OAuth callback; `AccountManager` persists a device id (ANDROID_ID with
+  a random fallback) and exchanges it for a Bearer session at
+  `/api/auth/device`. The web keeps its Discord/Google flow.
 - **HUD stays in axmol + FairyGUI** (the world canvas); Java only covers
   out-of-game screens.
 - **C++ `Config`/`Loadout`/`Localization`/`Touch`** stay in C++ as the source

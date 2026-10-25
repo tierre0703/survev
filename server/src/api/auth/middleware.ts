@@ -11,7 +11,13 @@ import { validateSessionToken } from "./index.ts";
 
 export const authMiddleware = async (c: Context, next: Next) => {
     try {
-        const sessionToken = getCookie(c, "session") ?? null;
+        // Web clients use the httpOnly session cookie; the native Android client
+        // has no cookie jar and sends the same token as a Bearer header.
+        const header = c.req.header("authorization");
+        const bearerToken = header?.toLowerCase().startsWith("bearer ")
+            ? header.slice(7).trim()
+            : null;
+        const sessionToken = getCookie(c, "session") ?? (bearerToken || null);
 
         if (!sessionToken) {
             c.set("user", null);

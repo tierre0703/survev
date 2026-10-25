@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { Config } from "../../../config.ts";
 import { server } from "../../apiServer.ts";
 import { databaseEnabledMiddleware, rateLimitMiddleware } from "../../auth/middleware.ts";
+import { DeviceRouter } from "./auth/device.ts";
 import { DiscordRouter } from "./auth/discord.ts";
 import { GoogleRouter } from "./auth/google.ts";
 import { MockRouter } from "./auth/mock.ts";
@@ -23,6 +24,7 @@ AuthRouter.use(rateLimitMiddleware(5, 60 * 1000));
 
 AuthRouter.route("/discord", DiscordRouter);
 AuthRouter.route("/google", GoogleRouter);
+AuthRouter.route("/device", DeviceRouter);
 
 if (Config.debug.allowMockAccount) {
     AuthRouter.route("/mock", MockRouter);

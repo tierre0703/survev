@@ -391,6 +391,13 @@ public class LoadoutFragment {
         if (!mOpen) return;
         mOpen = false;
         mRoot.setVisibility(View.GONE);
+        // Persist the (possibly changed) selection to the account once, on
+        // close: the crosshair buttons fire per tap and the account endpoint is
+        // rate limited (web account.setLoadout is debounced by its UI too).
+        AccountManager account = AccountManager.peek();
+        if (account != null) {
+            account.pushLoadout(SurvBridge.getLoadoutJson());
+        }
         Log.i(TAG, "loadout hide");
     }
 
