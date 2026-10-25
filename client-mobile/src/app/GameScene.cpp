@@ -7,6 +7,7 @@
 #include "../net/Regions.h"
 #include "../net/WebSocketConnection.h"
 #include "../game/GameWorld.h"
+#include "../game/DisconnectReason.h"
 #include "../game/Map.h"
 #include "../game/objects/Barns.h"
 #include "../render/AxmolPixi.h"
@@ -1234,29 +1235,11 @@ void GameScene::update(float delta) {
                 return;
             }
             _awaitingJoin = false;
-            static const struct {
-                uint16_t code;
-                const char* key;
-            } kCloseKeys[] = {
-                {4001, "index-invalid-token"},      {4002, "index-invalid-protocol"},
-                {4003, "index-invalid-packet"},     {4004, "index-behind-proxy"},
-                {4005, "index-player-not-found"},   {4006, "index-ip-banned"},
-                {4007, "index-rate-limited"},       {4008, "index-server-crashed"},
-                {4009, "index-server-restart"},     {4010, "index-invalid-captcha"},
-                {4011, "index-failed-finding-game"},
-            };
-            const char* key = "index-host-closed";
-            // Once a rejoin was attempted, a late server rejection (the window
-            // ran out -> invalid_token) is still a lost connection, not a bad
-            // token.
-            if (_reconnect.attempt == 0) {
-                for (const auto& entry : kCloseKeys) {
-                    if (entry.code == _game->getCloseCode()) {
-                        key = entry.key;
-                        break;
-                    }
-                }
-            }
+            // server/src game close reasons (shared/types/api.ts
+            // GameWsDisconnectReason). The server always closes with
+            // 3000 + a reason string; the old 4001-4011 code table was invented.
+            const std::string key = disconnectReasonKey(
+                _game->getCloseReason(), _game->hasJoined(), _reconnect.attempt > 0);
             setError(key, "Connection lost");
             leaveGame();
             if (onMatchEnded) onMatchEnded(key);

@@ -119,7 +119,13 @@ app.post("/api/find_game_v2", validateParams(zFindGameBody), async (c) => {
     const joinToken = randomUUID();
     let user: UsersTableSelect | null = null;
 
-    const sessionId = getCookie(c, "session") ?? null;
+    const sessionId = getCookie(c, "session")
+        ?? (() => {
+            const header = c.req.header("authorization");
+            return header?.toLowerCase().startsWith("bearer ")
+                ? header.slice(7).trim() || null
+                : null;
+        })();
 
     if (sessionId) {
         try {

@@ -23,6 +23,7 @@
 #include "UiHost.h"
 #include "../audio/AudioManager.h"
 #include "../net/Api.h"
+#include "../net/Net.h"
 #include "../ui/Config.h"
 #include "../ui/Files.h"
 #include "../ui/L10nJson.h"
@@ -265,6 +266,8 @@ public:
             config().save();
         });
     }
+
+    int protocolVersion() override { return surv::defs::kProtocolVersion; }
 
     void setConfigValue(const std::string& key, const std::string& value) override {
         // Java sends every value as a string; keep the JSON type so the C++ side
@@ -619,6 +622,10 @@ JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setLanguage(JNIEnv* env, jc
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setShowFps(JNIEnv*, jclass, jboolean show) {
     surv::uiBridge()->setShowFps(show == JNI_TRUE);
+}
+
+JNIEXPORT jint JNICALL Java_dev_axmol_app_SurvBridge_getProtocolVersion(JNIEnv*, jclass) {
+    return surv::uiBridge()->protocolVersion();
 }
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setConfigValue(JNIEnv* env, jclass, jstring key,

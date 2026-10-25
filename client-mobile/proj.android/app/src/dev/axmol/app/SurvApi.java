@@ -133,18 +133,19 @@ public final class SurvApi {
     /**
      * POSTs a find_game request and calls `callback` with the JSON response
      * text on the UI thread. The body is the JSON payload matching FindGameBody.
-     * Calls callback(null) on error.
+     * `token` is the device-session Bearer (the server also accepts the web
+     * cookie); pass "" when signed out. Calls callback(null) on error.
      */
     public static void findGame(final String apiBaseUrl, final String requestBody,
-                                 final Callback callback) {
+                                 final String token, final Callback callback) {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                final String result = httpPost(apiBaseUrl + "/api/find_game_v2",
-                                               requestBody);
+                final HttpResult result = httpPostWithToken(
+                        apiBaseUrl + "/api/find_game_v2", requestBody, token);
                 AppActivity activity = AppActivity.current();
                 if (activity != null) {
-                    final String r = result;
+                    final String r = result.body;
                     activity.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {

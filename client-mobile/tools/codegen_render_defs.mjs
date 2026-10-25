@@ -551,9 +551,9 @@ for (const type of gameTypes) {
         str(def.mapIndicator?.sprite || "")
     },${n(def.mapIndicator?.tint, 0xffffff)},${def.mapIndicator?.pulse ? 1 : 0},${
         n(def.mapIndicator?.pulseTint, 0xffffff)
-    },${str(def.sound?.reload)},${str(def.sound?.reloadAlt)},${str(def.sound?.deploy)},${
-        str(def.sound?.use)
-    },${str(def.sound?.pickup)}},\n`;
+    },${str(def.sound?.reload)},${str(def.sound?.reloadAlt)},${str(def.sound?.deploy)},${str(def.sound?.use)},${
+        str(def.sound?.pickup)
+    }},\n`;
     if (
         !def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack"
         && !def.frozenSprites

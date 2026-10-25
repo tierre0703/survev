@@ -50,6 +50,8 @@ public:
     }
     // Engine stats overlay (fps/draw calls), persisted as `showFps`.
     virtual void setShowFps(bool show) { (void)show; }
+    // GameConfig.protocolVersion (shared/gameConfig.ts) for find_game/playGame.
+    virtual int protocolVersion() { return 0; }
 
     // --- read-only snapshots ------------------------------------------------
     // Flattened table for the current locale ({"key": "text"}).

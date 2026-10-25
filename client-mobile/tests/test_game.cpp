@@ -3,6 +3,7 @@
 #include "TestFramework.h"
 #include "FakeConnection.h"
 #include "../src/game/Game.h"
+#include "../src/game/DisconnectReason.h"
 
 #include <memory>
 #include <string>
@@ -448,4 +449,26 @@ TEST(game_watchdog_is_reset_by_traffic) {
     h.game.update(0.0f);
     h.game.update(11.0f);
     CHECK(h.game.isConnected());
+}
+
+// P1.2: the server closes with reason strings, not invented 4001-4011 codes.
+TEST(game_disconnect_reason_mapping) {
+    CHECK_EQ(disconnectReasonKey("invalid_token", true, false), std::string("index-invalid-token"));
+    CHECK_EQ(disconnectReasonKey("invalid_protocol", true, false), std::string("index-invalid-protocol"));
+    CHECK_EQ(disconnectReasonKey("invalid_packet", true, false), std::string("index-invalid-packet"));
+    CHECK_EQ(disconnectReasonKey("behind_proxy", true, false), std::string("index-behind-proxy"));
+    CHECK_EQ(disconnectReasonKey("player_not_found", true, false), std::string("index-player-not-found"));
+    CHECK_EQ(disconnectReasonKey("ip_banned", true, false), std::string("index-ip-banned"));
+    CHECK_EQ(disconnectReasonKey("rate_limited", true, false), std::string("index-rate-limited"));
+    CHECK_EQ(disconnectReasonKey("server_crashed", true, false), std::string("index-server-crashed"));
+    CHECK_EQ(disconnectReasonKey("server_restart", true, false), std::string("index-server-restart"));
+    CHECK_EQ(disconnectReasonKey("full", true, false), std::string("index-failed-finding-game"));
+
+    // Normal host close / empty reason after joining is a lost connection.
+    CHECK_EQ(disconnectReasonKey("host_closed", true, false), std::string("index-host-closed"));
+    CHECK_EQ(disconnectReasonKey("", true, false), std::string("index-host-closed"));
+    // Before the server accepts the join it is a join failure.
+    CHECK_EQ(disconnectReasonKey("", false, false), std::string("index-failed-joining-game"));
+    // A late rejection after a rejoin attempt is still a lost connection.
+    CHECK_EQ(disconnectReasonKey("invalid_token", true, true), std::string("index-host-closed"));
 }

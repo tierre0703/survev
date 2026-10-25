@@ -76,6 +76,9 @@ public final class SurvBridge {
     /** Engine stats overlay (fps/draw calls); persisted as `showFps`. */
     public static native void setShowFps(boolean show);
 
+    /** GameConfig.protocolVersion (shared/gameConfig.ts). */
+    public static native int getProtocolVersion();
+
     public static native void saveConfig();
 
     /**

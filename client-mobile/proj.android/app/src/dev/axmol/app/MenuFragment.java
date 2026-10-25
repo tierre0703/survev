@@ -21,6 +21,7 @@
 package dev.axmol.app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -655,7 +656,7 @@ public class MenuFragment {
     }
 
     /** Zones of `region`, fastest first (pingTest.getZones); "[]" when unknown. */
-    private String zonesJson(String region) {
+    public String zonesJson(String region) {
         List<Json.PingEntry> matches = new ArrayList<Json.PingEntry>();
         for (Json.PingEntry p : mPings) {
             if (p.region.equals(region)) {
@@ -705,22 +706,24 @@ public class MenuFragment {
         int gameModeIdx = teamMode == 1 ? 0 : teamMode == 2 ? 1 : 2;
         final String bodyStr = "{\"region\":\"" + escapeJson(region) + "\""
                 + ",\"zones\":" + zonesJson(region)
-                + ",\"version\":1028"
-                + ",\"playerCount\":" + teamMode
+                + ",\"version\":" + SurvBridge.getProtocolVersion()
+                + ",\"playerCount\":1"
                 + ",\"autoFill\":true"
                 + ",\"gameModeIdx\":" + gameModeIdx
                 + "}";
         Log.i(TAG, "onPlay find_game body=" + bodyStr);
 
-        findGameAttempt(bodyStr, 0);
+        AccountManager account = AccountManager.peek();
+        final String token = account != null ? account.getSessionToken() : "";
+        findGameAttempt(bodyStr, token, 0);
     }
 
     /** main.ts findGame(): 2 attempts, 500 ms apart, transport failures only. */
     private static final int FIND_GAME_MAX_ATTEMPTS = 2;
     private static final long FIND_GAME_RETRY_DELAY_MS = 500;
 
-    private void findGameAttempt(final String bodyStr, final int attempt) {
-        SurvApi.findGame(mApiBaseUrl, bodyStr, new SurvApi.Callback() {
+    private void findGameAttempt(final String bodyStr, final String authToken, final int attempt) {
+        SurvApi.findGame(mApiBaseUrl, bodyStr, authToken, new SurvApi.Callback() {
             @Override public void onResult(String json) {
                 if (json == null) {
                     // Transport failure: retry like `findGameImpl`'s catch()
@@ -731,32 +734,80 @@ public class MenuFragment {
                                 + FIND_GAME_MAX_ATTEMPTS + ")");
                         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                             @Override public void run() {
-                                findGameAttempt(bodyStr, attempt + 1);
+                                findGameAttempt(bodyStr, authToken, attempt + 1);
                             }
                         }, FIND_GAME_RETRY_DELAY_MS);
                         return;
                     }
                     mFindingGame = false;
-                    setStatus("Failed to find game");
+                    setStatus(l10n("index-failed-finding-game", "Failed finding game."));
                     return;
                 }
                 mFindingGame = false;
                 String type = Json.peekString(json, "type");
                 if ("success".equals(type)) {
                     List<String> urls = parseUrls(json);
-                    String token = parseJoinToken(json);
-                    if (urls.size() > 0 && token != null) {
+                    String joinToken = parseJoinToken(json);
+                    if (urls.size() > 0 && joinToken != null) {
                         String[] urlArray = urls.toArray(new String[urls.size()]);
-                        SurvBridge.onJoinUrls(urlArray, token);
+                        SurvBridge.onJoinUrls(urlArray, joinToken);
                         setStatus("Joining...");
                         return;
                     }
                 }
+                if ("banned".equals(type)) {
+                    showIpBan(json);
+                    return;
+                }
                 String error = Json.peekString(json, "error");
                 if (error == null) error = "find_game_failed";
-                setStatus("Error: " + error);
+                handleFindGameError(error);
             }
         });
+    }
+
+    /** main.ts getErrorString(): find_game error -> l10n key. */
+    private static String findGameErrorKey(String error) {
+        if ("behind_proxy".equals(error)) return "index-behind-proxy";
+        if ("find_game_failed".equals(error) || "full".equals(error)) {
+            return "index-failed-finding-game";
+        }
+        if ("invalid_captcha".equals(error)) return "index-invalid-captcha";
+        if ("invalid_protocol".equals(error)) return "index-invalid-protocol";
+        if ("invalid_region".equals(error)) return "index-invalid-region";
+        if ("join_game_failed".equals(error)) return "index-failed-joining-game";
+        if ("mode_disabled".equals(error)) return "index-mode-disabled";
+        if ("rate_limited".equals(error)) return "index-rate-limited";
+        return "index-failed-finding-game";
+    }
+
+    private void handleFindGameError(String error) {
+        String text = l10n(findGameErrorKey(error), error);
+        if ("behind_proxy".equals(error) || "invalid_protocol".equals(error)) {
+            showErrorModal(l10n("index-error", "Error"), text);
+        } else if ("invalid_captcha".equals(error)) {
+            AccountManager account = AccountManager.peek();
+            boolean signedIn = account != null && account.isLoggedIn();
+            String extra = signedIn ? ""
+                    : "\n\nSign in from the account button to play on this server.";
+            showErrorModal(l10n("index-captcha", "Captcha required"), text + extra);
+        } else {
+            setStatus(text);
+        }
+    }
+
+    private void showIpBan(String json) {
+        String reason = Json.peekString(json, "reason");
+        boolean permanent = Json.peekBool(json, "permanent", false);
+        String expiresIn = Json.peekString(json, "expiresIn");
+        StringBuilder message = new StringBuilder(l10n("index-ip-banned", "Your IP has been banned."));
+        if (reason != null && !reason.isEmpty()) {
+            message.append("\n\nReason: ").append(reason);
+        }
+        message.append("\nDuration: ")
+                .append(permanent ? "indefinite"
+                        : (expiresIn == null || expiresIn.isEmpty() ? "temporary" : expiresIn));
+        showErrorModal(l10n("index-banned", "Banned"), message.toString());
     }
 
     // ===================== Interactions ====================================
@@ -848,6 +899,9 @@ public class MenuFragment {
         Log.w(TAG, "account error " + error);
         if ("account_offline".equals(error)) {
             setStatus("Account: cannot reach the server");
+        } else if ("account_banned".equals(error)) {
+            showErrorModal(l10n("index-account", "Account"),
+                    l10n("index-account-banned", "Your account has been banned."));
         }
     }
 
@@ -887,6 +941,26 @@ public class MenuFragment {
 
     public void showMessage(String text) {
         setStatus(text);
+    }
+
+    /** Localized text for an l10n key, with a fallback for missing entries. */
+    public String l10n(String key, String fallback) {
+        String text = Json.peekString(SurvBridge.getL10nJson(), key);
+        return text != null && !text.isEmpty() ? text : fallback;
+    }
+
+    /** A blocking error dialog (P1.2: invalid protocol/IP ban/behind proxy). */
+    public void showErrorModal(String title, String message) {
+        new AlertDialog.Builder(mActivity)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .show();
+    }
+
+    /** Error from a C++ l10n key (invalid protocol/IP ban/behind proxy). */
+    public void showErrorKey(String key) {
+        showErrorModal(l10n("index-error", "Error"), l10n(key, key));
     }
 
     // ===================== Types ===========================================

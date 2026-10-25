@@ -10,14 +10,15 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25 (P0.7/P1.5)** — settings are real: volume
-sliders read/write JSON numbers, every toggle/touch-style button persists and
-applies to the live camera/Touch/audio path, saved volumes + mute are restored at
-boot, and the language list comes from `ui::kLocales` (18 codes, native names).
-Audio now honours maxInstances/canCoalesce/delay/detune/ambient + loop retention,
-keeps the menu ambience running, and uses the real gun/item/pickup/door/button/
-puzzle/plane/victory sound keys. P0.1–P0.6 are also done; the 1:1 audit still
-applies to P1.1+. **181 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25 (P1.1/P1.2)** — quick play is authenticated
+with the device session (Bearer, server also accepts the cookie), sends
+`playerCount:1`, the real `protocolVersion` and the selected region's zones;
+team `playGame` uses the same version/zones and allows logged-in players through
+captcha-enabled rooms. Disconnect reasons now come from the server's reason
+string (the invented 4001–4011 codes are gone), with localized messages and
+error dialogs for invalid protocol/IP ban/behind proxy/account ban. P0.1–P1.5
+are also done; the 1:1 audit continues at P1.3/P1.4. **182 host tests pass,
+0 fail.**
 
 ---
 
@@ -33,7 +34,7 @@ applies to P1.1+. **181 host tests pass, 0 fail.**
 | M5 | Input + touch | **done (touch)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; keyboard/mouse binds remain P1.6. |
 | M6 | Audio | **mostly done** | engine/mixer/ambience/reverb/EQ/interior sounds, channel semantics, startup volume/mute, menu music and the real sound keys; notification/team-join cues are web-focus-only and exact EQ timbre remains P2. |
 | M7 | UI layer | **partial** | Java menu/account/pass/team/loadout live; death/result + spectate overlay live in the C++ HUD; settings screen is real (persist + apply); inventory v2 in the live HUD still missing; `FguiHud` is dead on Android (§3 P1.4). |
-| M8 | Accounts / API | **mostly done** | device login + profile, quests/pass, team links; quickplay is unauthenticated, captcha unsupported, error reasons wrong (§3 P1.1/P1.2); OAuth is an intentional platform delta. |
+| M8 | Accounts / API | **mostly done** | device login + profile, quests/pass, team links, authenticated quick play and correct disconnect reasons; captcha is unsupported for signed-out users (server skips it for the device session), OAuth is an intentional platform delta. |
 | M9 | Polish & release | **started** | release APK/AAB pipeline verified (§45); waiting on the 1:1 gameplay gate (§3.7), a physical-device soak and final store upload. |
 
 ---
@@ -81,8 +82,8 @@ applies to P1.1+. **181 host tests pass, 0 fail.**
 | `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | ✅ schema + settings screens write real values; runtime listeners applied at startup/on change (highResTex maps to the GFX tier, local rotation is desktop-only) |
 | `client/src/device.ts` → `ui/Device.*` | 🔶 simplified (no tablet/pixelRatio/MAX_TEXTURE_SIZE tiers) |
 | `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*` | 🔶 C++ table good; Java menu is hardcoded English (P1.7), but the settings language list is now `ui::kLocales` (18 codes/names) via the bridge |
-| `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | 🔶 join/reconnect good; quickplay auth/captcha and reason mapping still P1.1/P1.2 (match-over latch done) |
-| `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | 🔶 Bearer/find_game and mode/region metadata gaps (P1.1/P1.7) |
+| `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | ✅ join/reconnect, quickplay auth/captcha message, reason-string mapping and error dialogs (match-over latch done) |
+| `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; mode/region metadata polish remains P1.7 |
 | `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste) + `survev://team` deep links, kick/mode/region controls, team match stays connected |
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack; source badges and the per-item lore modal remain P1.7 |
 | `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, weapon/ammo, alive/kills, kill feed, kill leader, gas timer, death/result + spectate overlay done (P0.4); inventory v2/interaction prompts and most post-match stats detail still live only in dead `FguiHud` (P1.4) |
@@ -292,27 +293,43 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 
 ### 3.3 P1 — missing 1:1 features / correctness (playable but wrong)
 
-- [ ] **P1.1 Authenticated quick play + captcha + correct find_game body.**
-      Java `findGame` sends no Bearer (`SurvApi.java:138-157`), the server
-      `find_game_v2` reads only the cookie (`server/src/api/index.ts:118-162`),
-      `MenuFragment` sends `playerCount: teamMode` (2/4 instead of 1), a hardcoded
-      `version:1028` and no Turnstile token (`MenuFragment.java:695-712`).
-      Team `playGame` sends `zones:["<region>"]` instead of the region's zones
-      (`TeamFragment.java:762-771` vs `teamMenu.ts:355-380`). Add Bearer auth to
-      find_game (web already authenticates via cookie), read
-      `GameConfig.protocolVersion`, and either implement Turnstile or show a
-      clear unsupported message and allow logged-in players (server skips captcha
-      for authenticated users). Acceptance: quick-play stats/XP/quests count, and
-      a captcha deployment works for logged-in players.
+- [x] **P1.1 Authenticated quick play + captcha + correct find_game body.**
+      **Done.**
+      - `SurvApi.findGame` takes the device session token and sends
+        `Authorization: Bearer`; `server/src/api/index.ts` `find_game_v2` now
+        accepts Bearer as well as the web `session` cookie.
+      - `MenuFragment` sends `playerCount: 1`, `version:
+        SurvBridge.getProtocolVersion()` (bridge -> `defs::kProtocolVersion`) and
+        the selected region's fastest-first zones.
+      - `TeamFragment.startGame` sends the same protocol version and
+        `JavaUiHost.zonesJson(region)` (from the completed ping test); the Play
+        button no longer blocks on captcha when the device account is signed in
+        (the server skips captcha for authenticated users).
+      - Captcha is intentionally not implemented (no WebView/Play SafetyNet
+        integration): a signed-out player on a captcha deployment gets the
+        localized `index-invalid-captcha` dialog plus a "sign in" hint. A
+        signed-in device session bypasses it server-side.
+      - Acceptance: a device-session quick play is attributed to the account
+        (needs a dev server with the Bearer change; the stock bundle server
+        predates it). Region/zones and version are verified in logcat.
 
-- [ ] **P1.2 Correct disconnect reasons and error modals.**
-      Native maps invented codes 4001-4011 (`GameScene.cpp:1122-1143`); the
-      server always uses 3000 + reason string. Map the reason (`invalid_token`,
-      `invalid_protocol`, `ip_banned`, `behind_proxy`, `rate_limited`,
-      `server_restart`, `player_not_found`, ...) like `main.ts:839-858`, and add
-      the invalid-protocol/IP-ban/behind-proxy/account-banned modals
-      (`main.ts:881-912`, `profileUi.ts:332-347`). Acceptance: force each close
-      reason and see the localized message.
+- [x] **P1.2 Correct disconnect reasons and error modals.**
+      **Done.** `game/DisconnectReason.h` maps the server's close *reason*
+      (`invalid_token`, `invalid_protocol`, `invalid_packet`, `behind_proxy`,
+      `player_not_found`, `ip_banned`, `rate_limited`, `server_crashed`,
+      `server_restart`, `full`) like `main.ts:839-858`; the old 4001–4011 code
+      table is gone. A late `invalid_token` after a rejoin attempt stays
+      `index-host-closed`, and a pre-join failure shows
+      `index-failed-joining-game`.
+      - `JavaUiHost.returnToMenu` shows an `AlertDialog` for
+        invalid-protocol/IP-ban/behind-proxy and a status/message for the rest;
+        `find_game` errors map through `MenuFragment.handleFindGameError`
+        (ban detail dialog with reason/duration, captcha hint, proxy/protocol
+        modal). `account_banned` from the profile fetch also shows a dialog.
+      - Host test `game_disconnect_reason_mapping` covers every reason.
+      - Acceptance: force-reason runs still need a dev server; the mapping and
+        dialogs are unit-verified / compile-verified, and the stock bundle's
+        normal host-closed path stays localized.
 
 - [ ] **P1.3 Rendering feedback parity (biggest visual gap).**
       - Bullet tracers: per-def colour/length/width/comet trail, AP/sat/chambered
@@ -462,7 +479,8 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 3. **P0.2 + P0.3** — active layer + interpolation: fixes bunkers and game feel
    (done; see §3.2).
 4. **P0.7 + P1.5** — settings/audio correctness (done; see §3.2/§3.3).
-5. **P1.1 + P1.2** — authenticated quick play/captcha + correct errors.
+5. **P1.1 + P1.2** — authenticated quick play/captcha + correct errors
+   (done; see §3.3).
 6. **P1.3 + P1.4** — render feedback + live inventory HUD.
 7. **P1.6–P1.8** — input/metadata/team/account parity.
 8. **P2** — polish, then a physical-device soak and store upload.
@@ -486,7 +504,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (181 tests, 0 failures expected)
+# host tests (182 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -658,6 +676,18 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   `POST /api/auth/device` is rate limited by `AuthRouter` (5/min/IP) like the
   other auth routes, and returns the token in the body because native has no
   cookie jar.
+- `find_game_v2` reads the session from the cookie **or** `Authorization: Bearer`
+  (native); keep both. Quick play must send `playerCount: 1` (not teamMode),
+  `SurvBridge.getProtocolVersion()` (not a literal 1028) and the selected
+  region's zones; team playGame does the same.
+- Captcha is not implemented in the native client (no WebView/Turnstile). A
+  signed-out player gets the localized `index-invalid-captcha` dialog; an
+  authenticated device session bypasses the server check. Do not silently send
+  an empty token for signed-out players.
+- Disconnect reasons are the server's 3000 + reason string, mapped by
+  `game/DisconnectReason.h` (`disconnectReasonKey`); never reintroduce invented
+  4001–4011 close codes. Invalid-protocol/IP-ban/behind-proxy and account-banned
+  use `MenuFragment.showErrorModal` dialogs, not just the status line.
 - The first account login prompts for a name (`usernameSet == false`) and the
   profile screen closes itself after it is set (`mProfileOpenedForName`); the
   name prompt must never fire while in a match. The menu field only follows the

@@ -649,16 +649,19 @@ public class TeamFragment {
             anyInGame |= mPlayers.get(i).inGame;
         }
         if (leader) {
-            boolean canPlay = !mFindingGame && !anyInGame && !mCaptchaEnabled;
+            AccountManager account = AccountManager.peek();
+            boolean signedIn = account != null && account.isLoggedIn();
+            boolean captchaBlocks = mCaptchaEnabled && !signedIn;
+            boolean canPlay = !mFindingGame && !anyInGame && !captchaBlocks;
             mPlayBtn.setEnabled(canPlay);
             mPlayBtn.setText(mFindingGame ? "Finding game..."
                     : "Play (" + mPlayers.size() + ")");
+            if (captchaBlocks) {
+                mPlayBtn.setText("Captcha required");
+            }
         } else {
             mPlayBtn.setEnabled(false);
             mPlayBtn.setText("Waiting for leader");
-        }
-        if (mCaptchaEnabled) {
-            mPlayBtn.setText("Captcha required");
         }
     }
 
@@ -764,9 +767,9 @@ public class TeamFragment {
         mFindingGame = true;
         render();
         String msg = "{\"type\":\"playGame\",\"data\":{"
-                + "\"version\":1028,"
+                + "\"version\":" + SurvBridge.getProtocolVersion() + ","
                 + "\"region\":\"" + SurvApi.escapeJson(mRegion) + "\","
-                + "\"zones\":[\"" + SurvApi.escapeJson(mRegion) + "\"]}}";
+                + "\"zones\":" + mHost.zonesJson(mRegion) + "}}";
         send(msg);
     }
 

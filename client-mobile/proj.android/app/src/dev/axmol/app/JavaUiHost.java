@@ -155,6 +155,11 @@ public class JavaUiHost {
         Log.i(TAG, "showMenu() done, menu shown");
     }
 
+    /** Fastest-first zones of `region`, for the team playGame message. */
+    public String zonesJson(String region) {
+        return mMenu != null ? mMenu.zonesJson(region) : "[\"" + region + "\"]";
+    }
+
     /** A match started: hide the Java screens so the game canvas is visible. */
     public void enterGame(int activePlayerId) {
         mInGame = true;
@@ -196,7 +201,14 @@ public class JavaUiHost {
         }
         showMenu();
         if (errorL10nKey != null && !errorL10nKey.isEmpty() && mMenu != null) {
-            mMenu.showMessage(Json.peekString(SurvBridge.getL10nJson(), errorL10nKey));
+            String text = Json.peekString(SurvBridge.getL10nJson(), errorL10nKey);
+            if ("index-invalid-protocol".equals(errorL10nKey)
+                    || "index-ip-banned".equals(errorL10nKey)
+                    || "index-behind-proxy".equals(errorL10nKey)) {
+                mMenu.showErrorKey(errorL10nKey);
+            } else {
+                mMenu.showMessage(text);
+            }
         }
         Log.i(TAG, "returnToMenu error=" + errorL10nKey);
     }
