@@ -67,6 +67,7 @@ public class GamePauseDialog {
     // --- state ---
     private boolean mMuted = false;
     private boolean mShowFps = false;
+    private boolean mLowGraphics = false;
     private boolean mIsDead = false; // Set externally when player dies
 
     public GamePauseDialog(Activity activity, JavaUiHost host) {
@@ -210,7 +211,7 @@ public class GamePauseDialog {
 
         mLowGraphicsBtn = makeToggleButton("Low GFX");
         mLowGraphicsBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { toggleStyle(v); }
+            @Override public void onClick(View v) { toggleLowGraphics(); }
         });
         togglesRow.addView(mLowGraphicsBtn, halfParams());
 
@@ -348,23 +349,6 @@ public class GamePauseDialog {
         return btn;
     }
 
-    private void toggleStyle(View v) {
-        if (v instanceof Button) {
-            Button b = (Button) v;
-            String txt = b.getText().toString();
-            if (txt.contains("✓") || txt.contains("ON")) {
-                // Turn off
-                b.setText(txt.replace(" ✓", "").replace(" ON", ""));
-                b.setBackgroundColor(GREY);
-            } else {
-                // Turn on
-                b.setText(txt + " ✓");
-                b.setBackgroundColor(GREEN);
-            }
-            SurvBridge.saveConfig();
-        }
-    }
-
     /** "Show FPS": drives the engine stats overlay (persisted as `showFps`). */
     private void toggleShowFps() {
         mShowFps = !mShowFps;
@@ -375,6 +359,24 @@ public class GamePauseDialog {
     private void applyShowFps() {
         mShowFpsBtn.setText(mShowFps ? "Show FPS \u2713" : "Show FPS");
         mShowFpsBtn.setBackgroundColor(mShowFps ? GREEN : GREY);
+    }
+
+    /**
+     * "Low GFX": renders into a 75% EGL surface (RenderScale) and persists the
+     * tier as `renderScale`; the C++ config applies it again on the next launch.
+     */
+    private void toggleLowGraphics() {
+        mLowGraphics = !mLowGraphics;
+        applyLowGraphics();
+        final float scale = mLowGraphics ? RenderScale.LOW : RenderScale.FULL;
+        RenderScale.apply(scale);
+        SurvBridge.setConfigValue("renderScale", String.valueOf(scale));
+        SurvBridge.saveConfig();
+    }
+
+    private void applyLowGraphics() {
+        mLowGraphicsBtn.setText(mLowGraphics ? "Low GFX \u2713" : "Low GFX");
+        mLowGraphicsBtn.setBackgroundColor(mLowGraphics ? GREEN : GREY);
     }
 
     private void toggleMute() {
@@ -414,6 +416,9 @@ public class GamePauseDialog {
 
         mShowFps = Json.peekBool(config, "showFps", false);
         applyShowFps();
+
+        mLowGraphics = RenderScale.persisted() < 0.999f;
+        applyLowGraphics();
 
         String master = Json.peekString(config, "masterVolume");
         if (master != null) {

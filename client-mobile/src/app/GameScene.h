@@ -268,6 +268,9 @@ private:
     // M8 client error reporting (client/src/errorLogs.ts), ticked at 1 Hz.
     std::unique_ptr<ErrorLog> _errorLog;
     float _errorLogTick = 0.0f;
+    // Perf/polish instrumentation (`debug.surv_debug=1`): fps + GL frame size.
+    float _perfLogTick = 0.0f;
+    ax::Vec2 _perfFrameSize;
 
     // Priority 5: a dropped mid-match socket reclaims the same match through the
     // server's rejoin ticket (server/src/game/game.ts) before falling back to the

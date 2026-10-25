@@ -875,6 +875,24 @@ void GameScene::update(float delta) {
     if (_reconnect.active) {
         _reconnect.elapsed += delta;
     }
+    // Perf/polish: with `debug.surv_debug=1` print the frame rate and the GL frame
+    // size every 5 s (and on any frame-size change, e.g. the "Low GFX" tier).
+    if (isDevLogEnabled()) {
+        auto* director = ax::Director::getInstance();
+        auto* renderView = director->getRenderView();
+        const ax::Vec2 frame = renderView ? renderView->getFrameSize() : ax::Vec2(0.0f, 0.0f);
+        if (frame.x != _perfFrameSize.x || frame.y != _perfFrameSize.y) {
+            _perfFrameSize = frame;
+            AXLOGI("[perf] frame size {}x{}", static_cast<int>(frame.x), static_cast<int>(frame.y));
+        }
+        _perfLogTick += delta;
+        if (_perfLogTick >= 5.0f) {
+            _perfLogTick = 0.0f;
+            const float secondsPerFrame = director->getSecondsPerFrame();
+            AXLOGI("[perf] fps={:.1f} frame={}x{}", secondsPerFrame > 0.0f ? 1.0f / secondsPerFrame : 0.0f,
+                   static_cast<int>(frame.x), static_cast<int>(frame.y));
+        }
+    }
     if (_findInFlight) {
         _findTime += delta;
         if (_findTime > 30) {

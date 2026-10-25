@@ -41,6 +41,13 @@ public:
     // key is one of "master"/"sound"/"music"/"mute" (audio.ts volume tiers).
     virtual void setAudio(const std::string& key, float value) = 0;
     virtual void setLanguage(const std::string& locale) = 0;
+    // Generic config write from the Java settings screens (sensitivity sliders,
+    // renderScale, ...). Values arrive as strings; numbers/bools keep their JSON
+    // type so the C++ config reads them back with getFloat/getBool.
+    virtual void setConfigValue(const std::string& key, const std::string& value) {
+        (void)key;
+        (void)value;
+    }
     // Engine stats overlay (fps/draw calls), persisted as `showFps`.
     virtual void setShowFps(bool show) { (void)show; }
 

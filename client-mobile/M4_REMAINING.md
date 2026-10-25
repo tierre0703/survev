@@ -2376,3 +2376,52 @@ until the player dies.
   `returnToMenu error=index-host-closed` and the menu - no frozen match.
 - `logcat -b crash` empty in both runs. The bundle stack was restored afterwards
   and adb un-rooted.
+
+## 40. Session 39 - Low GFX tier, perf instrumentation, config JNI (2026-10-25)
+
+### 40.1 "Low GFX" is now a real resolution tier
+
+The pause dialog's Low GFX button was a pure visual stub. Native has no
+`highResTex` reload, but the same fill-rate saving is available at the surface:
+`RenderScale.apply()` calls `AxmolGLSurfaceView.getHolder().setFixedSize(w*0.75,
+h*0.75)` so the GL surface covers 44% of the pixels and the compositor upscales
+it to the view; layout, HUD and touch coordinates are untouched. `(0, 0)` clears
+the fixed size again.
+
+- applied at launch by `AndroidUiBridge::setScenes` from the `renderScale` config
+  key (the C++ config is the source of truth),
+- toggled in the pause dialog, persisted through `SurvBridge.setConfigValue`,
+- seeded into the button state from the config like "Show FPS".
+
+### 40.2 Perf instrumentation
+
+With `debug.surv_debug=1`, `GameScene::update` logs every 5 s:
+
+```
+[perf] fps=59.6 frame=960x540
+```
+
+and logs `[perf] frame size WxH` whenever the GL frame size changes (so toggling
+Low GFX is visible in logcat). The axmol stats overlay from §37 remains the
+on-screen version.
+
+### 40.3 Missing setConfigValue JNI
+
+`SurvBridge.setConfigValue` was declared in Java and called by the pause dialog's
+sensitivity sliders, but no C++ symbol existed - dragging a slider would throw
+`UnsatisfiedLinkError`. It is now implemented on `UiBridge`, preserving the JSON
+type (number/bool/string) and saving the config. The values persist; the touch
+code does not consume them yet (native-only sliders, the web has no equivalent).
+
+### 40.4 Verification
+
+- `surv_tests` 163 tests / 2,599 assertions; `lint:ci`; x86_64 native + APK
+  (39 Java sources) all green.
+- Device, `debug.surv_debug=1`, match running at 960x540: `[perf] fps=59.6
+  frame=960x540`. Low GFX on logs
+  `RenderScale: render scale 0.75 (720x405 from 960x540)` and
+  `[perf] frame size 720x405`; off logs `render scale FULL (960x540)` and the
+  frame returns. After a restart the tier is applied before the first frame
+  (`[perf] render scale 0.75 at startup`, `[perf] frame size 720x405`).
+- Dragging the "Move" sensitivity slider no longer crashes and the value
+  persists into the next dialog open (`Move 96%`). `logcat -b crash` empty.

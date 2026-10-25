@@ -10,16 +10,14 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25** — Session 38 added **mid-match reconnection**:
-the server keeps a rejoin ticket per player (registered at join time, so a
-reconnect works even before the dropped socket is detected) and re-attaches a new
-socket to the same player, kicking the stale one and resending Joined + Map +
-full state; the client retries the same join token 5 times (immediate, then
-1-4 s) through `GameScene::tryReconnect` and falls back to the localized
-"connection lost" path. Server and shared types were changed for this.
-Earlier: §37 find_game retry + FPS overlay, §36 background/pause socket
-continuity + watchdog + BACK pause, §35 error reporting, §34 region latency test.
-**163 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25** — Session 39 continued Perf/polish: the
+pause dialog's **"Low GFX"** now scales the EGL surface to 75%
+(`SurfaceHolder.setFixedSize`, `RenderScale.java`, persisted as `renderScale`),
+`debug.surv_debug=1` logs `[perf] fps=` and frame-size changes every 5 s, and the
+missing `SurvBridge.setConfigValue` JNI was implemented (the sensitivity sliders
+used to throw `UnsatisfiedLinkError`). Earlier: §38 mid-match reconnection,
+§37 find_game retry + FPS overlay, §36 background/pause continuity, §35 error
+reporting, §34 region latency test. **163 host tests pass, 0 fail.**
 
 ---
 
@@ -362,13 +360,21 @@ continuity + watchdog + BACK pause, §35 error reporting, §34 region latency te
         match (single use only for the first join), so a leaked token could steal
         the seat until the player dies.
       - The other lifecycle item (menu HTTP retries) landed in §37.
-- [x] **Perf tooling (start of Perf/polish)**: the pause dialog's "Show FPS"
-      now toggles the engine stats overlay (`Director::setStatsDisplay`), persists
-      `showFps` in the config JSON, applies it at startup in
-      `AndroidUiBridge::setScenes` and is also enabled by `debug.surv_debug=1`;
-      the "Low GFX" toggle is still a stub (a resolution tier needs an EGL
-      surface scale)
-- [ ] **Perf/polish (rest)**: 60 fps on mid-range devices, notch/insets, battery/resolution tiers, crash-free soak
+- [x] **Perf tooling + Low GFX tier (Perf/polish)**:
+      - "Low GFX" now renders into a 75% EGL surface
+        (`RenderScale.java` -> `AxmolGLSurfaceView.getHolder().setFixedSize`);
+        the compositor upscales it, so the layout is unchanged while fill-rate
+        drops. Persisted as `renderScale`, applied at launch by
+        `AndroidUiBridge::setScenes` and toggled from the pause dialog.
+      - `debug.surv_debug=1` logs `[perf] fps=…` and any frame-size change every
+        5 s (plus the existing axmol stats overlay via "Show FPS").
+      - `SurvBridge.setConfigValue` was declared in Java but never implemented in
+        C++ (the sensitivity sliders would throw `UnsatisfiedLinkError`); it now
+        writes the config with the JSON type preserved and saves it. The slider
+        values are persisted but still not consumed by the touch code (the web
+        has no equivalent setting).
+- [ ] **Perf/polish (rest)**: notch/safe-area insets, 60 fps soak on real
+      hardware, battery/thermal tiers beyond Low GFX
 - [ ] **Store-ready APK/AAB**
 
 ### Out of scope (deliberately not ported)
@@ -498,3 +504,13 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   rejections must fall through to the localized error.
   `Game::onError` synthesizes `close(1006, "error")` when an open fails so the
   reconnect/URL fallback is not stuck on a socket that never opened.
+- "Low GFX" is an EGL **surface** scale (`RenderScale.apply` ->
+  `SurfaceHolder.setFixedSize`), not a design-resolution change: (0,0) clears it
+  back to the view size. It must run on the UI thread and needs the view to be
+  measured (it retries 10x50 ms).
+- `SurvBridge.setConfigValue` keeps the JSON type (number/bool/string) and saves;
+  Java settings screens depend on it and the C++ config reads the keys with
+  getFloat/getBool.
+- `[perf]` fps/frame logs are gated on `debug.surv_debug=1`; applying the Low GFX
+  tier logs one line at startup (`RenderScale` + `[perf] render scale`) even
+  without the switch, which is how the persisted tier is verified.

@@ -30,6 +30,7 @@
 #include "../ui/Localization.h"
 
 #include <jni.h>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <string>
@@ -45,6 +46,8 @@ namespace {
 
 // The Java bridge class (proj.android/app/src/dev/axmol/app/SurvBridge.java).
 constexpr const char* kBridgeClass = "dev/axmol/app/SurvBridge";
+// Java-side render-resolution helper (applies the persisted "Low GFX" tier).
+constexpr const char* kRenderScaleClass = "dev/axmol/app/RenderScale";
 
 // JNI calls arrive on the Java UI thread; the scene graph, GameWorld and audio
 // mixer are owned by the GL thread. World teardown (resetWorld()) must never
@@ -109,6 +112,15 @@ public:
             if (show) {
                 AXLOGI("[perf] stats overlay enabled at startup");
             }
+        }
+
+        // Render-resolution tier (pause dialog "Low GFX"). The surface scale is
+        // applied on the Java side; the config lives here, so hand it over once.
+        const float renderScale = config().getFloat("renderScale", 1.0f);
+        if (renderScale < 0.999f) {
+            ax::JniHelper::callStaticVoidMethod(kRenderScaleClass, "apply",
+                                                static_cast<float>(renderScale));
+            AXLOGI("[perf] render scale {:.2f} at startup", renderScale);
         }
     }
 
@@ -209,6 +221,30 @@ public:
             config().setBool("showFps", show);
             config().save();
         });
+    }
+
+    void setConfigValue(const std::string& key, const std::string& value) override {
+        // Java sends every value as a string; keep the JSON type so the C++ side
+        // can read it with getFloat/getBool (e.g. renderScale, sensitivities).
+        if (value == "true" || value == "false") {
+            config().setBool(key, value == "true");
+        } else {
+            std::size_t consumed = 0;
+            bool numeric = false;
+            try {
+                const float parsed = std::stof(value, &consumed);
+                numeric = consumed == value.size();
+                if (numeric) {
+                    config().setFloat(key, parsed);
+                }
+            } catch (const std::exception&) {
+                numeric = false;
+            }
+            if (!numeric) {
+                config().setString(key, value);
+            }
+        }
+        config().save();
     }
 
     std::string l10nJson() override {
@@ -406,6 +442,11 @@ JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setLanguage(JNIEnv* env, jc
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setShowFps(JNIEnv*, jclass, jboolean show) {
     surv::uiBridge()->setShowFps(show == JNI_TRUE);
+}
+
+JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setConfigValue(JNIEnv* env, jclass, jstring key,
+                                                                   jstring value) {
+    surv::uiBridge()->setConfigValue(surv::fromJstring(env, key), surv::fromJstring(env, value));
 }
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getConfigJson(JNIEnv* env, jclass) {

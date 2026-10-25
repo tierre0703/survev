@@ -50,6 +50,23 @@ public final class Json {
         return fallback;
     }
 
+    /** Returns the number value of a top-level key, or `fallback` on error. */
+    public static float peekFloat(String json, String key, float fallback) {
+        if (json == null || key == null) return fallback;
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                JsonPrimitive p = el.getAsJsonPrimitive();
+                if (p.isNumber()) return p.getAsFloat();
+                if (p.isString()) return Float.parseFloat(p.getAsString());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "peekFloat failed for key=" + key + ": " + e.getMessage());
+        }
+        return fallback;
+    }
+
     /** Returns the integer value of a top-level key, or 0 on error. */
     public static int peekInt(String json, String key) {        if (json == null || key == null) return 0;
         try {
