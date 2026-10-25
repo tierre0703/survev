@@ -94,6 +94,9 @@ public final class SurvBridge {
     /** Flattened {"key": "text"} table for the current locale. */
     public static native String getL10nJson();
 
+    /** Language list for settings: [{"code","name"}, ...] (localization.ts Locales). */
+    public static native String getLocalesJson();
+
     /** The validated loadout selection. */
     public static native String getLoadoutJson();
 

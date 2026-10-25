@@ -94,6 +94,11 @@ public:
     Vec2 doorClosedPos;
     Vec2 posInterpOld;
     float posInterpTicker = 0.0f;
+    // obstacle.ts door/button sound state (seeded from the first full update).
+    int doorSeqOld = 0;
+    bool doorWasOpen = false;
+    bool doorWasLocked = false;
+    int buttonSeqOld = 0;
 
     pix::Sprite* sprite = nullptr;
     pix::Sprite* casingSprite = nullptr;
@@ -339,6 +344,9 @@ class Projectile : public AbstractObject {
 public:
     std::string type;
     Vec2 pos;
+    // projectile.ts visualPosOld/posInterpTicker (render lags net updates).
+    Vec2 visualPosOld;
+    float posInterpTicker = 0.0f;
     float posZ = 0.0f;
     int layer = 0;
     int ori = 0;
@@ -496,6 +504,7 @@ public:
     float soundUpdateThrottle = 0.0f;
     bool soundPlaying = false;
     std::string planeSound;
+    audio::SoundHandle soundInstance = audio::kInvalidSound;
     PlaneDef config;
 
     void init(GameWorld& ctx, const struct PlaneData& data, const Map& map);
@@ -706,6 +715,14 @@ public:
     Vec2 pos;
     Vec2 posOld;
     Vec2 dir;
+    // player.ts m_visualPos/m_visualDir + their interpolation tickers: the
+    // render position lags the raw net position between 33 Hz updates.
+    Vec2 visualPos;
+    Vec2 visualPosOld;
+    Vec2 visualDir;
+    Vec2 visualDirOld;
+    float posInterpTicker = 0.0f;
+    float dirInterpolationTicker = 0.0f;
     int layer = 0;
     std::string name;
     std::string outfit;
@@ -836,6 +853,8 @@ public:
     Pool<Player> playerPool;
     std::unordered_map<uint16_t, std::string> names;
     std::unordered_map<uint16_t, uint8_t> teams;
+    // config `anonPlayerNames`: hide non-active-player names (player.ts).
+    bool anonPlayerNames = false;
     void update(float dt, GameWorld& ctx);
     std::string getPlayerName(uint16_t playerId, uint16_t activePlayerId, bool anon);
     Player* getPlayerById(uint16_t playerId);

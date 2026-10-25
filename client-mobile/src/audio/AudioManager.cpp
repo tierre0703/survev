@@ -60,6 +60,20 @@ void AudioManager::preloadSounds() {
 }
 
 void AudioManager::update(float dt) {
+    _time += dt;
+    // Delayed plays (createJS `delay`, in seconds for the native API; shot.ts
+    // converts its millisecond values before calling us).
+    for (size_t i = _pending.size(); i-- > 0;) {
+        Pending& pending = _pending[i];
+        pending.remaining -= dt;
+        if (pending.remaining <= 0.0f) {
+            const std::string sound = pending.sound;
+            const PlaySoundOptions options = pending.options;
+            _pending.erase(_pending.begin() + static_cast<long>(i));
+            playSound(sound, options);
+        }
+    }
+
     if (_backend) {
         for (size_t i = _instances.size(); i-- > 0;) {
             if (!_backend->isPlaying(_instances[i].handle)) {
@@ -76,6 +90,15 @@ void AudioManager::update(float dt) {
 
         _backend->update(dt);
     }
+}
+
+AudioManager::Instance* AudioManager::findInstance(SoundHandle handle) {
+    for (auto& inst : _instances) {
+        if (inst.handle == handle) {
+            return &inst;
+        }
+    }
+    return nullptr;
 }
 
 SoundHandle AudioManager::playSound(const std::string& sound, const PlaySoundOptions& options) {
@@ -102,18 +125,39 @@ SoundHandle AudioManager::playSound(const std::string& sound, const PlaySoundOpt
     if (_sounds.find(key) == _sounds.end() || !_backend) {
         return kInvalidSound;
     }
+    const SoundDef* soundDef = provider->sound(channel, sound);
+    // createJS.play() accepts delay in milliseconds; the native API uses
+    // seconds (shot.ts converts `30` -> 0.03 before calling). Schedule it and
+    // return a null handle, like a sound that is still loading on the web.
+    if (options.delay > 0.0f) {
+        Pending pending;
+        pending.remaining = options.delay;
+        pending.sound = sound;
+        pending.options = options;
+        pending.options.delay = 0.0f;
+        _pending.push_back(std::move(pending));
+        return kInvalidSound;
+    }
 
+    const float defVolume = soundDef ? soundDef->volume : 1.0f;
     const bool ambient = channel == "ambient" || channel == "music" || options.ambient;
-    const float baseVol = baseVolume * masterVolume *
-                          getTypeVolume(a->isMusic ? "music" : "sound") * options.volumeScale;
+    // CreateJS's global volume (master) is applied separately; keep the
+    // type-scaled value so master can be changed later even from 0.
+    const float baseVol = baseVolume * getTypeVolume(a->isMusic ? "music" : "sound") *
+                          options.volumeScale * defVolume;
     const bool diffLayer = options.hasLayer && !sameAudioLayer(options.layer, activeLayer);
     // audioManager.ts: a filtered sound uses its EQ only when it is on another
     // layer (or forceFilter is set); otherwise it goes through the reverb send.
     const std::string filter = options.filter.empty() ? "none"
         : ((diffLayer || options.forceFilter) ? options.filter : "reverb");
 
-    SoundHandle instance = kInvalidSound;
-    if (channel != "activePlayer" && options.hasSoundPos) {
+    float preVolume = a->volume * baseVol;
+    float pan = 0.0f;
+    if (diffLayer) {
+        preVolume *= kDiffLayerMult;
+    }
+    const bool positional = channel != "activePlayer" && options.hasSoundPos;
+    if (positional) {
         const Vec2 diff = v2Sub(cameraPos, options.soundPos);
         const float dist = v2Length(diff);
         float range = a->maxRange * options.rangeMult;
@@ -122,40 +166,94 @@ SoundHandle AudioManager::playSound(const std::string& sound, const PlaySoundOpt
         }
         const float distNormal = math::clamp(std::fabs(dist / range), 0.0f, 1.0f);
         const float scaledVolume = std::pow(1.0f - distNormal, 1.0f + options.fallOff * 2.0f);
-        float clipVolume = a->volume * scaledVolume * baseVol;
+        preVolume = a->volume * scaledVolume * baseVol;
         if (diffLayer) {
-            clipVolume *= kDiffLayerMult;
+            preVolume *= kDiffLayerMult;
         }
-        if (clipVolume > kMinAllowedVolume || options.ignoreMinAllowable) {
-            PlayOptions po;
-            po.loop = options.loop;
-            po.volume = options.startSilent ? 0.0f : clipVolume;
-            po.pan = math::clamp((diff.x / range) * -1.0f, -1.0f, 1.0f);
-            po.delay = options.delay;
-            po.offset = options.offset;
-            po.ambient = ambient;
-            po.detune = options.detune;
-            po.filter = filter;
-            instance = _backend->play(key, po);
+        // The web's min-volume gate runs on the type-scaled volume (the global
+        // master is a separate gain node), so keep it before the master.
+        if (preVolume <= kMinAllowedVolume && !options.ignoreMinAllowable) {
+            return kInvalidSound;
         }
-    } else {
-        float clipVolume = a->volume * baseVol;
-        if (diffLayer) {
-            clipVolume *= kDiffLayerMult;
+        pan = math::clamp((diff.x / range) * -1.0f, -1.0f, 1.0f);
+    }
+    const float clipVolume = math::clamp(preVolume * masterVolume, 0.0f, 1.0f);
+
+    // createJS canCoalesce: merge a same-sound instance started in the same
+    // 30 ms window on an equal-power basis instead of starting another voice.
+    if (soundDef && soundDef->canCoalesce) {
+        constexpr float kCoalesceTime = 0.03f;
+        for (auto& inst : _instances) {
+            if (inst.key != key || !_backend->isPlaying(inst.handle)) {
+                continue;
+            }
+            if (std::fabs(inst.startTime - _time) > kCoalesceTime) {
+                continue;
+            }
+            const float vv = inst.volume * inst.volume + clipVolume * clipVolume;
+            const float vp = inst.volume * inst.pan + clipVolume * pan;
+            const float v = inst.volume + clipVolume;
+            inst.volume = std::sqrt(vv);
+            inst.pan = vp / std::max(0.001f, v);
+            inst.base = masterVolume > 0.0001f ? inst.volume / masterVolume : inst.volume;
+            _backend->setVolume(inst.handle, math::clamp(inst.volume, 0.0f, 1.0f));
+            _backend->setPan(inst.handle, inst.pan);
+            return kInvalidSound;
         }
-        PlayOptions po;
-        po.loop = options.loop;
-        po.volume = options.startSilent ? 0.0f : clipVolume;
-        po.delay = options.delay;
-        po.offset = options.offset;
-        po.ambient = ambient;
-        po.detune = options.detune;
-        po.filter = filter;
-        instance = _backend->play(key, po);
     }
 
-    if (instance != kInvalidSound && (options.loop || channel == "music")) {
-        _instances.push_back(Instance{instance, channel == "music" ? "music" : "sound"});
+    // createJS maxInstances: kill the oldest voice of this sound before
+    // starting another one.
+    const int maxInstances = (soundDef && soundDef->maxInstances > 0) ? soundDef->maxInstances : 16;
+    int live = 0;
+    for (const auto& inst : _instances) {
+        if (inst.key == key && _backend->isPlaying(inst.handle)) {
+            ++live;
+        }
+    }
+    while (live >= maxInstances) {
+        Instance* oldest = nullptr;
+        for (auto& inst : _instances) {
+            if (inst.key == key && _backend->isPlaying(inst.handle) &&
+                (!oldest || inst.startTime < oldest->startTime)) {
+                oldest = &inst;
+            }
+        }
+        if (!oldest) {
+            break;
+        }
+        const SoundHandle handle = oldest->handle;
+        _backend->stop(handle);
+        for (size_t i = 0; i < _instances.size(); ++i) {
+            if (_instances[i].handle == handle) {
+                _instances.erase(_instances.begin() + static_cast<long>(i));
+                break;
+            }
+        }
+        --live;
+    }
+
+    PlayOptions po;
+    po.loop = options.loop;
+    po.volume = options.startSilent ? 0.0f : clipVolume;
+    po.pan = pan;
+    po.offset = options.offset;
+    po.ambient = ambient;
+    po.detune = options.detune;
+    po.filter = filter;
+    const SoundHandle instance = _backend->play(key, po);
+    if (instance != kInvalidSound) {
+        Instance inst;
+        inst.handle = instance;
+        inst.key = key;
+        inst.type = channel == "music" ? "music" : "sound";
+        inst.base = preVolume;
+        inst.volume = po.volume;
+        inst.pan = po.pan;
+        inst.ambient = ambient;
+        inst.loop = options.loop;
+        inst.startTime = _time;
+        _instances.push_back(inst);
     }
     return instance;
 }
@@ -179,8 +277,7 @@ void AudioManager::updateSound(SoundHandle instance, const std::string& channel,
     if (instance == kInvalidSound || !a || !_backend) {
         return;
     }
-    const float baseVol = baseVolume * masterVolume *
-                          getTypeVolume(a->isMusic ? "music" : "sound") * options.volumeScale;
+    const float baseVol = baseVolume * getTypeVolume(a->isMusic ? "music" : "sound") * options.volumeScale;
     const Vec2 diff = v2Sub(cameraPos, soundPos);
     const float dist = v2Length(diff);
     float range = a->maxRange * options.rangeMult;
@@ -189,19 +286,33 @@ void AudioManager::updateSound(SoundHandle instance, const std::string& channel,
     }
     const float distNormal = math::clamp(std::fabs(dist / range), 0.0f, 1.0f);
     const float scaledVolume = std::pow(1.0f - distNormal, 1.0f + options.fallOff * 2.0f);
-    float clipVolume = a->volume * scaledVolume * baseVol;
+    float preVolume = a->volume * scaledVolume * baseVol;
     const bool sameLayer = !options.hasLayer || sameAudioLayer(options.layer, activeLayer);
     if (!sameLayer) {
-        clipVolume *= kDiffLayerMult;
+        preVolume *= kDiffLayerMult;
     }
-    if (clipVolume > kMinAllowedVolume || options.ignoreMinAllowable) {
-        _backend->setVolume(instance, clipVolume);
+    if (preVolume > kMinAllowedVolume || options.ignoreMinAllowable) {
+        const float base = math::clamp(preVolume, 0.0f, 1.0f);
+        const float effective = math::clamp(base * masterVolume, 0.0f, 1.0f);
+        _backend->setVolume(instance, effective);
         _backend->setPan(instance, math::clamp((diff.x / range) * -1.0f, -1.0f, 1.0f));
+        if (Instance* inst = findInstance(instance)) {
+            inst->base = base;
+            inst->volume = effective;
+        }
     }
 }
 
 void AudioManager::setMasterVolume(float volume) {
     masterVolume = math::clamp(volume, 0.0f, 1.0f);
+    // CreateJS.Sound.volume is a global gain applied to every live instance.
+    // Recompute from the pre-master value so 0 -> 1 works too.
+    if (_backend) {
+        for (auto& inst : _instances) {
+            inst.volume = math::clamp(inst.base * masterVolume, 0.0f, 1.0f);
+            _backend->setVolume(inst.handle, inst.volume);
+        }
+    }
 }
 
 void AudioManager::applyInstanceVolumeType(const std::string& type, float volume) {
@@ -210,7 +321,9 @@ void AudioManager::applyInstanceVolumeType(const std::string& type, float volume
     const float scaledVolume = typeVolume > 0.0001f ? volume / typeVolume : 0.0f;
     for (auto& inst : _instances) {
         if (inst.type == type && _backend) {
-            _backend->setVolume(inst.handle, _backend->getVolume(inst.handle) * scaledVolume);
+            inst.base = math::clamp(inst.base * scaledVolume, 0.0f, 1.0f);
+            inst.volume = math::clamp(inst.base * masterVolume, 0.0f, 1.0f);
+            _backend->setVolume(inst.handle, inst.volume);
         }
     }
 }
@@ -230,7 +343,16 @@ void AudioManager::setVolume(SoundHandle instance, float volume, const std::stri
         return;
     }
     const std::string t = type.empty() ? "sound" : type;
-    _backend->setVolume(instance, volume * getTypeVolume(t));
+    // CreateJS global volume (master) applies on top of the per-type volume;
+    // ambience/interior/emitter updates overwrite instance.volume, so the
+    // master has to be folded in here or it is lost after the first update.
+    const float base = math::clamp(volume * getTypeVolume(t), 0.0f, 1.0f);
+    const float effective = math::clamp(base * masterVolume, 0.0f, 1.0f);
+    _backend->setVolume(instance, effective);
+    if (Instance* inst = findInstance(instance)) {
+        inst->base = base;
+        inst->volume = effective;
+    }
 }
 
 float AudioManager::getVolume(SoundHandle instance) const {
@@ -265,9 +387,17 @@ void AudioManager::stopSound(SoundHandle instance) {
     }
 }
 
-void AudioManager::stopAll() {
-    if (_backend) {
-        _backend->stopAll();
+void AudioManager::stopAll(bool retainAmbient) {
+    if (!_backend) {
+        return;
+    }
+    for (size_t i = _instances.size(); i-- > 0;) {
+        Instance& inst = _instances[i];
+        if (retainAmbient && inst.ambient) {
+            continue;
+        }
+        _backend->stop(inst.handle);
+        _instances.erase(_instances.begin() + static_cast<long>(i));
     }
 }
 

@@ -91,6 +91,15 @@ public:
     // radius (player.ts m_getZoom). No-op before the first map is loaded.
     void updateCameraZoom(float dt);
 
+    // game.ts constructor: `m_camera.m_setInterpEnabled(config.interpolation)`.
+    // Applied when a world is (re)built and when the setting changes.
+    void setInterpolationEnabled(bool enabled) { _camera.m_setInterpEnabled(enabled); }
+    bool interpolationEnabled() const { return _camera.m_interpEnabled; }
+    void setScreenShakeEnabled(bool enabled) { _camera.m_setShakeEnabled(enabled); }
+    void setLocalRotationEnabled(bool enabled) { _camera.m_setRotationEnabled(enabled); }
+    void setAnonPlayerNames(bool enabled) { _playerBarn->anonPlayerNames = enabled; }
+    bool anonPlayerNames() const { return _playerBarn->anonPlayerNames; }
+
     EmoteManager& emoteManager() { return _emoteManager; }
 
     pix::Factory* factory() { return _factory; }

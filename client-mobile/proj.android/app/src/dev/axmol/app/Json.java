@@ -245,4 +245,30 @@ public final class Json {
         public int pingMs = -1;
         public boolean complete = false;
     }
+
+    /** Language dropdown entries (ui::kLocales): [{"code","name"}, ...]. */
+    public static List<LocaleEntry> parseLocales(String json) {
+        List<LocaleEntry> out = new ArrayList<>();
+        if (json == null) return out;
+        try {
+            JsonArray arr = JsonParser.parseString(json).getAsJsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                JsonElement el = arr.get(i);
+                if (el == null || !el.isJsonObject()) continue;
+                JsonObject obj = el.getAsJsonObject();
+                LocaleEntry e = new LocaleEntry();
+                e.code = obj.has("code") ? obj.get("code").getAsString() : "";
+                e.name = obj.has("name") ? obj.get("name").getAsString() : e.code;
+                if (!e.code.isEmpty()) out.add(e);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "parseLocales failed: " + e.getMessage());
+        }
+        return out;
+    }
+
+    public static class LocaleEntry {
+        public String code = "";
+        public String name = "";
+    }
 }

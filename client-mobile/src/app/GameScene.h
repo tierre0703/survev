@@ -142,6 +142,19 @@ public:
     // setConfigFromDOM + JoinMsg fields).
     void setJoinInfo(const Game::JoinInfo& info) { _joinInfo = info; }
     const Game::JoinInfo& joinInfo() const { return _joinInfo; }
+    // game.ts m_camera.m_setInterpEnabled(config.interpolation): the world is
+    // rebuilt per match, so keep the setting on the scene and apply it there.
+    void setInterpolationEnabled(bool enabled);
+    bool interpolationEnabled() const { return _interpolationEnabled; }
+    // Other `game.ts` config listeners (camera shake/rotation + player names).
+    void setScreenShakeEnabled(bool enabled);
+    void setLocalRotationEnabled(bool enabled);
+    void setAnonPlayerNames(bool enabled);
+    // touch.ts config validation + live Touch state (move/aim style, aim line).
+    void setTouchSettings(const std::string& moveStyle, const std::string& aimStyle, bool aimLine);
+    const std::string& moveStyle() const { return _moveStyle; }
+    const std::string& aimStyle() const { return _aimStyle; }
+    bool touchAimLine() const { return _touchAimLine; }
     audio::AudioManager* audioManager() const { return _audio.get(); }
     std::function<void()> onMatchStarted;
     std::function<void(const std::string&)> onMatchEnded;
@@ -230,6 +243,16 @@ private:
     bool _wasConnected = false;
     bool _wasPlaying = false;
     bool _inGame = false;
+    // config.interpolation, applied to every GameWorld in resetWorld().
+    bool _interpolationEnabled = true;
+    // game.ts config listeners (camera shake/rotation + anon names).
+    bool _screenShakeEnabled = true;
+    bool _localRotationEnabled = false;
+    bool _anonPlayerNames = false;
+    // touch.ts config (validated to "locked"/"anywhere").
+    std::string _moveStyle = "anywhere";
+    std::string _aimStyle = "anywhere";
+    bool _touchAimLine = true;
 
     // In-game HUD drawn through the pix adapter on _gameRoot (design space).
     std::unique_ptr<Hud> _hud;
@@ -303,6 +326,8 @@ private:
     // P0.4: the Java pause dialog shows Spectate after the local death; notify
     // it once per match (UiHost::showResult).
     bool _deadNotified = false;
+    // GameOverMsg victory cue (played once per match).
+    bool _victoryMusicPlayed = false;
 
     // P0.1 gameplay action buttons: taps/holds on the HUD controls queue into
     // `_pendingInputs` and drain into the next InputMsg (see updateInput()).

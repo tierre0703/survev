@@ -32,6 +32,9 @@ import android.widget.SeekBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class SettingsModal {
     private static final String TAG = "SettingsModal";
 
@@ -54,26 +57,22 @@ public class SettingsModal {
     private final TextView mSfxLabel;
     private final SeekBar mMusicSlider;
     private final TextView mMusicLabel;
-    private final CheckBox mHighRes;
     private final CheckBox mInterpolation;
-    private final CheckBox mLocalRotation;
     private final CheckBox mScreenShake;
     private final CheckBox mAnonNames;
     private final Button mMoveStyleBtn;
     private final Button mAimStyleBtn;
     private final Button mAimLineBtn;
-    private final Button mHudScaleBtn;
-    private final TextView mThemeLabel;
     private final TextView mStatusText;
     private final Button mCloseBtn;
     private final Button mResetBtn;
 
-    private String[] mLocales = {"en", "ru", "de", "fr", "es", "pt", "pl", "tr", "zh", "ja"};
+    // ui::kLocales, fetched from the C++ bridge (localization.ts Locales).
+    private List<Json.LocaleEntry> mLocales = new ArrayList<>();
     private int mLocaleIdx = 0;
-    
-    // HUD scale options
-    private String[] mHudScales = {"Small", "Normal", "Large"};
-    private int mHudScaleIdx = 1;
+    private boolean mMoveLocked = false;
+    private boolean mAimLocked = false;
+    private boolean mAimLine = true;
 
     public SettingsModal(Activity activity) {
         mActivity = activity;
@@ -121,12 +120,20 @@ public class SettingsModal {
 
         // === Language (web: language select dropdown) ===
         addSectionHeader(content, "Language");
-        mLanguageBtn = makeToggleButton("EN");
+        mLocales = Json.parseLocales(SurvBridge.getLocalesJson());
+        if (mLocales.isEmpty()) {
+            Json.LocaleEntry en = new Json.LocaleEntry();
+            en.code = "en";
+            en.name = "English";
+            mLocales.add(en);
+        }
+        mLanguageBtn = makeToggleButton("English");
         mLanguageBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                mLocaleIdx = (mLocaleIdx + 1) % mLocales.length;
-                mLanguageBtn.setText(mLocales[mLocaleIdx].toUpperCase());
-                SurvBridge.setLanguage(mLocales[mLocaleIdx]);
+                mLocaleIdx = (mLocaleIdx + 1) % mLocales.size();
+                Json.LocaleEntry locale = mLocales.get(mLocaleIdx);
+                mLanguageBtn.setText(locale.name);
+                SurvBridge.setLanguage(locale.code);
                 SurvBridge.saveConfig();
             }
         });
@@ -193,35 +200,24 @@ public class SettingsModal {
         addGap(content, dp(6));
 
         // === Graphics section ===
+        // `highResTex` has no native equivalent: the C++ client ships only the
+        // low-res atlases and quality is controlled by the GFX surface tier in
+        // the pause dialog (RenderScale), so the control is absent.
         addSectionHeader(content, "\uD83D\uDCF8 Graphics");
 
-        mHighRes = makeCheckbox("High Resolution Textures", true);
-        mHighRes.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
-                SurvBridge.saveConfig();
-            }
-        });
-        content.addView(mHighRes);
-        
         mInterpolation = makeCheckbox("Client-side Interpolation", true);
         mInterpolation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
+                SurvBridge.setConfigValue("interpolation", checked ? "true" : "false");
                 SurvBridge.saveConfig();
             }
         });
         content.addView(mInterpolation);
-        
-        mLocalRotation = makeCheckbox("Local Player Rotation", true);
-        mLocalRotation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
-                SurvBridge.saveConfig();
-            }
-        });
-        content.addView(mLocalRotation);
-        
+
         mScreenShake = makeCheckbox("Screen Shake Effects", true);
         mScreenShake.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
+                SurvBridge.setConfigValue("screenShake", checked ? "true" : "false");
                 SurvBridge.saveConfig();
             }
         });
@@ -235,9 +231,9 @@ public class SettingsModal {
         mMoveStyleBtn = makeToggleButton("Move Style: Anywhere");
         mMoveStyleBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                String cur = mMoveStyleBtn.getText().toString();
-                if (cur.contains("Locked")) mMoveStyleBtn.setText("Move Style: Anywhere");
-                else mMoveStyleBtn.setText("Move Style: Locked");
+                mMoveLocked = !mMoveLocked;
+                applyTouchStyleButtons();
+                SurvBridge.setConfigValue("touchMoveStyle", mMoveLocked ? "locked" : "anywhere");
                 SurvBridge.saveConfig();
             }
         });
@@ -246,9 +242,9 @@ public class SettingsModal {
         mAimStyleBtn = makeToggleButton("Aim Style: Anywhere");
         mAimStyleBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                String cur = mAimStyleBtn.getText().toString();
-                if (cur.contains("Locked")) mAimStyleBtn.setText("Aim Style: Anywhere");
-                else mAimStyleBtn.setText("Aim Style: Locked");
+                mAimLocked = !mAimLocked;
+                applyTouchStyleButtons();
+                SurvBridge.setConfigValue("touchAimStyle", mAimLocked ? "locked" : "anywhere");
                 SurvBridge.saveConfig();
             }
         });
@@ -257,39 +253,23 @@ public class SettingsModal {
         mAimLineBtn = makeToggleButton("Aim Line: On");
         mAimLineBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                String cur = mAimLineBtn.getText().toString();
-                if (cur.contains("On")) mAimLineBtn.setText("Aim Line: Off");
-                else mAimLineBtn.setText("Aim Line: On");
+                mAimLine = !mAimLine;
+                applyTouchStyleButtons();
+                SurvBridge.setConfigValue("touchAimLine", mAimLine ? "true" : "false");
                 SurvBridge.saveConfig();
             }
         });
         content.addView(mAimLineBtn);
-        
-        mHudScaleBtn = makeToggleButton("HUD Scale: Normal");
-        mHudScaleBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                mHudScaleIdx = (mHudScaleIdx + 1) % mHudScales.length;
-                mHudScaleBtn.setText("HUD Scale: " + mHudScales[mHudScaleIdx]);
-                SurvBridge.saveConfig();
-            }
-        });
-        content.addView(mHudScaleBtn);
         
         addGap(content, dp(6));
 
         // === Game section ===
         addSectionHeader(content, "\uD83C\uDFAE Game");
 
-        mThemeLabel = new TextView(activity);
-        mThemeLabel.setText("Theme: Default");
-        mThemeLabel.setTextColor(Color.WHITE);
-        mThemeLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        mThemeLabel.setPadding(dp(4), dp(4), dp(4), dp(4));
-        content.addView(mThemeLabel);
-
         mAnonNames = makeCheckbox("Anonymize Player Names", false);
         mAnonNames.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
+                SurvBridge.setConfigValue("anonPlayerNames", checked ? "true" : "false");
                 SurvBridge.saveConfig();
             }
         });
@@ -463,41 +443,58 @@ public class SettingsModal {
 
     public boolean isOpen() { return mOpen; }
 
+    private void applyTouchStyleButtons() {
+        mMoveStyleBtn.setText(mMoveLocked ? "Move Style: Locked" : "Move Style: Anywhere");
+        mAimStyleBtn.setText(mAimLocked ? "Aim Style: Locked" : "Aim Style: Anywhere");
+        mAimLineBtn.setText(mAimLine ? "Aim Line: On" : "Aim Line: Off");
+    }
+
     /** Reset all settings to default values */
     private void resetToDefaults() {
-        // Reset language
+        // Language (web default is English, which is not the first Locales entry)
         mLocaleIdx = 0;
-        mLanguageBtn.setText("EN");
+        for (int i = 0; i < mLocales.size(); i++) {
+            if ("en".equals(mLocales.get(i).code)) {
+                mLocaleIdx = i;
+                break;
+            }
+        }
+        if (!mLocales.isEmpty()) {
+            mLanguageBtn.setText(mLocales.get(mLocaleIdx).name);
+        }
         SurvBridge.setLanguage("en");
-        
-        // Reset volumes
+
+        // Volumes (web defaults: master 1, sound 1, music 1).
         mMasterSlider.setProgress(100);
         mSfxSlider.setProgress(100);
-        mMusicSlider.setProgress(60);
+        mMusicSlider.setProgress(100);
         mMasterLabel.setText("100%");
         mSfxLabel.setText("100%");
-        mMusicLabel.setText("60%");
+        mMusicLabel.setText("100%");
         SurvBridge.setAudio("master", 1.0f);
         SurvBridge.setAudio("sound", 1.0f);
-        SurvBridge.setAudio("music", 0.6f);
-        
-        // Reset checkboxes
-        mHighRes.setChecked(true);
+        SurvBridge.setAudio("music", 1.0f);
+
+        // Graphics
         mInterpolation.setChecked(true);
-        mLocalRotation.setChecked(true);
         mScreenShake.setChecked(true);
         mAnonNames.setChecked(false);
-        
-        // Reset toggles
-        mMoveStyleBtn.setText("Move Style: Anywhere");
-        mAimStyleBtn.setText("Aim Style: Anywhere");
-        mAimLineBtn.setText("Aim Line: On");
-        mHudScaleIdx = 1;
-        mHudScaleBtn.setText("HUD Scale: Normal");
-        
+        SurvBridge.setConfigValue("interpolation", "true");
+        SurvBridge.setConfigValue("screenShake", "true");
+        SurvBridge.setConfigValue("anonPlayerNames", "false");
+
+        // Controls (config defaults are "anywhere" + aim line on)
+        mMoveLocked = false;
+        mAimLocked = false;
+        mAimLine = true;
+        applyTouchStyleButtons();
+        SurvBridge.setConfigValue("touchMoveStyle", "anywhere");
+        SurvBridge.setConfigValue("touchAimStyle", "anywhere");
+        SurvBridge.setConfigValue("touchAimLine", "true");
+
         SurvBridge.saveConfig();
         mStatusText.setText("Settings reset to defaults");
-        
+
         Log.i(TAG, "Settings reset to defaults");
     }
 
@@ -505,70 +502,40 @@ public class SettingsModal {
         String config = SurvBridge.getConfigJson();
         if (config == null || config.isEmpty()) return;
 
-        // Language
+        // Language (names come from ui::kLocales via the bridge)
         String lang = Json.peekString(config, "language");
         if (lang != null) {
-            mLanguageBtn.setText(lang.toUpperCase());
-            for (int i = 0; i < mLocales.length; i++) {
-                if (mLocales[i].equals(lang)) { mLocaleIdx = i; break; }
+            for (int i = 0; i < mLocales.size(); i++) {
+                if (mLocales.get(i).code.equals(lang)) {
+                    mLocaleIdx = i;
+                    mLanguageBtn.setText(mLocales.get(i).name);
+                    break;
+                }
             }
         }
 
-        // Volume sliders
-        String master = Json.peekString(config, "masterVolume");
-        if (master != null) { 
-            try { 
-                float mv = Float.parseFloat(master);
-                mMasterSlider.setProgress((int)(mv * 100)); 
-                mMasterLabel.setText(String.format("%.0f%%", mv * 100));
-            } catch (Exception e) {} 
-        }
-        String sfx = Json.peekString(config, "soundVolume");
-        if (sfx != null) { 
-            try { 
-                float sv = Float.parseFloat(sfx);
-                mSfxSlider.setProgress((int)(sv * 100)); 
-                mSfxLabel.setText(String.format("%.0f%%", sv * 100));
-            } catch (Exception e) {} 
-        }
-        String music = Json.peekString(config, "musicVolume");
-        if (music != null) { 
-            try { 
-                float mv = Float.parseFloat(music);
-                mMusicSlider.setProgress((int)(mv * 100)); 
-                mMusicLabel.setText(String.format("%.0f%%", mv * 100));
-            } catch (Exception e) {} 
-        }
+        // Volume sliders: the config stores numbers, not strings.
+        float master = Json.peekFloat(config, "masterVolume", 1.0f);
+        mMasterSlider.setProgress(Math.round(master * 100));
+        mMasterLabel.setText(String.format("%.0f%%", master * 100));
+        float sfx = Json.peekFloat(config, "soundVolume", 1.0f);
+        mSfxSlider.setProgress(Math.round(sfx * 100));
+        mSfxLabel.setText(String.format("%.0f%%", sfx * 100));
+        float music = Json.peekFloat(config, "musicVolume", 1.0f);
+        mMusicSlider.setProgress(Math.round(music * 100));
+        mMusicLabel.setText(String.format("%.0f%%", music * 100));
 
-        // Touch style
-        String moveStyle = Json.peekString(config, "touchMoveStyle");
-        if ("locked".equals(moveStyle)) mMoveStyleBtn.setText("Move Style: Locked");
-        else mMoveStyleBtn.setText("Move Style: Anywhere");
+        // Touch style / aim line (booleans, not strings)
+        mMoveLocked = "locked".equals(Json.peekString(config, "touchMoveStyle"));
+        mAimLocked = "locked".equals(Json.peekString(config, "touchAimStyle"));
+        mAimLine = Json.peekBool(config, "touchAimLine", true);
+        applyTouchStyleButtons();
 
-        String aimStyle = Json.peekString(config, "touchAimStyle");
-        if ("locked".equals(aimStyle)) mAimStyleBtn.setText("Aim Style: Locked");
-        else mAimStyleBtn.setText("Aim Style: Anywhere");
-
-        String aimLine = Json.peekString(config, "touchAimLine");
-        if ("true".equals(aimLine)) mAimLineBtn.setText("Aim Line: On");
-        else mAimLineBtn.setText("Aim Line: Off");
-        
         // Graphics checkboxes
-        String hiRes = Json.peekString(config, "highResTextures");
-        mHighRes.setChecked(hiRes == null || "true".equals(hiRes));
-        
-        String interp = Json.peekString(config, "interpolation");
-        mInterpolation.setChecked(interp == null || "true".equals(interp));
-        
-        String localRot = Json.peekString(config, "localRotation");
-        mLocalRotation.setChecked(localRot == null || "true".equals(localRot));
-        
-        String shake = Json.peekString(config, "screenShake");
-        mScreenShake.setChecked(shake == null || "true".equals(shake));
-        
-        String anon = Json.peekString(config, "anonPlayerNames");
-        mAnonNames.setChecked("true".equals(anon));
-        
+        mInterpolation.setChecked(Json.peekBool(config, "interpolation", true));
+        mScreenShake.setChecked(Json.peekBool(config, "screenShake", true));
+        mAnonNames.setChecked(Json.peekBool(config, "anonPlayerNames", false));
+
         mStatusText.setText("");
     }
 

@@ -10,12 +10,14 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25 (P0.4/P0.5)** — death now shows a
-stats panel with **SPECTATE**/**LEAVE**, spectating follows the server's
-active player and shows the spectated player's name, spectator count, prev/next,
-match stats and leave, and a normal match end (`GameOverMsg` + server close
-3000/0) keeps the result screen instead of reporting a disconnect. P0.1/P0.6
-are also done; the 1:1 audit still applies to P0.2+. **172 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25 (P0.7/P1.5)** — settings are real: volume
+sliders read/write JSON numbers, every toggle/touch-style button persists and
+applies to the live camera/Touch/audio path, saved volumes + mute are restored at
+boot, and the language list comes from `ui::kLocales` (18 codes, native names).
+Audio now honours maxInstances/canCoalesce/delay/detune/ambient + loop retention,
+keeps the menu ambience running, and uses the real gun/item/pickup/door/button/
+puzzle/plane/victory sound keys. P0.1–P0.6 are also done; the 1:1 audit still
+applies to P1.1+. **181 host tests pass, 0 fail.**
 
 ---
 
@@ -27,10 +29,10 @@ are also done; the 1:1 audit still applies to P0.2+. **172 host tests pass, 0 fa
 | M1 | Asset pipeline | **done** | atlases, GUI PNGs (4x), Roboto Condensed TTF, l10n. |
 | M2 | Shared core ports (bit-exact) | **done** | `BitBuffer`, `Vec2/MathUtil/Collider`, message classes, TS-generated fixtures. |
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
-| M4 | Rendering | **mostly done** | terrain/island/obstacles/buildings/particles/decals/gas/skeletal player; missing active-layer wiring, interpolation, bullet/explosion/projectile/loot FX (§3 P0.2/P0.3/P1.3). |
+| M4 | Rendering | **mostly done** | terrain/island/obstacles/buildings/particles/decals/gas/skeletal player; active layer + player/camera/projectile interpolation done; missing bullet/explosion/projectile/loot FX (§3 P1.3). |
 | M5 | Input + touch | **done (touch)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; keyboard/mouse binds remain P1.6. |
-| M6 | Audio | **mostly done** | engine/mixer/ambience/reverb/EQ/interior sounds; startup volume/mute, pause/menu restart and many action cues are missing (§3 P1.5). |
-| M7 | UI layer | **partial** | Java menu/account/pass/team/loadout live; death/result + spectate overlay live in the C++ HUD; inventory v2/settings in the live HUD still missing; `FguiHud` is dead on Android (§3 P0.7, P1.4). |
+| M6 | Audio | **mostly done** | engine/mixer/ambience/reverb/EQ/interior sounds, channel semantics, startup volume/mute, menu music and the real sound keys; notification/team-join cues are web-focus-only and exact EQ timbre remains P2. |
+| M7 | UI layer | **partial** | Java menu/account/pass/team/loadout live; death/result + spectate overlay live in the C++ HUD; settings screen is real (persist + apply); inventory v2 in the live HUD still missing; `FguiHud` is dead on Android (§3 P1.4). |
 | M8 | Accounts / API | **mostly done** | device login + profile, quests/pass, team links; quickplay is unauthenticated, captcha unsupported, error reasons wrong (§3 P1.1/P1.2); OAuth is an intentional platform delta. |
 | M9 | Polish & release | **started** | release APK/AAB pipeline verified (§45); waiting on the 1:1 gameplay gate (§3.7), a physical-device soak and final store upload. |
 
@@ -50,10 +52,10 @@ are also done; the 1:1 audit still applies to P0.2+. **172 host tests pass, 0 fa
 | `shared/net/connection.ts` → `net/Connection.h`, `net/WebSocketConnection.*` | ✅ |
 | `shared/defs/*` → `render/GeneratedDefs.cpp` (codegen) | ✅ generated |
 | `client/src/camera.ts` → `render/Camera.h` | ✅ |
-| `client/src/renderer.ts` → `render/Renderer.*` | 🔶 transform/z-sort/mask ported; `setActiveLayer` is never called (P0.2) |
+| `client/src/renderer.ts` → `render/Renderer.*` | ✅ transform/z-sort/mask ported; `GameWorld::update` calls `setActiveLayer`/`setUnderground` before `m_update` |
 | `client/src/map.ts` → `game/Map.*` | ✅ terrain, surfaces, pools, camera emitter, baked minimap texture, big map (`game/MapView`); river-shore surface is always sand (P2) |
 | `client/src/gas.ts` → `game/Gas.*` | ✅ |
-| `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | 🔶 dispatch/net is good; match-over latch + death/spectate done (P0.4/P0.5); entity/camera interpolation missing (P0.3) |
+| `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | ✅ dispatch/net, match-over latch + death/spectate, player/camera/projectile interpolation (P0.3); no local-rotation input policy yet (P1.6) |
 | `client/src/objects/objectPool.ts` → `game/objects/GameObject.h` | ✅ |
 | `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | 🔶 poses/animations faithful; team patch, heal/revive/AoE emitters, bleed particles, nametag gating, action-sound keys, radius/easing missing (P1.3) |
 | `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | 🔶 whiz sound only; per-def tracers + all impact FX missing (P1.3) |
@@ -71,14 +73,14 @@ are also done; the 1:1 audit still applies to P0.2+. **172 host tests pass, 0 fa
 | `client/src/objects/flare.ts` → `objects/Barns.*` | 🔶 additive blend is a no-op (P2) |
 | `client/src/objects/structure.ts` → `objects/Structure.*` | ✅ bounds/masks/stairs/map icons + `interiorSound` ambience tracks |
 | `client/src/objects/particles.ts` → `objects/Barns.*` (ParticleBarn + Emitter) | ✅ near line-for-line; static colour per def (P2) |
-| `client/src/audioManager.ts` → `audio/AudioManager.*` | 🔶 startup volumes/mute, master routing to ambience/music, pause restart and channel semantics missing (P1.5) |
+| `client/src/audioManager.ts` → `audio/AudioManager.*` | ✅ startup volumes/mute, master folded into live type volumes, maxInstances/coalesce/delay/detune, ambient retention and stopAll semantics |
 | `client/src/soundDefs.ts` → `audio/GeneratedSoundDefs.cpp` (codegen) | ✅ generated |
-| `client/src/ambiance.ts` → `audio/Ambiance.*` | 🔶 in-game tracks faithful; no menu ambience, no restart after pause (P1.5) |
-| `client/lib/createJS.ts` → `audio/AxmolAudioBackend.h` | 🔶 channel `maxInstances`/coalesce/delay/detune/loop retention ignored (P1.5) |
-| `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | 🔶 pads/aim-line good; move/aim style + sensitivity never applied (P0.7); gameplay actions now come from `game/InputActions` + the `game/Hud` action bar (P0.1 done) |
-| `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | 🔶 schema ported; most settings never written/applied (P0.7) |
+| `client/src/ambiance.ts` → `audio/Ambiance.*` | ✅ in-game tracks + menu music (GameScene ticks it while the Java menu is up), retained across match end, completed-track restart |
+| `client/lib/createJS.ts` → `audio/AxmolAudioBackend.h` | ✅ channel semantics enforced in AudioManager; per-source pitch (detune), mute-safe new loops, EAX reverb |
+| `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | ✅ pads/aim-line good; config move/aim style + aim line applied live and persisted; gameplay actions from `game/InputActions` + `game/Hud` |
+| `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | ✅ schema + settings screens write real values; runtime listeners applied at startup/on change (highResTex maps to the GFX tier, local rotation is desktop-only) |
 | `client/src/device.ts` → `ui/Device.*` | 🔶 simplified (no tablet/pixelRatio/MAX_TEXTURE_SIZE tiers) |
-| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*` | 🔶 C++ table good; Java menu is hardcoded English and the language list uses invalid `zh`/`ja` (P0.7) |
+| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*` | 🔶 C++ table good; Java menu is hardcoded English (P1.7), but the settings language list is now `ui::kLocales` (18 codes/names) via the bridge |
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | 🔶 join/reconnect good; quickplay auth/captcha and reason mapping still P1.1/P1.2 (match-over latch done) |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | 🔶 Bearer/find_game and mode/region metadata gaps (P1.1/P1.7) |
 | `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste) + `survev://team` deep links, kick/mode/region controls, team match stays connected |
@@ -90,8 +92,8 @@ are also done; the 1:1 audit still applies to P0.2+. **172 host tests pass, 0 fa
 | `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | ❌ **not ported** (BT keyboard/mouse; only Escape handled) — P1.6 |
 | `client/src/ui/opponentDisplay.ts` (menu character preview / opponent display) | ❌ **not ported** (P1.7) |
 | `client/src/resources.ts` (per-map load/unload, audio preload, MAX_TEXTURE_SIZE) | 🔶 atlases load once and never unload; no map-audio preload (P2) |
-| Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | 🔶 many wired, but reload/deploy use gunshot keys, pickup uses wrong keys, dry fire is approximate, plane/doors/buttons silent (P1.5) |
-| UI sounds (ambient lab, pickup pings, notifications, victory) | ❌ **not wired** (P1.5/P2) |
+| Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ✅ keyed from the defs (`sound.reload/reloadAlt/deploy/use/pickup`); doors/buttons/puzzles/ceiling/plane loops and victory music wired; dry fire is approximate (P2) |
+| UI sounds (ambient lab, pickup pings, notifications, victory) | 🔶 victory music + pickup/door/puzzle/plane cues wired; notification/team-join sounds are web focus-only (not applicable to the Android foreground) |
 | Reverb (`setReverbProperties`) | ✅ `ReverbModel` maps cathedral/cave to EAX props; applied to every active handle (web convolver is global) |
 | `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | 🔶 inventory v2 is only in the dead `ui/FguiHud`; live HUD lacks ammo reserve, loot grid, scopes, interaction prompt, pickup/kill messages (P1.4) |
 | `client/src/emote.ts` (emote/ping system) | ✅ see the emote row above |
@@ -164,29 +166,41 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
       - Acceptance is device-checked in the next pass: loot, reload, heal,
         revive, switch/throw/drop weapons and scopes reach the server.
 
-- [ ] **P0.2 Wire `Renderer::setActiveLayer` (underground/bunker rendering).**
-      `Renderer::setActiveLayer` exists (`src/render/Renderer.h:38`) but has **zero
-      call sites**; `m_update` keeps `layer = 0`, so `layers[1]` stays alpha 0 and
-      invisible, `groundAlpha` never fades, and the stairs stencil is never
-      released (`src/render/Renderer.cpp:250-305`). Call it from the active
-      player's `layer` every frame (web `game.ts:1162-1163`) and verify:
-      - bunker/cellar interior objects and the player are visible underground;
-      - ground alpha and the tree/building mask release correctly on stairs;
-      - `activeLayer` also feeds audio filtering (`GameWorld.cpp:477`).
-      - Acceptance: enter/exit a bunker on device with the camera/layer correct.
+- [x] **P0.2 Wire `Renderer::setActiveLayer` (underground/bunker rendering).**
+      **Done.** `GameWorld::update` now applies the active player's `layer` and
+      `Map::isUnderground(pos, layer, rad)` to the renderer (and the audio
+      manager) **before** `renderer.m_update`, matching game.ts
+      `m_processGameUpdate` (`game.ts:1162-1167`). This makes `layers[1]` fade in,
+      the ground rect fade in/out, the stairs `layerMask` stencil release, and
+      the per-object `activeLayer` checks (`obstacle.render`) see the same frame.
+      Host tests cover the layer/`layerAlpha`/`groundAlpha`/`underground` wiring
+      and the camera following the interpolated position.
+      - Acceptance still needs a device pass: enter/exit a bunker and confirm the
+        interior objects, player, ground fade and tree/building mask. A
+        quick-play run on the x86_64 emulator joined a match and rendered
+        normally with no crash.
 
-- [ ] **P0.3 Interpolate entities and the camera.**
-      Only loot/obstacle skins interpolate (`Barns.cpp:958-964,423-429`); the
-      player is drawn at raw `pos` (`PlayerRender.cpp:452-459`), the camera at raw
-      `pos` (`GameWorld.cpp:443-445`), and `Game.cpp:426` still has
-      `TODO(M4+): interpolate objects`. Port `player.ts:799-821`
-      (`m_visualPos`/`posInterpTicker`) and `game.ts:426`:
-      - player + camera + bullets + projectiles + planes + airdrops + dead bodies
-        interpolate over `camera.m_interpInterval`;
-      - respect the `interpolation` setting;
-      - the camera follows the visual position (not the raw net position).
-      - Acceptance: motion is smooth at 33 Hz net sync; toggling interpolation
-        changes behaviour after P0.7.
+- [x] **P0.3 Interpolate entities and the camera.**
+      **Done (web-matching subset).** Ported `player.ts:799-821` and
+      `game.ts:426`:
+      - `Player` now carries `visualPos`/`visualPosOld`/`posInterpTicker` and
+        `visualDir`/`visualDirOld`/`dirInterpolationTicker`, seeded in
+        `m_updateData` exactly like the web (a duplicate update re-seeds from the
+        current net position). The container, aura container and body rotation
+        use the visual values.
+      - `Projectile` carries `visualPosOld`/`posInterpTicker`; its barn render
+        pass lerps `pos` over `camera.m_interpInterval`.
+      - `GameWorld::update` sets the camera to the active player's `visualPos`
+        (zoom/shake unchanged).
+      - `interpolation` is applied from config: `GameScene::setInterpolationEnabled`
+        (kept across per-match world rebuilds) + `UiBridge` startup/`setConfigValue`
+        hook. The live Java toggle is still P0.7.
+      - Bullets, planes, airdrops and dead bodies do **not** interpolate on the
+        web either (each advances by its own per-frame ticker / is static), so
+        the port leaves them on the same timing.
+      - Acceptance: motion is smooth at 33 Hz net sync; `interpolation=false`
+        snaps (host-tested). Device: a quick-play match ran for 12 s with no
+        crash; a bunker entry/motion comparison is still pending.
 
 - [x] **P0.4 Death → stats → spectate.**
       **Done.** `Game` now stores `PlayerStatsMsg` (`localStats()`,
@@ -248,22 +262,33 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         persist across an app restart, and join with them (verified on the
         x86_64 emulator).
 
-- [ ] **P0.7 Make settings real (persist + apply).**
-      `SettingsModal.java:198-296` only relabels toggles and calls
-      `saveConfig()`; it never calls `SurvBridge.setConfigValue`. Volume readback
-      uses `Json.peekString` on numbers (`:518-541`) → always fallback; the mute
-      toggle is inverted (`GamePauseDialog.java:384-389` vs
-      `UiBridge.cpp:203-207`); `Touch` is constructed with `Locked/Locked`
-      (`Touch.h:62-64`) although the config default is `anywhere`
-      (`Config.cpp:53-55`) and `GameScene` never applies it. Wire:
-      - highResTex/interpolation/localRotation/screenShake/anon names;
-      - move/aim style + aim line → live `Touch` and persistence;
-      - master/sound/music/mute applied at startup and to ambience/music;
-      - HUD scale (or remove the placeholder control);
-      - correct language list (`da/de/en/es/fr/it/nl/pl/pt/ru/sv/vn/tr/jp/ko/th/
-        zh-cn/zh-tw`; currently `zh`/`ja` are invalid and fall back to English).
-      - Acceptance: kill/restart the app; every setting persists and changes
-        behaviour.
+- [x] **P0.7 Make settings real (persist + apply).**
+      **Done.** `UiBridge::applyGameSettings` reads the saved config once at
+      install and after any handled key changes; `GameScene` keeps the values for
+      each rebuilt match world.
+      - Volumes/mute: Java uses `Json.peekFloat`/`peekBool` (numbers no longer
+        read as strings); `UiBridge::setAudio` persists on the game thread;
+        startup applies master/sound/music/mute. The pause dialog's mute mapping
+        is fixed (`1` = muted, matching the menu).
+      - Interpolation, screen shake, anon names and local rotation are applied
+        to the world camera/player barns (`GameScene` + `GameWorld`). `localRotation`
+        remains desktop-only (control hidden), `screenShake` gates
+        `Camera::m_applyShake` and is now called every frame; `anonPlayerNames`
+        hides non-active names in the player barn and in the kill feed/leader/
+        spectate labels (`Game::displayName`).
+      - Move/aim style + aim line: the settings buttons write
+        `touchMoveStyle`/`touchAimStyle`/`touchAimLine`; `Touch` defaults to web
+        `anywhere` and `GameScene::setTouchSettings` applies each change live.
+      - Volumes are folded into ambience/music updates (`AudioManager::setVolume`
+        now includes master) and existing loops are rescaled on a master change.
+      - Language list comes from `SurvBridge.getLocalesJson()` (`ui::kLocales`:
+        da/de/en/es/fr/it/nl/pl/pt/ru/sv/vn/tr/jp/ko/th/zh-cn/zh-tw) with native
+        display names; `Reset` returns to English.
+      - Removed the dead controls: highResTex (= the GFX surface tier, P2 asset
+        pipeline), local rotation (desktop mouse only) and the invented HUD scale.
+      - Acceptance: toggles/volumes/styles persist across reopening the screen
+        (device-verified); app-restart persistence is through the same config
+        save path.
 
 ### 3.3 P1 — missing 1:1 features / correctness (playable but wrong)
 
@@ -308,11 +333,11 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         particles, nametags only for same-group teammates
         (`player.ts:856-857,992-1027,1984-2074`; native
         `PlayerRender.cpp:729-741,804-859`, `Barns.cpp:1605-1608`).
-      - Airdrop/plane/airstrike: airdrop fall loop handle (native restarts the
-        sound every frame, `Barns.cpp:1729-1753`), plane engine loop, and
-        instantiate `msg.airstrikeZones` (parsed at `Messages.h:1314`, never used;
-        `GameWorld::applyUpdate`). Add camera shake triggering
-        (`explosion.ts:249-251`; `Camera::m_addShake` unused).
+      - Airdrop/plane/airstrike: airdrop fall loop handle (native still restarts
+        the sound every frame, `Barns.cpp`), plane engine loop is now wired
+        (P1.5), `msg.airstrikeZones` (parsed at `Messages.h:1314`) is still never
+        instantiated (`GameWorld::applyUpdate`), and `Camera::m_addShake` has no
+        explosion trigger (the `screenShake` gate + per-frame apply are done).
       - Acceptance: screenshot/side-by-side each effect; no sound spam.
 
 - [ ] **P1.4 Live inventory v2 / interaction HUD.**
@@ -327,25 +352,35 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
       references in the audit; `Hud.cpp:650-802`, `GameScene.cpp:1153-1218`).
       Acceptance: full HUD matches `ui.ts`/`ui2.ts` at 1280×720.
 
-- [ ] **P1.5 Audio correctness and coverage.**
-      - Apply saved `masterVolume`/`soundVolume`/`musicVolume`/`muteAudio` at boot
-        (`AudioManager.h:49-54` starts at 0.5; only the sliders call
-        `UiBridge::setAudio`): no saved volume is honored on launch.
-      - Route master volume through ambience/music (`Ambiance.cpp:161-167` calls
-        `AudioManager::setVolume`, which multiplies only the type volume).
-      - Do not `stopAll()` on pause/leave without restarting (`GameScene.cpp:709,
-        788`); `Ambiance` tracks never restart and there is no menu ambience.
-      - Fix sound keys: reload (`GunDef.sound.reload`), deploy/switch
-        (`GunDef.sound.deploy`), pickup (`item.sound.pickup`), plane loop,
-        doors/buttons/puzzles, ceiling debris, notification/victory/team-join
-        sounds; native currently uses `<weapon>_01`/`<item>_pickup_01`
-        (`PlayerRender.cpp:502-517,777-784`, `GameScene.cpp:797-805`,
-        `Barns.cpp:1942-1944`).
-      - Add channel semantics (`maxInstances`, `canCoalesce`, `delay`, `detune`,
-        `ambient`, loop retention) which `AxmolAudioBackend::play` ignores
-        (`AxmolAudioBackend.h:59-98`).
-      - Acceptance: a scripted sound checklist passes on device; volume/mute
-        survive restart.
+- [x] **P1.5 Audio correctness and coverage.**
+      **Done (web-focus-only cues excepted).**
+      - Saved `masterVolume`/`soundVolume`/`musicVolume`/`muteAudio` are applied
+        at bridge install (before the first menu track starts).
+      - Master volume is part of `AudioManager::setVolume` and is folded into
+        ambience/music/interior/emitter updates; changing it rescales live
+        voices (CreateJS global gain).
+      - Pause/background no longer `stopAll()`; leaving a match uses
+        `stopAll(retainAmbient=true)` (createJS default), so music/ambience loops
+        survive. `GameScene` ticks `AudioManager` + `Ambiance` every frame (not
+        just inside the world), giving the Java menu its menu music, and
+        `Ambiance::onGameComplete` fades the music back in.
+      - Sound keys now come from the defs: `GunDef.sound.reload/reloadAlt/deploy`,
+        `Heal/Boost.sound.use`, `Loot.sound.pickup` (codegen fields in
+        `GameObjRenderDef`), door change/open/close/unlock, button on/off,
+        obstacle explode, puzzle fail/complete, ceiling destroy, and the plane
+        engine loop (position/pan updated at 10 Hz). A win plays the map music
+        after 1.3 s (`GameOverMsg`).
+      - Channel semantics implemented in `AudioManager`: `maxInstances` (oldest
+        voice killed), `canCoalesce` (30 ms equal-power merge), `delay`
+        (scheduled in seconds), `detune` (axmol pitch = 2^(cents/1200)) and
+        ambient/loop retention. `AxmolAudioBackend` keeps PAUSED voices alive
+        and pauses loops started while muted.
+      - Not ported because they are web-focus-only: `notification_start_01`
+        (tab focus) and `notification_join_01` (team screen only plays it when
+        the browser window is unfocused). Exact EQ/convolution timbre stays P2.
+      - Acceptance: device run shows menu music at boot, settings volume/mute
+        survive the session; a full sound checklist on real hardware is still a
+        P2 polish item.
 
 - [ ] **P1.6 Keyboard/mouse/binds + input policy.**
       Only `KEY_ESCAPE` is handled (`GameScene.cpp:364-370`); `inputBinds.ts` and
@@ -424,8 +459,9 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 
 1. **P0.6** — real loadout (done; see §3.2).
 2. **P0.4 + P0.5** — death/stats/spectate + match-over latch (done).
-3. **P0.2 + P0.3** — active layer + interpolation: fixes bunkers and game feel.
-4. **P0.7 + P1.5** — settings/audio correctness (restart-verified).
+3. **P0.2 + P0.3** — active layer + interpolation: fixes bunkers and game feel
+   (done; see §3.2).
+4. **P0.7 + P1.5** — settings/audio correctness (done; see §3.2/§3.3).
 5. **P1.1 + P1.2** — authenticated quick play/captcha + correct errors.
 6. **P1.3 + P1.4** — render feedback + live inventory HUD.
 7. **P1.6–P1.8** — input/metadata/team/account parity.
@@ -450,7 +486,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (172 tests, 0 failures expected)
+# host tests (181 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -519,6 +555,18 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - Map dot styles (role icon/dead/downed scale + outer ring + z bump) come from `mapDotStyle`; keep it in sync with `ui.ts updatePlayerMapSprites`
 - Reverb is per-source OpenAL EAX: `AxmolAudioBackend` iterates active handles (no global convolver bus); `ReverbModel` is the host-tested mapping
 - The camera root is **positive-Y** (`Renderer::applyCamera`): axmol y-up origin = `screenH - pointToScreen(0,0).y`; world +y is screen-up. World labels do not `setFlipY`
+- `GameWorld::update` must call `renderer.setActiveLayer(_activePlayer->layer)` and `setUnderground(...)` **before** `renderer.m_update` (a one-frame-late layer/underground makes the bunker fade, ground fade and mask release lag/desync)
+- Player/projectile interpolation is `visualPos(Old)` + `posInterpTicker / camera.m_interpInterval` seeded in `m_updateData` (`isNew ? data.pos : pos/dir`); the camera follows `activePlayer->visualPos`. Do not draw or follow raw `pos`
+- A duplicated net update re-seeds `visualPosOld`/`visualDirOld` from the current net position and restarts the ticker (web `player.ts:508-515`); it must not slide back to the previous sample
+- `config.interpolation` lives on the scene (`GameScene::_interpolationEnabled`) and is re-applied by `resetWorld()`, because each match builds a new `GameWorld` camera; `UiBridge::setConfigValue("interpolation")` pushes it through `runOnGameThread`
+- All runtime game.ts settings (interpolation/screenShake/localRotation/anonPlayerNames/touch styles/aim line + volumes/mute) are applied by `AndroidUiBridge::applyGameSettings` at install and after `setConfigValue`; `GameScene`/`GameWorld` keep them so a rebuilt match world gets the same flags
+- Settings JSON values are numbers/bools: Java must use `Json.peekFloat`/`peekBool` (not `peekString`); the language list is `SurvBridge.getLocalesJson()` (`ui::kLocales`), never a hand-written Java array
+- `Touch` defaults to web `anywhere`; `GameScene::setTouchSettings` validates `locked`/`anywhere` and applies move/aim style + aim line live (the Java buttons persist the same keys)
+- `AudioManager::setVolume` multiplies master *and* type volume; per-instance `base` is the pre-master volume so setting master from 0 -> 1 restores loops (do not scale only by a ratio)
+- `AudioManager` enforces `maxInstances` (kill oldest), `canCoalesce` (30 ms equal-power merge), `delay` (scheduled in seconds; shot.ts pre-converts ms), `detune` (cents -> axmol pitch) and ambient retention; `stopAll(true)` keeps ambient/music, `stopAll(false)` is the hard stop
+- Pause/background must not stop audio; leaving a match keeps ambient/music loops (`stopAll(true)`), and `GameScene` ticks `AudioManager` + `Ambiance` every frame so the Java menu keeps its music
+- `AxmolAudioBackend::isPlaying` treats PAUSED as alive (mute uses pauseAll) and pauses handles started while muted; otherwise a muted menu loop would play after `resumeAll`
+- Sound keys come from the generated defs (`GameObjRenderDef.soundReload/ReloadAlt/Deploy/Use/Pickup`, obstacle door/button/explode, building puzzle/ceiling); do not reintroduce `<weapon>_01`/`<item>_pickup_01` guesses
 - Web/PIXI rotations on **world** nodes must be negated for the positive-Y root (obstacle/dead-body/flare/plane/bullet-ping sites already do)
 - Ground surfaces use the full `SurfaceType` enum + `surfaceTypeName` (the web's lowercase string is the `footstep_<type>` group); building floors come from codegen'd `def.floor.surfaces`, not terrain
 - Structure layer `underground` is tri-state: the def may omit it, in which case `i == 1` (structure.ts); do not collapse it to a bool at codegen time

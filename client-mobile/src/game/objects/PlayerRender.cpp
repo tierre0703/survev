@@ -64,6 +64,15 @@ void heldSprite(pix::Sprite* sprite, const HeldImageDef& def) {
 
 void Player::m_init() {
     dead = downed = false;
+    // player.ts m_init(): interpolation state starts at the origin and is
+    // seeded from the first net update (isNew) so a respawn never slides in
+    // from the previous life's position.
+    visualPos = Vec2();
+    visualPosOld = Vec2();
+    visualDir = Vec2();
+    visualDirOld = Vec2();
+    posInterpTicker = 0.0f;
+    dirInterpolationTicker = 0.0f;
     animType = currentAnim = Anim_None;
     animSeq = -1;
     animTicker = 0.0f;
@@ -121,6 +130,16 @@ void Player::m_free() {
 }
 
 void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) {
+    // player.ts m_updateData: remember where the visual position started before
+    // the net position moves. A duplicated update keeps the current ticker.
+    if (!v2Eq(data.pos, visualPosOld)) {
+        visualPosOld = isNew ? data.pos : pos;
+        posInterpTicker = 0.0f;
+    }
+    if (!v2Eq(data.dir, visualDirOld)) {
+        visualDirOld = isNew ? data.dir : dir;
+        dirInterpolationTicker = 0.0f;
+    }
     pos = data.pos;
     dir = data.dir;
     if (!fullUpdate) return; // partial updates must not erase gear/animation state
@@ -449,10 +468,25 @@ void Player::update(float dt, Ctx& ctx) {
         meleeSprite->setScale(img.scale.x / scale, img.scale.y / scale);
     }
     bodyContainer->setScale(scale, scale);
-    bodyContainer->setRotation(-std::atan2(dir.y, dir.x));
-    // player.ts renders the container at the player's world position; the camera
-    // transform lives on the world root.
-    container->setPosition(pos.x, pos.y);
+    // player.ts update(): interpolate the render position/direction between the
+    // previous and the current net position over camera.m_interpInterval. The
+    // camera follows m_visualPos, so this is what makes 33 Hz motion smooth.
+    if (ctx.camera().m_interpEnabled) {
+        posInterpTicker += dt;
+        const float interval = ctx.camera().m_interpInterval;
+        const float posT = interval > 0.0f ? std::clamp(posInterpTicker / interval, 0.0f, 1.0f) : 1.0f;
+        visualPos = v2Lerp(posT, visualPosOld, pos);
+        dirInterpolationTicker += dt;
+        const float dirT = interval > 0.0f ? std::clamp(dirInterpolationTicker / interval, 0.0f, 1.0f) : 1.0f;
+        visualDir = v2Lerp(dirT, visualDirOld, dir);
+    } else {
+        visualPos = pos;
+        visualDir = dir;
+    }
+    bodyContainer->setRotation(-std::atan2(visualDir.y, visualDir.x));
+    // player.ts renders the container at the player's visual world position;
+    // the camera transform lives on the world root.
+    container->setPosition(visualPos.x, visualPos.y);
     // player.ts: container.scale = camera.m_pixels(1) = m_zoom. The port keeps
     // the container in world units under the camera-transformed root, so the
     // equivalent world scale is m_zoom / (m_ppu * m_zoom) = 1 / m_ppu.
@@ -498,23 +532,27 @@ void Player::update(float dt, Ctx& ctx) {
             const GameObjRenderDef* prevWeapon = item(_prevActiveWeapon);
             const GameObjRenderDef* newWeapon = item(activeWeapon);
             if (newWeapon && (newWeapon->category == "melee" || newWeapon->category == "throwable")) {
-                // Melee/throwable deploy sound (player.ts ~line 1042).
-                audio::PlaySoundOptions opts;
-                opts.channel = "sfx";
-                opts.hasSoundPos = true;
-                opts.soundPos = pos;
-                opts.fallOff = 3.0f;
-                audio->playSound(newWeapon->type + "_01", opts);
+                // player.ts: itemDef.sound.deploy (melee/throwable equip).
+                const std::string& deploySound = newWeapon->soundDeploy;
+                if (!deploySound.empty()) {
+                    audio::PlaySoundOptions opts;
+                    opts.channel = "sfx";
+                    opts.hasSoundPos = true;
+                    opts.soundPos = pos;
+                    opts.fallOff = 3.0f;
+                    audio->playSound(deploySound, opts);
+                }
             } else if (newWeapon && newWeapon->category == "gun") {
-                // Gun switch sound (player.ts ~line 1058).
+                // player.ts: gun_switch_01 for a quick swap, the gun's
+                // def.sound.deploy when the full deployment animation plays.
                 std::string switchSound = "gun_switch_01";
                 bool deployFull = false;
-                // Check same deploy group (simplified: always use deploy sound if previous was also gun).
-                if (prevWeapon && prevWeapon->category == "gun") {
+                if (prevWeapon && prevWeapon->category == "gun" &&
+                    !newWeapon->soundDeploy.empty()) {
                     deployFull = true;
                 }
                 if (deployFull) {
-                    switchSound = newWeapon->type + "_01";  // weapon type maps to shoot sound group
+                    switchSound = newWeapon->soundDeploy;
                 }
                 if (cycleSoundInstance != audio::kInvalidSound) {
                     audio->stopSound(cycleSoundInstance);
@@ -720,7 +758,7 @@ void Player::update(float dt, Ctx& ctx) {
     }
     if (auraContainer) {
         ctx.renderer().addPIXIObj(auraContainer, renderLayer, zOrd - 1, zIdx);
-        auraContainer->setPosition(pos.x, pos.y);
+        auraContainer->setPosition(visualPos.x, visualPos.y);
         auraContainer->setScale(1.0f / ctx.camera().m_ppu, 1.0f / ctx.camera().m_ppu);
         auraContainer->setVisible(auraVisible && auraCircle && auraCircle->getSortOrd() >= 0);
     }
@@ -770,23 +808,19 @@ void Player::updateActions(int actionType, const std::string& actionItem, Ctx& c
         // Since updateActions is called from m_updateData which has a Ctx&,
         // we store it in a context-aware way. Use the stored reference.
         if (actionType == Action_UseItem && !actionItem.empty()) {
-            // Use item type from actionItem directly: e.g. "bandage" -> "bandage_use_01",
-            // "healthkit" -> "healthkit_use_01", "soda" -> "soda_use_01", "pills" -> "pills_use_01"
-            soundName = actionItem + "_use_01";
+            // player.ts: HealDef/BoostDef.sound.use (no string guessing).
+            soundName = actionItemDef ? actionItemDef->soundUse : std::string();
             channel = ctx.activePlayer() == this ? "activePlayer" : "otherPlayers";
         } else if (actionType == Action_Reload || actionType == Action_ReloadAlt) {
-            // Reload sound uses weapon type: e.g. "ak47" -> "ak47_01" (reload is shoot prefix)
-            // The web client uses GunDef.sound.reload directly.
-            // For now, use the item as a prefix with _reload_01 convention.
-            if (!actionItem.empty()) {
-                soundName = actionItem + "_01";  // placeholder - actual reload sound names differ
+            // player.ts: GunDef.sound.reload / reloadAlt.
+            if (actionItemDef) {
+                soundName = actionType == Action_ReloadAlt ? actionItemDef->soundReloadAlt
+                                                           : actionItemDef->soundReload;
             }
             channel = ctx.activePlayer() == this ? "activePlayer" : "otherPlayers";
         }
-        // The web client looks up HealDef/BoostDef.sound.use, GunDef.sound.reload etc.
-        // Since GameObjRenderDef doesn't carry this, we use the item type as a
-        // sound key prefix. The actual sound names are item-specific (e.g. bandage_use_01).
-        // For now, play a group based on action type.
+        // The web client looks up HealDef/BoostDef.sound.use, GunDef.sound.reload
+        // etc. directly from the item def.
         if (!soundName.empty()) {
             audio::PlaySoundOptions opts;
             opts.channel = channel;

@@ -54,6 +54,8 @@ public:
     // --- read-only snapshots ------------------------------------------------
     // Flattened table for the current locale ({"key": "text"}).
     virtual std::string l10nJson() = 0;
+    // Language list for the settings dropdown: [{"code","name"}, ...].
+    virtual std::string localesJson() { return "[]"; }
     virtual std::string loadoutJson() = 0;
     // Owned loadout items with shared-def metadata (type/category/name/lore/
     // sprite/rarity) for the Java customize screen: a JSON array.

@@ -1217,10 +1217,9 @@ void Hud::update(float dt, const Game& game, bool visible) {
             if (!wasSpectating) {
                 _specStatsShown = false;
             }
-            std::string name = "Player";
-            const auto it = game.allPlayerInfo().find(game.getActivePlayerId());
-            if (it != game.allPlayerInfo().end() && !it->second.name.empty()) {
-                name = it->second.name;
+            std::string name = game.displayName(game.getActivePlayerId());
+            if (name.empty()) {
+                name = "Player";
             }
             if (name != _specName) {
                 _specName = name;
@@ -1380,9 +1379,7 @@ void Hud::update(float dt, const Game& game, bool visible) {
     // --- Kill leader (game.ts msg.killLeaderDirty) ---
     std::string leaderText;
     if (const uint16_t leaderId = game.killLeaderId()) {
-        const auto& infos = game.allPlayerInfo();
-        const auto it = infos.find(leaderId);
-        const std::string name = it != infos.end() ? it->second.name : std::string("Kill Leader");
+        const std::string name = game.displayName(leaderId);
         leaderText = "Kill Leader: " + name + " (" + std::to_string(game.killLeaderKills()) + ")";
     }
     if (leaderText != _lastKillLeader) {

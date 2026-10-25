@@ -129,6 +129,13 @@ void Ambiance::onGameComplete(AudioManager& audio) {
     if (Track* river = getTrack("river")) {
         river->weight = 0.0f;
     }
+    // Android has no menu scene of its own: the same Ambiance instance ticks
+    // while the Java menu is up. Fade the menu music back in (the loop was kept
+    // alive by AudioManager::stopAll(true)).
+    introMusic = true;
+    if (Track* music = getTrack("music")) {
+        music->weight = 0.0f;
+    }
 }
 
 void Ambiance::update(float dt, AudioManager& audio, bool inGame) {

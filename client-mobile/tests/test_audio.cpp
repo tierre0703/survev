@@ -9,6 +9,7 @@
 #include "audio/ReverbModel.h"
 #include "audio/SoundDefs.h"
 
+#include <cmath>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -26,12 +27,17 @@ public:
         float volume = 0.0f;
         float pan = 0.0f;
         std::string filter;
+        float delay = 0.0f;
+        float offset = 0.0f;
+        float detune = 0.0f;
+        bool ambient = false;
     };
 
     std::vector<Played> played;
     std::unordered_map<std::string, std::string> paths;
     std::unordered_map<std::string, bool> loaded;
     std::unordered_map<audio::SoundHandle, float> volumes;
+    std::vector<audio::SoundHandle> stopped;
     bool muted = false;
     int nextHandle = 1;
 
@@ -45,13 +51,14 @@ public:
         return it != loaded.end() && it->second;
     }
     audio::SoundHandle play(const std::string& id, const audio::PlayOptions& opts) override {
-        played.push_back(Played{id, opts.loop, opts.volume, opts.pan, opts.filter});
+        played.push_back(Played{id, opts.loop, opts.volume, opts.pan, opts.filter,
+                                opts.delay, opts.offset, opts.detune, opts.ambient});
         const audio::SoundHandle handle = nextHandle++;
         volumes[handle] = opts.volume;
         return handle;
     }
-    void stop(audio::SoundHandle) override {}
-    void stopAll() override {}
+    void stop(audio::SoundHandle handle) override { stopped.push_back(handle); }
+    void stopAll() override { stopped.clear(); }
     void setVolume(audio::SoundHandle handle, float volume) override { volumes[handle] = volume; }
     float getVolume(audio::SoundHandle handle) const override {
         auto it = volumes.find(handle);
@@ -188,6 +195,136 @@ TEST(audio_play_volume) {
     CHECK_EQ(manager.playSound("explosion_01", opts), audio::kInvalidSound);
     manager.setMute(false);
     CHECK(manager.playSound("explosion_01", opts) != audio::kInvalidSound);
+}
+
+// ---------------------------------------------------------------------------
+TEST(audio_master_volume_scales_live_instances) {
+    audio::installGeneratedSoundDefs();
+    RecordingBackend backend;
+    audio::AudioManager manager(&backend);
+    manager.preloadSounds();
+
+    // Startup config (master 1) replaces CreateJS's default 0.5 global volume.
+    manager.setMasterVolume(1.0f);
+    audio::PlaySoundOptions loop;
+    loop.channel = "ambient";
+    loop.loop = true;
+    const audio::SoundHandle wind = manager.playSound("ambient_wind_01", loop);
+    CHECK(wind != audio::kInvalidSound);
+    CHECK_NEAR(backend.getVolume(wind), 0.5f, 1e-4f); // base 0.5 * master 1
+
+    // A slider change applies to the already-playing loop (CreateJS global).
+    manager.setMasterVolume(0.5f);
+    CHECK_NEAR(backend.getVolume(wind), 0.25f, 1e-4f);
+
+    // Per-track volume updates keep the master folded in (Ambiance setVolume).
+    manager.setVolume(wind, 0.4f, "sound");
+    CHECK_NEAR(backend.getVolume(wind), 0.4f * 1.0f * 0.5f, 1e-4f);
+}
+
+// ---------------------------------------------------------------------------
+TEST(audio_stop_all_retains_ambient_voices) {
+    audio::installGeneratedSoundDefs();
+    RecordingBackend backend;
+    audio::AudioManager manager(&backend);
+    manager.preloadSounds();
+
+    audio::PlaySoundOptions ambience;
+    ambience.channel = "ambient";
+    ambience.loop = true;
+    const audio::SoundHandle wind = manager.playSound("ambient_wind_01", ambience);
+
+    audio::PlaySoundOptions sfx;
+    sfx.channel = "sfx";
+    const audio::SoundHandle hit = manager.playSound("explosion_01", sfx);
+
+    manager.stopAll(true);
+    CHECK_EQ(backend.stopped.size(), 1u);
+    if (!backend.stopped.empty()) {
+        CHECK_EQ(backend.stopped[0], hit);
+    }
+    CHECK(wind != hit);
+
+    // stopAll(false) is the hard stop (backend.stopAll path is separate).
+    manager.stopAll(false);
+    CHECK_EQ(backend.stopped.size(), 2u);
+}
+
+// ---------------------------------------------------------------------------
+TEST(audio_channel_semantics) {
+    audio::installGeneratedSoundDefs();
+    const audio::SoundDefProvider* provider = audio::getSoundDefProvider();
+    CHECK(provider != nullptr);
+    if (!provider) {
+        return;
+    }
+    const audio::SoundDef* m9 = provider->sound("activePlayer", "m9_01");
+    const audio::SoundDef* stone = provider->sound("hits", "stone_bullet_hit_01");
+    CHECK(m9 && stone);
+    if (!m9 || !stone) {
+        return;
+    }
+    CHECK_EQ(m9->maxInstances, 5);
+    CHECK(stone->canCoalesce);
+
+    RecordingBackend backend;
+    audio::AudioManager manager(&backend);
+    manager.preloadSounds();
+    manager.setMasterVolume(1.0f);
+
+    // maxInstances: the 6th m9 shot kills the oldest voice.
+    audio::PlaySoundOptions gun;
+    gun.channel = "activePlayer";
+    std::vector<audio::SoundHandle> shots;
+    for (int i = 0; i < 6; ++i) {
+        shots.push_back(manager.playSound("m9_01", gun));
+    }
+    CHECK_EQ(shots.size(), 6u);
+    CHECK_EQ(backend.stopped.size(), 1u);
+    if (!backend.stopped.empty()) {
+        CHECK_EQ(backend.stopped[0], shots[0]);
+    }
+
+    // canCoalesce: two hits in the same 30 ms window share one voice on an
+    // equal-power basis (hits channel volume 0.4 * base 0.5 = 0.2 each).
+    backend.played.clear();
+    audio::PlaySoundOptions hit;
+    hit.channel = "hits";
+    const audio::SoundHandle first = manager.playSound("stone_bullet_hit_01", hit);
+    const audio::SoundHandle second = manager.playSound("stone_bullet_hit_01", hit);
+    CHECK(first != audio::kInvalidSound);
+    CHECK_EQ(second, audio::kInvalidSound);
+    CHECK_EQ(backend.played.size(), 1u);
+    CHECK_NEAR(backend.getVolume(first), std::sqrt(0.2f * 0.2f + 0.2f * 0.2f), 1e-3f);
+
+    // The window closes once 30 ms have passed.
+    manager.update(0.04f);
+    CHECK(manager.playSound("stone_bullet_hit_01", hit) != audio::kInvalidSound);
+    CHECK_EQ(backend.played.size(), 2u);
+}
+
+// ---------------------------------------------------------------------------
+TEST(audio_delay_and_detune) {
+    audio::installGeneratedSoundDefs();
+    RecordingBackend backend;
+    audio::AudioManager manager(&backend);
+    manager.preloadSounds();
+
+    audio::PlaySoundOptions opts;
+    opts.channel = "sfx";
+    opts.delay = 0.05f;
+    opts.detune = 1200.0f;
+    CHECK_EQ(manager.playSound("explosion_01", opts), audio::kInvalidSound);
+    CHECK_EQ(backend.played.size(), 0u);
+
+    manager.update(0.02f);
+    CHECK_EQ(backend.played.size(), 0u);
+    manager.update(0.04f);
+    CHECK_EQ(backend.played.size(), 1u);
+    if (!backend.played.empty()) {
+        CHECK_NEAR(backend.played[0].delay, 0.0f, 1e-6f); // delay consumed by the manager
+        CHECK_NEAR(backend.played[0].detune, 1200.0f, 1e-4f);
+    }
 }
 
 // ---------------------------------------------------------------------------

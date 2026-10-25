@@ -230,6 +230,14 @@ struct MapObjectDef {
     bool isWindow = false;
     std::string hitParticle;
     std::string punchSound;
+    // obstacle.ts door/button/explosion sounds (played on state changes).
+    std::string doorSoundChange;
+    std::string doorSoundOpen;
+    std::string doorSoundClose;
+    std::string doorSoundUnlock;
+    std::string buttonSoundOn;
+    std::string buttonSoundOff;
+    std::string explodeSound;
 
     // decalDefs (decal.ts): `surface` recolours getGroundSurface for decals
     // painted over water; `gore` fades that water colour with the gore level.
@@ -278,6 +286,10 @@ struct MapObjectDef {
     // structures
     bool hasInteriorSound = false;
     InteriorSoundDef interiorSound;
+    // building.ts puzzle/ceiling-destroy sounds.
+    std::string puzzleSoundFail;
+    std::string puzzleSoundComplete;
+    std::string ceilingDestroySound;
     CeilingVisionDef ceilingVision;
     std::string ceilingDestroyResidue;
     std::vector<BuildingEmitterDef> occupiedEmitters;
@@ -434,6 +446,12 @@ struct GameObjRenderDef {
     bool cleave = false;
     std::string playerHit;  // meleeDefs sound.playerHit
     std::string punchSound; // meleeDefs/obstacleDefs sound.punch
+    // Item action sounds (player.ts playActionStartEffect / deploy / pickup).
+    std::string soundReload;
+    std::string soundReloadAlt;
+    std::string soundDeploy;
+    std::string soundUse;
+    std::string soundPickup;
     // gunDefs.bulletType + barrelLength (touch.ts LineSprites aim-line range).
     std::string bulletType;
     float barrelLength = 0.0f;

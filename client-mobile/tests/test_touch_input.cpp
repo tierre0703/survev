@@ -29,6 +29,9 @@ void setAimPull(Touch& t, float dx, float dy) {
 
 TEST(touch_input_move_and_aim) {
     Touch t(kWidth, kHeight, true);
+    // Touch defaults to anywhere (web config); exercise the locked pad path.
+    t.setMoveStyle(TouchStyle::Locked);
+    t.setAimStyle(TouchStyle::Locked);
     setMovePull(t, 48.0f, 0.0f);   // full right on the move pad
     setAimPull(t, 0.0f, -60.0f);   // up, past the shot threshold
 

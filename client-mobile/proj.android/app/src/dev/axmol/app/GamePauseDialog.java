@@ -389,7 +389,8 @@ public class GamePauseDialog {
 
     private void toggleMute() {
         mMuted = !mMuted;
-        SurvBridge.setAudio("mute", mMuted ? 0.0f : 1.0f);
+        // UiBridge reads non-zero as mute (MenuFragment uses the same mapping).
+        SurvBridge.setAudio("mute", mMuted ? 1.0f : 0.0f);
         SurvBridge.saveConfig();
         updateMuteButton();
     }
@@ -428,32 +429,15 @@ public class GamePauseDialog {
         mRenderScale = RenderScale.persisted();
         updateRenderTierButton();
 
-        String master = Json.peekString(config, "masterVolume");
-        if (master != null) {
-            try {
-                float mv = Float.parseFloat(master);
-                mMasterSlider.setProgress((int)(mv * 100));
-                mMasterLabel.setText(String.format("%.0f%%", mv * 100));
-            } catch (Exception e) {}
-        }
-
-        String sfx = Json.peekString(config, "soundVolume");
-        if (sfx != null) {
-            try {
-                float sv = Float.parseFloat(sfx);
-                mSfxSlider.setProgress((int)(sv * 100));
-                mSfxLabel.setText(String.format("%.0f%%", sv * 100));
-            } catch (Exception e) {}
-        }
-
-        String music = Json.peekString(config, "musicVolume");
-        if (music != null) {
-            try {
-                float mv = Float.parseFloat(music);
-                mMusicSlider.setProgress((int)(mv * 100));
-                mMusicLabel.setText(String.format("%.0f%%", mv * 100));
-            } catch (Exception e) {}
-        }
+        float master = Json.peekFloat(config, "masterVolume", 1.0f);
+        mMasterSlider.setProgress(Math.round(master * 100));
+        mMasterLabel.setText(String.format("%.0f%%", master * 100));
+        float sfx = Json.peekFloat(config, "soundVolume", 1.0f);
+        mSfxSlider.setProgress(Math.round(sfx * 100));
+        mSfxLabel.setText(String.format("%.0f%%", sfx * 100));
+        float music = Json.peekFloat(config, "musicVolume", 1.0f);
+        mMusicSlider.setProgress(Math.round(music * 100));
+        mMusicLabel.setText(String.format("%.0f%%", music * 100));
     }
 
     // ===== Public API =====

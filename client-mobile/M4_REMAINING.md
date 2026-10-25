@@ -2799,3 +2799,41 @@ constructs bundletool's module zip and calls `bundletool build-bundle`:
   that installed and ran (account/site_info), proving the bundle pipeline.
 - The test signatures use the debug keystore; a real upload needs the production
   upload keystore/passwords (never committed).
+
+## 47. Session 46 - active layer + interpolation (P0.2/P0.3, 2026-10-25)
+
+### 47.1 Bunker/cellar rendering
+
+`Renderer::setActiveLayer` had no callers, so every frame ran with `layer = 0`:
+`layers[1]` stayed transparent, `groundAlpha` never rose, and the stairs mask was
+never released. `GameWorld::update` now mirrors `game.ts m_processGameUpdate`:
+the active player's `layer` and `Map::isUnderground(pos, layer, rad)` are applied
+to the renderer (and `AudioManager`) **before** `renderer.m_update`, so the layer
+alpha, ground fade, mask transition, obstacle `activeLayer` checks and audio
+filtering all use the same frame's state.
+
+### 47.2 Player/camera/projectile interpolation
+
+- `Player` gained `visualPos`/`visualPosOld`/`posInterpTicker` and
+  `visualDir`/`visualDirOld`/`dirInterpolationTicker` seeded in `m_updateData`
+  exactly like `player.ts:508-515` (duplicate updates re-seed from the current
+  net position). The container, aura container and `bodyContainer` rotation use
+  the visual values.
+- `Projectile` gained `visualPosOld`/`posInterpTicker`; `ProjectileBarn::update`
+  lerps the render position over `camera.m_interpInterval` like
+  `projectile.ts:383-395`.
+- The camera follows `activePlayer->visualPos` (game.ts:426).
+- `config.interpolation` is applied to each new world
+  (`GameScene::setInterpolationEnabled` + `UiBridge` startup/setConfigValue).
+- Bullets, planes, airdrops and dead bodies are left on their own per-frame
+  timing: the web client does not interpolate them either.
+
+### 47.3 Verification
+
+- `surv_tests`: **175 tests, 2,750 assertions, 0 failures** (new
+  `player_visual_pos_interpolates`, `projectile_visual_pos_interpolates`,
+  `world_applies_active_layer_and_underground`).
+- `build-native.ps1 -Abis x86_64`: links; `build-apk.ps1 -Abis x86_64` packages.
+- Device (x86_64 emulator): quick-play joined a match and ran for 12 s with
+  `logcat -b crash` empty. Bunker entry and an interpolation on/off comparison
+  are still pending.

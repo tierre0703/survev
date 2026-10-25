@@ -130,6 +130,10 @@ void Obstacle::m_init() {
     casingEnabled = false;
     posInterpTicker = 0.0f;
     posInterpOld = Vec2(0.0f, 0.0f);
+    doorSeqOld = 0;
+    doorWasOpen = false;
+    doorWasLocked = false;
+    buttonSeqOld = 0;
     _anchor = Vec2(0.5f, 0.5f);
     _anchorApplied = false;
     _firstUpdate = true;
@@ -254,6 +258,14 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
     buttonSeq = data.buttonSeq;
     isPuzzlePiece = data.isPuzzlePiece;
     parentBuildingId = data.isPuzzlePiece ? data.parentBuildingId : 0;
+    if (isNew) {
+        // obstacle.ts seeds seqOld/wasOpen/wasLocked from the first full data so
+        // a streamed-in door/button does not play a change sound on spawn.
+        doorSeqOld = data.doorSeq;
+        doorWasOpen = data.doorOpen;
+        doorWasLocked = data.doorLocked;
+        buttonSeqOld = data.buttonSeq;
+    }
 
     // Health smoke emitter for explodable obstacles (obstacle.ts uses a higher
     // health threshold for player skins).
@@ -341,6 +353,43 @@ void Obstacle::update(float dt, Ctx& ctx) {
     }
     _mapValueAdjust = ctx.map().mapDef.valueAdjust;
 
+    // obstacle.ts button/door state-change sounds (audioManager.playSound sfx).
+    if (ctx.audio()) {
+        auto playSfx = [&](const std::string& sound) {
+            if (sound.empty()) {
+                return;
+            }
+            audio::PlaySoundOptions opts;
+            opts.channel = "sfx";
+            opts.hasSoundPos = true;
+            opts.soundPos = pos;
+            opts.hasLayer = true;
+            opts.layer = layer;
+            opts.filter = "muffled";
+            ctx.audio()->playSound(sound, opts);
+        };
+        if (isButton && buttonSeq != buttonSeqOld) {
+            playSfx(buttonOnOff ? def->buttonSoundOn : def->buttonSoundOff);
+        }
+        buttonSeqOld = buttonSeq;
+        if (isDoor) {
+            if (doorSeq != doorSeqOld) {
+                playSfx(def->doorSoundChange);
+                doorSeqOld = doorSeq;
+            }
+            if (doorOpen != doorWasOpen) {
+                playSfx(doorOpen ? def->doorSoundOpen : def->doorSoundClose);
+                doorWasOpen = doorOpen;
+            }
+            if (doorWasLocked != doorLocked) {
+                if (!doorLocked) {
+                    playSfx(def->doorSoundUnlock);
+                }
+                doorWasLocked = doorLocked;
+            }
+        }
+    }
+
     const bool explodedNow = dead && !exploded;
     if (explodedNow) {
         ctx.map().deadObstacleIds.push_back(__id);
@@ -348,6 +397,16 @@ void Obstacle::update(float dt, Ctx& ctx) {
         if (smokeEmitter) {
             smokeEmitter->stop();
             smokeEmitter = nullptr;
+        }
+        if (ctx.audio() && !def->explodeSound.empty()) {
+            audio::PlaySoundOptions opts;
+            opts.channel = "sfx";
+            opts.hasSoundPos = true;
+            opts.soundPos = pos;
+            opts.hasLayer = true;
+            opts.layer = layer;
+            opts.filter = "muffled";
+            ctx.audio()->playSound(def->explodeSound, opts);
         }
     }
 
@@ -697,22 +756,74 @@ void Building::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
 }
 
 void Building::update(float dt, Ctx& ctx) {
+    const bool wasNew = isNew;
     // Destroy ceiling fx (audio/particles are stubbed; the residue + reveal
     // below carry the visual).
     if (ceilingDead && !playedCeilingDeadFx) {
+        const MapObjectDef* def = mapDefFor(type);
         ctx.map().deadCeilingIds.push_back(__id);
         playedCeilingDeadFx = true;
-        if (!isNew && ctx.audio()) {
+        if (!wasNew && ctx.audio()) {
             audio::PlaySoundOptions opts;
             opts.channel = "sfx";
             opts.hasSoundPos = true;
             opts.soundPos = pos;
             opts.hasLayer = true;
             opts.layer = layer;
-            ctx.audio()->playSound("ceiling_break_01", opts);
+            const std::string& sound =
+                def && !def->ceilingDestroySound.empty() ? def->ceilingDestroySound
+                                                         : std::string("ceiling_break_01");
+            ctx.audio()->playSound(sound, opts);
         }
     }
     isNew = false;
+
+    // building.ts puzzle fail/solved sounds.
+    if (hasPuzzle && ctx.audio()) {
+        const MapObjectDef* def = mapDefFor(type);
+        if (puzzleErrSeqModified && !wasNew) {
+            Obstacle* nearest = nullptr;
+            float nearestDist = 1e9f;
+            Player* active = ctx.activePlayer();
+            for (auto* obstacle : ctx.map().obstaclePool.m_getPool()) {
+                if (!obstacle->active || !obstacle->isPuzzlePiece ||
+                    obstacle->parentBuildingId != __id) {
+                    continue;
+                }
+                const float dist = active ? v2Length(v2Sub(active->pos, obstacle->pos)) : 0.0f;
+                if (!nearest || dist < nearestDist) {
+                    nearest = obstacle;
+                    nearestDist = dist;
+                }
+            }
+            if (def && !def->puzzleSoundFail.empty()) {
+                audio::PlaySoundOptions opts;
+                opts.channel = "sfx";
+                opts.hasSoundPos = true;
+                opts.soundPos = nearest ? nearest->pos : pos;
+                opts.hasLayer = true;
+                opts.layer = nearest ? nearest->layer : layer;
+                opts.filter = "muffled";
+                ctx.audio()->playSound(def->puzzleSoundFail, opts);
+            }
+            puzzleErrSeqModified = false;
+        }
+        if (puzzleSolved && !playedSolvedPuzzleFx) {
+            ctx.map().solvedPuzzleIds.push_back(__id);
+            playedSolvedPuzzleFx = true;
+            if (def && !def->puzzleSoundComplete.empty() &&
+                def->puzzleSoundComplete != "none") {
+                audio::PlaySoundOptions opts;
+                opts.channel = "sfx";
+                opts.hasSoundPos = true;
+                opts.soundPos = pos;
+                opts.hasLayer = true;
+                opts.layer = layer;
+                opts.filter = "muffled";
+                ctx.audio()->playSound(def->puzzleSoundComplete, opts);
+            }
+        }
+    }
 
     // Residue left behind by a destroyed ceiling.
     if (ceilingDead && !residueCreated) {
@@ -1222,7 +1333,8 @@ void DeadBodyBarn::update(float dt, GameWorld& ctx) {
             continue;
         }
         if (!d->nameTextSet && d->nameText) {
-            d->nameText->setText(ctx.playerBarn().getPlayerName(d->playerId, ctx.activePlayerId(), false));
+            d->nameText->setText(ctx.playerBarn().getPlayerName(
+                d->playerId, ctx.activePlayerId(), ctx.playerBarn().anonPlayerNames));
             d->nameTextSet = true;
         }
         const Collider col = Collider::createCircle(d->pos, 1.0f);
@@ -1257,6 +1369,8 @@ DeadBody* DeadBodyBarn::getDeadBodyById(uint16_t playerId) {
 // ---------------------------------------------------------------------------
 void Projectile::m_init() {
     posZ = 0.0f;
+    visualPosOld = Vec2();
+    posInterpTicker = 0.0f;
 }
 
 void Projectile::m_free() {
@@ -1266,7 +1380,11 @@ void Projectile::m_free() {
 }
 
 void Projectile::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, Ctx& ctx) {
-    (void)isNew;
+    // projectile.ts: seed the interpolation target before the net position moves.
+    if (!v2Eq(data.pos, visualPosOld)) {
+        visualPosOld = isNew ? data.pos : pos;
+        posInterpTicker = 0.0f;
+    }
     pos = data.pos;
     if (!fullUpdate) {
         return;
@@ -1286,14 +1404,23 @@ void Projectile::m_updateData(const ObjectData& data, bool fullUpdate, bool isNe
 }
 
 void ProjectileBarn::update(float dt, GameWorld& ctx) {
-    (void)dt;
     for (auto* p : projectilePool.m_getPool()) {
         if (!p->active || !p->container) {
             continue;
         }
         ctx.renderer().addPIXIObj(p->container, p->layer, 200, p->__id);
-        // projectile.ts: pos + (0, posZ) in world space.
-        placeInWorldLayer(p->container, Vec2(p->pos.x, p->pos.y + p->posZ));
+        // projectile.ts: the visual position lags the net position by
+        // camera.m_interpInterval (pos + (0, posZ) in world space).
+        Vec2 renderPos = p->pos;
+        if (ctx.camera().m_interpEnabled) {
+            p->posInterpTicker += dt;
+            const float interval = ctx.camera().m_interpInterval;
+            const float posT = interval > 0.0f
+                ? math::clamp(p->posInterpTicker / interval, 0.0f, 1.0f)
+                : 1.0f;
+            renderPos = v2Lerp(posT, p->visualPosOld, p->pos);
+        }
+        placeInWorldLayer(p->container, Vec2(renderPos.x, renderPos.y + p->posZ));
         // projectile.ts: camera.m_pixels(imgScale * remap(posZ, 0, maxHeight,
         // 1, 4.75)); world units need the extra /m_ppu.
         const float scale = p->imgScale * math::remap(p->posZ, 0.0f, defs::kProjectileMaxHeight, 1.0f, 4.75f);
@@ -1925,6 +2052,10 @@ void PlaneObj::init(GameWorld& ctx, const PlaneData& data, const Map& map) {
     spriteUpdateTime = 0.0f;
     soundUpdateThrottle = 0.0f;
     soundPlaying = false;
+    if (soundInstance != audio::kInvalidSound && ctx.audio()) {
+        ctx.audio()->stopSound(soundInstance);
+    }
+    soundInstance = audio::kInvalidSound;
     type = data.action;
 
     const DefProvider* provider = getDefProvider();
@@ -1995,6 +2126,10 @@ void PlaneBarn::updatePlanes(GameWorld& ctx, const std::vector<PlaneData>& data)
     for (auto* p : planes) {
         if (p->active && p->dirty) {
             p->active = false;
+            if (p->soundInstance != audio::kInvalidSound && ctx.audio()) {
+                ctx.audio()->stopSound(p->soundInstance);
+            }
+            p->soundInstance = audio::kInvalidSound;
             if (p->sprite) {
                 p->sprite->setVisible(false);
             }
@@ -2029,6 +2164,53 @@ void PlaneBarn::update(float dt, GameWorld& ctx) {
             p->soundRangeMult =
                 math::max(0.0f, math::lerp(p->spriteUpdateTime, p->config.soundRangeMult,
                                             p->config.soundRangeMult - p->config.soundRangeDelta));
+        }
+
+        // plane.ts: looping engine sound, started once the plane is within its
+        // audible range and volume/pan updated at 10 Hz.
+        if (ctx.audio()) {
+            audio::AudioManager* audio = ctx.audio();
+            if (p->soundInstance != audio::kInvalidSound) {
+                p->soundUpdateThrottle -= dt;
+                if (p->soundUpdateThrottle <= 0.0f) {
+                    audio::PlaySoundOptions opts;
+                    opts.hasLayer = true;
+                    opts.layer = layer;
+                    opts.rangeMult = p->config.soundRangeMult;
+                    opts.ignoreMinAllowable = true;
+                    opts.fallOff = p->config.fallOff;
+                    audio->updateSound(p->soundInstance, "sfx", p->pos, opts);
+                    p->soundUpdateThrottle = 0.1f;
+                }
+            } else {
+                const float distToPlane = v2Length(v2Sub(activePlayer->pos, p->pos));
+                const float maxRange = p->config.soundRangeMax * p->config.soundRangeMult;
+                float offset = 0.0f;
+                if (p->type == 1) {
+                    // Fighter sounds are delayed to compensate for distance.
+                    constexpr float maxDistToOffset = 800.0f;
+                    constexpr float minDist = 150.0f;
+                    constexpr float maxSoundOffset = 2.25f;
+                    const float distToCompare = math::max(minDist, distToPlane);
+                    offset = (1.0f - math::clamp(math::max(0.0f, distToCompare) / maxDistToOffset,
+                                                 0.0f, 1.0f)) *
+                        maxSoundOffset;
+                }
+                if (distToPlane < maxRange) {
+                    audio::PlaySoundOptions opts;
+                    opts.channel = "sfx";
+                    opts.hasSoundPos = true;
+                    opts.soundPos = p->pos;
+                    opts.hasLayer = true;
+                    opts.layer = layer;
+                    opts.loop = true;
+                    opts.rangeMult = 2.5f;
+                    opts.ignoreMinAllowable = true;
+                    opts.fallOff = p->config.fallOff;
+                    opts.offset = offset;
+                    p->soundInstance = audio->playSound(p->planeSound, opts);
+                }
+            }
         }
 
         ctx.renderer().addPIXIObj(p->sprite, layer, 1501, p->id);

@@ -73,6 +73,12 @@ public:
         if (opts.pan != 0.0f) {
             ax::AudioEngine::setPan(handle, opts.pan);
         }
+        // createJS `detune` is in cents (shot.ts bonus rounds etc.). axmol's
+        // pitch multiplier is 2^(cents/1200), clamped to its 0.5..2.0 range.
+        if (std::fabs(opts.detune) > 0.001f) {
+            const float pitch = std::pow(2.0f, opts.detune / 1200.0f);
+            ax::AudioEngine::setPitch(handle, pitch < 0.5f ? 0.5f : (pitch > 2.0f ? 2.0f : pitch));
+        }
         // Per-source EQ (createJS muffled/club chains approximated by an EFX
         // low-pass). The reverb send is handled by applyReverb() below.
         const FilterParams filterParams = filterParamsFor(opts.filter);
@@ -91,6 +97,12 @@ public:
             }
         }
         _handles[handle] = volume;
+        if (_muted) {
+            // pauseAll() only covers voices that existed when mute was applied;
+            // loops started while muted (Ambiance forceStart) must also stay
+            // paused or they would play through the mute.
+            ax::AudioEngine::pause(handle);
+        }
         if (_appliedReverb > 0.001f) {
             applyReverb(handle);
         }
@@ -126,6 +138,7 @@ public:
     }
 
     void setMute(bool mute) override {
+        _muted = mute;
         if (mute) {
             ax::AudioEngine::pauseAll();
         } else {
@@ -134,8 +147,14 @@ public:
     }
 
     bool isPlaying(SoundHandle handle) const override {
-        return handle != kInvalidSound &&
-               ax::AudioEngine::getState(handle) == ax::AudioEngine::AudioState::PLAYING;
+        if (handle == kInvalidSound) {
+            return false;
+        }
+        // PAUSED still owns a live AudioPlayer (mute uses pauseAll/resumeAll), so
+        // it must not be garbage-collected as finished.
+        const ax::AudioEngine::AudioState state = ax::AudioEngine::getState(handle);
+        return state == ax::AudioEngine::AudioState::PLAYING ||
+               state == ax::AudioEngine::AudioState::PAUSED;
     }
 
     void setReverbVolume(const std::string& reverbName, float volume) override {
@@ -220,6 +239,7 @@ private:
     std::unordered_map<std::string, std::string> _paths;
     std::unordered_map<std::string, bool> _loaded;
     std::unordered_map<SoundHandle, float> _handles;
+    bool _muted = false;
 };
 
 } // namespace audio

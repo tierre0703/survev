@@ -447,14 +447,24 @@ void Game::handleUpdate(NetBitStream& s) {
     // TODO(M4+): interpolate objects with _lastUpdate.
 }
 
+std::string Game::displayName(uint16_t playerId) const {
+    const auto found = _playersById.find(playerId);
+    if (found == _playersById.end()) {
+        return "Player";
+    }
+    if (_anonPlayerNames) {
+        const auto active = _playersById.find(_activePlayerId);
+        if (active != _playersById.end() && active->second.groupId != found->second.groupId) {
+            return "Player";
+        }
+    }
+    return found->second.name;
+}
+
 void Game::handleKill(NetBitStream& s) {
     KillMsg m;
     m.deserialize(s);
-    auto name = [this](uint16_t id) {
-        const auto found = _playersById.find(id);
-        return found == _playersById.end() ? std::string("Player") : found->second.name;
-    };
-    _killFeed.push_back({m, name(m.killerId), name(m.targetId), 8.0f});
+    _killFeed.push_back({m, displayName(m.killerId), displayName(m.targetId), 8.0f});
     if (_killFeed.size() > 6) _killFeed.erase(_killFeed.begin());
     if (m.killed) _playerStatus[m.targetId].dead = true;
 }

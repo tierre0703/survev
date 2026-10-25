@@ -394,7 +394,13 @@ for (let i = 0; i < mapTypes.length; i++) {
         str(
             punchSound,
         )
-    },${surface ? 1 : 0},${surfaceTypeId},${n(surface?.data?.waterColor, 0)},${
+    },${str(def.door?.sound?.change)},${str(def.door?.sound?.open)},${str(def.door?.sound?.close)},${
+        str(
+            def.door?.sound?.unlock,
+        )
+    },${str(def.button?.sound?.on)},${str(def.button?.sound?.off)},${str(def.sound?.explode)},${
+        surface ? 1 : 0
+    },${surfaceTypeId},${n(surface?.data?.waterColor, 0)},${
         n(
             surface?.data?.rippleColor,
             0,
@@ -446,7 +452,9 @@ for (let i = 0; i < mapTypes.length; i++) {
         n(interiorSound?.transitionTime, 1)
     },${n(interiorSound?.outsideMaxDist, 10)},${n(interiorSound?.outsideVolume, 0)},${
         interiorSound && interiorSound.undergroundVolume !== undefined ? 1 : 0
-    },${n(interiorSound?.undergroundVolume, 1)},${refs.soundEmitters},${buildingSoundEmitters.length}},\n`;
+    },${n(interiorSound?.undergroundVolume, 1)},${refs.soundEmitters},${buildingSoundEmitters.length},${
+        str(def.puzzle?.sound?.fail)
+    },${str(def.puzzle?.sound?.complete)},${str(def.sound)}},\n`;
 }
 
 // Map render defs.
@@ -543,7 +551,9 @@ for (const type of gameTypes) {
         str(def.mapIndicator?.sprite || "")
     },${n(def.mapIndicator?.tint, 0xffffff)},${def.mapIndicator?.pulse ? 1 : 0},${
         n(def.mapIndicator?.pulseTint, 0xffffff)
-    }},\n`;
+    },${str(def.sound?.reload)},${str(def.sound?.reloadAlt)},${str(def.sound?.deploy)},${
+        str(def.sound?.use)
+    },${str(def.sound?.pickup)}},\n`;
     if (
         !def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack"
         && !def.frozenSprites
@@ -940,6 +950,8 @@ struct RawMapObj {
     float doorSpriteAnchorX, doorSpriteAnchorY;
     float height; int collidable, isWindow;
     const char* hitParticle; const char* punchSound;
+    const char* doorSoundChange; const char* doorSoundOpen; const char* doorSoundClose; const char* doorSoundUnlock;
+    const char* buttonSoundOn; const char* buttonSoundOff; const char* explodeSound;
     int hasSurface, surfaceType; unsigned surfaceWaterColor, surfaceRippleColor;
     int hasGore; float goreFadeStart, goreFadeEnd, goreFadePow, goreFadeSpeed;
     int goreHasTint; unsigned goreTint; int goreHasAlpha; float goreAlpha;
@@ -964,6 +976,7 @@ struct RawMapObj {
     float interiorTransitionTime, interiorOutsideMaxDist, interiorOutsideVolume;
     int hasInteriorUndergroundVolume; float interiorUndergroundVolume;
     const RawSoundEmitter* soundEmitters; int soundEmitterCount;
+    const char* puzzleSoundFail; const char* puzzleSoundComplete; const char* ceilingDestroySound;
 };
 struct RawMapRender {
     const char* name;
@@ -977,7 +990,8 @@ struct RawGameObj { const char* type; const char* category; RawImg img; int hasI
     int hasAttack; float attackOffX, attackOffY, attackRad; int cleave;
     const char* playerHit; const char* punchSound; int useThrowParticles;
     const char* bulletType; float barrelLength;
-    const char* mapIndicatorSprite; unsigned mapIndicatorTint; int mapIndicatorPulse; unsigned mapIndicatorPulseTint; };
+    const char* mapIndicatorSprite; unsigned mapIndicatorTint; int mapIndicatorPulse; unsigned mapIndicatorPulseTint;
+    const char* soundReload; const char* soundReloadAlt; const char* soundDeploy; const char* soundUse; const char* soundPickup; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -1128,6 +1142,13 @@ public:
             d.isWindow = r.isWindow != 0;
             d.hitParticle = r.hitParticle ? r.hitParticle : "";
             d.punchSound = r.punchSound ? r.punchSound : "";
+            d.doorSoundChange = r.doorSoundChange ? r.doorSoundChange : "";
+            d.doorSoundOpen = r.doorSoundOpen ? r.doorSoundOpen : "";
+            d.doorSoundClose = r.doorSoundClose ? r.doorSoundClose : "";
+            d.doorSoundUnlock = r.doorSoundUnlock ? r.doorSoundUnlock : "";
+            d.buttonSoundOn = r.buttonSoundOn ? r.buttonSoundOn : "";
+            d.buttonSoundOff = r.buttonSoundOff ? r.buttonSoundOff : "";
+            d.explodeSound = r.explodeSound ? r.explodeSound : "";
             d.hasSurface = r.hasSurface != 0;
             d.surfaceType = r.surfaceType == 2
                 ? SurfaceTypeDef::Grass
@@ -1228,6 +1249,9 @@ public:
             d.interiorSound.outsideVolume = r.interiorOutsideVolume;
             d.interiorSound.hasUndergroundVolume = r.hasInteriorUndergroundVolume != 0;
             d.interiorSound.undergroundVolume = r.interiorUndergroundVolume;
+            d.puzzleSoundFail = r.puzzleSoundFail ? r.puzzleSoundFail : "";
+            d.puzzleSoundComplete = r.puzzleSoundComplete ? r.puzzleSoundComplete : "";
+            d.ceilingDestroySound = r.ceilingDestroySound ? r.ceilingDestroySound : "";
             for (int i = 0; i < r.soundEmitterCount; i++) {
                 BuildingSoundEmitterDef e;
                 e.sound = r.soundEmitters[i].sound ? r.soundEmitters[i].sound : "";
@@ -1294,6 +1318,11 @@ public:
             d.mapIndicatorTint = r.mapIndicatorTint;
             d.mapIndicatorPulse = r.mapIndicatorPulse != 0;
             d.mapIndicatorPulseTint = r.mapIndicatorPulseTint;
+            d.soundReload = r.soundReload ? r.soundReload : "";
+            d.soundReloadAlt = r.soundReloadAlt ? r.soundReloadAlt : "";
+            d.soundDeploy = r.soundDeploy ? r.soundDeploy : "";
+            d.soundUse = r.soundUse ? r.soundUse : "";
+            d.soundPickup = r.soundPickup ? r.soundPickup : "";
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}

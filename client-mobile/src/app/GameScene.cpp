@@ -444,6 +444,51 @@ void GameScene::startRegionPingTest() {
     _pingReported = false;
 }
 
+void GameScene::setInterpolationEnabled(bool enabled) {
+    _interpolationEnabled = enabled;
+    if (_world) {
+        _world->setInterpolationEnabled(enabled);
+    }
+}
+
+void GameScene::setScreenShakeEnabled(bool enabled) {
+    _screenShakeEnabled = enabled;
+    if (_world) {
+        _world->setScreenShakeEnabled(enabled);
+    }
+}
+
+void GameScene::setLocalRotationEnabled(bool enabled) {
+    _localRotationEnabled = enabled;
+    if (_world) {
+        _world->setLocalRotationEnabled(enabled);
+    }
+}
+
+void GameScene::setAnonPlayerNames(bool enabled) {
+    _anonPlayerNames = enabled;
+    if (_world) {
+        _world->setAnonPlayerNames(enabled);
+    }
+    if (_game) {
+        _game->setAnonPlayerNames(enabled);
+    }
+}
+
+void GameScene::setTouchSettings(const std::string& moveStyle, const std::string& aimStyle,
+                                bool aimLine) {
+    // touch.ts validateTouchStyle: anything other than "locked"/"anywhere"
+    // falls back to "anywhere".
+    _moveStyle = moveStyle == "locked" ? "locked" : "anywhere";
+    _aimStyle = aimStyle == "locked" ? "locked" : "anywhere";
+    _touchAimLine = aimLine;
+    if (_touch) {
+        _touch->setMoveStyle(_moveStyle == "locked" ? TouchStyle::Locked : TouchStyle::Anywhere);
+        _touch->setAimStyle(_aimStyle == "locked" ? TouchStyle::Locked : TouchStyle::Anywhere);
+        _touch->setTouchAimLine(_touchAimLine);
+    }
+}
+
 void GameScene::resetWorld() {
     // game.ts builds a fresh world (renderer + map + barns) for every match.
     // The native world is only built on a join, never in init(), because
@@ -480,6 +525,10 @@ void GameScene::resetWorld() {
     _pixiFactory = std::make_unique<pix::AxPixiFactory>();
     _world = std::make_unique<GameWorld>(_pixiFactory.get(), false);
     _world->setAudio(_audio.get(), _ambiance.get());
+    _world->setInterpolationEnabled(_interpolationEnabled);
+    _world->setScreenShakeEnabled(_screenShakeEnabled);
+    _world->setLocalRotationEnabled(_localRotationEnabled);
+    _world->setAnonPlayerNames(_anonPlayerNames);
     // emote.ts reads playerBarn.getPlayerStatus(playerId).role for the
     // leader/captain/last-man ping sound; Game owns the status table.
     _world->setPlayerRoleLookup([this](uint16_t playerId) {
@@ -640,6 +689,7 @@ void GameScene::enterWithJoin(const std::vector<std::string>& urls, const std::s
     _notifiedStarted = false;
     _joinElapsed = 0;
     _deadNotified = false;
+    _victoryMusicPlayed = false;
     _gameRoot->setVisible(true);
     _worldVisible = true;
     ensureBackdropVisible();
@@ -712,7 +762,12 @@ void GameScene::leaveGame() {
         _crosshairFallback->setVisible(false);
     }
     if (_audio) {
-        _audio->stopAll();
+        if (_ambiance) {
+            _ambiance->onGameComplete(*_audio);
+        }
+        // game.ts free(): stopAll() keeps ambient/music loops running, so the
+        // menu music and the ambience tracks survive the return to the menu.
+        _audio->stopAll(true);
     }
 }
 
@@ -790,9 +845,9 @@ void GameScene::pauseGame() {
     if (_game) {
         _game->pause();
     }
-    if (_audio) {
-        _audio->stopAll();
-    }
+    // Audio keeps playing while paused/backgrounded: the socket and mixer stay
+    // alive, and createJS.stopAll() would leave the Ambiance tracks unable to
+    // restart (web client parity: pause only freezes input).
     // Backgrounded: the OS may freeze the process, so release the latency
     // sockets instead of leaving half-open probes behind (the Java menu asks
     // for a fresh test when it comes back).
@@ -800,14 +855,19 @@ void GameScene::pauseGame() {
 }
 
 void GameScene::onPickupSound(const std::string& item) {
-    if (_audio) {
-        // The item id maps to a ui-channel pickup sound like "gun_pickup_01".
-        const std::string soundKey = item + "_pickup_01";
-        audio::PlaySoundOptions opts;
-        opts.channel = "ui";
-        opts.rangeMult = 48.0f;
-        _audio->playSound(soundKey, opts);
+    if (!_audio) {
+        return;
     }
+    // player.ts playItemPickupSound: itemDef.sound.pickup on the ui channel.
+    const DefProvider* provider = getDefProvider();
+    const GameObjRenderDef* def = provider ? provider->gameObject(item) : nullptr;
+    if (!def || def->soundPickup.empty()) {
+        return;
+    }
+    audio::PlaySoundOptions opts;
+    opts.channel = "ui";
+    opts.rangeMult = 48.0f;
+    _audio->playSound(def->soundPickup, opts);
 }
 
 void GameScene::returnToMenu() {
@@ -1066,13 +1126,41 @@ void GameScene::update(float delta) {
 
     if (_world && _inGame) {
         _world->update(delta);
-        if (Player* active = _world->activePlayer()) {
-            // Camera follows the active player (M5 adds the smoothing/shake).
-            _world->camera().m_pos = active->pos;
-        }
-        // game.ts newEmotes/newPings loop: send what the emote wheel queued.
         for (const auto& emote : _world->emoteManager().consumeOutgoing()) {
             _game->sendEmote(emote.type, emote.pos, emote.isPing);
+        }
+    }
+
+    // game.ts owns audioManager.update() + ambience.update() outside the world
+    // update, so both keep running while the Java menu is up (menu music) and
+    // the camera position follows the interpolated camera.
+    if (_audio) {
+        _audio->cameraPos = (_world && _inGame) ? _world->camera().m_pos : Vec2(0.0f, 0.0f);
+        _audio->update(delta);
+    }
+    if (_ambiance && _audio) {
+        _ambiance->update(delta, *_audio, _game && _game->isPlaying());
+    }
+
+    // game.ts GameOverMsg: on a win, play the map's music after 1.3 s (the
+    // client's victory cue); defeat keeps the menu music already running.
+    if (_audio && _game && !_victoryMusicPlayed) {
+        if (const GameOverMsg* over = _game->gameOver()) {
+            _victoryMusicPlayed = true;
+            const uint16_t localTeam = _game->teamIdForPlayer(_game->getLocalPlayerId());
+            if (over->winningTeamId != 0 && over->winningTeamId == localTeam) {
+                const DefProvider* provider = getDefProvider();
+                const MapRenderDef* mapDef =
+                    provider ? provider->mapRender(_game->map().mapName) : nullptr;
+                const std::string music = mapDef ? mapDef->ambienceMusic : std::string();
+                if (!music.empty()) {
+                    audio::PlaySoundOptions opts;
+                    opts.channel = "music";
+                    opts.delay = 1.3f;
+                    opts.forceStart = true;
+                    _audio->playSound(music, opts);
+                }
+            }
         }
     }
 

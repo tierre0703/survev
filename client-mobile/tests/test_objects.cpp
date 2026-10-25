@@ -81,6 +81,36 @@ TEST(plane_and_bullet_defs) {
     }
 }
 
+// Codegen carries the item action/pickup sounds added for P1.5 (they used to
+// be guessed as "<type>_01" / "<item>_pickup_01" in the port).
+TEST(game_object_sound_fields) {
+    installGeneratedDefs();
+    const DefProvider* provider = getDefProvider();
+    CHECK(provider != nullptr);
+    if (!provider) {
+        return;
+    }
+    const GameObjRenderDef* mp5 = provider->gameObject("mp5");
+    CHECK(mp5 != nullptr);
+    if (mp5) {
+        CHECK_EQ(mp5->soundReload, std::string("mp5_reload_01"));
+        CHECK_EQ(mp5->soundDeploy, std::string("mp5_switch_01"));
+        CHECK_EQ(mp5->soundPickup, std::string("gun_pickup_01"));
+    }
+    const GameObjRenderDef* bandage = provider->gameObject("bandage");
+    CHECK(bandage != nullptr);
+    if (bandage) {
+        CHECK_EQ(bandage->soundUse, std::string("bandage_use_01"));
+        CHECK_EQ(bandage->soundPickup, std::string("bandage_pickup_01"));
+    }
+    const GameObjRenderDef* mp220 = provider->gameObject("mp220");
+    CHECK(mp220 != nullptr);
+    if (mp220) {
+        // Some guns carry a separate alt-reload sound.
+        CHECK(mp220->soundReloadAlt.empty() || mp220->soundReloadAlt != mp220->soundReload);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Airdrop: parachute fall + landed flag; the crate is a real object type.
 // ---------------------------------------------------------------------------

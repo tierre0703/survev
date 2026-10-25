@@ -125,6 +125,33 @@ public:
         ax::JniHelper::callStaticVoidMethod(kRenderScaleClass, "apply",
                                             static_cast<float>(renderScale));
         AXLOGI("[perf] render scale {:.2f} at startup", renderScale);
+
+        // game.ts: camera/player/touch/audio config listeners. The scene keeps
+        // them for the next match world (none exists yet).
+        applyGameSettings();
+    }
+
+    // Applies the persisted runtime settings (game.ts config listeners) to the
+    // live scene/audio manager. Called once at bridge install and after a Java
+    // settings screen writes one of the keys handled here.
+    void applyGameSettings() {
+        if (!_game) {
+            return;
+        }
+        uikit::Config& cfg = config();
+        _game->setInterpolationEnabled(cfg.getBool("interpolation", true));
+        _game->setScreenShakeEnabled(cfg.getBool("screenShake", true));
+        _game->setLocalRotationEnabled(cfg.getBool("localRotation", false));
+        _game->setAnonPlayerNames(cfg.getBool("anonPlayerNames", false));
+        _game->setTouchSettings(cfg.getString("touchMoveStyle", "anywhere"),
+                                cfg.getString("touchAimStyle", "anywhere"),
+                                cfg.getBool("touchAimLine", true));
+        if (audio::AudioManager* audio = _game->audioManager()) {
+            audio->setMasterVolume(cfg.getFloat("masterVolume", 1.0f));
+            audio->setSoundVolume(cfg.getFloat("soundVolume", 1.0f));
+            audio->setMusicVolume(cfg.getFloat("musicVolume", 1.0f));
+            audio->setMute(cfg.getBool("muteAudio", false));
+        }
     }
 
     // Android has no C++ MenuScene (AppDelegate passes nullptr), but the Java
@@ -207,6 +234,9 @@ public:
                 config().setBool("muteAudio", mute);
                 if (audio) audio->setMute(mute);
             }
+            // Persist with the value applied (Java also calls saveConfig when
+            // the slider is released; this keeps the GL-side write authoritative).
+            config().save();
         });
     }
 
@@ -221,6 +251,7 @@ public:
             _standaloneLocalization->setLocale(locale);
         }
         config().setString("language", locale);
+        config().save();
     }
 
     void setShowFps(bool show) override {
@@ -257,6 +288,14 @@ public:
             }
         }
         config().save();
+        // Settings that the live render/input path reads immediately (game.ts
+        // config listeners). Apply on the game thread, like every other scene
+        // mutation from the Java UI.
+        if (key == "interpolation" || key == "screenShake" || key == "localRotation" ||
+            key == "anonPlayerNames" || key == "touchMoveStyle" || key == "touchAimStyle" ||
+            key == "touchAimLine") {
+            runOnGameThread([this] { applyGameSettings(); });
+        }
     }
 
     std::string l10nJson() override {
@@ -273,6 +312,22 @@ public:
     std::string loadoutJson() override {
         uikit::Loadout loadout(&config());
         return uikit::jsonToString(loadout.validated());
+    }
+    // Language dropdown source: ui::kLocales (localization.ts Locales order).
+    std::string localesJson() override {
+        std::string out = "[";
+        for (int i = 0; i < uikit::kLocaleCount; ++i) {
+            if (i) {
+                out += ",";
+            }
+            out += "{\"code\":\"";
+            out += uikit::kLocales[i].code;
+            out += "\",\"name\":\"";
+            out += uikit::kLocales[i].name;
+            out += "\"}";
+        }
+        out += "]";
+        return out;
     }
     // Owned loadout items + shared-def metadata for the Java customize screen.
     std::string loadoutItemsJson() override {
@@ -577,6 +632,10 @@ JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getConfigJson(JNIEnv* en
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getL10nJson(JNIEnv* env, jclass) {
     return surv::toJstring(env, surv::uiBridge()->l10nJson());
+}
+
+JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLocalesJson(JNIEnv* env, jclass) {
+    return surv::toJstring(env, surv::uiBridge()->localesJson());
 }
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLoadoutJson(JNIEnv* env, jclass) {

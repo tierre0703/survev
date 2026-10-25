@@ -171,6 +171,12 @@ public:
     const std::vector<std::string>& emotes() const { return _emotes; }
     // JoinedMsg team mode (gameConfig.ts TeamMode: Solo = 1).
     uint8_t teamMode() const { return _teamMode; }
+    // config `anonPlayerNames`: hide names of players outside the local group.
+    void setAnonPlayerNames(bool enabled) { _anonPlayerNames = enabled; }
+    bool anonPlayerNames() const { return _anonPlayerNames; }
+    // playerBarn.getPlayerName(): the raw name, or "Player" for other groups
+    // when anon names is on (kill feed / kill leader / spectate).
+    std::string displayName(uint16_t playerId) const;
     // EmoteMsg send (game.ts newEmotes/newPings loop). The chat/emote wheel
     // queues into EmoteManager and GameScene forwards the queue here.
     void sendEmote(const std::string& type, const Vec2& pos, bool isPing);
@@ -247,6 +253,7 @@ private:
     uint16_t _activePlayerId = 0;
     uint16_t _localPlayerId = 0;
     uint8_t _teamMode = 0;
+    bool _anonPlayerNames = false;
     bool _started = false;
     JoinInfo _joinInfo;
     bool _joined = false;

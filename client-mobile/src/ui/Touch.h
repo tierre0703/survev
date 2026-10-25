@@ -59,8 +59,8 @@ public:
     bool touchingAim = false;
     bool display = true;
 
-    TouchStyle::Value moveStyle = TouchStyle::Locked;
-    TouchStyle::Value aimStyle = TouchStyle::Locked;
+    TouchStyle::Value moveStyle = TouchStyle::Anywhere;
+    TouchStyle::Value aimStyle = TouchStyle::Anywhere;
     bool touchAimLine = true;
     // While moving without touching the aim pad, the aim direction follows the
     // move direction once this cooldown has elapsed (port of touch.ts).
@@ -320,6 +320,10 @@ public:
 
     void toggleAimLine() {
         touchAimLine = !touchAimLine;
+    }
+
+    void setTouchAimLine(bool isOn) {
+        touchAimLine = isOn;
     }
 
     void hideAll() {

@@ -78,7 +78,9 @@ public:
     void setForcedMute(bool mute);
     bool muteToggle();
     void stopSound(SoundHandle instance);
-    void stopAll();
+    // createJS.Sound.stop() with its default: ambient/music instances are
+    // retained (they are marked `ambient` when played).
+    void stopAll(bool retainAmbient = true);
 
     bool allLoaded() const;
     bool isSoundLoaded(const std::string& soundName, const std::string& channel) const;
@@ -89,16 +91,32 @@ public:
     AudioBackend* backend() { return _backend; }
 
 private:
+    struct Instance;
     void ensureRegistered(const std::string& name, const std::string& channel);
     void applyInstanceVolumeType(const std::string& type, float volume);
+    Instance* findInstance(SoundHandle handle);
 
     AudioBackend* _backend = nullptr;
     std::unordered_map<std::string, SoundEntry> _sounds; // key = name + channel
     struct Instance {
         SoundHandle handle = kInvalidSound;
+        std::string key;
         std::string type; // "sound" | "music"
+        float base = 0.0f;   // type-scaled volume before the global master
+        float volume = 0.0f; // effective volume sent to the backend
+        float pan = 0.0f;
+        bool ambient = false;
+        bool loop = false;
+        float startTime = 0.0f;
+    };
+    struct Pending {
+        float remaining = 0.0f;
+        std::string sound;
+        PlaySoundOptions options;
     };
     std::vector<Instance> _instances;
+    std::vector<Pending> _pending;
+    float _time = 0.0f;
     bool _preloaded = false;
 };
 

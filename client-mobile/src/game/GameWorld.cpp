@@ -175,6 +175,16 @@ void GameWorld::loadMap(const MapMsg& msg) {
     _particleBarn->clear();
     _decalBarn->decalPool.clear();
     _airdropBarn->airdropPool.clear();
+    for (auto* plane : _planeBarn->planes) {
+        if (plane->soundInstance != audio::kInvalidSound && _audio) {
+            _audio->stopSound(plane->soundInstance);
+        }
+        plane->soundInstance = audio::kInvalidSound;
+        plane->active = false;
+        if (plane->sprite) {
+            plane->sprite->setVisible(false);
+        }
+    }
     _map->resetObjectPools();
     _gas.m_initFree();
     _lineSprites.m_free();
@@ -435,13 +445,25 @@ void GameWorld::update(float dt) {
     // Emote/ping manager update (positioned after all other objects)
     _emoteManager.update(dt, *this);
 
-    _renderer->m_update(dt, _camera, *_map, false);
-    // game.ts restoreCamera() only recentres on an ACTIVE player. Until the
-    // server names one (game.ts plays the map with the camera frozen on the
-    // viewport centre), do not force m_pos onto the held player, or a stale
-    // pointer would hide the terrain behind an all-water view.
+    // game.ts m_processGameUpdate(): the active player's layer and underground
+    // state are applied before renderer.m_update(), so the bunker layer fade,
+    // the ground fade and the tree/building mask all track the same frame.
     if (_activePlayer) {
-        _camera.m_pos = _activePlayer->pos;
+        _renderer->setActiveLayer(_activePlayer->layer);
+        const bool underground = _map->isUnderground(_activePlayer->pos, _activePlayer->layer, _activePlayer->rad);
+        _renderer->setUnderground(underground);
+        if (_audio) {
+            _audio->activeLayer = _activePlayer->layer;
+            _audio->underground = underground;
+        }
+    }
+
+    _renderer->m_update(dt, _camera, *_map, false);
+    // game.ts restoreCamera(): the camera follows the interpolated visual
+    // position, not the raw net position (player.ts m_visualPos), so following
+    // a 33 Hz player is smooth.
+    if (_activePlayer) {
+        _camera.m_pos = _activePlayer->visualPos;
     } else {
         const float w = _camera.m_screenWidth;
         const float h = _camera.m_screenHeight;
@@ -450,6 +472,9 @@ void GameWorld::update(float dt) {
         }
     }
     updateCameraZoom(dt);
+    // game.ts: apply the accumulated explosion/shake offset after restoring the
+    // camera position; the `screenShake` setting gates it in Camera.
+    _camera.m_applyShake();
     if (_root) {
         // renderer.ts: the camera live transform goes on the containers, right
         // after the zoom update so this frame already uses it. Only the world
@@ -469,22 +494,9 @@ void GameWorld::update(float dt) {
                             _camera, *_renderer, _factory, _mobile);
     }
 
-    // M6: drive the audio manager + ambience (game.ts update order).
-    if (_activePlayer) {
-        const bool underground = _map->isUnderground(_activePlayer->pos, _activePlayer->layer, _activePlayer->rad);
-        _renderer->setUnderground(underground);
-        if (_audio) {
-            _audio->activeLayer = _activePlayer->layer;
-            _audio->underground = underground;
-        }
-    }
-    if (_audio) {
-        _audio->cameraPos = _camera.m_pos;
-        _audio->update(dt);
-    }
-    if (_ambiance && _audio) {
-        _ambiance->update(dt, *_audio, true);
-    }
+    // M6: audio is ticked by GameScene (it must keep running in the Java menu,
+    // where there is no world); this only publishes the active layer/underground
+    // state above, before renderer.m_update.
 }
 
 const std::string& GameWorld::getPlayerName(uint16_t playerId) const {

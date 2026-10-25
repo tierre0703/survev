@@ -1099,19 +1099,20 @@ TEST(building_sound_emitters) {
     }
     const audio::SoundHandle handle = b->soundEmitters[0].instance;
     CHECK(handle != audio::kInvalidSound);
-    // baseVolume 0.5 * emitter volume 0.2 * distT 1 * visibility 0.25.
-    CHECK_NEAR(backend.getVolume(handle), 0.025f, 1e-4f);
+    // baseVolume 0.5 * masterVolume 0.5 * emitter volume 0.2 * distT 1 *
+    // visibility 0.25.
+    CHECK_NEAR(backend.getVolume(handle), 0.0125f, 1e-4f);
 
     // Halfway through the range: distT = 0.5.
     world.camera().m_pos = Vec2(162.5f, 160.0f);
     b->ceilingFadeAlpha = 1.0f;
     tick();
-    CHECK_NEAR(backend.getVolume(handle), 0.0125f, 1e-4f);
+    CHECK_NEAR(backend.getVolume(handle), 0.00625f, 1e-4f);
 
     // Seeing inside (ceiling faded) raises the visibility multiplier to 1.
     b->ceilingFadeAlpha = 0.0f;
     tick();
-    CHECK_NEAR(backend.getVolume(handle), 0.05f, 1e-3f);
+    CHECK_NEAR(backend.getVolume(handle), 0.025f, 1e-3f);
 
     // Wrong audio layer mutes the emitter.
     ap.layer = 1;
@@ -1135,7 +1136,7 @@ TEST(building_sound_emitters) {
     b->ceilingFadeAlpha = 0.0f;
     b->ceilingVisionTicker = -10.0f;
     b->update(0.001f, world); // ticker crossed 0.1 -> ~0.1 at dist 0
-    CHECK(backend.getVolume(handle) > 0.09f);
+    CHECK(backend.getVolume(handle) > 0.045f);
 
     // Freeing stops the loop and drops the emitters.
     b->m_free();
@@ -1462,8 +1463,173 @@ TEST(player_animation_sequence_and_interpolation) {
     CHECK_NEAR(p.animTicker, 0, 1e-5f);
 }
 
-TEST(player_downed_gear_and_pool_reuse) {
+// P0.3: player.ts interpolates m_visualPos/m_visualDir between net updates;
+// the container (and the camera in GameWorld::update) follow the visual copy.
+TEST(player_visual_pos_interpolates) {
     installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.camera().m_interpInterval = 0.1f;
+
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    p.m_updateData(d, true, true, world);
+    p.update(0.0f, world);
+    CHECK_NEAR(p.visualPos.x, 50.0f, 1e-5f);
+    CHECK_NEAR(container(p.container)->x, 50.0f, 1e-5f);
+
+    // A net move seeds the old visual position, then the frame lerps halfway.
+    d.pos = Vec2(60.0f, 50.0f);
+    d.dir = Vec2(0.0f, 1.0f);
+    p.m_updateData(d, true, false, world);
+    CHECK_NEAR(p.pos.x, 60.0f, 1e-5f);
+    CHECK_NEAR(p.visualPosOld.x, 50.0f, 1e-5f);
+    CHECK_NEAR(p.posInterpTicker, 0.0f, 1e-5f);
+    CHECK_NEAR(p.visualDirOld.x, 1.0f, 1e-5f);
+    p.update(0.05f, world);
+    CHECK_NEAR(p.visualPos.x, 55.0f, 1e-4f);
+    CHECK_NEAR(container(p.container)->x, 55.0f, 1e-4f);
+    // visualDir (0.5, 0.5) => body rotation -pi/4.
+    CHECK_NEAR(container(p.bodyContainer)->rotation, -3.14159265358979f / 4.0f, 1e-4f);
+    p.update(0.06f, world);
+    CHECK_NEAR(p.visualPos.x, 60.0f, 1e-4f);
+
+    // Disabling interpolation (the config toggle) snaps to the net position.
+    world.setInterpolationEnabled(false);
+    d.pos = Vec2(70.0f, 50.0f);
+    p.m_updateData(d, true, false, world);
+    p.update(0.0f, world);
+    CHECK_NEAR(p.visualPos.x, 70.0f, 1e-5f);
+    CHECK(world.camera().m_interpEnabled == false);
+
+    // A duplicated net update re-seeds the start position from the current net
+    // position (player.ts: `m_visualPosOld = isNew ? data.pos : this.m_pos`), so
+    // it cannot slide backwards and the ticker restarts at the settled target.
+    world.setInterpolationEnabled(true);
+    d.pos = Vec2(80.0f, 50.0f);
+    p.m_updateData(d, true, false, world);
+    p.update(0.04f, world);
+    CHECK(p.posInterpTicker > 0.0f);
+    p.m_updateData(d, true, false, world);
+    CHECK_NEAR(p.visualPosOld.x, 80.0f, 1e-5f);
+    CHECK_NEAR(p.posInterpTicker, 0.0f, 1e-5f);
+    p.update(0.04f, world);
+    CHECK_NEAR(p.visualPos.x, 80.0f, 1e-5f);
+}
+
+// P0.3: projectile.ts lerps the visual position in the barn render pass.
+TEST(projectile_visual_pos_interpolates) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.camera().m_interpInterval = 0.1f;
+
+    Projectile* p = world.projectileBarn().projectilePool.m_alloc();
+    p->__id = 7;
+    p->__type = ObjectType_Projectile;
+    ObjectData d;
+    d.type = "proj_grenade";
+    d.pos = Vec2(100.0f, 100.0f);
+    d.layer = 0;
+    d.scale = 1.0f;
+    d.posZ = 2.0f;
+    p->m_updateData(d, true, true, world);
+    world.projectileBarn().update(0.0f, world);
+    CHECK_NEAR(container(p->container)->x, 100.0f, 1e-5f);
+    CHECK_NEAR(container(p->container)->y, 102.0f, 1e-5f);
+
+    d.pos = Vec2(110.0f, 100.0f);
+    p->m_updateData(d, true, false, world);
+    CHECK_NEAR(p->visualPosOld.x, 100.0f, 1e-5f);
+    world.projectileBarn().update(0.05f, world);
+    CHECK_NEAR(container(p->container)->x, 105.0f, 1e-4f);
+    CHECK_NEAR(container(p->container)->y, 102.0f, 1e-4f);
+    world.projectileBarn().update(0.06f, world);
+    CHECK_NEAR(container(p->container)->x, 110.0f, 1e-4f);
+}
+
+// P0.2: GameWorld::update feeds the active player's layer (and the underground
+// flag) to the renderer before renderer.m_update(), so the bunker fade/mask and
+// the ground fade track the same frame.
+TEST(world_applies_active_layer_and_underground) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.camera().m_screenWidth = 800.0f;
+    world.camera().m_screenHeight = 600.0f;
+    MapMsg msg;
+    msg.mapName = "main";
+    msg.seed = 123456;
+    msg.width = 512.0f;
+    msg.height = 512.0f;
+    msg.shoreInset = 4.0f;
+    msg.grassInset = 2.0f;
+    world.loadMap(msg);
+
+    // A structure whose second layer is underground, covering the player.
+    Structure* s = world.map().structurePool.m_alloc();
+    s->layers.resize(2);
+    s->layers[1].underground = true;
+    s->layers[1].collision = Collider::createAabb(Vec2(40.0f, 40.0f), Vec2(60.0f, 60.0f));
+
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    d.layer = 1;
+    p.m_updateData(d, true, true, world);
+    world.setActivePlayer(&p);
+    world.setActivePlayerId(1);
+
+    world.update(0.016f);
+    CHECK_EQ(world.renderer().layer, 1);
+    CHECK(world.renderer().layerAlpha > 0.0f);
+    CHECK(world.renderer().underground);
+    CHECK(world.renderer().groundAlpha > 0.0f);
+
+    // The camera follows the interpolated visual position, not the raw one.
+    p.visualPos = Vec2(51.0f, 52.0f);
+    world.update(0.016f);
+    CHECK_NEAR(world.camera().m_pos.x, p.visualPos.x, 1e-5f);
+    CHECK_NEAR(world.camera().m_pos.y, p.visualPos.y, 1e-5f);
+
+    // Leaving the structure drops the layer and lets both fades run back out.
+    p.layer = 0;
+    for (int i = 0; i < 200; i++) {
+        world.update(0.016f);
+    }
+    CHECK_EQ(world.renderer().layer, 0);
+    CHECK_NEAR(world.renderer().layerAlpha, 0.0f, 1e-3f);
+    CHECK_NEAR(world.renderer().groundAlpha, 0.0f, 1e-3f);
+    CHECK(!world.renderer().underground);
+}
+
+// P0.7: the game.ts config listeners (interpolation/shake/rotation/anon names)
+// live on the world camera + player barn so every per-match world gets them.
+TEST(gameworld_settings_flags) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+
+    world.setInterpolationEnabled(false);
+    world.setScreenShakeEnabled(false);
+    world.setLocalRotationEnabled(true);
+    world.setAnonPlayerNames(true);
+    CHECK(!world.camera().m_interpEnabled);
+    CHECK(!world.camera().m_shakeEnabled);
+    CHECK(world.camera().m_localRotationEnabled);
+    CHECK(world.anonPlayerNames());
+
+    world.playerBarn().names[7] = "VisibleName";
+    CHECK_EQ(world.playerBarn().getPlayerName(7, 1, true), std::string("Player"));
+    CHECK_EQ(world.playerBarn().getPlayerName(7, 7, true), std::string("VisibleName"));
+
+    world.setAnonPlayerNames(false);
+    CHECK_EQ(world.playerBarn().getPlayerName(7, 1, world.anonPlayerNames()),
+             std::string("VisibleName"));
+}
+
+TEST(player_downed_gear_and_pool_reuse) {    installGeneratedDefs();
     pix::NullPixiFactory factory;
     GameWorld world(&factory, false);
     Player p;

@@ -104,3 +104,28 @@ low-pass, added to the vendored engine by
 
 Still not ported: human timbre verification (the call trace now proves the
 parameters) and UI sounds (the Java UI owns those screens).
+
+## Update 2026-10-25 (P0.7/P1.5)
+
+- Startup volumes/mute are applied from config by `UiBridge::applyGameSettings`.
+- `AudioManager::setVolume` now folds in the global master volume (and the
+  per-instance pre-master base), so ambience/music/interior/emitter updates no
+  longer drop it; changing master rescales live voices (including 0 -> 1).
+- `stopAll(retainAmbient = true)` matches createJS and keeps ambient/music loops;
+  pausing/backgrounding no longer stops audio. `GameScene` ticks
+  `AudioManager`/`Ambiance` every frame (menu music included), and
+  `Ambiance::onGameComplete` fades the menu music back in.
+- Channel semantics live in `AudioManager`: maxInstances (oldest killed),
+  canCoalesce (30 ms equal-power merge), delay (seconds; shot.ts pre-converts),
+  detune (cents -> axmol pitch 2^(c/1200)) and ambient/loop retention.
+- `AxmolAudioBackend::isPlaying` keeps PAUSED voices (mute = pauseAll) and pauses
+  loops started while muted.
+- Sound keys now come from generated defs: gun reload/reloadAlt/deploy,
+  heal/boost use, loot pickup (new `GameObjRenderDef` fields), door
+  change/open/close/unlock, button on/off, obstacle explode, building puzzle
+  fail/complete + ceiling destroy, plane engine loop, and victory music
+  (`GameOverMsg` + 1.3 s delay).
+- Not applicable on Android: `notification_start_01` (tab focus) and
+  `notification_join_01` (web team screen only when unfocused). Exact EQ timbre
+  remains P2.
+- Host tests: 181 tests / 2,794 assertions, 0 failures.
