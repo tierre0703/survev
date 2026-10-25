@@ -541,12 +541,27 @@ struct EmitterDef {
     int zOrd = 0;
 };
 
+// Shared loadout item metadata (shared/defs BaseLoadoutItem): outfits, melee,
+// emotes, heal/boost effects and crosshairs. Ownership is resolved separately
+// by ui::Loadout (unlock_default + account items); this table only carries the
+// display data the native customize screen needs.
+struct LoadoutItemDef {
+    std::string type;
+    std::string category; // "outfit" | "melee" | "emote" | "heal_effect" | "boost_effect" | "crosshair"
+    std::string name;
+    std::string lore;
+    std::string sprite; // loot/emote/crosshair texture name
+    int rarity = 0;
+};
+
 class DefProvider {
 public:
     virtual ~DefProvider() = default;
     virtual const MapObjectDef* mapObject(const std::string& type) const = 0;
     virtual const MapRenderDef* mapRender(const std::string& mapName) const = 0;
     virtual const GameObjRenderDef* gameObject(const std::string& type) const = 0;
+    // Loadout metadata for the Java customize screen (null in fakes).
+    virtual const std::vector<LoadoutItemDef>* loadoutItems() const { return nullptr; }
     // Particle/emitter tables. Default to null so providers that don't emit
     // them (e.g. host-test fakes) keep compiling.
     virtual const ParticleDef* particle(const std::string&) const { return nullptr; }

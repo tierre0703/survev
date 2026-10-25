@@ -55,6 +55,15 @@ public:
     // Flattened table for the current locale ({"key": "text"}).
     virtual std::string l10nJson() = 0;
     virtual std::string loadoutJson() = 0;
+    // Owned loadout items with shared-def metadata (type/category/name/lore/
+    // sprite/rarity) for the Java customize screen: a JSON array.
+    virtual std::string loadoutItemsJson() { return "[]"; }
+    // Persists the account's owned item types (from /api/user profile `items`)
+    // so ui::Loadout keeps non-default unlocks; JSON array of strings.
+    virtual bool setAccountItemsJson(const std::string& json) {
+        (void)json;
+        return false;
+    }
     // /api/site_info is fetched by the C++ menu today; Java reads the last
     // response through this (empty until the first fetch responds).
     virtual std::string siteInfoJson() = 0;

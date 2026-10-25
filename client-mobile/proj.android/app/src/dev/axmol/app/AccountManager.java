@@ -54,6 +54,12 @@ public final class AccountManager {
 
     private static AccountManager sInstance;
 
+    /** One owned account item and its confirmation status (loadout.ItemStatus). */
+    public static final class ItemInfo {
+        public String type = "";
+        public int status = 0; // 0=New, 1=Confirmed, 2=Ackd
+    }
+
     /** Snapshot of the logged-in user; `loggedIn` is false before login. */
     public static final class Profile {
         public boolean loggedIn = false;
@@ -111,6 +117,7 @@ public final class AccountManager {
     private final String mApiBaseUrl;
 
     private final Profile mProfile = new Profile();
+    private final List<ItemInfo> mItems = new ArrayList<ItemInfo>();
     private String mDeviceId = "";
     private String mToken = "";
     private boolean mStarted = false;
@@ -149,6 +156,19 @@ public final class AccountManager {
 
     public Profile getProfile() {
         return mProfile;
+    }
+
+    public List<ItemInfo> getItems() {
+        return mItems;
+    }
+
+    /** The owned item types as a JSON array (SurvBridge.setAccountItems). */
+    public String getItemTypesJson() {
+        JsonArray types = new JsonArray();
+        for (ItemInfo item : mItems) {
+            types.add(item.type);
+        }
+        return types.toString();
     }
 
     public boolean isLoggedIn() {
@@ -407,6 +427,38 @@ public final class AccountManager {
      * server validates it against the owned items and returns the corrected
      * selection, which `fetchProfile` then applies back through SurvBridge.
      */
+    /**
+     * Marks items Confirmed (1) or Ackd (2) on the account (web
+     * `account.setItemStatus`). The local copy is updated first so the
+     * customize screen does not fire duplicate requests on every refresh.
+     */
+    public void setItemStatus(final int status, List<String> itemTypes) {
+        if (!mProfile.loggedIn || mToken.isEmpty() || itemTypes == null || itemTypes.isEmpty()) {
+            return;
+        }
+        for (ItemInfo item : mItems) {
+            for (String type : itemTypes) {
+                if (item.type.equals(type)) {
+                    item.status = Math.max(item.status, status);
+                }
+            }
+        }
+        JsonArray types = new JsonArray();
+        for (String type : itemTypes) {
+            types.add(type);
+        }
+        JsonObject body = new JsonObject();
+        body.addProperty("status", status);
+        body.add("itemTypes", types);
+        SurvApi.userPost(mApiBaseUrl, "set_item_status", mToken, body.toString(),
+                new SurvApi.StatusCallback() {
+                    @Override
+                    public void onResult(int code, String json) {
+                        Log.i(TAG, "set_item_status " + status + " -> " + code);
+                    }
+                });
+    }
+
     public void pushLoadout(String loadoutJson) {
         if (!mProfile.loggedIn || mToken.isEmpty() || loadoutJson == null) {
             return;
@@ -510,6 +562,29 @@ public final class AccountManager {
         mProfile.linked = jsonBool(profile, "linked");
         mProfile.usernameChangeTime = jsonLong(profile, "usernameChangeTime");
 
+        // Owned items first: the account loadout below is validated against the
+        // owned set, so an item unlocked after the default loadout must be known
+        // before we hand the server's selection to the C++ validator.
+        JsonElement items = root.get("items");
+        mItems.clear();
+        if (items != null && items.isJsonArray()) {
+            for (JsonElement item : items.getAsJsonArray()) {
+                if (item == null || !item.isJsonObject()) continue;
+                JsonObject obj = item.getAsJsonObject();
+                JsonElement type = obj.get("type");
+                if (type == null || !type.isJsonPrimitive()) continue;
+                ItemInfo info = new ItemInfo();
+                info.type = type.getAsString();
+                try {
+                    info.status = obj.has("status") ? obj.get("status").getAsInt() : 0;
+                } catch (Exception ignored) {
+                    info.status = 0;
+                }
+                mItems.add(info);
+            }
+        }
+        SurvBridge.setAccountItems(getItemTypesJson());
+
         // The account loadout is authoritative (web `account.loadout`); the
         // C++ validator still normalizes it before the JoinMsg sees it.
         JsonElement loadout = root.get("loadout");
@@ -550,6 +625,9 @@ public final class AccountManager {
     private void clearSession() {
         mToken = "";
         writePref(PREF_SESSION_TOKEN, "");
+        // Do not leave the previous account's unlocks in the C++ owned set.
+        mItems.clear();
+        SurvBridge.setAccountItems("[]");
     }
 
     private void notifyChanged() {

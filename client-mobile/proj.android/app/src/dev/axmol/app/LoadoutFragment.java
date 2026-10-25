@@ -28,6 +28,11 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -54,7 +59,9 @@ public class LoadoutFragment {
     private final LinearLayout mGrid;
     private final TextView mSelectionLabel;
     private final TextView mDetailPanel;      // item details area
-    private final Button mEmoteSlotBtn;
+    private final Button mNewItemBtn;
+    private final LinearLayout mEmoteSlotRow;
+    private final Button[] mEmoteSlotButtons = new Button[6];
     private final Button mSortBtn;
     private final Button mPrevBtn;
     private final Button mNextBtn;
@@ -70,12 +77,15 @@ public class LoadoutFragment {
 
     // --- state ---
     private String[] mCategories = {"outfit", "melee", "emote", "heal", "boost", "player_icon", "crosshair"};
+    private static final int EMOTE_SLOT_COUNT = 6;
+    private static final String[] EMOTE_SLOT_LABELS = {"Top", "Right", "Bottom", "Left", "Win", "Death"};
     private int mSelectedCat = 0;
     private int mPage = 0;
     private int mEmoteSlot = 0;
-    private int mEmoteCount = 8;
     private boolean mOpen = false;
     private int mSortMode = 0; // 0=newest, 1=alpha, 2=rarity
+    // Real shared/defs items (owned by this account), refreshed on each show.
+    private final List<ItemEntry> mItems = new ArrayList<ItemEntry>();
     
     // Crosshair state
     private int mCrosshairColorIdx = 0; // default red
@@ -182,22 +192,43 @@ public class LoadoutFragment {
         mSelectionLabel.setGravity(Gravity.CENTER);
         panel.addView(mSelectionLabel);
 
-        // Emote slot selector (visible only for emote category)
-        mEmoteSlotBtn = new Button(activity);
-        mEmoteSlotBtn.setText("Emote Slot 1");
-        mEmoteSlotBtn.setBackgroundColor(0xFF4A4A4A);
-        mEmoteSlotBtn.setTextColor(Color.WHITE);
-        mEmoteSlotBtn.setOnClickListener(new View.OnClickListener() {
+        // New-item confirmation banner (web modal-item-confirm reduced to the
+        // touch screen): appears while account items have status < Confirmed.
+        mNewItemBtn = makeSmallButton("New items unlocked - tap to confirm");
+        mNewItemBtn.setBackgroundColor(GOLD);
+        mNewItemBtn.setTextColor(Color.BLACK);
+        mNewItemBtn.setVisibility(View.GONE);
+        mNewItemBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (mEmoteCount > 0) {
-                    mEmoteSlot = (mEmoteSlot + 1) % mEmoteCount;
-                    refresh();
-                }
+                confirmNewItems();
             }
         });
-        mEmoteSlotBtn.setVisibility(View.GONE);
-        panel.addView(mEmoteSlotBtn);
+        panel.addView(mNewItemBtn);
+
+        // Emote slot selector (visible only for emote category): the four wheel
+        // wedges plus the win/death auto-emotes (EmoteSlot 0..5).
+        mEmoteSlotRow = new LinearLayout(activity);
+        mEmoteSlotRow.setOrientation(LinearLayout.HORIZONTAL);
+        mEmoteSlotRow.setGravity(Gravity.CENTER);
+        for (int i = 0; i < EMOTE_SLOT_COUNT; i++) {
+            final int slot = i;
+            Button slotBtn = makeSmallButton(EMOTE_SLOT_LABELS[i]);
+            LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            slp.setMargins(dp(1), 0, dp(1), 0);
+            slotBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    mEmoteSlot = slot;
+                    refresh();
+                }
+            });
+            mEmoteSlotButtons[i] = slotBtn;
+            mEmoteSlotRow.addView(slotBtn, slp);
+        }
+        mEmoteSlotRow.setVisibility(View.GONE);
+        panel.addView(mEmoteSlotRow);
 
         // === Crosshair Editor (visible only for crosshair category) ===
         mCrosshairEditor = new LinearLayout(activity);
@@ -371,6 +402,22 @@ public class LoadoutFragment {
         
         // Initialize color selection
         updateColorSelection();
+
+        // The profile can land after the screen is first built (device login is
+        // asynchronous); refresh the owned list when it arrives.
+        AccountManager account = AccountManager.peek();
+        if (account != null) {
+            account.addListener(new AccountManager.Listener() {
+                @Override
+                public void onAccountChanged(AccountManager.Profile profile) {
+                    if (mOpen) refresh();
+                }
+
+                @Override
+                public void onAccountError(String error) {
+                }
+            });
+        }
     }
 
     public void setOnChanged(OnChangedListener listener) {
@@ -383,6 +430,13 @@ public class LoadoutFragment {
         if (mOpen) return;
         mOpen = true;
         mRoot.setVisibility(View.VISIBLE);
+        // Re-sync the owned account items before the first read: the profile
+        // fetch can finish before installUiBridge installs the C++ bridge, so
+        // AccountManager's early setAccountItems call may have been dropped.
+        AccountManager account = AccountManager.peek();
+        if (account != null && account.isLoggedIn()) {
+            SurvBridge.setAccountItems(account.getItemTypesJson());
+        }
         refresh();
         Log.i(TAG, "loadout show");
     }
@@ -405,28 +459,52 @@ public class LoadoutFragment {
 
     public void refresh() {
         String loadoutJson = SurvBridge.getLoadoutJson();
+        JsonObject loadout = parseObject(loadoutJson);
 
         // Determine current selection and available items for this category.
         String cat = mCategories[mSelectedCat];
         String selectedType = "";
 
-        // Show/hide appropriate panels based on category
+        // Show/hide appropriate panels based on category. The item grid stays
+        // visible for crosshair too: it is the crosshair type picker.
         boolean isCrosshair = "crosshair".equals(cat);
+        boolean isEmote = "emote".equals(cat);
         mCrosshairEditor.setVisibility(isCrosshair ? View.VISIBLE : View.GONE);
-        mGrid.setVisibility(isCrosshair ? View.GONE : View.GONE);
-        mEmoteSlotBtn.setVisibility(View.GONE);
+        mGrid.setVisibility(View.VISIBLE);
+        mEmoteSlotRow.setVisibility(isEmote ? View.VISIBLE : View.GONE);
+
+        // Owned item list + metadata from shared/defs (show() re-synced the
+        // account items first).
+        loadItems();
+        refreshItemStatus();
 
         if (isCrosshair) {
             // Update crosshair editor state from the validated loadout
-            // ({"crosshair":{"color":0xRRGGBB,"size":"1.00","stroke":"0.00"}}).
-            String chColor = Json.peekNestedString(loadoutJson, "crosshair", "color");
-            if (chColor == null) {
-                int colorInt = (int) Json.peekNestedDouble(loadoutJson, "crosshair", "color", 0xFFFFFF);
-                chColor = String.format("#%06X", colorInt & 0xFFFFFF);
+            // ({"crosshair":{"type":...,"color":0xRRGGBB,"size":"1.00","stroke":"0.00"}}).
+            JsonObject crosshair = loadout != null && loadout.has("crosshair")
+                    && loadout.get("crosshair").isJsonObject()
+                    ? loadout.getAsJsonObject("crosshair") : null;
+            String chColor = null;
+            double chSize = 1.0;
+            double chStroke = 0.0;
+            if (crosshair != null) {
+                selectedType = jsonString(crosshair, "type");
+                JsonElement color = crosshair.get("color");
+                if (color != null && color.isJsonPrimitive()) {
+                    try {
+                        chColor = String.format("#%06X",
+                                color.getAsInt() & 0xFFFFFF);
+                    } catch (Exception ignored) {
+                        chColor = "#FFFFFF";
+                    }
+                }
+                if (crosshair.has("size")) {
+                    try { chSize = crosshair.get("size").getAsDouble(); } catch (Exception ignored) {}
+                }
+                if (crosshair.has("stroke")) {
+                    try { chStroke = crosshair.get("stroke").getAsDouble(); } catch (Exception ignored) {}
+                }
             }
-            double chSize = Json.peekNestedDouble(loadoutJson, "crosshair", "size", 1.0);
-            double chStroke = Json.peekNestedDouble(loadoutJson, "crosshair", "stroke", 0.0);
-
             if (chColor != null) {
                 for (int i = 0; i < CROSSHAIR_COLORS.length; i++) {
                     if (CROSSHAIR_COLORS[i].equalsIgnoreCase(chColor)) {
@@ -445,37 +523,96 @@ public class LoadoutFragment {
             for (int i = 0; i < strokes.length; i++) {
                 if (Math.abs(chStroke - strokes[i]) < 0.5) mCrosshairStroke = i;
             }
-            
+
             mSizeBtn.setText(SIZE_LABELS[mCrosshairSize]);
             mStrokeBtn.setText(STROKE_LABELS[mCrosshairStroke]);
             updateCrosshairPreview();
             updateColorSelection();
-            
-            mSelectionLabel.setText("Customize your crosshair appearance");
-            return;
-        }
-
-        if ("emote".equals(cat)) {
+        } else if ("emote".equals(cat)) {
             List<String> emotes = parseArray(loadoutJson, "emotes");
-            mEmoteCount = Math.max(emotes.size(), 1);
-            if (mEmoteSlot >= mEmoteCount && mEmoteCount > 0) mEmoteSlot = 0;
-            if (mEmoteSlot < emotes.size()) {
-                selectedType = emotes.get(mEmoteSlot);
+            while (emotes.size() < EMOTE_SLOT_COUNT) emotes.add("");
+            if (mEmoteSlot < 0 || mEmoteSlot >= EMOTE_SLOT_COUNT) mEmoteSlot = 0;
+            selectedType = emotes.get(mEmoteSlot);
+            for (int i = 0; i < EMOTE_SLOT_COUNT; i++) {
+                mEmoteSlotButtons[i].setBackgroundColor(
+                        i == mEmoteSlot ? SELECT_GREEN : 0xFF3A3A3A);
             }
-            mEmoteSlotBtn.setVisibility(View.VISIBLE);
-            mEmoteSlotBtn.setText("Emote " + (mEmoteSlot + 1) + "/" + mEmoteCount
-                    + " : " + localizeName(selectedType));
         } else {
-            selectedType = Json.peekString(loadoutJson, cat);
+            if (loadout != null) {
+                selectedType = jsonString(loadout, cat);
+            }
         }
 
-        String display = selectedType == null || selectedType.isEmpty()
-                ? "Stock" : localizeName(selectedType);
-        int rarityColor = getRarityColor(selectedType);
-        mSelectionLabel.setText(catLabel(cat) + ": " + display);
+        ItemEntry selected = findItem(selectedType);
+        String display = selected != null && !selected.displayName.isEmpty()
+                ? selected.displayName
+                : (selectedType == null || selectedType.isEmpty()
+                        ? ("player_icon".equals(cat) ? "None" : "Stock")
+                        : localizeName(selectedType));
+        int rarityColor = selected != null ? selected.rarityColor : RARITY_STOCK;
+        String prefix = isEmote
+                ? "Emote (" + EMOTE_SLOT_LABELS[mEmoteSlot] + ") "
+                : catLabel(cat) + ": ";
+        mSelectionLabel.setText(prefix + display);
         mSelectionLabel.setTextColor(rarityColor != RARITY_STOCK ? rarityColor : GOLD);
 
         refreshGrid(cat, selectedType);
+    }
+
+    // --- New-item confirmation (web loadoutMenu onItems/tryBeginConfirming) ---
+
+    private String itemCategory(String tab) {
+        return "player_icon".equals(tab) ? "emote" : tab;
+    }
+
+    private void refreshItemStatus() {
+        AccountManager account = AccountManager.peek();
+        if (account == null || !account.isLoggedIn()) {
+            mNewItemBtn.setVisibility(View.GONE);
+            return;
+        }
+        List<String> pending = new ArrayList<String>();
+        StringBuilder names = new StringBuilder();
+        for (AccountManager.ItemInfo info : account.getItems()) {
+            if (info.status >= 1 || pending.contains(info.type)) continue;
+            pending.add(info.type);
+            ItemEntry entry = findItem(info.type);
+            if (names.length() > 0) names.append(", ");
+            names.append(entry != null ? entry.displayName : info.type);
+        }
+        if (!pending.isEmpty()) {
+            mNewItemBtn.setText("New: " + names + " - tap to confirm");
+            mNewItemBtn.setVisibility(View.VISIBLE);
+        } else {
+            mNewItemBtn.setVisibility(View.GONE);
+        }
+        // Opening a category acks its items (web setItemsAckd); the local copy is
+        // updated by setItemStatus so this fires once per item.
+        String wanted = itemCategory(mCategories[mSelectedCat]);
+        List<String> ack = new ArrayList<String>();
+        for (AccountManager.ItemInfo info : account.getItems()) {
+            if (info.status >= 2) continue;
+            ItemEntry entry = findItem(info.type);
+            if (entry != null && wanted.equals(entry.category)) {
+                ack.add(info.type);
+            }
+        }
+        if (!ack.isEmpty()) account.setItemStatus(2, ack);
+    }
+
+    private void confirmNewItems() {
+        AccountManager account = AccountManager.peek();
+        if (account == null || !account.isLoggedIn()) {
+            mNewItemBtn.setVisibility(View.GONE);
+            return;
+        }
+        List<String> types = new ArrayList<String>();
+        for (AccountManager.ItemInfo info : account.getItems()) {
+            if (info.status < 1 && !types.contains(info.type)) types.add(info.type);
+        }
+        if (!types.isEmpty()) account.setItemStatus(1, types);
+        mNewItemBtn.setVisibility(View.GONE);
+        Log.i(TAG, "confirmed " + types.size() + " new item(s)");
     }
 
     private void refreshGrid(String category, String selectedType) {
@@ -510,6 +647,9 @@ public class LoadoutFragment {
 
             final ItemEntry entry = items.get(i);
             String label = entry.displayName;
+            if ("crosshair".equals(category) && label.startsWith("Style ")) {
+                label = label.substring("Style ".length());
+            }
             boolean isSelected = entry.type.equals(selectedType);
 
             Button itemBtn = new Button(mActivity);
@@ -623,15 +763,32 @@ public class LoadoutFragment {
     }
 
     private void selectItem(String category, String type, int emoteSlot) {
-        StringBuilder loadoutJson = new StringBuilder();
-        loadoutJson.append("{\"").append(category).append("\":\"").append(escapeJson(type)).append("\"");
+        String json;
         if ("emote".equals(category)) {
-            loadoutJson.append(",\"emotes\":[\"").append(escapeJson(type)).append("\"]");
+            // Merge into the 6-slot array (4 wheel + win/death); the old code
+            // replaced the array with one entry, wiping the other slots.
+            List<String> emotes = parseArray(SurvBridge.getLoadoutJson(), "emotes");
+            while (emotes.size() < EMOTE_SLOT_COUNT) emotes.add("");
+            int slot = Math.max(0, Math.min(emoteSlot, EMOTE_SLOT_COUNT - 1));
+            emotes.set(slot, type);
+            StringBuilder arr = new StringBuilder("[");
+            for (int i = 0; i < EMOTE_SLOT_COUNT; i++) {
+                if (i > 0) arr.append(',');
+                arr.append('"').append(escapeJson(emotes.get(i))).append('"');
+            }
+            arr.append(']');
+            json = "{\"emotes\":" + arr + "}";
+        } else if ("crosshair".equals(category)) {
+            // Nested loadout.ts shape; a flat {"crosshair":"type"} is ignored
+            // by the validator.
+            json = "{\"crosshair\":{\"type\":\"" + escapeJson(type) + "\"}}";
+        } else {
+            json = "{\"" + category + "\":\"" + escapeJson(type) + "\"}";
         }
-        loadoutJson.append("}");
 
-        boolean accepted = SurvBridge.setLoadout(loadoutJson.toString());
-        Log.i(TAG, "select " + category + "=" + type + " accepted=" + accepted);
+        boolean accepted = SurvBridge.setLoadout(json);
+        Log.i(TAG, "select " + category + "=" + type + " slot=" + emoteSlot
+                + " accepted=" + accepted);
 
         if (mOnChanged != null) {
             mOnChanged.onChanged(category, type, emoteSlot);
@@ -684,77 +841,91 @@ public class LoadoutFragment {
         SurvBridge.setLoadout(json.toString());
     }
 
-    // --- Item data (mirrors C++ ui::Loadout::items) with rarity ---
+    // --- Item data (owned shared/defs items, via SurvBridge.loadoutItemsJson) ---
 
     static class ItemEntry {
         String type;
+        String category;
         String displayName;
         int rarity; // 0-5 stock->mythic
         int rarityColor;
         String description;
+        String sprite;
+    }
+
+    // Reads the C++ item snapshot: [{"type","category","name","lore","sprite",
+    // "rarity"}]. The C++ side has already filtered to owned items
+    // (unlock_default + account items) and mapped effect categories to the
+    // loadout's heal/boost tabs.
+    private void loadItems() {
+        mItems.clear();
+        String json = SurvBridge.getLoadoutItemsJson();
+        if (json == null || json.isEmpty()) return;
+        try {
+            JsonElement parsed = JsonParser.parseString(json);
+            if (!parsed.isJsonArray()) return;
+            String l10n = SurvBridge.getL10nJson();
+            JsonArray array = parsed.getAsJsonArray();
+            for (JsonElement element : array) {
+                if (element == null || !element.isJsonObject()) continue;
+                JsonObject obj = element.getAsJsonObject();
+                ItemEntry e = new ItemEntry();
+                e.type = jsonString(obj, "type");
+                e.category = jsonString(obj, "category");
+                e.sprite = jsonString(obj, "sprite");
+                String name = jsonString(obj, "name");
+                String l10nName = Json.peekString(l10n, "game-" + e.type);
+                e.displayName = l10nName != null && !l10nName.isEmpty() ? l10nName : name;
+                if (e.displayName == null || e.displayName.isEmpty()) {
+                    e.displayName = e.type.replace('_', ' ');
+                }
+                String lore = jsonString(obj, "lore");
+                String l10nLore = Json.peekString(l10n, "game-" + e.type + "-lore");
+                e.description = l10nLore != null && !l10nLore.isEmpty() ? l10nLore : lore;
+                try {
+                    e.rarity = obj.has("rarity") ? obj.get("rarity").getAsInt() : 0;
+                } catch (Exception ignored) {
+                    e.rarity = 0;
+                }
+                e.rarityColor = getRarityFromInt(e.rarity);
+                mItems.add(e);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "loadout items parse failed: " + e.getMessage());
+        }
     }
 
     private List<ItemEntry> getCategoryItems(String category) {
         List<ItemEntry> items = new ArrayList<ItemEntry>();
-        
-        if ("outfit".equals(category)) {
-            addItem(items, "", "Stock", 0, "Default outfit");
-            addItem(items, "outfitBase", "Base Skin", 1, "Standard military uniform");
-            addItem(items, "outfitWoodland", "Woodland", 2, "Forest camouflage pattern");
-            addItem(items, "outfitSnow", "Arctic", 3, "Snow terrain camouflage");
-            addItem(items, "outfitDesert", "Desert", 3, "Desert tan uniform");
-            addItem(items, "outfitJungle", "Jungle", 4, "Tropical jungle camo");
-        } else if ("melee".equals(category)) {
-            addItem(items, "", "Fists", 0, "Your bare hands");
-            addItem(items, "katana_rusted", "Rusty Katana", 2, "A worn katana blade");
-            addItem(items, "katana", "Katana", 4, "Sharp samurai sword");
-        } else if ("emote".equals(category)) {
-            addItem(items, "emote_gg", "GG", 1, "Good Game!");
-            addItem(items, "emote_wp", "Well Played", 1, "Respectful nod");
-            addItem(items, "emote_cry", "Cry", 2, "Tears of defeat");
-            addItem(items, "emote_laugh", "Laugh", 2, "Hysterical laughter");
-            addItem(items, "emote_heart", "Heart", 3, "Send some love");
-            addItem(items, "emote_thumbs_up", "Thumbs Up", 1, "Approval!");
-            addItem(items, "emote_wave", "Wave", 1, "Friendly greeting");
-            addItem(items, "emote_dab", "Dab", 4, "Dab dance move");
-        } else if ("heal".equals(category)) {
-           addItem(items, "heal_basic", "Bandages", 1, "Basic healing item");
-            addItem(items, "heal_advanced", "Med Kit", 3, "Full health restore");
-        } else if ("boost".equals(category)) {
-            addItem(items, "boost_basic", "Soda", 1, "Minor speed boost");
-            addItem(items, "boost_advanced", "Pills", 3, "Major adrenaline boost");
-        } else if ("player_icon".equals(category)) {
-            addItem(items, "", "Default", 0, "Standard icon");
-            addItem(items, "emote_gg", "GG Icon", 1, "GG as icon");
-            addItem(items, "emote_wp", "WP Icon", 1, "Well Played icon");
-        } else if ("crosshair".equals(category)) {
-            // Crosshair is handled by the editor, not grid
+        // player_icon uses the emote pool (shared/defs emote defs); add an
+        // explicit "None" entry because its validated default is "".
+        String wanted = "player_icon".equals(category) ? "emote" : category;
+        for (ItemEntry e : mItems) {
+            if (wanted.equals(e.category)) items.add(e);
+        }
+        if ("player_icon".equals(category)) {
+            addItem(items, "", "None", RARITY_STOCK, "No player icon");
         }
         return items;
     }
-    
+
     private void addItem(List<ItemEntry> items, String type, String name, int rarity, String desc) {
         ItemEntry e = new ItemEntry();
         e.type = type;
+        e.category = "player_icon";
         e.displayName = name;
-        e.rarity = rarity;
-        e.rarityColor = getRarityFromInt(rarity);
+        e.rarity = 0;
+        e.rarityColor = rarity;
         e.description = desc;
         items.add(e);
     }
-    
-    private int getRarityColor(String type) {
-        if (type == null || type.isEmpty()) return RARITY_STOCK;
-        // Map known items to their rarity colors
-        List<ItemEntry> allItems = new ArrayList<>();
-        String[] cats = {"outfit", "melee", "emote", "heal", "boost", "player_icon"};
-        for (String cat : cats) {
-            allItems.addAll(getCategoryItems(cat));
+
+    private ItemEntry findItem(String type) {
+        if (type == null || type.isEmpty()) return null;
+        for (ItemEntry e : mItems) {
+            if (e.type.equals(type)) return e;
         }
-        for (ItemEntry e : allItems) {
-            if (e.type.equals(type)) return e.rarityColor;
-        }
-        return RARITY_COMMON;
+        return null;
     }
     
     private int getRarityFromInt(int rarity) {
@@ -793,6 +964,26 @@ public class LoadoutFragment {
     }
 
     // --- JSON helpers ---
+
+    private JsonObject parseObject(String json) {
+        if (json == null || json.isEmpty()) return null;
+        try {
+            JsonElement element = JsonParser.parseString(json);
+            return element != null && element.isJsonObject() ? element.getAsJsonObject() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String jsonString(JsonObject obj, String key) {
+        if (obj == null || !obj.has(key)) return "";
+        try {
+            JsonElement element = obj.get(key);
+            return element != null && element.isJsonPrimitive() ? element.getAsString() : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
 
     private List<String> parseArray(String json, String key) {
         List<String> items = new ArrayList<String>();

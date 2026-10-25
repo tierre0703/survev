@@ -583,6 +583,25 @@ for (const type of gameTypes) {
         }\n`;
 }
 
+// Loadout item metadata (shared/defs BaseLoadoutItem): the native customize
+// screen lists the real outfit/melee/emote/heal/boost/crosshair defs with their
+// display name, lore, sprite and rarity instead of the old hardcoded IDs.
+const LOADOUT_DEF_TYPES = new Set(["outfit", "melee", "emote", "heal_effect", "boost_effect", "crosshair"]);
+let loadoutEntries = "";
+for (const type of gameTypes) {
+    let def;
+    try {
+        def = GameObjectDefs.typeToDef(type);
+    } catch {
+        def = null;
+    }
+    if (!def || !LOADOUT_DEF_TYPES.has(def.type)) continue;
+    const sprite = def.lootImg?.sprite || def.img?.sprite || def.texture || "";
+    loadoutEntries += `    {${str(type)},${str(def.type)},${str(def.name || "")},${str(def.lore || "")},${
+        str(sprite)
+    },${n(def.rarity, 0)}},\n`;
+}
+
 const boneInit = (p) => `{${vec(p?.pivot)},${fp(p?.rot)},${vec(p?.pos)}}`;
 const poseInit = (bones) => `{{${Array.from({ length: 6 }, (_, i) => boneInit(bones[i])).join(",")}}}`;
 const easings = [
@@ -977,6 +996,9 @@ struct RawPlane { float actionOffset; float planeVel, planeRad, soundRangeMult, 
 struct RawTracer { unsigned regular, saturated, chambered, apSaturated; float alphaRate, alphaMin; };
 struct RawBulletRender { float distance, speed, variance; const char* tracerColor; float tracerWidth, tracerLength; unsigned flareColor; float maxFlareScale; };
 struct RawEmote { const char* type; const char* texture; const char* sound; const char* channel; const char* name; int teamOnly; int category; };
+struct RawLoadoutItem {
+    const char* type; const char* category; const char* name; const char* lore; const char* sprite; int rarity;
+};
 struct RawPing {
     const char* type; const char* texture; const char* mapTexture; const char* sound; const char* soundLeader;
     int pingMap; float pingLife, mapLife; int worldDisplay; int mapEvent; unsigned tint;
@@ -1069,6 +1091,8 @@ static const RawRole kRoles[] = {
 ${roleEntries}};
 static const RawGameObj kGameObjs[] = {
 ${gameEntries}};
+static const RawLoadoutItem kLoadoutItems[] = {
+${loadoutEntries}};
 static const RawParticle kParticles[] = {
 ${particleEntries}};
 static const RawEmitter kEmitters[] = {
@@ -1353,6 +1377,17 @@ ${
             d.soundDead = r.soundDead ? r.soundDead : "";
             _roles[r.type] = std::move(d);
         }
+        _loadoutItems.reserve(sizeof(kLoadoutItems) / sizeof(kLoadoutItems[0]));
+        for (const auto& r : kLoadoutItems) {
+            LoadoutItemDef d;
+            d.type = r.type ? r.type : "";
+            d.category = r.category ? r.category : "";
+            d.name = r.name ? r.name : "";
+            d.lore = r.lore ? r.lore : "";
+            d.sprite = r.sprite ? r.sprite : "";
+            d.rarity = r.rarity;
+            _loadoutItems.push_back(std::move(d));
+        }
         _planes.reserve(2);
         for (const auto& r : kPlanes) _planes.push_back(toPlane(r));
         for (int i = 0; i < ${tracerCount}; ++i) {
@@ -1415,6 +1450,9 @@ ${
         auto it = _roles.find(type);
         return it == _roles.end() ? nullptr : &it->second;
     }
+    const std::vector<LoadoutItemDef>* loadoutItems() const override {
+        return &_loadoutItems;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
@@ -1429,6 +1467,7 @@ private:
     std::unordered_map<std::string, EmitterDef> _emitters;
     std::unordered_map<std::string, PlayerPose> _poses;
     std::unordered_map<std::string, PlayerAnimationDef> _animations;
+    std::vector<LoadoutItemDef> _loadoutItems;
     std::vector<PlaneDef> _planes;
 };
 

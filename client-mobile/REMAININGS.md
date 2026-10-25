@@ -10,11 +10,11 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25 (P0.1)** — the touch client now sends gameplay
-action inputs: reload, interact/cancel, equip slot 1–4 (tap the weapon cards),
-throwable throw, quick-use heal/boost, scope cycling, weapon-slot swap, and
-drop (long-press a card/pill). The previous 1:1 audit still applies to P0.2+;
-**170 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25 (P0.6)** — the loadout editor now lists the
+real owned items from `shared/defs` (outfit/melee/emote/heal/boost/player-icon/
+crosshair), edits all **6** emote slots (4 wheel + win/death), picks crosshair
+types, and confirms/acks new account items. P0.1 (touch action inputs) is also
+done; the 1:1 audit still applies to P0.2+. **171 host tests pass, 0 fail.**
 
 ---
 
@@ -29,7 +29,7 @@ drop (long-press a card/pill). The previous 1:1 audit still applies to P0.2+;
 | M4 | Rendering | **mostly done** | terrain/island/obstacles/buildings/particles/decals/gas/skeletal player; missing active-layer wiring, interpolation, bullet/explosion/projectile/loot FX (§3 P0.2/P0.3/P1.3). |
 | M5 | Input + touch | **done (touch)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; keyboard/mouse binds remain P1.6. |
 | M6 | Audio | **mostly done** | engine/mixer/ambience/reverb/EQ/interior sounds; startup volume/mute, pause/menu restart and many action cues are missing (§3 P1.5). |
-| M7 | UI layer | **partial** | Java menu/account/pass/team live; live HUD lacks inventory v2/spectate/settings; `FguiHud` is dead on Android (§3 P0.4/P0.7, P1.4). |
+| M7 | UI layer | **partial** | Java menu/account/pass/team/loadout live; live HUD lacks inventory v2/spectate/settings; `FguiHud` is dead on Android (§3 P0.4/P0.7, P1.4). |
 | M8 | Accounts / API | **mostly done** | device login + profile, quests/pass, team links; quickplay is unauthenticated, captcha unsupported, error reasons wrong (§3 P1.1/P1.2); OAuth is an intentional platform delta. |
 | M9 | Polish & release | **started** | release APK/AAB pipeline verified (§45); waiting on the 1:1 gameplay gate (§3.7), a physical-device soak and final store upload. |
 
@@ -81,7 +81,7 @@ drop (long-press a card/pill). The previous 1:1 audit still applies to P0.2+;
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | 🔶 join/reconnect good; quickplay auth/captcha, reason mapping and match-over latch gaps (P0.5/P1.1/P1.2) |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | 🔶 Bearer/find_game and mode/region metadata gaps (P1.1/P1.7) |
 | `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste) + `survev://team` deep links, kick/mode/region controls, team match stays connected |
-| `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 grid permanently hidden + invented item IDs; only slot 0 emote; no crosshair types/item art (P0.6) |
+| `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 real owned items from `shared/defs` (`getLoadoutItemsJson`), 6 emote slots, crosshair type picker, new-item confirm/ack; item art/lore animation and source badges remain P1.7 |
 | `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, basic weapon/ammo, alive/kills (from `GameOverMsg` only), kill feed, kill leader, gas timer, result panel, squad bars, gear icons; most inventory v2/interaction/spectate pieces live only in dead `FguiHud` (P1.4) |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
@@ -210,16 +210,30 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
       the result screen/world until the player leaves. Acceptance: finish a match
       and see the result screen, not a disconnect error.
 
-- [ ] **P0.6 Loadout editor: real items + all emote slots.**
-      `LoadoutFragment.java:416` permanently hides the item grid
-      (`mGrid.setVisibility(isCrosshair ? GONE : GONE)`), the category lists are
-      invented IDs (`outfitWoodland/outfitSnow/katana_rusted/emote_gg/heal_advanced`
-      at `:697-734`) that the validator rejects (`ui/Loadout.cpp:93-107`), and
-      emote selection writes only slot 0 and replaces the array
-      (`LoadoutFragment.java:625-631`). Port `ui/loadoutMenu.ts` item lists from
-      `shared/defs` (unlocked/owned state), the emote-slot picker (4 wheel + win/
-      death), the item confirm flow and the crosshair type picker. Acceptance:
-      change outfit/melee/heal/boost/4 emotes/crosshair and join with them.
+- [x] **P0.6 Loadout editor: real items + all emote slots.**
+      `LoadoutFragment.java` used to permanently hide the item grid
+      (`mGrid.setVisibility(isCrosshair ? GONE : GONE)`), invented IDs
+      (`outfitWoodland/outfitSnow/katana_rusted/emote_gg/heal_advanced`) that the
+      validator rejected, and replaced the emote array with one slot. **Done**
+      (port of `ui/loadoutMenu.ts`):
+      - `codegen_render_defs.mjs` now emits a `LoadoutItemDef` table (type,
+        category, name, lore, sprite, rarity) from `shared/defs`; the bridge
+        returns the owned subset as `getLoadoutItemsJson()`.
+      - The grid is live for every category and uses the real names/rarities/
+        lore; crosshair entries form the 30-type picker (`001`/`005`/... labels).
+      - Six emote slot buttons (Top/Right/Bottom/Left/Win/Death); selecting an
+        item merges that slot and preserves the other five.
+      - Crosshair type writes the nested `{"crosshair":{"type":...}}` shape (the
+        old flat write was ignored by the validator); color/size/stroke still
+        round-trip through the same editor.
+      - `AccountManager` feeds `account.items` into the C++ validator and keeps
+        its status; new items show a confirm banner (`set_item_status` 1) and
+        opening a category acks its items (status 2).
+      - Not done (tracked in P1.7): per-item art (SVG loot/emote sprites), source
+        badges and the full per-item lore modal; the native list uses text +
+        rarity colours. Acceptance: outfit/melee/heal/boost/emotes/crosshair
+        change, persist across an app restart, and join with them (verified on
+        the x86_64 emulator).
 
 - [ ] **P0.7 Make settings real (persist + apply).**
       `SettingsModal.java:198-296` only relabels toggles and calls
@@ -394,7 +408,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 
 ### 3.6 Suggested session order (each ends with a green `surv_tests` + device check)
 
-1. **P0.6** — real loadout (P0.1 is done: action inputs + HUD action controls).
+1. **P0.6** — real loadout (done; see §3.2).
 2. **P0.4 + P0.5** — death/stats/spectate + match-over latch.
 3. **P0.2 + P0.3** — active layer + interpolation: fixes bunkers and game feel.
 4. **P0.7 + P1.5** — settings/audio correctness (restart-verified).
@@ -422,7 +436,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (170 tests, 0 failures expected)
+# host tests (171 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -472,6 +486,12 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - The minimap bakes the **static** `MapMsg.objects` (not the live pools, which are empty during `loadMap`); the big map uses the same texture fitted to 640px
 - `Hud` hit tests (`minimapExpandHit`, `bigMapContains/CloseHit`) take design-space coords; widget positions are centred HUD coords
 - P0.1 action taps are one-shot edits queued in `game/InputActions` and cleared only after `Game::sendInput` runs (clearing at tap time loses taps that land between the 33 Hz sends)
+- Loadout item lists come from `codegen_render_defs.mjs` (`LoadoutItemDef` table) via `SurvBridge.getLoadoutItemsJson()`; never hardcode item IDs in `LoadoutFragment.java` again
+- The emote loadout is **6** slots (Top/Right/Bottom/Left/Win/Death): editing one merges into the existing array (`UiBridge::setLoadoutJson` only merges top-level keys) and must not replace the other five
+- The crosshair type is the nested `{"crosshair":{"type":...}}` shape; a flat `{"crosshair":"..."}` is ignored by `ui::Loadout::validated`
+- `AccountManager` re-pushes `account.items` when the loadout opens (`LoadoutFragment.show`): the profile fetch can finish before `installUiBridge`, so the early `setAccountItems` call is a no-op and the C++ owned set would stay at `unlock_default`
+- In the profile handler, parse/set `items` **before** `setLoadout`: the server loadout is validated against the owned set, so a pass item selected on another device would otherwise be reset to the stock default
+- New-item confirm/ack goes through `AccountManager.setItemStatus` (status 1 = Confirmed, 2 = Ackd); the local `ItemInfo.status` is bumped first so a refresh does not re-POST
 - P0.1 weapon-card taps equip, but a card touch that moves >`kHudDragHandoffPx` is handed to `Touch` (the cards overlap the bottom-right aim pad, so claiming every drag would break aiming)
 - `MapMsg` place positions are normalized (0..1); do not divide by map width/height again
 - Place names are drawn as HUD text in `MapView`, not baked into the RenderTexture (text-in-RT did not show on device)

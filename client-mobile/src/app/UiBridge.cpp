@@ -33,7 +33,9 @@
 #include <jni.h>
 #include <exception>
 #include <functional>
+#include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -272,6 +274,72 @@ public:
         uikit::Loadout loadout(&config());
         return uikit::jsonToString(loadout.validated());
     }
+    // Owned loadout items + shared-def metadata for the Java customize screen.
+    std::string loadoutItemsJson() override {
+        const auto* provider = surv::getDefProvider();
+        if (!provider || !provider->loadoutItems()) {
+            return "[]";
+        }
+        uikit::Loadout loadout(&config());
+        std::map<std::string, std::set<std::string>> owned;
+        for (const char* category : { "outfit", "melee", "emote", "heal", "boost", "crosshair" }) {
+            for (const auto& type : loadout.items(category)) {
+                owned[category].insert(type);
+            }
+        }
+        const auto categoryFor = [](const std::string& defCategory) {
+            if (defCategory == "heal_effect") return std::string("heal");
+            if (defCategory == "boost_effect") return std::string("boost");
+            return defCategory;
+        };
+        uikit::JsonValue out;
+        out.kind = uikit::JsonValue::Kind::Array;
+        for (const auto& def : *provider->loadoutItems()) {
+            const std::string category = categoryFor(def.category);
+            const auto it = owned.find(category);
+            if (it == owned.end() || it->second.count(def.type) == 0) {
+                continue;
+            }
+            uikit::JsonValue item;
+            item.kind = uikit::JsonValue::Kind::Object;
+            auto addString = [&item](const char* key, const std::string& value) {
+                uikit::JsonValue v;
+                v.kind = uikit::JsonValue::Kind::String;
+                v.string = value;
+                item.object[key] = std::move(v);
+            };
+            addString("type", def.type);
+            addString("category", category);
+            addString("name", def.name);
+            addString("lore", def.lore);
+            addString("sprite", def.sprite);
+            uikit::JsonValue rarity;
+            rarity.kind = uikit::JsonValue::Kind::Number;
+            rarity.number = def.rarity;
+            item.object["rarity"] = std::move(rarity);
+            out.array.push_back(std::move(item));
+        }
+        return uikit::jsonToString(out);
+    }
+    bool setAccountItemsJson(const std::string& json) override {
+        uikit::JsonValue parsed;
+        if (!uikit::JsonParser::parse(json, parsed) || !parsed.isArray()) {
+            return false;
+        }
+        uikit::JsonValue types;
+        types.kind = uikit::JsonValue::Kind::Array;
+        for (const auto& value : parsed.array) {
+            if (value.isString() && !value.string.empty()) {
+                uikit::JsonValue type;
+                type.kind = uikit::JsonValue::Kind::String;
+                type.string = value.string;
+                types.array.push_back(std::move(type));
+            }
+        }
+        config().setJson("accountItems", types);
+        config().save();
+        return true;
+    }
 
     std::string siteInfoJson() override { return _menu ? _menu->siteInfoJson() : std::string(); }
 
@@ -496,6 +564,16 @@ JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getL10nJson(JNIEnv* env,
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLoadoutJson(JNIEnv* env, jclass) {
     return surv::toJstring(env, surv::uiBridge()->loadoutJson());
+}
+
+JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLoadoutItemsJson(JNIEnv* env, jclass) {
+    return surv::toJstring(env, surv::uiBridge()->loadoutItemsJson());
+}
+
+JNIEXPORT jboolean JNICALL Java_dev_axmol_app_SurvBridge_setAccountItems(JNIEnv* env, jclass,
+                                                                        jstring json) {
+    return surv::uiBridge()->setAccountItemsJson(surv::fromJstring(env, json)) ? JNI_TRUE
+                                                                              : JNI_FALSE;
 }
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getSiteInfoJson(JNIEnv* env, jclass) {

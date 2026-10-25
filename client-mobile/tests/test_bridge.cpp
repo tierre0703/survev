@@ -147,7 +147,7 @@ TEST(bridge_config_json_round_trips) {
     CHECK(loadout != nullptr && loadout->isObject());
     CHECK_EQ(loadout->getString("outfit"), std::string("outfitBase"));
     CHECK(loadout->get("emotes") != nullptr);
-    CHECK_EQ(loadout->get("emotes")->size(), size_t(5));
+    CHECK_EQ(loadout->get("emotes")->size(), size_t(6));
 
     // ... and the C++ side derives the join parcel from that same blob (this is
     // what AndroidUiBridge::joinUrls hands to GameScene).

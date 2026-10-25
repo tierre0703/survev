@@ -92,6 +92,17 @@ std::string teamInviteCode(const std::string& input) {
 
 std::vector<std::string> Loadout::items(const std::string& category) const {
     std::vector<std::string> candidates = _accountItems;
+    // Account items are persisted by the Java profile bridge (account.items);
+    // the config is the source of truth so the per-call Loadout instances the
+    // bridge creates all see the same owned set.
+    if (_config) {
+        if (const auto* stored = _config->getJson("accountItems");
+            stored && stored->isArray()) {
+            for (const auto& value : stored->array) {
+                if (value.isString() && !value.string.empty()) candidates.push_back(value.string);
+            }
+        }
+    }
     const auto* provider = surv::getDefProvider();
     if (!provider) return {};
     if (const auto* unlock = provider->gameObject("unlock_default")) {

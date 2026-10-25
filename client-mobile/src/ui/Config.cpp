@@ -196,11 +196,11 @@ JsonValue Config::buildDefaultLoadout() {
     crosshair.object["stroke"] = makeString("0.00");
     loadout.object["crosshair"] = crosshair;
 
-    // GameConfig.defaultEmoteLoadout (EmoteSlot has 5 slots:
-    // Top/Right/Bottom/Left/Win).
+    // GameConfig.defaultEmoteLoadout (EmoteSlot has 6 slots:
+    // Top/Right/Bottom/Left/Win/Death).
     JsonValue emotes = makeArray();
     const char* def[] = { "emote_happyface", "emote_thumbsup", "emote_surviv", "emote_sadface",
-                          "" };
+                          "", "" };
     for (const char* e : def) {
         emotes.array.push_back(makeString(e));
     }

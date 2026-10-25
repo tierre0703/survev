@@ -94,6 +94,12 @@ public final class SurvBridge {
     /** The validated loadout selection. */
     public static native String getLoadoutJson();
 
+    /** Owned loadout items with shared-def metadata (JSON array; empty until defs load). */
+    public static native String getLoadoutItemsJson();
+
+    /** Persists the account's owned item types (profile `items`) for the validator. */
+    public static native boolean setAccountItems(String typesJson);
+
     /** Cached /api/site_info response ("" until the first fetch responds). */
     public static native String getSiteInfoJson();
 

@@ -116,6 +116,8 @@ TEST(ui_loadout_available_validation_and_persistence) {
     CHECK(loadout.select("outfit", "outfitWoodland"));
     CHECK(loadout.select("emote", "emote_gg", 0));
     CHECK(!loadout.select("emote", "emote_gg", 100));
+    // Win/Death auto-emotes (slots 5 and 6 of the 6-slot array).
+    CHECK(loadout.select("emote", "emote_tombstone", 5));
     CHECK(loadout.select("player_icon", "emote_gg"));
     config.setString("playerName", "  Native  ");
     const auto join = loadout.joinInfo();
@@ -125,6 +127,7 @@ TEST(ui_loadout_available_validation_and_persistence) {
     CHECK_EQ(join.heal, std::string("heal_basic"));
     CHECK_EQ(join.boost, std::string("boost_basic"));
     CHECK_EQ(join.emotes[0], std::string("emote_gg"));
+    CHECK_EQ(join.emotes[5], std::string("emote_tombstone"));
     ui::Config reloaded(&storage);
     reloaded.load();
     ui::Loadout restored(&reloaded);
@@ -133,6 +136,60 @@ TEST(ui_loadout_available_validation_and_persistence) {
     restored.setAccountItems({});
     CHECK_EQ(restored.joinInfo().melee, std::string("fists"));
     CHECK_EQ(restored.joinInfo().outfit, std::string("outfitBase"));
+
+    // The Java profile bridge persists account.items in the config; all later
+    // Loadout instances (the bridge makes a fresh one per query) must see them.
+    ui::JsonValue accountItems;
+    accountItems.kind = ui::JsonValue::Kind::Array;
+    ui::JsonValue katana;
+    katana.kind = ui::JsonValue::Kind::String;
+    katana.string = "katana_rusted";
+    accountItems.array.push_back(katana);
+    config.setJson("accountItems", accountItems);
+    ui::Loadout sharedConfig(&config);
+    CHECK_EQ(sharedConfig.items("melee").size(), size_t(2));
+    sharedConfig.select("melee", "katana_rusted");
+    CHECK_EQ(sharedConfig.joinInfo().melee, std::string("katana_rusted"));
+}
+
+// The generated loadout table carries the shared/defs display metadata the
+// Java customize screen lists (real names, rarity, lore, item art sprite).
+TEST(ui_loadout_item_metadata_table) {
+    installGeneratedDefs();
+    const surv::DefProvider* provider = surv::getDefProvider();
+    CHECK(provider != nullptr);
+    const auto* items = provider ? provider->loadoutItems() : nullptr;
+    CHECK(items != nullptr);
+    if (!items) return;
+    CHECK(items->size() > 200);
+    const auto find = [items](const std::string& type) -> const surv::LoadoutItemDef* {
+        for (const auto& item : *items) {
+            if (item.type == type) return &item;
+        }
+        return nullptr;
+    };
+    const auto* outfit = find("outfitBase");
+    CHECK(outfit != nullptr);
+    if (outfit) {
+        CHECK_EQ(outfit->category, std::string("outfit"));
+        CHECK_EQ(outfit->name, std::string("Basic Outfit"));
+        CHECK(!outfit->sprite.empty());
+    }
+    const auto* emote = find("emote_happyface");
+    CHECK(emote != nullptr);
+    if (emote) {
+        CHECK_EQ(emote->category, std::string("emote"));
+        CHECK(!emote->sprite.empty());
+    }
+    const auto* heal = find("heal_basic");
+    CHECK(heal != nullptr);
+    if (heal) CHECK_EQ(heal->category, std::string("heal_effect"));
+    const auto* crosshair = find("crosshair_default");
+    CHECK(crosshair != nullptr);
+    if (crosshair) {
+        CHECK_EQ(crosshair->category, std::string("crosshair"));
+        CHECK_EQ(crosshair->name, std::string("Default"));
+    }
 }
 
 // Crosshair settings arrive from the Java editor (nested shape after the
@@ -257,8 +314,8 @@ TEST(ui_config_defaults_and_persistence) {
     CHECK_EQ(config.getInt("gameModeIdx"), 2);
     CHECK(config.getBool("teamAutoFill"));
 
-// The default loadout matches GameConfig.defaultEmoteLoadout (5 slots: the
-// EmoteSlot enum only has 5 entries).
+// The default loadout matches GameConfig.defaultEmoteLoadout (6 slots: the
+// EmoteSlot enum is Top/Right/Bottom/Left/Win/Death).
     // The default loadout matches GameConfig.defaultEmoteLoadout.
     const ui::JsonValue* loadout = config.getJson("loadout");
     CHECK(loadout != nullptr && loadout->isObject());
@@ -267,9 +324,10 @@ TEST(ui_config_defaults_and_persistence) {
     CHECK_EQ(loadout->getString("heal"), std::string("heal_basic"));
     CHECK_EQ(loadout->getString("boost"), std::string("boost_basic"));
     CHECK(loadout->get("emotes") != nullptr);
-    CHECK_EQ(loadout->get("emotes")->size(), 5u);
+    CHECK_EQ(loadout->get("emotes")->size(), 6u);
     CHECK_EQ(loadout->get("emotes")->at(0)->asString(), std::string("emote_happyface"));
     CHECK_EQ(loadout->get("emotes")->at(4)->asString(), std::string(""));
+    CHECK_EQ(loadout->get("emotes")->at(5)->asString(), std::string(""));
     CHECK_EQ(loadout->get("crosshair")->getString("type"), std::string("crosshair_default"));
 
     config.setString("playerName", "Tester");
