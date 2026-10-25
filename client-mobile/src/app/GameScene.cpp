@@ -619,6 +619,8 @@ void GameScene::leaveGame() {
     _pendingFind = false;
     _findInFlight = false;
     ++_findGeneration;
+    // An intentional leave cancels any pending reconnect.
+    _reconnect = ReconnectState{};
     // game.ts free(): stop drawing the finished match's world (also hides a
     // world that a concurrent join is still rebuilding).
     _worldVisible = false;
@@ -787,6 +789,52 @@ void GameScene::stopPingTest() {
     // it after every stop (match start, background) spammed the Java menu.
 }
 
+bool GameScene::tryReconnect() {
+    // Only transport-level failures can heal on a new socket; a server rejection
+    // (invalid token, ban, protocol) will not become valid by retrying.
+    const uint16_t code = _game->getCloseCode();
+    const std::string& reason = _game->getCloseReason();
+    const bool rejected = reason == "invalid_token" || reason == "ip_banned"
+        || reason == "rate_limited" || reason == "behind_proxy";
+    const bool retryable = !rejected && (code == 0 || code == 1006 || code == 1011);
+    if (!retryable) {
+        _reconnect.active = false;
+        return false;
+    }
+
+    if (!_reconnect.active) {
+        // The first close of a match we actually joined: the server keeps a
+        // rejoin ticket for the seat (server/src/game/game.ts), so retry with the
+        // token this match was joined with.
+        if (!_game->hasJoined() || _joinRetryToken.empty() || _joinRetryUrls.empty()) {
+            return false;
+        }
+        _reconnect = ReconnectState{};
+        _reconnect.active = true;
+        _reconnect.url = _joinRetryUrls.front();
+        _reconnect.token = _joinRetryToken;
+        AXLOGW("[net] connection lost in a match; trying to rejoin the same game");
+    }
+
+    if (_reconnect.attempt >= kReconnectMaxAttempts) {
+        _reconnect.active = false;
+        return false;
+    }
+    if (_reconnect.elapsed < _reconnect.delay) {
+        return true; // waiting for the next attempt
+    }
+
+    ++_reconnect.attempt;
+    AXLOGI("[net] rejoin attempt {}/{}", _reconnect.attempt, kReconnectMaxAttempts);
+    // Full re-entry: the server answers with Joined + Map + every visible object,
+    // exactly like a fresh join, so the world is rebuilt for it.
+    _game->free();
+    enterWithJoin({_reconnect.url}, _reconnect.token);
+    _reconnect.elapsed = 0.0f;
+    _reconnect.delay = static_cast<float>(_reconnect.attempt); // 1 s, 2 s, 3 s
+    return true;
+}
+
 void GameScene::update(float delta) {
     // view.ts setSize(): director callbacks run before the frame's update, so
     // pick up the first real window size here and re-layout the world layers
@@ -823,6 +871,10 @@ void GameScene::update(float delta) {
             _errorLog->tick();
         }
     }
+    // Priority 5: pace the rejoin attempts while a reconnect is pending.
+    if (_reconnect.active) {
+        _reconnect.elapsed += delta;
+    }
     if (_findInFlight) {
         _findTime += delta;
         if (_findTime > 30) {
@@ -834,6 +886,8 @@ void GameScene::update(float delta) {
         _joinElapsed += delta;
         if (_game->hasJoined()) {
             _notifiedStarted = true;
+            // A successful (re)join ends any pending reconnect.
+            _reconnect = ReconnectState{};
             // The match is actually running; show the joystick pads (game.ts
             // only enables the touch display once the game starts).
             _touch->display = true;
@@ -926,12 +980,21 @@ void GameScene::update(float delta) {
         }
     }
 
-    // A closed game socket (not an intentional leave) returns to the menu with
-    // a localized reason, mirroring main.ts onQuit().
-    if (_inGame && !_game->isConnected() && _game->getCloseCode() != 0) {
+    // A closed game socket (not an intentional leave) first tries the server's
+    // rejoin ticket; if that fails, returns to the menu with a localized reason
+    // (mirroring main.ts onQuit()).
+    // Some transports report a close without a code (0), so a joined match that
+    // stopped being connected also counts as a drop.
+    const bool lostSocket = !_game->isConnected()
+        && (_game->getCloseCode() != 0 || _game->hasJoined());
+    if (_inGame && lostSocket) {
+        // Mid-match drop: rejoin the same game (the server keeps the seat).
+        if (tryReconnect()) {
+            return;
+        }
         // If the server never accepted us, try the next advertised URL with the
         // same join token (main.ts joinGame()) before giving up.
-        if (_awaitingJoin && !_game->hasJoined()
+        if (!_reconnect.active && _awaitingJoin && !_game->hasJoined()
             && _joinRetryIndex + 1 < _joinRetryUrls.size()) {
             _awaitingJoin = false;
             const size_t next = _joinRetryIndex + 1;
@@ -954,10 +1017,14 @@ void GameScene::update(float delta) {
             {4011, "index-failed-finding-game"},
         };
         const char* key = "index-host-closed";
-        for (const auto& entry : kCloseKeys) {
-            if (entry.code == _game->getCloseCode()) {
-                key = entry.key;
-                break;
+        // Once a rejoin was attempted, a late server rejection (the window ran
+        // out -> invalid_token) is still a lost connection, not a bad token.
+        if (_reconnect.attempt == 0) {
+            for (const auto& entry : kCloseKeys) {
+                if (entry.code == _game->getCloseCode()) {
+                    key = entry.key;
+                    break;
+                }
             }
         }
         setError(key, "Connection lost");

@@ -10,13 +10,16 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-24** — Session 37 finished the lifecycle
-network item and started perf tooling: `find_game` now retries transport
-failures once after 500 ms (main.ts `findGameImpl` parity), and the pause
-dialog's "Show FPS" drives the engine stats overlay (persisted as `showFps`,
-also enabled by `debug.surv_debug=1`). Earlier: §36 background/pause socket
-continuity + watchdog + BACK pause, §35 error reporting, §34 region latency
-test, §33 minimap zoom/clip. **163 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25** — Session 38 added **mid-match reconnection**:
+the server keeps a rejoin ticket per player (registered at join time, so a
+reconnect works even before the dropped socket is detected) and re-attaches a new
+socket to the same player, kicking the stale one and resending Joined + Map +
+full state; the client retries the same join token 5 times (immediate, then
+1-4 s) through `GameScene::tryReconnect` and falls back to the localized
+"connection lost" path. Server and shared types were changed for this.
+Earlier: §37 find_game retry + FPS overlay, §36 background/pause socket
+continuity + watchdog + BACK pause, §35 error reporting, §34 region latency test.
+**163 host tests pass, 0 fail.**
 
 ---
 
@@ -33,7 +36,7 @@ test, §33 minimap zoom/clip. **163 host tests pass, 0 fail.**
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb + per-source EFX low-pass EQ (muffled/club) + structure interior ambience + building `soundEmitters`. UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
 | M8 | Accounts / API | **started** | region latency test (`net/PingTest` + `net/Regions` codegen) and client error reporting (`net/ErrorLog` + Java crash handler); login/profile/quests/pass still to do. |
-| M9 | Polish & release | **started** | lifecycle continuity done (§36); perf/soak/store-ready AAB still to do. |
+| M9 | Polish & release | **started** | lifecycle: background/pause continuity (§36), mid-match reconnection (§38); perf/soak/store-ready AAB still to do. |
 
 ---
 
@@ -340,9 +343,25 @@ test, §33 minimap zoom/clip. **163 host tests pass, 0 fail.**
         (`UiHost::togglePause` -> `SurvBridge.onNativeTogglePause`); the
         dialog's Quit calls `onQuitGame`. Hosts without that UI fall back to
         leaving the match.
-- [ ] **Lifecycle hardening (remaining)**: reconnecting to a live match needs a
-      server-side rejoin token (the API only issues single-use join tokens);
-      menu-side `find_game` retries now match `main.ts` (see below)
+- [x] **Mid-match reconnection**:
+      - Server (`server/src/game/{game,client}.ts`): a **rejoin ticket** per
+        player, keyed by the join token and registered at join time (the socket
+        close can lag behind the client's reconnect by ~10 s on a lost link).
+        `ClientBarn.rejoinClient()` marks the old client `replaced`, closes its
+        socket and re-attaches a new one; `Client.beginRejoin()` resends Joined +
+        Map + every visible object, so the client rebuilds from a full snapshot.
+        Tickets are pruned when the player dies/despawns; `GameWsDisconnectReason`
+        gained `"rejoined"` for the kicked socket.
+      - Client (`GameScene::tryReconnect`): only transport closures (0/1006/1011)
+        are retried - immediate, then 1 s, 2 s, 3 s and 4 s apart - each attempt a
+        full `enterWithJoin()` on the same token. A rejection after the attempts
+        (or the window closing) shows `index-host-closed`; a join that never
+        opens now synthesizes `close(1006)` (`Game::onError`) so retries/URL
+        fallbacks are never stuck.
+      - Trade-off: the ticket makes the join token a bearer credential for the
+        match (single use only for the first join), so a leaked token could steal
+        the seat until the player dies.
+      - The other lifecycle item (menu HTTP retries) landed in §37.
 - [x] **Perf tooling (start of Perf/polish)**: the pause dialog's "Show FPS"
       now toggles the engine stats overlay (`Director::setStatsDisplay`), persists
       `showFps` in the config JSON, applies it at startup in
@@ -468,3 +487,14 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - `WebSocketConnection`'s event queue is capped at 4096 frames and turns an
   overflow into `close(1006, "backlog")` (deltas cannot be skipped); do not
   raise the cap without bounding background memory some other way.
+- Rejoin tickets are registered **at join time** (`Game.addRejoinToken`), not on
+  socket close: the server can take ~10 s to notice a dead link, and the client
+  reconnects sooner. Do not move that registration back into `handleSocketClose`.
+- A rejoin marks the previous `Client` as `replaced` and closes it; its
+  `handleSocketClose` must return before the despawn/input-reset logic or the
+  seat is torn down mid-reconnect.
+- The client only retries transport closes (0/1006/1011) and never a rejection
+  reason (`invalid_token`/`ip_banned`/`rate_limited`/`behind_proxy`); server
+  rejections must fall through to the localized error.
+  `Game::onError` synthesizes `close(1006, "error")` when an open fails so the
+  reconnect/URL fallback is not stuck on a socket that never opened.

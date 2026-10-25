@@ -2312,3 +2312,67 @@ design resolution, and is left for the next perf session.
 - `adb shell setprop debug.surv_debug 1` + restart logs
   `[perf] stats overlay enabled by debug.surv_debug`. `logcat -b crash` stays
   empty.
+
+## 39. Session 38 - mid-match reconnection (2026-10-25)
+
+### 39.1 Why the first attempt failed
+
+A reconnect cannot reuse the join token: `joinTokens` entries are deleted on the
+first join. The first design registered a separate rejoin ticket from
+`handleSocketClose`, but on-device (iptables RST for 2 s) the client was back
+within ~1 s while the server only noticed the dead socket ~10 s later, so every
+retry hit "invalid_token" before the ticket existed.
+
+### 39.2 Server: a ticket from join time
+
+`server/src/game/game.ts` now keeps `rejoinTokens` keyed by the join token, and
+`ClientBarn.addClientWithPlayer` registers it as soon as the player exists. A
+rejoin is therefore accepted even while the previous socket still looks alive:
+
+- `ClientBarn.rejoinClient()` marks the old `Client` as `replaced`, removes it
+  from the client list and closes it (`"rejoined"`), then attaches the new
+  socket. Its late `handleSocketClose` returns before the despawn/input-reset
+  path, so the seat keeps playing.
+- `Client.beginRejoin()` resets `ack`, visibility caches and `_firstUpdate`, so
+  the next `sendMsgs()` resends Joined + the Map stream + every visible object;
+  the native client rebuilds its world from that full snapshot.
+- `player.client` is swapped to the new socket (pickup/stats/game-over messages
+  follow it) and the group statuses are recomputed.
+- Tickets are pruned in `Game.update` when the player dies or despawns;
+  `GameWsDisconnectReason` gained `"rejoined"` for the kicked socket.
+
+Trade-off (documented in the code): the token is a bearer credential for the
+match rather than strictly single-use, so a leaked token could steal the seat
+until the player dies.
+
+### 39.3 Client: retry with backoff
+
+`GameScene::tryReconnect()` runs when an in-match socket closes unexpectedly:
+
+- retryable closes only (`0`, `1006`, `1011`) and never a server rejection
+  reason (`invalid_token`, `ip_banned`, `rate_limited`, `behind_proxy`); those
+  fall through to the localized error;
+- up to five attempts - immediate, then 1 s, 2 s, 3 s and 4 s apart - each one a
+  `Game::free()` + `enterWithJoin()` on the same token, so the rejoin goes
+  through the normal JoinMsg path and the server sends a fresh snapshot;
+- success clears the state in the `hasJoined()` branch; giving up shows
+  `index-host-closed` (a late `invalid_token` from an exhausted window is still
+  reported as a lost connection, not a bad token);
+- `Game::onError` now synthesizes `close(1006, "error")` when a socket fails to
+  open, because axmol only reports the error: without it the retry loop and the
+  URL fallback could sit on a connection that never produced a close.
+
+### 39.4 Verification
+
+- Server `tsc` typecheck, root `lint:ci`, vitest (11,768 tests) and
+  `surv_tests` (163 tests / 2,599 assertions) are green.
+- Against the dev server (`dev:api` + `dev:game`, the bundle server predates the
+  change), forcing an RST on the game port for 2 s:
+  - client: `[net] connection lost in a match`, `rejoin attempt 1..3`,
+    `Connected to game server`, `Receiving game updates` (same
+    `activePlayerId`); still in the match, no menu;
+  - server: `"Player" rejoined` (no `left` - the stale socket was replaced).
+- Blocking the port for 20 s: five attempts, then
+  `returnToMenu error=index-host-closed` and the menu - no frozen match.
+- `logcat -b crash` empty in both runs. The bundle stack was restored afterwards
+  and adb un-rooted.

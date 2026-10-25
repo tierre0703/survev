@@ -99,6 +99,12 @@ void Game::tryJoinGame(const std::string& url, const std::string& joinToken) {
         if (_connection) {
             _connection->close();
         }
+        // A socket that failed to open may never deliver onClose (axmol reports
+        // the error only), which would leave `_connecting` stuck and block the
+        // reconnect/URL fallback. Surface it as an abnormal close.
+        if (!_connected && _closeCode == 0) {
+            onClose(1006, "error");
+        }
     };
     _connection->onClose = [this](uint16_t code, const std::string& reason) { onClose(code, reason); };
 }

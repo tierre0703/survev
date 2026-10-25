@@ -247,7 +247,7 @@ a tiny JSON lib — axmol ships `rapidjson`).
 | Net protocol bit-incompatibility | Unit tests from M2 with captured frames; server is source of truth |
 | PIXI `Graphics`/mask features without direct axmol equivalent | Adapter layer + `ClippingNode`; where impossible, fall back to `DrawNode` fill like the canvas path does |
 | UI is huge; axmol UI can't replicate it cheaply | **Resolved 2026-10-14 (`ARCHITECTURE.md`):** gameplay UI = axmol + FairyGUI; all other screens = Android Java over one JNI bridge |
-| WebSocket reliability on mobile networks | Reconnect + backoff like `findGameImpl` retry; surface to UI |
+| WebSocket reliability on mobile networks | **Resolved 2026-10-25:** server rejoin tickets (`game.ts rejoinTokens`, registered at join) + client `GameScene::tryReconnect` (5 attempts, 1-4 s backoff, full snapshot resync); failures surface as `index-host-closed` |
 | Asset format mismatches (woff2, m4a) | Convert in M1 pipeline step; document in `assets/README` |
 | Shared defs TS→C++ drift | Codegen (D2) preferred to keep defs in sync with server |
 

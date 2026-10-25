@@ -63,6 +63,7 @@ export type GameWsDisconnectReason =
     | "ip_banned"
     | "player_not_found"
     | "rate_limited"
+    | "rejoined"
     | "server_crashed"
     | "server_restart";
 

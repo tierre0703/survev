@@ -269,6 +269,21 @@ private:
     std::unique_ptr<ErrorLog> _errorLog;
     float _errorLogTick = 0.0f;
 
+    // Priority 5: a dropped mid-match socket reclaims the same match through the
+    // server's rejoin ticket (server/src/game/game.ts) before falling back to the
+    // menu: immediate, then 1 s, 2 s, 3 s and 4 s apart.
+    static constexpr int kReconnectMaxAttempts = 5;
+    struct ReconnectState {
+        bool active = false;
+        int attempt = 0;
+        float elapsed = 0.0f;
+        float delay = 0.0f;
+        std::string url;
+        std::string token;
+    };
+    ReconnectState _reconnect;
+    bool tryReconnect();
+
     TouchInput _touchInput;
     float _inputMsgTimeout = 0.0f;
     bool _shootStartPending = false;

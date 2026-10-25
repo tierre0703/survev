@@ -6,6 +6,7 @@ import { Config } from "../config.ts";
 import { ServerLogger } from "../utils/logger.ts";
 import { type FindGamePrivateBody, type ServerGameConfig } from "../utils/types.ts";
 import { ClientBarn } from "./client.ts";
+import type { Client } from "./client.ts";
 import { GameModeManager } from "./gameModeManager.ts";
 import { Grid } from "./grid.ts";
 import { GameMap } from "./map.ts";
@@ -20,6 +21,7 @@ import { LootBarn } from "./objects/loot.ts";
 import { MapIndicatorBarn } from "./objects/mapIndicator.ts";
 import { PlaneBarn } from "./objects/plane.ts";
 import { PlayerBarn } from "./objects/player.ts";
+import type { Player } from "./objects/player.ts";
 import { ProjectileBarn } from "./objects/projectile.ts";
 import { SmokeBarn } from "./objects/smoke.ts";
 import { Profiler } from "./profiler.ts";
@@ -52,6 +54,23 @@ type JoinToken = {
     data: SpectateTokenData;
 };
 
+/**
+ * A joined player's rejoin ticket, keyed by the join token. The token is
+ * consumed from `joinTokens` on the first join, but the seat it opened stays
+ * reclaimable for the rest of the match: a reconnect can arrive before the
+ * server even notices that the previous socket is dead (TCP reset/retransmit
+ * delays), so the ticket must exist from join time.
+ *
+ * Trade-off: the token is a bearer credential for the seat until the player
+ * dies. It is the same random value the client already holds, so this only
+ * removes the "single use" property (a leaked token could steal the seat).
+ */
+export interface RejoinTokenData {
+    player: Player;
+    userId: string | null;
+    findGameIp: string;
+}
+
 export class Game {
     started = false;
     stopped = false;
@@ -82,6 +101,45 @@ export class Game {
     netSyncWarnings = 0;
 
     joinTokens = new Map<string, JoinToken>();
+
+    /**
+     * Rejoin tickets for connected players, keyed by the join token they used.
+     * Registered at join time (see RejoinTokenData) so a reconnect can reclaim
+     * the seat even before the server notices the old socket died. Pruned when
+     * the player dies or despawns.
+     */
+    rejoinTokens = new Map<string, RejoinTokenData>();
+
+    /** Register/refresh a connected player's rejoin ticket. */
+    addRejoinToken(token: string, client: Client) {
+        const player = client.player;
+        if (!token || !player || player.dead || this.over) {
+            return;
+        }
+        this.rejoinTokens.set(token, {
+            player,
+            userId: client.userId,
+            findGameIp: client.findGameIp,
+        });
+    }
+
+    /** The live player behind a rejoin token, or undefined if the seat is gone. */
+    peekRejoinToken(token: string): RejoinTokenData | undefined {
+        const data = this.rejoinTokens.get(token);
+        if (!data) {
+            return undefined;
+        }
+        if (data.player.dead || this.objectRegister.getById(data.player.__id) !== data.player) {
+            this.rejoinTokens.delete(token);
+            return undefined;
+        }
+        return data;
+    }
+
+    /** Drop a ticket (player left for good). */
+    deleteRejoinToken(token: string) {
+        this.rejoinTokens.delete(token);
+    }
 
     get aliveCount(): number {
         return this.playerBarn.livingPlayers.length;
@@ -160,6 +218,18 @@ export class Game {
     update(dt?: number) {
         if (this.stopped) return;
         this.profiler.flush();
+
+        // Rejoin tickets die with their player (gas, kill, despawn, game over).
+        if (this.rejoinTokens.size > 0) {
+            for (const [token, data] of this.rejoinTokens) {
+                if (
+                    data.player.dead
+                    || this.objectRegister.getById(data.player.__id) !== data.player
+                ) {
+                    this.rejoinTokens.delete(token);
+                }
+            }
+        }
 
         const now = performance.now();
         if (!this.now) this.now = now;

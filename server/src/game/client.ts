@@ -13,7 +13,7 @@ import { util } from "../../../shared/utils/util.ts";
 import { v2 } from "../../../shared/utils/v2.ts";
 import { Config } from "../config.ts";
 
-import type { Game, JoinTokenData, SpectateTokenData } from "./game.ts";
+import type { Game, JoinTokenData, RejoinTokenData, SpectateTokenData } from "./game.ts";
 import type { GameObject } from "./objects/gameObject.ts";
 import type { MapIndicator } from "./objects/mapIndicator.ts";
 import type { Player } from "./objects/player.ts";
@@ -67,10 +67,58 @@ export class ClientBarn {
         }
 
         const client = new Client(this.game, socket, joinData.userId, joinData.findGameIp);
+        client.joinToken = joinMsg.joinToken;
         this.clients.push(client);
 
         const player = this.game.playerBarn.addPlayer(client, joinMsg, joinData);
         client.player = player;
+        // Rejoin ticket from the start: a reconnect can arrive before the server
+        // notices that the first socket died.
+        this.game.addRejoinToken(joinMsg.joinToken, client);
+
+        return client;
+    }
+
+    /**
+     * Re-attach a fresh socket to a player whose previous socket dropped (or is
+     * still half-open). The client resends Joined + Map + every visible object,
+     * so the native client can rebuild its world. Any previous socket for the
+     * seat is closed and its close handler ignores the teardown.
+     */
+    rejoinClient(
+        socket: ClientSocket<Client>,
+        data: RejoinTokenData,
+        joinToken: string,
+    ): Client | undefined {
+        const player = data.player;
+        if (!player || player.game !== this.game || player.dead) {
+            return undefined;
+        }
+        // The player may have despawned (or the game ended) while disconnected.
+        if (this.game.objectRegister.getById(player.__id) !== player) {
+            return undefined;
+        }
+
+        const previous = player.client;
+        const client = new Client(this.game, socket, data.userId, data.findGameIp);
+        client.joinToken = joinToken;
+        client.beginRejoin(player);
+        this.clients.push(client);
+
+        // Player-initiated messages (pickup/stats/game over) must use the new socket.
+        player.client = client;
+
+        if (previous && previous !== client) {
+            previous.replaced = true;
+            util.removeFrom(this.clients, previous);
+            if (!previous.socket.closed()) {
+                previous.socket.close("rejoined");
+            }
+        }
+        this.game.addRejoinToken(client.joinToken, client);
+
+        player.setGroupStatuses();
+        player.group?.checkPlayers();
 
         return client;
     }
@@ -210,24 +258,37 @@ export class ClientBarn {
             const joinMsg = msg as net.JoinMsg;
 
             const joinData = this.game.joinTokens.get(joinMsg.joinToken);
-            if (!joinData || joinData.expiresAt < Date.now()) {
-                this.game.logger.warn("Client tried to join without or with expired join token");
-                socket.close("invalid_token");
-                if (joinData) {
-                    this.game.joinTokens.delete(joinMsg.joinToken);
-                }
-                return;
-            }
-
-            if (joinData) {
+            if (joinData && joinData.expiresAt >= Date.now()) {
                 if (joinData.type === "join") {
                     client = this.game.clientBarn.addClientWithPlayer(socket, joinData.data, joinMsg);
                     this.game.joinTokens.delete(joinMsg.joinToken);
                 } else {
                     client = this.game.clientBarn.addSpectatorClient(socket, joinData.data);
                 }
+                return;
+            }
+            if (joinData) {
+                this.game.joinTokens.delete(joinMsg.joinToken);
             }
 
+            // The token is single use, so a reconnect (network loss, backgrounded
+            // socket) arrives with a token that only exists in the rejoin map.
+            // Keep it until the rejoin actually succeeds so a lost response can
+            // be retried inside the window.
+            const rejoin = this.game.peekRejoinToken(joinMsg.joinToken);
+            if (!rejoin) {
+                this.game.logger.warn("Client tried to join without or with expired join token");
+                socket.close("invalid_token");
+                return;
+            }
+            client = this.game.clientBarn.rejoinClient(socket, rejoin, joinMsg.joinToken);
+            if (!client) {
+                this.game.deleteRejoinToken(joinMsg.joinToken);
+                this.game.logger.warn("Client tried to rejoin a match/player that no longer exists");
+                socket.close("invalid_token");
+                return;
+            }
+            this.game.logger.info(`"${client.player?.name}" rejoined`);
             return;
         }
 
@@ -250,6 +311,12 @@ export class ClientBarn {
         client.disconnected = true;
         util.removeFrom(this.clients, client);
 
+        // A rejoin already attached this seat to a new socket; the stale
+        // connection must not despawn the player or reset its input.
+        if (client.replaced) {
+            return;
+        }
+
         if (!client.player) return;
         const player = client.player;
         this.game.logger.info(`"${player.name}" left`);
@@ -268,6 +335,8 @@ export class ClientBarn {
         player.setGroupStatuses();
         player.questManager.flushProgress();
 
+        // The rejoin ticket was registered at join time; keep it so the player
+        // can reconnect after the server notices this close.
         if (player.canDespawn()) {
             player.game.playerBarn.removePlayer(player);
         }
@@ -283,6 +352,12 @@ export class Client {
     socket: ClientSocket<Client>;
 
     disconnected = false;
+
+    /** True once a rejoin replaced this client; its close must not tear down the seat. */
+    replaced = false;
+
+    /** The join token this client used; kept so a dropped socket can rejoin. */
+    joinToken = "";
 
     userId: string | null = null;
     ip: string;
@@ -362,6 +437,27 @@ export class Client {
 
     sendMsg(type: net.MsgType, msg: net.AbstractMsg): void {
         this.msgsToSend.push({ type, msg });
+    }
+
+    /**
+     * Reset the per-connection send state after a reconnect. `_firstUpdate`
+     * makes sendMsgs() resend Joined, the Map and every visible object, which is
+     * exactly the full snapshot a native client needs to rebuild its world.
+     */
+    beginRejoin(player: Player) {
+        this.player = player;
+        this.ack = 0;
+        this._firstUpdate = true;
+        this.visibleObjects.clear();
+        this.visibleMapIndicators.clear();
+        this.lastPlayerId = 0;
+        this.msgsToSend.length = 0;
+        this._cullingZoom = GameConfig.scopeZoomRadius.desktop["1xscope"];
+        this._cullingPortrait = false;
+        this._cullingPortraitTicker = 0;
+        this.portrait = false;
+        this.spectating = undefined;
+        this.startedSpectating = false;
     }
 
     sendInstantMsg(type: net.MsgType, msg: net.AbstractMsg, bytes = 128): void {
