@@ -127,6 +127,11 @@ cd client-mobile
 
 # APK (Gradle-free: aapt2/javac/d8/zipalign/apksigner)
 .\tools\build-apk.ps1 -Abis "x86_64"         # -> SurvevMobile-debug.apk
+
+# Store release APK + Play AAB (arm64; upload keystore + bundletool, see BUILDING.md)
+.\tools\build-native.ps1 -Abis "arm64-v8a"
+.\tools\build-apk.ps1 -Release -Abis "arm64-v8a" -ApiUrl "https://survev.io" -KeystorePath upload.jks
+.\tools\build-aab.ps1 -Abis "arm64-v8a" -BundletoolJar C:\tools\bundletool-all.jar
 ```
 
 Install / run / inspect:
@@ -190,7 +195,18 @@ files are deterministic — commit them, but only via the tools above.
 - The **arm64** emulator runs under Houdini ARM translation, so backtraces are
   useless — build/install the **x86_64** APK for real crash stacks.
 - `build-apk.ps1` must keep packaging `assets/axslc/**` (missing it causes a
-  black screen) and storing `resources.arsc` uncompressed + aligned.
+  black screen) and storing `resources.arsc` uncompressed + aligned. The same
+  script is the store path (`-Release`): do not bypass it for releases.
+- `surv_apiUrl` (manifest meta-data) is the single API origin for C++ **and**
+  Java (`SurvApi.initialize`); release builds substitute it with `-ApiUrl`, and
+  the AAB script reads it back from the release APK. Do not hardcode a store URL
+  in `SurvApi.DEFAULT_API_BASE_URL` (it is the dev fallback only).
+- Version name/code come from the repo `package.json` (`0.4.3` -> `403`) in the
+  Gradle-free release path; bump it or pass `-VersionName/-VersionCode` before
+  uploading to Play (codes must increase).
+- `build-aab.ps1` needs a release APK first (dex/libs/assets) and an external
+  `bundletool-all.jar`; the AAB is JAR-signed only when keystore args are given.
+  It is not part of the regular debug loop.
 - Gradle cannot run while the Astrill VPN LSP is active; use the Gradle-free APK
   script (see `BUILDING.md` "Why not Gradle?").
 

@@ -2736,3 +2736,66 @@ Frame-size changes are logged as they happen (tier changes or a resize).
     frame=816x459` (emulator, not representative of real mid-range hardware).
 - Still to do: validate the soak on a physical mid-range device (the only
   remaining perf/polish item) and the store-ready AAB.
+
+## 46. Session 45 - store-ready release APK + Play AAB (2026-10-25)
+
+### 46.1 Release APK (`tools/build-apk.ps1 -Release`)
+
+- Parameters: `-Release`, `-Abis` (default `arm64-v8a` for release,
+  `armeabi-v7a,arm64-v8a` for debug), `-VersionName`, `-VersionCode`,
+  `-ApiUrl`, `-KeystorePath/-KeystoreAlias/-KeystorePassword/-KeyPassword`
+  (env fallbacks `SURVEV_KEYSTORE`, `SURVEV_KS_ALIAS`, `SURVEV_KS_PASS`,
+  `SURVEV_KEY_PASS`), `-Output`.
+- Version defaults: repo `package.json` `0.4.3` -> `versionName=0.4.3`,
+  `versionCode=403` (major*10000 + minor*100 + patch); overridable for Play.
+- `-ApiUrl` replaces the manifest `surv_apiUrl` meta-data (release default
+  `https://survev.io`). `SurvApi.initialize(Context)` now reads that meta-data
+  once before the Java UI is built, so `SurvApi.apiBaseUrl()` drives
+  `site_info`, `find_game`, accounts/pass and `teamWsUrl`; the C++ side already
+  used the same key. Debug/manifest default is `http://127.0.0.1:8000` (matches
+  `adb reverse`).
+- Release packaging strips `libSurvevMobile.so` + `libopenal.so` with
+  `llvm-strip` (copies in `build-apk/stripped/<abi>`), signs with the upload
+  keystore (secrets via `apksigner`'s `env:` prefix), prints the signer
+  certificate, and keeps the `resources.arsc` uncompressed/aligned check.
+- Debug output/signing is unchanged (`SurvevMobile-debug.apk`, debug keystore).
+
+### 46.2 Play AAB (`tools/build-aab.ps1`)
+
+Gradle cannot run here, and aapt2 itself does not emit AABs, so the script
+constructs bundletool's module zip and calls `bundletool build-bundle`:
+
+- builds a proto manifest/resource table with
+  `aapt2 link --proto-format` (same package/extractNativeLibs/API/version
+  substitutions as the APK);
+- copies `classes*.dex`, `assets/**` and `lib/**` from the **release APK** (so
+  the dex/libs/assets are the exact store build), moves the proto manifest to
+  `manifest/AndroidManifest.xml`;
+- writes `base.zip` with forward-slash entry names (`.NET`'s
+  `CreateFromDirectory` emits `\` on Windows and bundletool rejects that);
+- runs `bundletool build-bundle --modules=base.zip --output=...` and optionally
+  JAR-signs the AAB with `jarsigner` (upload key).
+- Version/API/ABIs are read back from the release APK unless overridden;
+  `bundletool-all.jar` is external (`-BundletoolJar`/`BUNDLETOOL_JAR`).
+
+### 46.3 Verification
+
+- `surv_tests` 163 tests / 2,599 assertions; `lint:ci`; server `tsc`.
+- x86_64 release APK (debug keystore for testing, `-ApiUrl
+  http://127.0.0.1:8000`): installs, `SurvApi: api base url
+  http://127.0.0.1:8000`, account/profile/site_info work; `aapt2 dump badging`
+  shows `versionCode='403' versionName='0.4.3'`, and the manifest holds the
+  substituted `surv_apiUrl`.
+- arm64 native build (full engine) + release APK (`-ApiUrl
+  https://survev.io`, 42.9 MB, stripped, arm64-only, signer printed). Launching
+  the x86_64 release build logs both `SurvApi: api base url
+  https://survev.io` and `[net] api base https://survev.io`, proving the Java
+  and C++ halves resolve the same store origin.
+- arm64 AAB (29.6 MB signed / 29.4 MB unsigned) contains
+  `base/manifest/AndroidManifest.xml`, `base/resources.pb`, `base/dex/classes.dex`
+  and `base/lib/arm64-v8a/*`; `bundletool validate` accepts it and
+  `build-apks --mode=universal` produces an arm64 APK (`versionCode 403`).
+- x86_64 AAB built earlier from the x86_64 release APK produced a universal APK
+  that installed and ran (account/site_info), proving the bundle pipeline.
+- The test signatures use the debug keystore; a real upload needs the production
+  upload keystore/passwords (never committed).

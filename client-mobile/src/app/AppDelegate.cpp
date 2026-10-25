@@ -98,11 +98,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
                 body.playerCount = 1;
                 body.autoFill = true;
                 body.gameModeIdx = gameModeIdx;
-                std::string apiUrl(ax::UserDefault::getInstance()->getStringForKey(
-                    surv::dev::kKeyApiUrl, ""));
-                if (apiUrl.rfind("http://", 0) != 0 && apiUrl.rfind("https://", 0) != 0) {
-                    apiUrl = surv::dev::kApiBaseUrl;
-                }
+                const std::string apiUrl = surv::GameScene::resolveApiBaseUrl();
                 surv::findGame(apiUrl, body, [done](surv::FindGameResult result) {
                     surv::GameScene::FindGameResultInfo info;
                     info.ok = result.ok;

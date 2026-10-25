@@ -9,9 +9,25 @@
 # and build the native lib first:
 #   cmake --build build-android --config Release
 #
-# Usage:  pwsh/powershell -File tools/build-apk.ps1 [-Abis arm64-v8a,x86_64]
+# Usage:
+#   powershell -File tools/build-apk.ps1 [-Abis arm64-v8a,x86_64]
+#   powershell -File tools/build-apk.ps1 -Release -KeystorePath upload.jks `
+#       -KeystoreAlias upload -KeystorePassword $env:SURVEV_KS_PASS `
+#       -ApiUrl https://survev.io
 param(
-    [string[]]$Abis = @('armeabi-v7a', 'arm64-v8a')
+    # Empty = all store ABIs for debug, arm64-v8a for release.
+    [string[]]$Abis = @(),
+    # Signed release build (non-debug keystore, version from package.json).
+    [switch]$Release,
+    [string]$VersionName = "",
+    [int]$VersionCode = 0,
+    # Release API origin; substituted for the manifest `surv_apiUrl`.
+    [string]$ApiUrl = "",
+    [string]$KeystorePath = "",
+    [string]$KeystoreAlias = "",
+    [string]$KeystorePassword = "",
+    [string]$KeyPassword = "",
+    [string]$Output = ""
 )
 # Native tools (aapt2/javac/d8/zipalign/apksigner) write notes/progress to
 # stderr, which PowerShell turns into a terminating error under 'Stop'. Every
@@ -28,6 +44,50 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Set-Location $root
 [Environment]::CurrentDirectory = $root
 
+if ($Abis.Count -eq 0) {
+    $Abis = if ($Release) { @('arm64-v8a') } else { @('armeabi-v7a', 'arm64-v8a') }
+}
+
+# Version defaults come from the repo package.json (0.4.3 -> 403); a release
+# build must bump package.json or pass -VersionCode (Play versions are monotonic).
+$pkgVersion = '1.0'
+try {
+    $pkg = Get-Content (Join-Path $root '..\package.json') -Raw | ConvertFrom-Json
+    if ($pkg.version) { $pkgVersion = [string]$pkg.version }
+} catch {}
+if (-not $VersionName) { $VersionName = $pkgVersion }
+if ($VersionCode -le 0) {
+    $parts = @($pkgVersion.Split('.') | ForEach-Object { [int]($_ -replace '[^0-9]', '') })
+    $major = if ($parts.Count -gt 0) { $parts[0] } else { 1 }
+    $minor = if ($parts.Count -gt 1) { $parts[1] } else { 0 }
+    $patch = if ($parts.Count -gt 2) { $parts[2] } else { 0 }
+    $VersionCode = ($major * 10000) + ($minor * 100) + $patch
+}
+if ($VersionCode -le 0) { $VersionCode = 1 }
+
+# Signing: explicit args win over environment (CI-friendly, no secrets in argv
+# on disk; apksigner still receives them via env: below).
+if (-not $KeystorePath) { $KeystorePath = $env:SURVEV_KEYSTORE }
+if (-not $KeystoreAlias) { $KeystoreAlias = $env:SURVEV_KS_ALIAS }
+if (-not $KeystorePassword) { $KeystorePassword = $env:SURVEV_KS_PASS }
+if (-not $KeyPassword) { $KeyPassword = $env:SURVEV_KEY_PASS }
+if ($Release) {
+    if (-not $ApiUrl) { $ApiUrl = 'https://survev.io' }
+    if (-not $KeystorePath) {
+        throw "Release build needs -KeystorePath (or `$env:SURVEV_KEYSTORE)"
+    }
+    if (-not (Test-Path $KeystorePath)) { $KeystorePath = Join-Path $root $KeystorePath }
+    if (-not (Test-Path $KeystorePath)) { throw "Keystore not found: $KeystorePath" }
+    if (-not $KeystoreAlias -or -not $KeystorePassword) {
+        throw "Release build needs -KeystoreAlias/-KeystorePassword (or `$env:SURVEV_KS_ALIAS/`$env:SURVEV_KS_PASS)"
+    }
+    if (-not $KeyPassword) { $KeyPassword = $KeystorePassword }
+}
+$ApiUrl = $ApiUrl.Trim()
+Write-Host "== config =="
+Write-Host "   abis=$($Abis -join ',') version=$VersionName ($VersionCode) release=$([bool]$Release)"
+if ($ApiUrl) { Write-Host "   api=$ApiUrl" }
+
 . (Join-Path $PSScriptRoot 'android-env.ps1')
 
 $bt         = Join-Path $env:ANDROID_HOME 'build-tools\35.0.0'
@@ -38,6 +98,7 @@ $java       = Join-Path $env:JAVA_HOME 'bin\java.exe'
 $javac      = Join-Path $env:JAVA_HOME 'bin\javac.exe'
 $keytool    = Join-Path $env:JAVA_HOME 'bin\keytool.exe'
 $jar        = Join-Path $env:JAVA_HOME 'bin\jar.exe'
+$strip      = Join-Path $ndk 'toolchains\llvm\prebuilt\windows-x86_64\bin\llvm-strip.exe'
 
 $work    = Join-Path $root 'build-apk'
 $genDir  = Join-Path $work 'gen'
@@ -56,6 +117,10 @@ $mf = $mf -replace '<manifest xmlns:android="http://schemas.android.com/apk/res/
                    '<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.survev.mobile"'
 $mf = $mf -replace 'android:allowBackup="true"',
                    'android:allowBackup="true" android:extractNativeLibs="true"'
+if ($ApiUrl) {
+    $mf = $mf -replace '(android:name="surv_apiUrl"\s+android:value=")[^"]*(")',
+                       ('${1}' + $ApiUrl + '${2}')
+}
 Set-Content -Path (Join-Path $work 'AndroidManifest.xml') -Value $mf -NoNewline
 
 $resZip = Join-Path $work 'res.zip'
@@ -64,7 +129,7 @@ $baseApk = Join-Path $work 'base.apk'
 if ($LASTEXITCODE -ne 0) { throw "aapt2 compile failed" }
 & (Join-Path $bt 'aapt2.exe') link -o $baseApk -I $androidJar `
     --manifest (Join-Path $work 'AndroidManifest.xml') $resZip --java $genDir `
-    --min-sdk-version 24 --target-sdk-version 36 --version-code 1 --version-name 1.0 --auto-add-overlay
+    --min-sdk-version 24 --target-sdk-version 36 --version-code $VersionCode --version-name "$VersionName" --auto-add-overlay
 if ($LASTEXITCODE -ne 0) { throw "aapt2 link failed" }
 
 Write-Host "== 2/7 java (javac) =="
@@ -160,9 +225,25 @@ foreach ($abi in $Abis) {
     $b = $abiMap[$abi].build
     $so = Join-Path $root "$b\libSurvevMobile.so"
     if (-not (Test-Path $so)) { throw "Missing native lib for ${abi}: $so (build it first)" }
+    $openal = Join-Path $root "$b\lib\libopenal.so"
+    if (-not (Test-Path $openal)) { throw "Missing libopenal for ${abi}: $openal (build it first)" }
+    if ($Release) {
+        # Store builds strip debug symbols; keep the build outputs untouched by
+        # stripping copies in build-apk/stripped/<abi>/.
+        $stripDir = Join-Path $work "stripped\$abi"
+        New-Dir $stripDir
+        $soStripped = Join-Path $stripDir 'libSurvevMobile.so'
+        $openalStripped = Join-Path $stripDir 'libopenal.so'
+        Copy-Item $so $soStripped -Force
+        Copy-Item $openal $openalStripped -Force
+        & $strip --strip-unneeded $soStripped $openalStripped
+        if ($LASTEXITCODE -ne 0) { throw "llvm-strip failed for $abi" }
+        $so = $soStripped
+        $openal = $openalStripped
+    }
     $cxx = Join-Path $ndk "toolchains\llvm\prebuilt\windows-x86_64\sysroot\usr\lib\$($abiMap[$abi].sysroot)\libc++_shared.so"
     Add-Entry $so "lib/$abi/libSurvevMobile.so" ([System.IO.Compression.CompressionLevel]::NoCompression)
-    Add-Entry (Join-Path $root "$b\lib\libopenal.so") "lib/$abi/libopenal.so" ([System.IO.Compression.CompressionLevel]::NoCompression)
+    Add-Entry $openal "lib/$abi/libopenal.so" ([System.IO.Compression.CompressionLevel]::NoCompression)
     Add-Entry $cxx "lib/$abi/libc++_shared.so" ([System.IO.Compression.CompressionLevel]::NoCompression)
 }
 $contentRoot = Join-Path $root 'Content'
@@ -192,19 +273,38 @@ $aligned = Join-Path $work "aligned-$runStamp.apk"
 if ($LASTEXITCODE -ne 0) { throw "zipalign failed" }
 
 Write-Host "== 6/7 sign =="
-$ks = Join-Path $work 'debug.keystore'
-if (-not (Test-Path $ks)) {
-    & $keytool -genkeypair -keystore $ks -storepass android -keypass android -alias androiddebugkey `
-        -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
-    if ($LASTEXITCODE -ne 0) { throw "keytool failed" }
+if ($Release) {
+    $signed = if ($Output) { Join-Path $root $Output } else { Join-Path $root 'SurvevMobile-release.apk' }
+    if (Test-Path $signed) { Remove-Item $signed -Force }
+    # apksigner reads the secrets from the environment (env: prefix), keeping
+    # them out of the command line/logs.
+    $env:SURVEV_APK_KS_PASS = $KeystorePassword
+    $env:SURVEV_APK_KEY_PASS = $KeyPassword
+    & $java -jar (Join-Path $bt 'lib\apksigner.jar') sign --ks $KeystorePath `
+        --ks-key-alias $KeystoreAlias --ks-pass env:SURVEV_APK_KS_PASS `
+        --key-pass env:SURVEV_APK_KEY_PASS --out $signed $aligned
+    $signExit = $LASTEXITCODE
+    Remove-Item Env:SURVEV_APK_KS_PASS, Env:SURVEV_APK_KEY_PASS -ErrorAction SilentlyContinue
+    if ($signExit -ne 0) { throw "apksigner failed" }
+} else {
+    $ks = Join-Path $work 'debug.keystore'
+    if (-not (Test-Path $ks)) {
+        & $keytool -genkeypair -keystore $ks -storepass android -keypass android -alias androiddebugkey `
+            -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+        if ($LASTEXITCODE -ne 0) { throw "keytool failed" }
+    }
+    $signed = if ($Output) { Join-Path $root $Output } else { Join-Path $root 'SurvevMobile-debug.apk' }
+    if (Test-Path $signed) { Remove-Item $signed -Force }
+    & $java -jar (Join-Path $bt 'lib\apksigner.jar') sign --ks $ks --ks-pass pass:android --key-pass pass:android --out $signed $aligned
+    if ($LASTEXITCODE -ne 0) { throw "apksigner failed" }
 }
-$signed = Join-Path $root 'SurvevMobile-debug.apk'
-if (Test-Path $signed) { Remove-Item $signed -Force }
-& $java -jar (Join-Path $bt 'lib\apksigner.jar') sign --ks $ks --ks-pass pass:android --key-pass pass:android --out $signed $aligned
-if ($LASTEXITCODE -ne 0) { throw "apksigner failed" }
 
 Write-Host "== 7/7 verify =="
-& $java -jar (Join-Path $bt 'lib\apksigner.jar') verify --verbose $signed
+if ($Release) {
+    & $java -jar (Join-Path $bt 'lib\apksigner.jar') verify --verbose --print-certs $signed
+} else {
+    & $java -jar (Join-Path $bt 'lib\apksigner.jar') verify --verbose $signed
+}
 if ($LASTEXITCODE -ne 0) { throw "apksigner verify failed" }
 
 # Android R+ requires resources.arsc stored uncompressed and 4-byte aligned.

@@ -5,10 +5,12 @@ build-android/
 build-android-*/
 build-win32/
 build-apk/
+build-aab/
 .vs/
 *.user
 *.apk
 *.aab
+*.apks
 *.idsig
 # Vendored axmol engine (~590 MB, populated by tools/vendor-axmol.ps1)
 /axmol/

@@ -14,6 +14,10 @@
  ****************************************************************************/
 package dev.axmol.app;
 
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
 import android.util.Log;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -31,11 +35,50 @@ public final class SurvApi {
     public static final String DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 
     /**
+     * API origin for this install. The release build substitutes the manifest
+     * `surv_apiUrl` meta-data (`tools/build-apk.ps1 -ApiUrl`), which the C++ side
+     * already reads through `dev::kKeyApiUrl`; the Java HTTP/WebSocket clients
+     * must use the same origin.
+     */
+    private static String sApiBaseUrl = DEFAULT_API_BASE_URL;
+
+    /** Reads the manifest meta-data once, before the Java UI is installed. */
+    public static void initialize(Context context) {
+        String url = null;
+        try {
+            ApplicationInfo info = context.getPackageManager().getApplicationInfo(
+                    context.getPackageName(), PackageManager.GET_META_DATA);
+            Bundle meta = info.metaData;
+            if (meta != null) {
+                url = meta.getString("surv_apiUrl");
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "could not read surv_apiUrl: " + e.getMessage());
+        }
+        if (url != null) {
+            url = url.trim();
+            while (url.endsWith("/")) {
+                url = url.substring(0, url.length() - 1);
+            }
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+                sApiBaseUrl = url;
+            } else {
+                Log.w(TAG, "ignoring invalid surv_apiUrl: " + url);
+            }
+        }
+        Log.i(TAG, "api base url " + sApiBaseUrl);
+    }
+
+    public static String apiBaseUrl() {
+        return sApiBaseUrl;
+    }
+
+    /**
      * The `/team_v2` WebSocket endpoint, derived from the API origin (the web
      * client proxies it there; native connects directly).
      */
     public static String teamWsUrl() {
-        String base = DEFAULT_API_BASE_URL;
+        String base = apiBaseUrl();
         if (base.startsWith("https://")) {
             base = "wss://" + base.substring("https://".length());
         } else if (base.startsWith("http://")) {

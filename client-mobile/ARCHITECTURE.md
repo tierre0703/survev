@@ -64,11 +64,15 @@ proj.android/app/src/dev/axmol/app/
   `MenuScene`, so `UiBridge::l10nJson()` builds its own `Localization` from the
   bundled `l10n/*.json` (config `language`). Do not remove that fallback: the
   Java UI would fall back to raw keys.
-- **Team links are web links** — `https://<webBaseUrl>/#CODE` (config key,
+- **Team links are web links** - `https://<webBaseUrl>/#CODE` (config key,
   default `https://survev.io`) so browser players can join, plus a
   `survev://team/CODE` deep link handled by `AppActivity`. The team socket is a
   hand-written WebSocket client (`TeamSocket`) because no WS library is
   vendored; it sends the device Bearer token so `/team_v2` sees the account.
+- **The API origin is manifest-driven** - `surv_apiUrl` is read once by
+  `SurvApi.initialize(Context)` for the Java HTTP/team clients (and by C++ as the
+  dev override). `tools/build-apk.ps1 -ApiUrl` substitutes it for release builds;
+  the manifest default is the loopback used with `adb reverse`.
 - **HUD stays in axmol + FairyGUI** (the world canvas); Java only covers
   out-of-game screens.
 - **C++ `Config`/`Loadout`/`Localization`/`Touch`** stay in C++ as the source

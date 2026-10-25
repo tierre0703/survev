@@ -69,6 +69,7 @@ public class AppActivity extends AxmolActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        SurvApi.initialize(this);
         super.setEnableVirtualButton(false);
         installCrashReporter();
         super.onCreate(savedInstanceState);
@@ -161,7 +162,7 @@ public class AppActivity extends AxmolActivity {
         }
         // Main thread: the process is about to die, so send it here and wait
         // (briefly) for the request to leave.
-        final String apiBase = SurvApi.DEFAULT_API_BASE_URL;
+        final String apiBase = SurvApi.apiBaseUrl();
         Thread sender = new Thread(new Runnable() {
             @Override
             public void run() {

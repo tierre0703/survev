@@ -22,6 +22,7 @@ WebView. Anything UI-shaped should follow `ARCHITECTURE.md` §5/§7.
 | Android SDK (platform android-36, build-tools 35.0.0, CMake 3.22.1, ninja) | `E:\work\survev-tools\Sdk` |
 | Android NDK r27b | `E:\work\survev-tools\Sdk\ndk\27.1.12297006` |
 | JDK 21 | `C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot` |
+| bundletool (AAB) | any `bundletool-all.jar`; pass `-BundletoolJar` or `$env:BUNDLETOOL_JAR` |
 | axmol 2.11.5 source (to vendor) | `E:\work\survev-tools\axmol-2.11.5` |
 
 Everything is wired by `tools/android-env.ps1` (it also puts the SDK's
@@ -52,6 +53,73 @@ powershell -File tools\build-apk.ps1 -Abis "armeabi-v7a,arm64-v8a"
 `build-android-x86_64/` if you pass `x86_64`). The first build compiles the whole
 axmol engine, so it takes a while; later builds are incremental.
 
+## Release APK + Play AAB (store build)
+
+Store builds use the same Gradle-free pipeline. Google Play requires 64-bit, so
+build **arm64-v8a** first:
+
+```powershell
+. .\tools\android-env.ps1
+.\tools\build-native.ps1 -Abis "arm64-v8a"
+```
+
+Create an upload keystore **once** (never commit it):
+
+```powershell
+keytool -genkeypair -keystore upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Prefer environment variables so the passwords stay out of shell history:
+
+```powershell
+$env:SURVEV_KS_ALIAS = "upload"
+$env:SURVEV_KS_PASS  = "<store password>"
+$env:SURVEV_KEY_PASS = "<key password>"
+```
+
+Signed release APK (version defaults from `../package.json`: `0.4.3` -> code
+`403`; `-ApiUrl` replaces the manifest `surv_apiUrl`):
+
+```powershell
+.\tools\build-apk.ps1 -Release -Abis "arm64-v8a" `
+    -ApiUrl "https://survev.io" -KeystorePath "upload.jks"
+# -> SurvevMobile-release.apk
+```
+
+- Use `-VersionName`/`-VersionCode` to override; bump `package.json` or pass a
+  new code for every Play upload (version codes must increase).
+- Release builds strip the native symbols, sign with APK Signature Scheme v2/v3,
+  print the signer certificate, and still verify that `resources.arsc` is stored
+  uncompressed + 4-byte aligned.
+- The release manifest is not debuggable; the debug APK path is unchanged.
+
+Play app bundle (AAB):
+
+```powershell
+.\tools\build-aab.ps1 -Abis "arm64-v8a" `
+    -BundletoolJar "C:\tools\bundletool-all.jar"
+# -> SurvevMobile-release.aab
+```
+
+- Build the release APK first: `build-aab.ps1` reads the version, API URL and ABI
+  list from it, assembles the `base` module (protobuf manifest/resources + dex +
+  stripped native libs + assets) and calls `bundletool build-bundle`.
+- `bundletool-all.jar` is not vendored (it is large); pass `-BundletoolJar`,
+  `$env:BUNDLETOOL_JAR`, or put it in `tools/`.
+- Add the same keystore arguments (`-KeystorePath/-KeystoreAlias/
+  -KeystorePassword/-KeyPassword`) to JAR-sign the AAB for upload. Without them
+  the AAB is unsigned (Play can sign it with the app signing key).
+- Inspect/install locally with bundletool:
+  ```powershell
+  java -jar bundletool-all.jar build-apks --bundle=SurvevMobile-release.aab `
+      --output=SurvevMobile-release.apks --mode=universal `
+      --ks=upload.jks --ks-key-alias=upload
+  ```
+- These scripts are the canonical store path on this machine. If Gradle is
+  usable (Astrill disabled), `cd proj.android; ./gradlew bundleRelease
+  -PKEY_STORE_FILE=... -PKEY_STORE_PASSWORD=... -PKEY_ALIAS=... -PKEY_PASSWORD=...`
+  is the standard alternative.
+
 ## Install & run
 ```powershell
 adb install -r SurvevMobile-debug.apk
@@ -63,7 +131,7 @@ adb shell am start -n com.survev.mobile/dev.axmol.app.AppActivity
 . .\tools\android-env.ps1
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
-.\build-tests\Release\surv_tests.exe     # 40 tests, bit-exact vs the TypeScript code
+.\build-tests\Release\surv_tests.exe     # 163 tests, bit-exact vs the TypeScript code
 ```
 
 ## Emulator (x86_64)
@@ -98,10 +166,10 @@ Gradle, stop the Astrill `ASProxy` service (admin) or whitelist `java.exe`.
   are missing, axmol compiles empty shaders and the app renders a **black
   screen** with `The vertex attribute 'a_position' ... not exist` warnings in
   logcat.
-- **M4 rendering status (on-device)**: terrain/ground/grid/labels render; the
-  sprite atlas pipeline (web `client/atlas-builder`) is not yet wired into the
-  native app, so obstacles/loot/player/particle sprites do not draw yet. See
-  `plan.md` §M4 for the full list of remaining polish.
+- **M4 rendering status (on-device)**: terrain/ground/grid/labels, sprite atlases
+  (`Content/atlas`), obstacles/buildings/ceilings, particles, loot, skeletal
+  players and the minimap/big map render on device. See `M4_REMAINING.md` for
+  the session-by-session coverage and remaining polish.
 - **Java UI (from 2026-10-14)**: the APK also packages `assets/fgui/**` once
   FairyGUI packages exist, and `proj.android/app/libs/*.jar` are linked into
   `javac`/`d8` by `build-apk.ps1`. See `ARCHITECTURE.md` §6 for the UI split,

@@ -106,7 +106,7 @@ public class MenuFragment {
     private boolean mRegionChosen = false;
     private boolean mMuted = false;
     private boolean mFindingGame = false;
-    private String mApiBaseUrl = SurvApi.DEFAULT_API_BASE_URL;
+    private String mApiBaseUrl = SurvApi.apiBaseUrl();
     // Raw /api/site_info response, shared with TeamFragment (which needs the
     // region list and mode→teamMode table). C++ has no MenuScene on Android, so
     // SurvBridge.getSiteInfoJson() is empty.

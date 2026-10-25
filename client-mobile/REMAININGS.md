@@ -10,17 +10,20 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25** — Session 44 continued Perf/polish: the render-resolution
-tier is now a four-step battery scale (**Full 1.00 / Medium 0.85 / Low 0.75 /
-Potato 0.60**) cycled from the pause dialog and persisted as `renderScale`; the
-startup path always re-applies it (Full clears a stale fixed surface). A 60 s
-soak summary (`[perf] soak 60s fps min/avg/max frame=WxH`, plus a low-FPS hint)
-now complements the 5 s fps/frame logs. Verified on the emulator: every tier
-changes the GL frame (960x540 -> 816x459 -> 720x405 -> 576x324), survives a
-restart, and Medium held min 57.6 / avg 59.3 / max 60.3 fps over a minute.
-Earlier: §43 team rooms + invite links, §42 quest/pass data + Java l10n, §41
-device login + profile, §40 HUD safe-area insets. **163 host tests pass, 0
-fail.**
+Latest recorded state: **2026-10-25** — Session 45 finished the **store-ready packaging**:
+`tools/build-apk.ps1 -Release` builds a stripped, v2/v3-signed APK (version
+from `package.json` 0.4.3 -> 403, API origin substituted into the manifest
+`surv_apiUrl`, non-debuggable), and the new `tools/build-aab.ps1` assembles the
+Play `base` module from that APK and calls `bundletool build-bundle` (optional
+JAR signing). The Java HTTP/WebSocket clients **and** the C++ API/error-reporting
+path now resolve the API origin from the manifest (`SurvApi.initialize` +
+`GameScene::resolveApiBaseUrl`), so the release app points at
+`https://survev.io` instead of loopback.
+Verified: arm64 release APK/AAB (42.9 MB / 29.6 MB), bundletool validate +
+universal APK, x86_64 debug/release installs, and a debug build still talks to
+the dev API.
+Earlier: §44 render tiers + soak, §43 team rooms + invite links, §42 quest/pass
+data + Java l10n, §41 device login + profile. **163 host tests pass, 0 fail.**
 
 ---
 
@@ -37,7 +40,7 @@ fail.**
 | M6 | Audio | **mostly done** | engine + mixer + ambiance + explosion/bullet/shot sounds + per-source EAX reverb + per-source EFX low-pass EQ (muffled/club) + structure interior ambience + building `soundEmitters`. UI sounds still unwired (see §2). |
 | M7 | UI layer | **S1–S7 landed** | The JNI `SurvBridge` seam + Java menu/loadout/team/pause are in place; the in-game HUD is the plain pix adapter (`game/Hud`), and the emote wheel (`game/EmoteWheel`) + team-ping wheel (`game/PingWheel`) are live with loadout/ammo icons + input. |
 | M8 | Accounts / API | **done** | device login + profile, quests/pass data, team links (`/team_v2` protocol + invite links/deep links), region latency test, client error reporting. |
-| M9 | Polish & release | **started** | lifecycle: background/pause continuity (§36), mid-match reconnection (§38); render/battery tiers + soak instrumentation (§44); real-device soak and store-ready AAB still to do. |
+| M9 | Polish & release | **done (except real-hardware soak)** | lifecycle: background/pause continuity (§36), mid-match reconnection (§38), render/battery tiers + soak instrumentation (§44), release APK + Play AAB pipeline with version/API substitution (§45); a soak on a physical mid-range device remains. |
 
 ---
 
@@ -455,12 +458,34 @@ fail.**
       - `debug.surv_debug=1` logs `[perf] safe area …` / `[perf] HUD fitted …`
         only when an inset exists, so a cutout is verifiable from logcat.
 - [x] **Battery/render tiers + soak instrumentation** (Session 44): four
-      surface tiers, pause-dialog cycling, persistence, startup re-apply, and the
-      60 s min/avg/max soak log.
+      surface tiers (Full/Medium/Low/Potato), pause-dialog cycling, persistence,
+      startup re-apply, and the 60 s min/avg/max soak log.
+- [x] **Store-ready APK/AAB** (Session 45):
+      - `tools/build-apk.ps1 -Release` uses an upload keystore (args or
+        `SURVEV_KEYSTORE`/`SURVEV_KS_*` env), strips the native libs, sets
+        `versionName`/`versionCode` from the repo `package.json` (0.4.3 -> 403;
+        overridable), substitutes the manifest `surv_apiUrl` with `-ApiUrl`
+        (default `https://survev.io`), signs v2/v3 and prints the signer. The
+        debug path is unchanged (`SurvevMobile-debug.apk`).
+      - `tools/build-aab.ps1` builds the Play `base` module from the release APK
+        (proto manifest/resources via `aapt2 --proto-format`, dex, stripped libs,
+        assets) and runs `bundletool build-bundle`; version/API/ABIs are read
+        back from the APK. Optional JAR signing for the upload key; otherwise
+        Play can sign with the app signing key. `bundletool-all.jar` is external
+        (`-BundletoolJar`/`BUNDLETOOL_JAR`).
+      - `SurvApi.initialize(Context)` resolves the API origin from the manifest
+        meta-data for the Java HTTP (`site_info`/`find_game`/accounts/pass) and
+        `/team_v2` clients, matching the C++ `surv_apiUrl` resolution. The
+        manifest default is the loopback used with `adb reverse`; a physical dev
+        device can pass `-ApiUrl` when building.
+      - Version codes: bump `package.json`/`-VersionCode` for every Play upload.
+      - Verified with the debug upload key: arm64 release APK (42.9 MB), arm64
+        AAB (29.6 MB signed), `bundletool validate` + universal APK, x86_64
+        release/debug installs and dev API calls. A real store upload only needs
+        the production keystore/passwords.
 - [ ] **Perf/polish (rest)**: 60 fps soak on a real mid-range device (the
       emulator holds ~59 fps at Medium), and further UI polish from device
       testing.
-- [ ] **Store-ready APK/AAB**
 
 ### Out of scope (deliberately not ported)
 
@@ -487,6 +512,11 @@ cmake --build build-tests --config Release
 .\tools\build-apk.ps1 -Abis "x86_64"
 & $adb reverse tcp:8000 tcp:8000; & $adb reverse tcp:9000 tcp:9000
 & $adb install -r .\SurvevMobile-debug.apk
+
+# store release (arm64; upload keystore + bundletool)
+.\tools\build-native.ps1 -Abis "arm64-v8a"
+.\tools\build-apk.ps1 -Release -Abis "arm64-v8a" -ApiUrl "https://survev.io" -KeystorePath upload.jks
+.\tools\build-aab.ps1 -Abis "arm64-v8a" -BundletoolJar C:\tools\bundletool-all.jar
 ```
 
 Regenerate after touching `shared/defs` or web sources:
@@ -656,3 +686,21 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - The Java team screen gets site_info from `MenuFragment.siteInfoJson()`:
   `SurvBridge.getSiteInfoJson()` is empty on Android (no C++ MenuScene). Keep the
   default Solo/Duo/Squad fallback for deep links that arrive before the fetch.
+- **Store builds go through `tools/build-apk.ps1 -Release`** (stripped native
+  libs, upload keystore, version from `package.json`, v2/v3 signing, signer
+  printed) and `tools/build-aab.ps1` (bundletool module from that APK). Do not
+  hand-package or reuse the debug signing key for a real upload; keep the debug
+  output/signing path unchanged.
+- `surv_apiUrl` (manifest meta-data) is the **single API origin**: Java reads it
+  in `SurvApi.initialize` (HTTP + `/team_v2`) and C++ uses it as the
+  `surv_apiUrl` override. Release uses `-ApiUrl` (default
+  `https://survev.io`); the manifest default is `http://127.0.0.1:8000` for
+  `adb reverse`. Never hardcode the store origin in `SurvApi`/`DevConfig` only.
+- Version code = `major*10000 + minor*100 + patch` from the repo `package.json`
+  (0.4.3 -> 403); bump it (or `-VersionCode`) for every Play upload. The debug
+  build uses the same values but a different output name.
+- `build-aab.ps1` must keep the module zip entry names forward-slashed
+  (`manifest/`, `resources.pb`, `res/`, `dex/`, `lib/`, `assets/`) — .NET's
+  `CreateFromDirectory` writes backslashes on Windows and bundletool rejects it.
+  Proto resources come from `aapt2 link --proto-format`; the rest is copied from
+  the release APK.

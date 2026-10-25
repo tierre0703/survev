@@ -24,16 +24,16 @@
             mirroring main.ts's `localhostDetection`.
         -->
         <!--
-            `surv_apiUrl` is intentionally absent: axmol's AxmolActivity calls
-            getString("surv_apiUrl") on a missing property, and android.os.Build
-            falls back to "unknown" rather than an empty string. The app treats
-            anything that is not an http(s) URL as "use the built-in default",
-            so write a real URL here only to override DevConfig.h's
-            kApiBaseUrl at build time.
+            `surv_apiUrl` is the API origin for both halves of the app: C++ reads
+            it as the dev override (DevConfig.h `kApiBaseUrl` is the fallback),
+            and Java reads it in `SurvApi.initialize` so HTTP/WebSocket calls use
+            the same host. The default is the loopback address used with
+            `adb reverse`; `tools/build-apk.ps1 -ApiUrl` substitutes it for
+            release/store builds (the AAB script reads it back from the APK).
         -->
         <meta-data android:name="surv_region" android:value="local" />
         <meta-data android:name="surv_debug" android:value="0" />
-        <meta-data android:name="surv_apiUrl" android:value="http://10.0.2.2:8000" />
+        <meta-data android:name="surv_apiUrl" android:value="http://127.0.0.1:8000" />
 
         <activity
             android:name="dev.axmol.app.AppActivity"

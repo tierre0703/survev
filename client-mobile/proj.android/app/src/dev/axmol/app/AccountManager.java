@@ -119,7 +119,7 @@ public final class AccountManager {
     private AccountManager(Activity activity) {
         mActivity = activity;
         mPrefs = activity.getSharedPreferences(PREFS_NAME, Activity.MODE_PRIVATE);
-        mApiBaseUrl = SurvApi.DEFAULT_API_BASE_URL;
+        mApiBaseUrl = SurvApi.apiBaseUrl();
     }
 
     /** UI-thread entry point; the Activity is only used to read ANDROID_ID. */

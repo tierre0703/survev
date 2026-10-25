@@ -29,6 +29,10 @@
 #include "fairygui/GRoot.h"
 #include "fairygui/FairyGUI.h"
 
+#if AX_TARGET_PLATFORM == AX_PLATFORM_ANDROID
+#include "platform/android/jni/JniHelper.h"
+#endif
+
 #include <set>
 #include <algorithm>
 #include <cmath>
@@ -372,6 +376,7 @@ bool GameScene::init() {
     _errorLog = std::make_unique<ErrorLog>(
         [](const std::string& url, const std::string& body) { postJson(url, body); },
         resolveApiBaseUrl());
+    AXLOGI("[net] api base {}", resolveApiBaseUrl());
     // Dev smoke test for the whole reporting path: with `debug.surv_debug=1`
     // (the EQ trace switch) send one tagged report at startup; the API log must
     // show `POST /api/report_error`. Nothing is sent in normal runs.
@@ -387,6 +392,16 @@ bool GameScene::init() {
 }
 
 std::string GameScene::resolveApiBaseUrl() {
+#if AX_TARGET_PLATFORM == AX_PLATFORM_ANDROID
+    // The manifest `surv_apiUrl` is resolved once by SurvApi.initialize() (it
+    // also powers the Java HTTP/team clients); prefer it so release builds
+    // report errors to the same store origin instead of DevConfig's loopback.
+    const std::string javaUrl =
+        ax::JniHelper::callStaticStringMethod("dev/axmol/app/SurvApi", "apiBaseUrl");
+    if (javaUrl.rfind("http://", 0) == 0 || javaUrl.rfind("https://", 0) == 0) {
+        return javaUrl;
+    }
+#endif
     // Same resolution as AppDelegate's find_game wiring.
     std::string apiUrl(ax::UserDefault::getInstance()->getStringForKey(dev::kKeyApiUrl, ""));
     if (apiUrl.rfind("http://", 0) != 0 && apiUrl.rfind("https://", 0) != 0) {
