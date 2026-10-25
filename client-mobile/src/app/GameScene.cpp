@@ -493,11 +493,17 @@ void GameScene::resetWorld() {
     // The HUD is laid out around the design rect's centre (like the menu's
     // uiRoot); ui::layoutUiRoot fits the 1280x720 rect into the view.
     {
-        const float vw = ax::Director::getInstance()->getVisibleSize().width;
-        const float vh = ax::Director::getInstance()->getVisibleSize().height;
-        const float fit = std::fmin(vw / ::ui::kit::designWidth(), vh / ::ui::kit::designHeight());
-        _hudRoot->setPosition(vw * 0.5f, vh * 0.5f);
-        _hudRoot->setScale(fit, fit);
+        const ax::Rect safe = safeAreaRect();
+        layoutHud(safe);
+        if (isDevLogEnabled()) {
+            const ax::Size visible = ax::Director::getInstance()->getVisibleSize();
+            if (std::fabs(safe.origin.x) > 0.5f || std::fabs(safe.origin.y) > 0.5f
+                || std::fabs(safe.size.width - visible.width) > 0.5f
+                || std::fabs(safe.size.height - visible.height) > 0.5f) {
+                AXLOGI("[perf] HUD fitted to safe area x={} y={} {}x{}", safe.origin.x,
+                       safe.origin.y, safe.size.width, safe.size.height);
+            }
+        }
     }
     _gameRoot->addChild(static_cast<ax::Node*>(_hudRoot->native()));
     _hud = std::make_unique<Hud>();
@@ -538,10 +544,51 @@ void GameScene::onWorldResize(float width, float height) {
     // Re-fit the HUD to the real viewport once the GL view exists (the first
     // pass runs before it, so the HUD would keep the default size scale).
     if (_hudRoot) {
-        const float fit = std::fmin(width / ::ui::kit::designWidth(), height / ::ui::kit::designHeight());
-        _hudRoot->setPosition(width * 0.5f, height * 0.5f);
-        _hudRoot->setScale(fit, fit);
+        const ax::Rect safe = safeAreaRect();
+        layoutHud(safe);
+        if (isDevLogEnabled() && (std::fabs(safe.origin.x) > 0.5f
+                                  || std::fabs(safe.origin.y) > 0.5f
+                                  || std::fabs(safe.size.width - visible.width) > 0.5f
+                                  || std::fabs(safe.size.height - visible.height) > 0.5f)) {
+            AXLOGI("[perf] safe area x={} y={} {}x{} (view {}x{})", safe.origin.x,
+                   safe.origin.y, safe.size.width, safe.size.height, visible.width,
+                   visible.height);
+        }
     }
+}
+
+ax::Rect GameScene::safeAreaRect() const {
+    const ax::Size visible = ax::Director::getInstance()->getVisibleSize();
+    const ax::Rect fallback(0.0f, 0.0f, visible.width, visible.height);
+    auto* renderView = ax::Director::getInstance()->getRenderView();
+    if (!renderView) {
+        return fallback;
+    }
+    // axmol folds display cutouts, rounded corners and system bars into this
+    // rect (points, view space). It returns the visible rect when nothing is
+    // known; guard degenerate/oversized values anyway.
+    const ax::Rect safe = renderView->getSafeAreaRect();
+    if (safe.size.width <= 0.0f || safe.size.height <= 0.0f
+        || safe.size.width > visible.width + 0.5f
+        || safe.size.height > visible.height + 0.5f) {
+        return fallback;
+    }
+    return safe;
+}
+
+void GameScene::layoutHud(const ax::Rect& safe) {
+    if (!_hudRoot) {
+        return;
+    }
+    // Priority 5 polish: keep the HUD (minimap, kill feed, health/boost, squad
+    // bars, emote/ping buttons, big map) out of the notch/system-bar area. The
+    // world itself stays full-bleed; the HUD is fitted to and centred in the
+    // safe rect instead of the whole viewport (same 1280x720 design space).
+    const float fit = std::fmin(safe.size.width / ::ui::kit::designWidth(),
+                                safe.size.height / ::ui::kit::designHeight());
+    _hudRoot->setPosition(safe.origin.x + safe.size.width * 0.5f,
+                          safe.origin.y + safe.size.height * 0.5f);
+    _hudRoot->setScale(fit, fit);
 }
 
 void GameScene::ensureBackdropVisible() {

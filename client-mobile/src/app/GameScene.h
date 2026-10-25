@@ -189,6 +189,9 @@ private:
     void resetWorld();
     // view.ts resizeGame callback registered on every new GameWorld.
     void onWorldResize(float width, float height);
+    // Notch/system-bar safe rect (view points) and the HUD fit/centre inside it.
+    ax::Rect safeAreaRect() const;
+    void layoutHud(const ax::Rect& safe);
     // main.ts #game-area backdrop: keeps the full-screen black canvas rect
     // (created in init()) in front of the Java menu's translucent scrim.
     void ensureBackdropVisible();

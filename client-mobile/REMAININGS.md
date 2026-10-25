@@ -10,14 +10,14 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25** — Session 39 continued Perf/polish: the
-pause dialog's **"Low GFX"** now scales the EGL surface to 75%
-(`SurfaceHolder.setFixedSize`, `RenderScale.java`, persisted as `renderScale`),
-`debug.surv_debug=1` logs `[perf] fps=` and frame-size changes every 5 s, and the
-missing `SurvBridge.setConfigValue` JNI was implemented (the sensitivity sliders
-used to throw `UnsatisfiedLinkError`). Earlier: §38 mid-match reconnection,
-§37 find_game retry + FPS overlay, §36 background/pause continuity, §35 error
-reporting, §34 region latency test. **163 host tests pass, 0 fail.**
+Latest recorded state: **2026-10-25** — Session 40 continued Perf/polish: the HUD
+now fits inside the device **safe area** (notch / rounded corners / system bars)
+via `RenderView::getSafeAreaRect()`, while the world stays full-bleed; verified
+with the emulator's cutout overlay (`safe area x=128 1152x720` -> HUD fitted).
+`debug.surv_debug=1` also logs the safe rect when it differs from the viewport.
+Earlier: §39 Low GFX surface tier + perf logs + `setConfigValue` JNI, §38
+mid-match reconnection, §37 find_game retry + FPS overlay, §36 background/pause
+continuity, §35 error reporting. **163 host tests pass, 0 fail.**
 
 ---
 
@@ -373,8 +373,19 @@ reporting, §34 region latency test. **163 host tests pass, 0 fail.**
         writes the config with the JSON type preserved and saves it. The slider
         values are persisted but still not consumed by the touch code (the web
         has no equivalent setting).
-- [ ] **Perf/polish (rest)**: notch/safe-area insets, 60 fps soak on real
-      hardware, battery/thermal tiers beyond Low GFX
+- [x] **Notch / safe-area insets**:
+      - `GameScene::safeAreaRect()` reads `RenderView::getSafeAreaRect()`
+        (axmol folds display cutouts, rounded corners and system bars into it)
+        and falls back to the visible rect when it is degenerate.
+      - `layoutHud()` fits the 1280x720 HUD into that rect and centres it there,
+        instead of the whole viewport: the minimap, kill feed, health/boost,
+        squad bars, gear/perk row, emote/ping buttons and the big map stay out of
+        the notch. The world remains full-bleed (intended) and the touch pads
+        keep their screen-space offsets (they sit far from the edges).
+      - `debug.surv_debug=1` logs `[perf] safe area …` / `[perf] HUD fitted …`
+        only when an inset exists, so a cutout is verifiable from logcat.
+- [ ] **Perf/polish (rest)**: 60 fps soak on real mid-range hardware, battery
+      tiers beyond Low GFX, and further UI polish from device testing
 - [ ] **Store-ready APK/AAB**
 
 ### Out of scope (deliberately not ported)
@@ -514,3 +525,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - `[perf]` fps/frame logs are gated on `debug.surv_debug=1`; applying the Low GFX
   tier logs one line at startup (`RenderScale` + `[perf] render scale`) even
   without the switch, which is how the persisted tier is verified.
+- The HUD is fitted/centred in `RenderView::getSafeAreaRect()`, not the viewport:
+  keep that in `GameScene::layoutHud` (build + every resize) so notches and
+  system bars never cover HUD widgets. The world stays full-bleed and the touch
+  pads keep screen-space offsets; do not "fix" those into the safe rect.

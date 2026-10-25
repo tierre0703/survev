@@ -2402,7 +2402,7 @@ With `debug.surv_debug=1`, `GameScene::update` logs every 5 s:
 ```
 
 and logs `[perf] frame size WxH` whenever the GL frame size changes (so toggling
-Low GFX is visible in logcat). The axmol stats overlay from §37 remains the
+Low GFX is visible in logcat). The axmol stats overlay from ï¿½37 remains the
 on-screen version.
 
 ### 40.3 Missing setConfigValue JNI
@@ -2425,3 +2425,41 @@ code does not consume them yet (native-only sliders, the web has no equivalent).
   (`[perf] render scale 0.75 at startup`, `[perf] frame size 720x405`).
 - Dragging the "Move" sensitivity slider no longer crashes and the value
   persists into the next dialog open (`Move 96%`). `logcat -b crash` empty.
+
+## 41. Session 40 - safe-area insets for the HUD (2026-10-25)
+
+### 41.1 Why
+
+The HUD was fitted to the whole viewport. On devices with a display cutout,
+rounded corners or a system bar the outermost widgets (minimap/kill feed on the
+right, squad bars on the left, health/boost at the bottom) could sit under the
+cutout; the app deliberately draws under it (`cutoutMode=shortEdges`).
+
+### 41.2 Fix
+
+`GameScene::safeAreaRect()` reads `RenderView::getSafeAreaRect()` (axmol folds
+cutout/rounded-corner/soft-key insets into it, in view points) with a fallback to
+the visible rect for degenerate values. `layoutHud()` now fits the 1280x720 HUD
+into that rect and centres it there; it runs both when the HUD is built and on
+every resize. The world stays full-bleed, and the touch pads keep their
+screen-space offsets (126/100 design units from the edges, well clear of a
+cutout).
+
+With `debug.surv_debug=1` the safe rect is logged only when it differs from the
+viewport:
+
+```
+[perf] HUD fitted to safe area x=128 y=0 1152x720
+```
+
+### 41.3 Verification
+
+- `surv_tests` 163 tests / 2,599 assertions; `lint:ci`; x86_64 native + APK.
+- Emulator (960x540 surface, Low GFX on -> 720x405), cutout emulation
+  (`cmd overlay enable ...cutout.emulation.corner`): the log above appears and
+  the HUD is scaled to fit the 1152-wide safe rect (fit 0.9) instead of the full
+  viewport. Disabling the overlay removes the log (rect == viewport).
+- 3-minute in-match run with `debug.surv_debug=1`: 36 fps samples, 58.4-60.7 fps
+  at 720x405 (Low GFX on), no crash. The socket then closed (bundle server, which
+  predates the rejoin support) and the client took the expected
+  `index-host-closed` path back to the menu; `logcat -b crash` empty.
