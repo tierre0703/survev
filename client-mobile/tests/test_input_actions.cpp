@@ -385,8 +385,12 @@ TEST(hud_prompt_announcement_and_faction_counts) {
     CHECK(prompt != nullptr);
     CHECK(prompt->visible);
     CHECK_EQ(prompt->text, std::string("PICK UP FRAG"));
+    // ui.ts binds touchstart to the prompt element itself: tapping the visible
+    // "PICK UP <TYPE>" text must interact (not fall through to the pads).
+    CHECK(hud.hitTest(640.0f, 144.0f).kind == Hud::TapKind::Interact);
     hud.setInteractionPrompt(std::string());
     CHECK(!prompt->visible);
+    CHECK(hud.hitTest(640.0f, 144.0f).kind == Hud::TapKind::None);
 
     hud.showAnnouncement("ROLE ASSIGNED: LEADER");
     auto* announcement = static_cast<const pix::NullText*>(hud.announcementText());

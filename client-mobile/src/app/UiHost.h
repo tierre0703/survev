@@ -56,6 +56,9 @@ public:
     // --- read-only snapshots ------------------------------------------------
     // Flattened table for the current locale ({"key": "text"}).
     virtual std::string l10nJson() = 0;
+    // Active language code (config `language`): Java uses it to invalidate its
+    // cached l10n table when the settings screen changes it.
+    virtual std::string language() { return "en"; }
     // Language list for the settings dropdown: [{"code","name"}, ...].
     virtual std::string localesJson() { return "[]"; }
     virtual std::string loadoutJson() = 0;
@@ -84,6 +87,14 @@ public:
     virtual void resumeGame() = 0;
     // SpectateMsg action from the Java pause dialog: 1=Begin, 2=Next, 3=Prev.
     virtual void spectate(int action) { (void)action; }
+    // BT-keyboard key event forwarded by AppActivity with an Android
+    // KeyEvent.KEYCODE_* value. Routed to the active GameScene's HardwareInput
+    // on the game thread (P1.6); axmol's Android GLSurfaceView only forwards
+    // DPAD/BACK, so letters/digits need this path.
+    virtual void hardwareKey(int androidKeyCode, bool down) {
+        (void)androidKeyCode;
+        (void)down;
+    }
     // Persist the config blob (Java calls this before backgrounding).
     virtual void saveConfig() {}
     // The bundled news entries as JSON (the Java menu's news column).

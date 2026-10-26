@@ -247,8 +247,7 @@ public final class Json {
     }
 
     /** Language dropdown entries (ui::kLocales): [{"code","name"}, ...]. */
-    public static List<LocaleEntry> parseLocales(String json) {
-        List<LocaleEntry> out = new ArrayList<>();
+    public static List<LocaleEntry> parseLocales(String json) {        List<LocaleEntry> out = new ArrayList<>();
         if (json == null) return out;
         try {
             JsonArray arr = JsonParser.parseString(json).getAsJsonArray();
@@ -270,5 +269,59 @@ public final class Json {
     public static class LocaleEntry {
         public String code = "";
         public String name = "";
+    }
+
+    /**
+     * Parses `site_info.modes`: [{mapName, teamMode, enabled}, ...]. This is the
+     * single source of truth for the quick-play buttons (siteInfo.ts
+     * getGameModeStyles); the native menu must not hard-code Solo/Duo/Squad.
+     */
+    public static List<ModeEntry> parseModes(String json) {
+        List<ModeEntry> modes = new ArrayList<>();
+        if (json == null) return modes;
+        try {
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            JsonElement modesEl = root.get("modes");
+            if (modesEl == null || !modesEl.isJsonArray()) return modes;
+            JsonArray arr = modesEl.getAsJsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                JsonElement el = arr.get(i);
+                if (el == null || !el.isJsonObject()) continue;
+                JsonObject obj = el.getAsJsonObject();
+                ModeEntry e = new ModeEntry();
+                e.mapName = obj.has("mapName") && !obj.get("mapName").isJsonNull()
+                        ? obj.get("mapName").getAsString() : "main";
+                e.teamMode = obj.has("teamMode") ? obj.get("teamMode").getAsInt() : 1;
+                e.enabled = !obj.has("enabled") || obj.get("enabled").getAsBoolean();
+                modes.add(e);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "parseModes failed: " + e.getMessage());
+        }
+        return modes;
+    }
+
+    public static class ModeEntry {
+        public String mapName = "main";
+        public int teamMode = 1;
+        public boolean enabled = true;
+    }
+
+    /** Flattens a flat string map (the l10n table) into a lookup map. */
+    public static Map<String, String> parseStringMap(String json) {
+        Map<String, String> out = new java.util.HashMap<>();
+        if (json == null) return out;
+        try {
+            JsonObject obj = JsonParser.parseString(json).getAsJsonObject();
+            for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
+                JsonElement el = entry.getValue();
+                if (el != null && el.isJsonPrimitive() && el.getAsJsonPrimitive().isString()) {
+                    out.put(entry.getKey(), el.getAsString());
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "parseStringMap failed: " + e.getMessage());
+        }
+        return out;
     }
 }

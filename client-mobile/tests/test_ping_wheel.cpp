@@ -745,6 +745,16 @@ TEST(hud_big_map_toggle_and_hits) {
     CHECK(!hud.bigMapVisible());
     CHECK(hud.minimap().visible());
 
+    // CycleUIMode (V): hide/show the minimap without opening the big map.
+    hud.setMinimapHidden(true);
+    CHECK(hud.minimapHidden());
+    CHECK(!hud.minimap().visible());
+    CHECK(!hud.minimapExpandHit(expand.x, expand.y));
+    hud.setMinimapHidden(false);
+    CHECK(!hud.minimapHidden());
+    CHECK(hud.minimap().visible());
+    CHECK(hud.minimapExpandHit(expand.x, expand.y));
+
     // Hiding the HUD also closes the big map.
     hud.setBigMapVisible(true);
     hud.setVisible(false);

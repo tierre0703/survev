@@ -67,7 +67,8 @@ public final class TeamLinks {
         return code == null || code.isEmpty() ? "" : "survev://team/" + code;
     }
 
-    private static String webBaseUrl() {
+    /** Web origin from config `webBaseUrl` (default https://survev.io). */
+    public static String webBaseUrl() {
         String base = Json.peekString(SurvBridge.getConfigJson(), "webBaseUrl");
         if (base == null || base.isEmpty()) {
             base = DEFAULT_WEB_BASE_URL;

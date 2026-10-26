@@ -425,6 +425,20 @@ public class JavaUiHost {
         Log.i(TAG, "opening team invite " + code);
     }
 
+    /**
+     * Web `tryJoinGameFromParam`: `?u=<base64 comma-separated urls>&jt=<token>`
+     * direct match link from AppActivity. Leaves any team room first.
+     */
+    public void openJoinLink(String[] urls, String joinToken) {
+        if (urls == null || urls.length == 0 || joinToken == null || joinToken.isEmpty()) {
+            return;
+        }
+        mInGame = false;
+        showMenu();
+        SurvBridge.onJoinUrls(urls, joinToken);
+        Log.i(TAG, "opening join link urls=" + urls.length);
+    }
+
     public void hideTeam() {
         mInTeam = false;
         if (mTeam != null) {
@@ -496,6 +510,11 @@ public class JavaUiHost {
     private void ensureSettings() {
         if (mSettings == null) {
             mSettings = new SettingsModal(mActivity);
+            mSettings.setOnHidden(new Runnable() {
+                @Override public void run() {
+                    if (mMenu != null) mMenu.refresh();
+                }
+            });
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             mContainer.addView(mSettings.root(), params);
@@ -593,6 +612,13 @@ public class JavaUiHost {
         mInGame = false;
         hidePause();
         SurvBridge.onQuitGame();
+        // A team match returns to its room through returnToMenu(), which sends
+        // `gameComplete` and re-shows the team screen. Do not call showMenu()
+        // here: it clears mInTeam before that callback arrives (web
+        // main.ts:351-358 keeps the team socket/room alive).
+        if (mInTeam && mTeam != null) {
+            return;
+        }
         showMenu();
     }
 }

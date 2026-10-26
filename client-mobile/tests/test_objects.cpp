@@ -243,6 +243,8 @@ TEST(projectile_spin_and_trail) {
     const auto* pSprite = static_cast<pix::NullSprite*>(p->sprite);
     const auto* pTrail = static_cast<pix::NullSprite*>(p->trail);
     CHECK_NEAR(pSprite->rotation, p->rot, 1e-6f);
+    // P2: the additive blend now reaches the adapter (flares/projectile trails).
+    CHECK(pTrail->blend == pix::BlendMode::Add);
     p->dir = Vec2(0.70710678f, 0.70710678f);
     p->lastPos = p->pos;
     world.projectileBarn().update(0.0f, world);

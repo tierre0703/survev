@@ -59,6 +59,20 @@
 
                 <data android:scheme="survev" android:host="team" />
             </intent-filter>
+            <!--
+                Web invite/join links: https://<web>/#<code> and
+                ?u=<base64 urls>&jt=<token>. Without assetlinks verification the
+                system shows the chooser; handleDeepLink ignores normal pages.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" android:host="survev.io" />
+                <data android:scheme="https" android:host="www.survev.io" />
+            </intent-filter>
         </activity>
     </application>
 

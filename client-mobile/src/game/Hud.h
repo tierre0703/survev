@@ -79,6 +79,10 @@ public:
     static constexpr float kPillWidth = 160.0f;
     static constexpr float kPillHeight = 42.0f;
     static constexpr float kSmallPillWidth = 110.0f;
+    // Touch target around the #ui-interaction prompt (the web binds touchstart
+    // to the prompt element itself, not just the action pill).
+    static constexpr float kPromptHitWidth = 240.0f;
+    static constexpr float kPromptHitHeight = 40.0f;
     // Long-press a pill/weapon card to drop instead of use/equip (the web's
     // touch UI only binds tap-to-use; drop is a native touch affordance for the
     // mouse right-click action in ui2.ts itemActions).
@@ -168,6 +172,11 @@ public:
     bool bigMapVisible() const { return _bigMapVisible; }
     void setBigMapVisible(bool visible);
     void toggleBigMap() { setBigMapVisible(!_bigMapVisible); }
+    // ui.ts cycleVisibilityMode (V): hide/show the minimap without opening the
+    // big map. Touch users have no button for this, matching the web.
+    bool minimapHidden() const { return _minimapHidden; }
+    void setMinimapHidden(bool hidden);
+    void toggleMinimapHidden() { setMinimapHidden(!_minimapHidden); }
     bool minimapExpandHit(float designX, float designY) const;
     bool bigMapContains(float designX, float designY) const;
     bool bigMapCloseHit(float designX, float designY) const;
@@ -280,6 +289,7 @@ private:
     Vec2 _bigMapPos;
     Vec2 _expandPos;
     bool _bigMapVisible = false;
+    bool _minimapHidden = false;
     pix::Text* _aliveText = nullptr;
     pix::Text* _killsText = nullptr;
     pix::Text* _killLeaderText = nullptr;
@@ -363,6 +373,7 @@ private:
     pix::Graphics* _weaponSlotBg[4] = {nullptr, nullptr, nullptr, nullptr};
     Rect _reloadRect;
     Rect _interactRect;
+    Rect _promptRect;
     Rect _healRect;
     Rect _boostRect;
     Rect _scopeRect;

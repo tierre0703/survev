@@ -58,6 +58,10 @@ public final class AccountManager {
     public static final class ItemInfo {
         public String type = "";
         public int status = 0; // 0=New, 1=Confirmed, 2=Ackd
+        /** Account source type (web `item.source`, e.g. "pass"/"halloween"). */
+        public String source = "";
+        /** Milliseconds since epoch when the account acquired it (0 = unknown). */
+        public long timeAcquired = 0;
     }
 
     /** Snapshot of the logged-in user; `loggedIn` is false before login. */
@@ -362,6 +366,11 @@ public final class AccountManager {
 
                     Log.i(TAG, "pass loaded: type=" + pass.type + " level=" + pass.level
                             + " xp=" + pass.xp + " quests=" + pass.quests.size());
+                    // account.ts:getPass: newly unlocked pass items mean the
+                    // profile's item list is stale -> reload it (new-item badges).
+                    if (pass.newItems) {
+                        fetchProfile(false);
+                    }
                     callback.onResult(true, pass);
                 } catch (Exception e) {
                     Log.w(TAG, "get_pass parse failed: " + e.getMessage());
@@ -577,6 +586,10 @@ public final class AccountManager {
                 info.type = type.getAsString();
                 try {
                     info.status = obj.has("status") ? obj.get("status").getAsInt() : 0;
+                    info.source = obj.has("source") && !obj.get("source").isJsonNull()
+                            ? obj.get("source").getAsString() : "";
+                    info.timeAcquired = obj.has("timeAcquired") && !obj.get("timeAcquired").isJsonNull()
+                            ? obj.get("timeAcquired").getAsLong() : 0L;
                 } catch (Exception ignored) {
                     info.status = 0;
                 }

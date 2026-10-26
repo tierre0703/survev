@@ -32,6 +32,7 @@
 
 #if AX_TARGET_PLATFORM == AX_PLATFORM_ANDROID
 #include "platform/android/jni/JniHelper.h"
+#include <android/keycodes.h>
 #endif
 
 #include <set>
@@ -104,6 +105,64 @@ static const char* pickupErrorText(int type) {
         case 5: return "GUN CANNOT FIRE";
         case 6: return "MAX PERKS EQUIPPED";
         default: return "CANNOT PICK UP";
+    }
+}
+
+// inputBinds.ts default key codes -> HardwareInput's engine-independent keys.
+// Both the shifted (KEY_CAPITAL_*) and plain letter codes are accepted, and the
+// Android DPAD variants behave like the arrow keys.
+static bool hwKeyFromEvent(ax::EventKeyboard::KeyCode code, surv::HwKey& out) {
+    using KC = ax::EventKeyboard::KeyCode;
+    switch (code) {
+        case KC::KEY_A:
+        case KC::KEY_CAPITAL_A: out = surv::HwKey::A; return true;
+        case KC::KEY_C: out = surv::HwKey::C; return true;
+        case KC::KEY_CAPITAL_C: out = surv::HwKey::C; return true;
+        case KC::KEY_D:
+        case KC::KEY_CAPITAL_D: out = surv::HwKey::D; return true;
+        case KC::KEY_E:
+        case KC::KEY_CAPITAL_E: out = surv::HwKey::E; return true;
+        case KC::KEY_F:
+        case KC::KEY_CAPITAL_F: out = surv::HwKey::F; return true;
+        case KC::KEY_G:
+        case KC::KEY_CAPITAL_G: out = surv::HwKey::G; return true;
+        case KC::KEY_L:
+        case KC::KEY_CAPITAL_L: out = surv::HwKey::L; return true;
+        case KC::KEY_M:
+        case KC::KEY_CAPITAL_M: out = surv::HwKey::M; return true;
+        case KC::KEY_Q:
+        case KC::KEY_CAPITAL_Q: out = surv::HwKey::Q; return true;
+        case KC::KEY_R:
+        case KC::KEY_CAPITAL_R: out = surv::HwKey::R; return true;
+        case KC::KEY_S:
+        case KC::KEY_CAPITAL_S: out = surv::HwKey::S; return true;
+        case KC::KEY_T:
+        case KC::KEY_CAPITAL_T: out = surv::HwKey::T; return true;
+        case KC::KEY_V:
+        case KC::KEY_CAPITAL_V: out = surv::HwKey::V; return true;
+        case KC::KEY_W:
+        case KC::KEY_CAPITAL_W: out = surv::HwKey::W; return true;
+        case KC::KEY_X:
+        case KC::KEY_CAPITAL_X: out = surv::HwKey::X; return true;
+        case KC::KEY_0: out = surv::HwKey::Num0; return true;
+        case KC::KEY_1: out = surv::HwKey::Num1; return true;
+        case KC::KEY_2: out = surv::HwKey::Num2; return true;
+        case KC::KEY_3: out = surv::HwKey::Num3; return true;
+        case KC::KEY_4: out = surv::HwKey::Num4; return true;
+        case KC::KEY_5: out = surv::HwKey::Num5; return true;
+        case KC::KEY_6: out = surv::HwKey::Num6; return true;
+        case KC::KEY_7: out = surv::HwKey::Num7; return true;
+        case KC::KEY_8: out = surv::HwKey::Num8; return true;
+        case KC::KEY_9: out = surv::HwKey::Num9; return true;
+        case KC::KEY_LEFT_ARROW:
+        case KC::KEY_DPAD_LEFT: out = surv::HwKey::Left; return true;
+        case KC::KEY_RIGHT_ARROW:
+        case KC::KEY_DPAD_RIGHT: out = surv::HwKey::Right; return true;
+        case KC::KEY_UP_ARROW:
+        case KC::KEY_DPAD_UP: out = surv::HwKey::Up; return true;
+        case KC::KEY_DOWN_ARROW:
+        case KC::KEY_DPAD_DOWN: out = surv::HwKey::Down; return true;
+        default: return false;
     }
 }
 
@@ -383,13 +442,60 @@ bool GameScene::init() {
     });
 
     // Android hardware back button / desktop Escape: pause/leave the game.
+    // P1.6: every other key feeds HardwareInput (default inputBinds.ts binds).
     auto* keyListener = ax::EventListenerKeyboard::create();
     keyListener->onKeyPressed = [this](ax::EventKeyboard::KeyCode code, ax::Event*) {
         if (code == ax::EventKeyboard::KeyCode::KEY_ESCAPE) {
             handleBackPressed();
+            return;
+        }
+        HwKey key;
+        if (hwKeyFromEvent(code, key)) {
+            _hw.setKey(key, true);
+        }
+    };
+    keyListener->onKeyReleased = [this](ax::EventKeyboard::KeyCode code, ax::Event*) {
+        HwKey key;
+        if (hwKeyFromEvent(code, key)) {
+            _hw.setKey(key, false);
         }
     };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(keyListener, this);
+
+    // Bluetooth/emulator mouse: cursor aim + left-click fire + wheel cycling.
+    // `getLocation()` is GL space (y up), so flip it into web screen space like
+    // the touch listener does.
+    auto* mouseListener = ax::EventListenerMouse::create();
+    auto mousePos = [](ax::EventMouse* e) {
+        const ax::Vec2 p = e->getLocation();
+        const float h = ax::Director::getInstance()->getVisibleSize().height;
+        return Vec2(p.x, h - p.y);
+    };
+    mouseListener->onMouseMove = [this, mousePos](ax::EventMouse* e) {
+        const Vec2 p = mousePos(e);
+        _hw.setMousePos(p.x, p.y);
+        return false;
+    };
+    mouseListener->onMouseDown = [this, mousePos](ax::EventMouse* e) {
+        const Vec2 p = mousePos(e);
+        _hw.setMousePos(p.x, p.y);
+        _hw.setMouseButton(static_cast<int>(e->getMouseButton()), true);
+        return false;
+    };
+    mouseListener->onMouseUp = [this](ax::EventMouse* e) {
+        _hw.setMouseButton(static_cast<int>(e->getMouseButton()), false);
+        return false;
+    };
+    mouseListener->onMouseScroll = [this](ax::EventMouse* e) {
+        const float y = e->getScrollY();
+        if (y > 0.0f) {
+            _hw.addWheel(HardwareInput::kWheelUp);
+        } else if (y < 0.0f) {
+            _hw.addWheel(HardwareInput::kWheelDown);
+        }
+        return false;
+    };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
 
     this->scheduleUpdate();
 
@@ -770,6 +876,11 @@ void GameScene::leaveGame() {
     // touch.ts hideAll(): the pads stay hidden until the next match starts.
     _touch->hideAll();
     for (auto& touch : _touch->touches) touch.active = false;
+    // P1.6: keys/mouse held when the match ends must not carry into the menu or
+    // the next match, and the diff cache starts fresh on rejoin.
+    _hw.reset();
+    _inputSync.reset();
+    _shootStartPending = false;
     _awaitingJoin = false;
     _joinRetryUrls.clear();
     _gameRoot->setVisible(false);
@@ -868,6 +979,10 @@ void GameScene::pauseGame() {
     if (_game) {
         _game->pause();
     }
+    // P1.6: drop held keys/mouse buttons and the send-diff cache so a hardware
+    // key held across the pause boundary cannot stick or be replayed.
+    _hw.reset();
+    _inputSync.reset();
     // Audio keeps playing while paused/backgrounded: the socket and mixer stay
     // alive, and createJS.stopAll() would leave the Ambiance tracks unable to
     // restart (web client parity: pause only freezes input).
@@ -1689,6 +1804,10 @@ void GameScene::update(float delta) {
         && !_game->isSpectating() && !_game->isLocalDead()) {
         updateInput(delta);
     }
+    // P1.6 hardware keys that change local UI (map, spectate cycling). Kept
+    // outside updateInput() so they also work while dead/spectating, and the
+    // per-frame key edges are cleared for every frame that runs.
+    updateHardwareUi();
     // Dual joysticks: Touch::m_update reads the pad centres that getMovement/
     // getAim publish and forwards them to the axmol pad graphics. It is safe to
     // call every frame; `display` gates visibility (false until a match starts).
@@ -1701,12 +1820,18 @@ void GameScene::update(float delta) {
     if (_world) {
         _world->setAimLineState(_touch->touchingAim, _touch->touchAimLine);
     }
+
+    // P1.6: move this frame's key/mouse state into the edge snapshot so
+    // keyPressed()/wheel() fire once (input.ts flush()).
+    _hw.flush();
 }
 
 void GameScene::updateInput(float dt) {
     // The pause dialog / background pause keeps the socket, but the player must
     // not keep moving or firing with stale pad state.
     if (_game->isPaused()) {
+        _hw.reset();
+        _inputSync.reset();
         return;
     }
     const ax::Size size = getContentSize();
@@ -1720,29 +1845,130 @@ void GameScene::updateInput(float dt) {
                                      size.width < size.height,
                                      dt);
 
+    // P1.6 keyboard movement. The server ignores the move flags while
+    // `touchMoveActive` is set (player.ts:1925), so keyboard movement clears it;
+    // otherwise the joystick vectors keep driving (game.ts non-touch branch).
+    if (_hw.anyMoveDown()) {
+        msg.moveLeft = _hw.moveLeft();
+        msg.moveRight = _hw.moveRight();
+        msg.moveUp = _hw.moveUp();
+        msg.moveDown = _hw.moveDown();
+        msg.touchMoveActive = false;
+    }
+
+    // Mouse aim/fire: the camera follows the active player, so the cursor offset
+    // from the screen centre is the world aim vector (game.ts:471-483).
+    if (_hw.mouseUsed()) {
+        const Camera* cam = _world ? &_world->camera() : nullptr;
+        if (cam) {
+            const float dx = _hw.mousePos().x - cam->m_screenWidth * 0.5f;
+            const float dy = cam->m_screenHeight * 0.5f - _hw.mousePos().y;
+            const float z = cam->m_z();
+            msg.toMouseDir = v2NormalizeSafe(Vec2(dx, dy), Vec2(1.0f, 0.0f));
+            msg.toMouseLen = z > 0.0f ? v2Length(Vec2(dx, dy)) / z : 0.0f;
+            msg.toMouseLen = math::clamp(msg.toMouseLen, 0.0f, Constants::MouseMaxDist);
+        }
+        msg.shootStart = msg.shootStart || _hw.firePressed();
+        msg.shootHold = msg.shootHold || _hw.fireDown();
+    }
+
+    // Keyboard/mouse one-shot actions join the HUD's queued ones.
+    _hw.collectActions(_pendingInputs);
+
     // A quick tap can begin and end between two sends; latch shootStart so the
     // server still observes the press.
     _shootStartPending = _shootStartPending || msg.shootStart;
+    msg.shootStart = _shootStartPending;
 
-    // Merge the HUD's one-shot actions (reload/interact/equip/use-item) into the
-    // message. They stay queued until a send actually happens.
+    // Merge the queued one-shot actions (reload/interact/equip/use-item).
     _pendingInputs.applyTo(msg);
 
-    // Send at the server's net-sync/input rate rather than once per frame.
-    _inputMsgTimeout -= dt;
-    if (_inputMsgTimeout < 0.0f) {
-        msg.shootStart = _shootStartPending;
-        _shootStartPending = false;
-        if (!_pendingInputs.empty() && isDevLogEnabled()) {
-            std::string actions;
-            for (uint8_t input : _pendingInputs.inputs()) {
-                actions += std::to_string(static_cast<int>(input)) + ",";
-            }
-            AXLOGI("[input] actions={} useItem={}", actions, _pendingInputs.useItem());
+    // Send when the data changed or after the 1 s keepalive (game.ts:731-771),
+    // not unconditionally at the net-sync rate, so idle upstream traffic matches
+    // the web client.
+    if (!_inputSync.shouldSend(msg, dt)) {
+        return;
+    }
+    _shootStartPending = false;
+    if (!_pendingInputs.empty() && isDevLogEnabled()) {
+        std::string actions;
+        for (uint8_t input : _pendingInputs.inputs()) {
+            actions += std::to_string(static_cast<int>(input)) + ",";
         }
-        _game->sendInput(msg);
-        _pendingInputs.clear();
-        _inputMsgTimeout = 1.0f / kNetSyncTps;
+        AXLOGI("[input] actions={} useItem={}", actions, _pendingInputs.useItem());
+    }
+    _game->sendInput(msg);
+    _inputSync.markSent(msg);
+    _pendingInputs.clear();
+}
+
+void GameScene::onHardwareKey(int androidKeyCode, bool down) {
+#if AX_TARGET_PLATFORM == AX_PLATFORM_ANDROID
+    HwKey key;
+    switch (androidKeyCode) {
+        case AKEYCODE_A: key = HwKey::A; break;
+        case AKEYCODE_C: key = HwKey::C; break;
+        case AKEYCODE_D: key = HwKey::D; break;
+        case AKEYCODE_E: key = HwKey::E; break;
+        case AKEYCODE_F: key = HwKey::F; break;
+        case AKEYCODE_G: key = HwKey::G; break;
+        case AKEYCODE_L: key = HwKey::L; break;
+        case AKEYCODE_M: key = HwKey::M; break;
+        case AKEYCODE_Q: key = HwKey::Q; break;
+        case AKEYCODE_R: key = HwKey::R; break;
+        case AKEYCODE_S: key = HwKey::S; break;
+        case AKEYCODE_T: key = HwKey::T; break;
+        case AKEYCODE_V: key = HwKey::V; break;
+        case AKEYCODE_W: key = HwKey::W; break;
+        case AKEYCODE_X: key = HwKey::X; break;
+        case AKEYCODE_0: key = HwKey::Num0; break;
+        case AKEYCODE_1: key = HwKey::Num1; break;
+        case AKEYCODE_2: key = HwKey::Num2; break;
+        case AKEYCODE_3: key = HwKey::Num3; break;
+        case AKEYCODE_4: key = HwKey::Num4; break;
+        case AKEYCODE_5: key = HwKey::Num5; break;
+        case AKEYCODE_6: key = HwKey::Num6; break;
+        case AKEYCODE_7: key = HwKey::Num7; break;
+        case AKEYCODE_8: key = HwKey::Num8; break;
+        case AKEYCODE_9: key = HwKey::Num9; break;
+        case AKEYCODE_DPAD_LEFT: key = HwKey::Left; break;
+        case AKEYCODE_DPAD_RIGHT: key = HwKey::Right; break;
+        case AKEYCODE_DPAD_UP: key = HwKey::Up; break;
+        case AKEYCODE_DPAD_DOWN: key = HwKey::Down; break;
+        default: return;
+    }
+    _hw.setKey(key, down);
+#else
+    (void)androidKeyCode;
+    (void)down;
+#endif
+}
+
+void GameScene::updateHardwareUi() {
+    if (!_game) {
+        return;
+    }
+    // Spectating: arrow keys cycle the observed teammate (game.ts:709-715).
+    if (_game->isSpectating()) {
+        if (_hw.keyPressed(HwKey::Right)) {
+            _game->sendSpectate(2);
+        } else if (_hw.keyPressed(HwKey::Left)) {
+            _game->sendSpectate(3);
+        }
+        return;
+    }
+    if (!_game->isPlaying() || _game->isPaused() || !_hud || _game->isLocalDead() ||
+        _hud->overlayShown()) {
+        return;
+    }
+    // Large map: ToggleMap (M) or the unbound Key.G fallback (game.ts:452-458).
+    // The touch expand button and big-map tap targets already share this state.
+    if (_hw.keyPressed(HwKey::M) || _hw.keyPressed(HwKey::G)) {
+        _hud->toggleBigMap();
+    }
+    // CycleUIMode (V): hide/show the minimap without opening the big map.
+    if (_hw.keyPressed(HwKey::V)) {
+        _hud->toggleMinimapHidden();
     }
 }
 
@@ -1750,6 +1976,9 @@ void GameScene::onTouchBegan(float x, float y, int id) {
     // S6: _overlay is never created; the Java GamePauseDialog is the
     // actual pause. Don't block touches because of a null overlay.
     if (!_inGame || !_notifiedStarted) return;
+    // Hybrid device: a touch takes the aim back from the mouse (the pads own
+    // the aim direction again until the next mouse move).
+    _hw.noteTouchInput();
     // P0.4 result/death/spectate overlays are modal; route their buttons before
     // any world/map interaction.
     if (_hud && _game && (_hud->overlayShown() || _hud->spectating())) {

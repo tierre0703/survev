@@ -61,6 +61,14 @@ public final class SurvBridge {
     /** SpectateMsg action from the pause dialog: 1=Begin, 2=Next, 3=Prev. */
     public static native void spectate(int action);
 
+    /**
+     * BT-keyboard key state (Android KeyEvent.KEYCODE_*). axmol's GLSurfaceView
+     * only forwards DPAD/BACK to the engine, so AppActivity sends the gameplay
+     * letters/digits through here; C++ routes them to HardwareInput on the GL
+     * thread (P1.6).
+     */
+    public static native void hardwareKey(int keyCode, boolean down);
+
     public static native void setPlayerName(String name);
 
     public static native void setRegion(String region);
@@ -116,6 +124,9 @@ public final class SurvBridge {
     public static native String getNewsJson();
 
     public static native boolean isInGame();
+
+    /** The active language code (config `language`, "en" when unset). */
+    public static native String getLanguage();
 
     /** Set a config key-value pair (for sensitivity, HUD scale, etc.). */
     public static native void setConfigValue(String key, String value);

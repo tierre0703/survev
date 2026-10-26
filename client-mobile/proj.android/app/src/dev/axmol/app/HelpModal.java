@@ -62,7 +62,7 @@ public class HelpModal {
 
         // Title
         TextView title = new TextView(activity);
-        title.setText("\uD83D\uDCD6 How to Play");
+        title.setText("\uD83D\uDCD6 " + L10n.t("index-how-to-play", "How to Play"));
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         title.setGravity(Gravity.CENTER);
@@ -77,30 +77,38 @@ public class HelpModal {
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(10), dp(8), dp(10), dp(8));
 
-        // === Movement Controls ===
-        addSectionHeader(content, "\uD83D\uDEAA Movement", 0xFF4CAF50);
-        addControlRow(content, "\uD83D\uDCCD", "Drag left side", "Move your character");
-        addControlRow(content, "\uD83D\uDD04", "Double-tap left", "Sprint / Dash");
-        addControlRow(content, "\uD83E\uDD18", "Pinch/Spread", "Zoom in/out");
-        
+        // === Touch controls (native HUD) ===
+        addSectionHeader(content, "\uD83D\uDCF1 Touch", 0xFF4CAF50);
+        addControlRow(content, "\uD83D\uDD79", "Left pad", "Drag to move");
+        addControlRow(content, "\uD83C\uDFAF", "Right pad", "Drag to aim; release past the edge to fire");
+        addControlRow(content, "\u270B", "PICK UP prompt", "Tap the prompt (or USE) to loot");
+        addControlRow(content, "\uD83D\uDD27", "USE / RELOAD", "Action pills above the pads");
+        addControlRow(content, "\uD83D\uDC8A", "HEAL / BOOST", "Quick-use the best item in the bag");
+        addControlRow(content, "\uD83D\uDD0D", "SCOPE / SWAP", "Cycle scopes or switch gun slots");
+        addControlRow(content, "\uD83D\uDD2B", "Weapon cards", "Tap to equip; hold to drop");
+        addControlRow(content, "\uD83D\uDCAC", "Emote / ping", "Right-side wheel buttons");
+        addControlRow(content, "\uD83D\uDDFA", "Minimap", "Tap to open the big map");
+
         addGap(content, dp(8));
 
-        // === Combat Controls ===
-        addSectionHeader(content, "\u2694\uFE0F Combat", 0xFFF44336);
-        addControlRow(content, "\uD83D\uDD1E", "Tap right side", "Shoot / Attack");
-        addControlRow(content, "\uD83C\uDFAF", "Drag right side", "Aim direction");
-        addControlRow(content, "\uD83D\uDD27", "Pick up icon", "Collect items");
-        addControlRow(content, "\uD83D\uDEE1\uFE0F", "Hold weapon", "Open item menu");
-        addControlRow(content, "\uD83D\uDDD2", "Swipe on item", "Switch weapons");
-        
-        addGap(content, dp(8));
-
-        // === Interaction ===
-        addSectionHeader(content, "\u270B Interactions", 0xFF2196F3);
-        addControlRow(content, "\uD83D\uDCC5", "Tap door/crate", "Open / Loot");
-        addControlRow(content, "\uD83D\uDCED", "Tap teammate", "View stats");
-        addControlRow(content, "\uD83D\uDCAC", "Chat button", "Team chat");
-        addControlRow(content, "\uD83D\uDE4C", "Emote button", "Quick emote wheel");
+        // === Keyboard / mouse (BT keyboard or desktop/emulator) ===
+        addSectionHeader(content, "\u2328 " + L10n.t("index-controls", "Controls"), 0xFF2196F3);
+        addControlRow(content, "\uD83D\uDEAA", L10n.t("index-movement", "Movement"),
+                L10n.t("index-movement-ctrl", "W, A, S, D") + " / arrows");
+        addControlRow(content, "\uD83C\uDFAF", L10n.t("index-aim", "Aim"),
+                L10n.t("index-aim-ctrl", "Mouse"));
+        addControlRow(content, "\uD83D\uDD1E", L10n.t("index-shoot", "Shoot"),
+                L10n.t("index-shoot-ctrl", "Left-Click"));
+        addControlRow(content, "\uD83D\uDD27", L10n.t("index-reload", "Reload"),
+                L10n.t("index-reload-ctrl", "R") + " / F " + L10n.t("index-pickup", "Pickup"));
+        addControlRow(content, "\uD83D\uDD00", L10n.t("index-change-weapons", "Change Weapons"),
+                L10n.t("index-change-weapons-ctrl", "1 through 4 or Scroll Wheel"));
+        addControlRow(content, "\uD83D\uDD04", L10n.t("index-swap-weapon-slots", "Switch Gun Slots"),
+                L10n.t("index-swap-weapon-slots-ctrl", "T"));
+        addControlRow(content, "\uD83D\uDEE1", L10n.t("index-stow-weapons", "Stow Weapons"),
+                L10n.t("index-stow-weapons-ctrl", "E"));
+        addControlRow(content, "\uD83D\uDDFA", L10n.t("index-toggle-minimap", "Toggle Minimap"),
+                L10n.t("index-toggle-minimap-ctrl", "V") + " / M or G = large map");
 
         // Separator
         View sep = new View(activity);
@@ -108,24 +116,18 @@ public class HelpModal {
         sep.setBackgroundColor(0x33FFFFFF);
         content.addView(sep);
 
-        // === Advanced Tips ===
-        addSectionHeader(content, "\uD83D\uDCA1 Pro Tips", GOLD);
-        
-        addTip(content, "\uD83C\uDFD7\uFE0F Building", "Use walls for cover. Build stairs to reach high ground. A 2x2 base with doors is a strong starter.");
-        addTip(content, "\uD83D\uDD2B Weapons", "Shotguns dominate close range. Snipers for long distance. SMGs have fast fire rate but low damage.");
-        addTip(content, "\uD83D\uDC65 Team", "Stick together! Revive downed teammates before they get eliminated. Share ammo and heals.");
-        addTip(content, "\u2604\uFE0F Gas Zone", "The gas shrinks over time. Stay ahead of it but don't rush to the center too early - enemies will be waiting.");
-
-        // Tutorial link stub
-        addGap(content, dp(10));
-        Button tutorialBtn = makeLinkButton("\u25B6 Watch Tutorial Video");
-        tutorialBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                // Stub: would open YouTube or in-app video
-                android.util.Log.i(TAG, "Tutorial video requested (stub)");
-            }
-        });
-        content.addView(tutorialBtn);
+        // === Tips (actual game behaviour) ===
+        addSectionHeader(content, "\uD83D\uDCA1 Tips", GOLD);
+        addTip(content, "\uD83C\uDFD7\uFE0F Cover",
+                "Trees, rocks, walls and buildings block bullets. Fight from behind cover and peek only to shoot.");
+        addTip(content, "\uD83D\uDD2B Weapons",
+                "Shotguns dominate close range, snipers long range, SMGs up close. Reload behind cover.");
+        addTip(content, "\uD83D\uDC65 Team",
+                "Stick together and revive downed teammates. Share ammo and healing items.");
+        addTip(content, "\u2604\uFE0F Red zone",
+                "The gas shrinks over time. Stay inside the safe zone; move early instead of sprinting at the end.");
+        addTip(content, "\uD83C\uDF92 Loot",
+                "Walk near an item and tap the PICK UP prompt. Better armour and a backpack win fights.");
 
         scroll.addView(content);
         panel.addView(scroll);

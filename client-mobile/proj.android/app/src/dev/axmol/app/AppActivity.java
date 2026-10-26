@@ -27,9 +27,11 @@ package dev.axmol.app;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Build;
 import android.os.Looper;
+import android.util.Base64;
 import dev.axmol.lib.AxmolActivity;
 import dev.axmol.lib.SharedLoader;
 import android.view.KeyEvent;
@@ -102,17 +104,53 @@ public class AppActivity extends AxmolActivity {
         handleDeepLink(intent);
     }
 
-    /** `survev://team/<code>` invite links (AndroidManifest VIEW filter). */
+    /**
+     * Incoming VIEW links:
+     *   - main.ts `tryJoinGameFromParam`: `?u=<base64 urls>&jt=<token>`
+     *   - `survev://team/<code>` and `https://<web>/#<code>` team invites.
+     */
     private void handleDeepLink(Intent intent) {
-        if (intent == null || intent.getDataString() == null || mJavaUi == null) {
+        if (intent == null || intent.getData() == null || mJavaUi == null) {
             return;
         }
-        String url = intent.getDataString();
-        if (!url.startsWith("survev://team")) {
+        final Uri data = intent.getData();
+        final String url = data.toString();
+        Log.i(TAG, "deep link " + url);
+
+        String u = data.getQueryParameter("u");
+        String jt = data.getQueryParameter("jt");
+        if (u != null && jt != null && !jt.isEmpty()) {
+            try {
+                byte[] decoded;
+                try {
+                    decoded = Base64.decode(u, Base64.DEFAULT);
+                } catch (IllegalArgumentException urlSafe) {
+                    decoded = Base64.decode(u, Base64.URL_SAFE | Base64.NO_WRAP);
+                }
+                String joined = new String(decoded, java.nio.charset.StandardCharsets.UTF_8);
+                String[] urls = joined.split(",");
+                mJavaUi.openJoinLink(urls, jt);
+            } catch (Exception e) {
+                Log.w(TAG, "invalid join link: " + e.getMessage());
+            }
             return;
         }
-        Log.i(TAG, "team deep link " + url);
-        mJavaUi.openTeamInvite(url);
+
+        if (url.startsWith("survev://team")) {
+            mJavaUi.openTeamInvite(url);
+            return;
+        }
+        if (url.startsWith("https://") || url.startsWith("http://")) {
+            // The fragment is the room code in web invite links. Android keeps
+            // it in the intent URI, so both this and extractCode() see it.
+            String fragment = data.getFragment();
+            String code = fragment != null && !fragment.isEmpty()
+                    ? fragment
+                    : TeamLinks.extractCode(url);
+            if (!code.isEmpty()) {
+                mJavaUi.openTeamInvite(url);
+            }
+        }
     }
 
     @Override
@@ -186,7 +224,38 @@ public class AppActivity extends AxmolActivity {
             // e.g. pause menu).
             return false;
         }
+        // P1.6: axmol's GLSurfaceView only forwards DPAD/BACK to the engine, so
+        // BT-keyboard gameplay keys go through the bridge (GL-thread marshalled).
+        if (shouldForwardGameKey(pKeyCode)) {
+            SurvBridge.hardwareKey(pKeyCode, true);
+            return true;
+        }
         return super.onKeyDown(pKeyCode, pKeyEvent);
+    }
+
+    @Override
+    public boolean onKeyUp(final int pKeyCode, final KeyEvent pKeyEvent) {
+        if (shouldForwardGameKey(pKeyCode)) {
+            SurvBridge.hardwareKey(pKeyCode, false);
+            return true;
+        }
+        return super.onKeyUp(pKeyCode, pKeyEvent);
+    }
+
+    /** In a match, but not while the pause dialog wants DPAD focus navigation. */
+    private boolean shouldForwardGameKey(final int keyCode) {
+        return SurvBridge.isInGame() && isGameKey(keyCode)
+                && !(mJavaUi != null && mJavaUi.isPauseOpen());
+    }
+
+    /** Letters, digits and DPAD arrows are the inputBinds.ts default keys. */
+    private static boolean isGameKey(final int keyCode) {
+        return (keyCode >= KeyEvent.KEYCODE_A && keyCode <= KeyEvent.KEYCODE_Z)
+                || (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9)
+                || keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
+                || keyCode == KeyEvent.KEYCODE_DPAD_UP
+                || keyCode == KeyEvent.KEYCODE_DPAD_DOWN;
     }
 
     /**

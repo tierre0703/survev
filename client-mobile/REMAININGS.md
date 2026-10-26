@@ -10,18 +10,12 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-25 (P1.3 + P1.4)** — bullet tracers now use the
-per-def sprite palette/length/width with AP/saturated/suppressed modes and real
-collision FX (wall dust + hit groups, blood parented to players, pan/steelskin
-sparks); explosions use the generated burst/scatter/ripple/shake/lifetime table;
-projectiles spin, trail, water-fade and sort on stairs; loot has its outer ring
-and inner-art rotation/mirror; player nametags are teammate-only, faction patches
-and bleed/adrenaline emitters exist; airdrop fall/plane loops and airstrike zones
-are wired. The live HUD now also has the interaction prompt, error/rare-loot/
-perk/“You killed X” toasts, coloured kill-feed rows, faction alive counts,
-off-screen teammate arrows, role announcements, waiting-for-players and the
-pie-timer action label (perk-mode role picker remains). **190 host tests pass,
-0 fail.**
+Latest recorded state: **2026-10-26 (P1.8 + first P2 pass)** — team matches
+return to their room, room props persist, in-room rename and invite/join links
+work, and the pass reloads the profile for new items. The first P2 pass adds
+real additive blending, the V minimap toggle, newest/item-source/NEW-badge
+loadout polish, plus the P1.4–P1.7 HUD/menu/input/audio set. **195 host tests
+pass, 0 fail.**
 
 ---
 
@@ -34,10 +28,10 @@ pie-timer action label (perk-mode role picker remains). **190 host tests pass,
 | M2 | Shared core ports (bit-exact) | **done** | `BitBuffer`, `Vec2/MathUtil/Collider`, message classes, TS-generated fixtures. |
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
 | M4 | Rendering | **done (major FX)** | terrain/objects/buildings/particles/decals/gas/skeletal player; active layer + interpolation; bullet tracers/impacts, explosions, projectiles, loot rings, player patches/nametags and airstrike zones. Remaining exact-normal/colour nuances are P2. |
-| M5 | Input + touch | **done (touch)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; keyboard/mouse binds remain P1.6. |
+| M5 | Input + touch | **done (touch + hardware)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; P1.6 keyboard/mouse defaults + change-gated sends. Remapping UI remains optional. |
 | M6 | Audio | **mostly done** | engine/mixer/ambience/reverb/EQ/interior sounds, channel semantics, startup volume/mute, menu music and the real sound keys; notification/team-join cues are web-focus-only and exact EQ timbre remains P2. |
-| M7 | UI layer | **mostly done** | Java menu/account/pass/team/loadout live; death/result + spectate overlay live in the C++ HUD; settings screen is real; live HUD has the full P1.4 set (reserve ammo, bag strip, prompts/toasts, coloured feed, arrows, faction counts, waiting text, pie label); only the perk-mode role picker remains. |
-| M8 | Accounts / API | **mostly done** | device login + profile, quests/pass, team links, authenticated quick play and correct disconnect reasons; captcha is unsupported for signed-out users (server skips it for the device session), OAuth is an intentional platform delta. |
+| M7 | UI layer | **done** | Java menu/account/pass/team/loadout live; menu chrome is site_info-driven and localized (P1.7), settings language switch re-renders, death/result + spectate overlay live in the C++ HUD, live HUD has the full P1.4 set; remaining art, perk-role picker and live-leaderboard polish is P2. |
+| M8 | Accounts / API | **done (intentional deltas)** | device login + profile, quests/pass, team links, room props/rename/deep links, authenticated quick play, correct disconnect reasons, pass-new-items profile refresh; captcha is unsupported for signed-out users (server skips it for the device session), OAuth is an intentional platform delta. |
 | M9 | Polish & release | **started** | release APK/AAB pipeline verified (§45); waiting on the 1:1 gameplay gate (§3.7), a physical-device soak and final store upload. |
 
 ---
@@ -59,7 +53,7 @@ pie-timer action label (perk-mode role picker remains). **190 host tests pass,
 | `client/src/renderer.ts` → `render/Renderer.*` | ✅ transform/z-sort/mask ported; `GameWorld::update` calls `setActiveLayer`/`setUnderground` before `m_update` |
 | `client/src/map.ts` → `game/Map.*` | ✅ terrain, surfaces, pools, camera emitter, baked minimap texture, big map (`game/MapView`); river-shore surface is always sand (P2) |
 | `client/src/gas.ts` → `game/Gas.*` | ✅ |
-| `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | ✅ dispatch/net, match-over latch + death/spectate, player/camera/projectile interpolation (P0.3); no local-rotation input policy yet (P1.6) |
+| `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | ✅ dispatch/net, match-over latch + death/spectate, player/camera/projectile interpolation (P0.3), keyboard/mouse input + change-gated InputMsg (P1.6); local rotation remains desktop-only (P2) |
 | `client/src/objects/objectPool.ts` → `game/objects/GameObject.h` | ✅ |
 | `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | ✅ poses/animations faithful; faction patch, last-stand/bleed particles, same-group nametags and real action-sound keys; minor radius/easing nuances P2 |
 | `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | ✅ travelling tracer sprite, per-def palette/width/length, suppression, collision FX + hit groups, blood/pan sparks, stairs layer |
@@ -84,26 +78,26 @@ pie-timer action label (perk-mode role picker remains). **190 host tests pass,
 | `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | ✅ pads/aim-line good; config move/aim style + aim line applied live and persisted; gameplay actions from `game/InputActions` + `game/Hud` |
 | `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | ✅ schema + settings screens write real values; runtime listeners applied at startup/on change (highResTex maps to the GFX tier, local rotation is desktop-only) |
 | `client/src/device.ts` → `ui/Device.*` | 🔶 simplified (no tablet/pixelRatio/MAX_TEXTURE_SIZE tiers) |
-| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*` | 🔶 C++ table good; Java menu is hardcoded English (P1.7), but the settings language list is now `ui::kLocales` (18 codes/names) via the bridge |
+| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*`, Java `L10n.java` | ✅ C++ table good; Java menu/settings/pause/help labels read the flattened table (session P1.7), settings language list is `ui::kLocales` (18 codes/names) via the bridge; remaining loadout/item chrome strings are P2 |
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | ✅ join/reconnect, quickplay auth/captcha message, reason-string mapping and error dialogs (match-over latch done) |
-| `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; mode/region metadata polish remains P1.7 |
-| `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste) + `survev://team` deep links, kick/mode/region controls, team match stays connected |
-| `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack; source badges and the per-item lore modal remain P1.7 |
-| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, weapon/ammo, alive/kills, kill feed, kill leader, gas timer, death/result + spectate overlay done (P0.4); inventory v2/interaction prompts and most post-match stats detail still live only in dead `FguiHud` (P1.4) |
+| `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; Java menu builds modes/regions from site_info (enabled/teamMode/l10n) and requires the fetch before Play (P1.7); mode/region icons remain P2 |
+| `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste, config `webBaseUrl`), `survev://` + `https://…/#CODE` + `?u=&jt=` links, kick/mode/region/auto-fill, in-room rename, room-prop persistence, team match returns to the room |
+| `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack; source badges and the per-item lore modal remain P2 |
+| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, weapon/ammo, alive/kills, kill feed, kill leader, gas timer, death/result + spectate overlay, inventory v2 strip, interaction prompt/touch target and toasts are live; post-match per-team stats detail is reduced (P1.4/P2) |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | 🔶 partial: barn exists but is constructed with a **null** sprite barn; `MapSprite` z-order/pulse not applied (P2) |
-| `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | ❌ **not ported** (BT keyboard/mouse; only Escape handled) — P1.6 |
+| `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | `game/HardwareInput.h` + `game/InputSync.h` | 🔶 default bind set ported (WASD/arrows, R/F/X, 1–4, wheel, Q/E/T, 7–0, M/G, Escape) with mouse aim/left-click fire/wheel, touch handoff and change-gated InputMsg sends (1 s keepalive); no bind-remap editor/CRC or controller mapping (not required for Android) |
 | `client/src/ui/opponentDisplay.ts` (menu character preview / opponent display) | ❌ **not ported** (P1.7) |
 | `client/src/resources.ts` (per-map load/unload, audio preload, MAX_TEXTURE_SIZE) | 🔶 atlases load once and never unload; no map-audio preload (P2) |
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ✅ keyed from the defs (`sound.reload/reloadAlt/deploy/use/pickup`); doors/buttons/puzzles/ceiling/plane loops and victory music wired; dry fire is approximate (P2) |
 | UI sounds (ambient lab, pickup pings, notifications, victory) | 🔶 victory music + pickup/door/puzzle/plane cues wired; notification/team-join sounds are web focus-only (not applicable to the Android foreground) |
 | Reverb (`setReverbProperties`) | ✅ `ReverbModel` maps cathedral/cave to EAX props; applied to every active handle (web convolver is global) |
-| `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | 🔶 inventory v2 is only in the dead `ui/FguiHud`; live HUD lacks ammo reserve, loot grid, scopes, interaction prompt, pickup/kill messages (P1.4) |
+| `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | 🔶 live `game/Hud` has reserve ammo, bag strip, scopes, interaction prompt and pickup/kill messages (P1.4); the dead `ui/FguiHud` is not built |
 | `client/src/emote.ts` (emote/ping system) | ✅ see the emote row above |
 | `client/src/ui/pieTimer.ts` (action progress circle) | 🔶 arc/countdown works; action label (Reloading/Using/Reviving) missing (P2) |
 | `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ✅ `ProfileFragment` + `PassFragment` (real level/XP, next unlock, quest reroll); stats link inert, no unlock image/animations (P2) |
-| `client/src/account.ts` | ✅ Java `AccountManager` + `SurvApi` device login/session/profile/username/logout/reset/delete/loadout push; OAuth/linking intentionally N/A |
+| `client/src/account.ts` | ✅ Java `AccountManager` + `SurvApi` device login/session/profile/username/logout/reset/delete/loadout push, item-status ack/confirm and pass `newItems` profile reload; OAuth/linking intentionally N/A |
 | `client/src/crosshair.ts` (custom crosshair) | 🔶 sprite pipeline good; editor offers 7 colours/3 sizes/3 strokes and no type picker (P1.7) |
 | `client/src/pingTest.ts` (pre-game latency check) | ✅ `net/PingTest` (echo cadence/retry/complete + `bestRegion`/zones, host-tested); the probe list comes from `net/Regions` (`tools/codegen_regions.mjs`, the native `PING_TEST_URLS`), and the Java menu shows the ms and auto-selects the closest region |
 | `client/src/errorLogs.ts` (client error reporting) | ✅ `net/ErrorLog` (sample/budget/throttle host-tested) + `SurvApi.reportError` crash handler in `AppActivity`; `debug.surv_debug=1` sends a startup probe |
@@ -371,7 +365,8 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
       scopes, quick-use pills, gas timer, spectator count and death/result
       overlays were already live.
       - Interaction prompt: nearest loot on the active audio layer
-        (`PICK UP <TYPE>`) above the health bar.
+        (`PICK UP <TYPE>`) above the health bar; the prompt itself is a touch
+        target (tap = Interact + Cancel) like ui.ts `interactionElems`.
       - Toasts: `PickupMsg` failures map to the ui2.ts messages (full bag,
         already owned/equipped, better item, cannot fire, max perks); XP drops
         show RARE LOOT; new perks show `PERK: <TYPE>`; local credited kills show
@@ -416,63 +411,132 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         survive the session; a full sound checklist on real hardware is still a
         P2 polish item.
 
-- [ ] **P1.6 Keyboard/mouse/binds + input policy.**
-      Only `KEY_ESCAPE` is handled (`GameScene.cpp:364-370`); `inputBinds.ts` and
-      mouse aiming/wheel cycling are absent; `InputMsg` is sent at 33 Hz
-      unconditionally instead of on change + 1 s keepalive
-      (`GameScene.cpp:1507-1514` vs `game.ts:731-769`). Add the bind model/CRC
-      (or document BT keyboard as unsupported), arrows/Escape/G/L, mouse aim and
-      wheel, and change-gated input sends. Acceptance: BT keyboard/mouse and
-      emulator mouse work; idle upstream traffic matches the web.
+- [x] **P1.6 Keyboard/mouse/binds + input policy.**
+      **Done (default binds; no remap editor).**
+      - `game/HardwareInput.h` ports the default `inputBinds.ts` bind set and the
+        state model from `input.ts` (key down/pressed edges, mouse buttons/wheel,
+        movement and fire queries). Defaults: WASD + arrows move,
+        left mouse fire, R reload, F interact, X cancel, 1/2/3/4 equip
+        primary/secondary/melee/throwable, wheel up/down previous/next weapon,
+        Q last weapon, E stow, T swap gun slots, 7/8/9/0 use bandage/medkit/
+        soda/pills, M or G open the large map. Escape keeps its pause/leave path.
+      - Mouse aim/fire: cursor offset from the screen centre becomes
+        `toMouseDir`/`toMouseLen` through the camera zoom, left click sets
+        `shootStart`/`shootHold`; a touch event hands aim back to the pads
+        (`noteTouchInput`). Spectating uses Left/Right to cycle targets.
+      - `game/InputSync.h` is the web's `game.ts:731-771` send policy: send on a
+        changed message, aim direction >0.1 deg, aim length >0.5, any non-empty
+        `inputs`, `shootStart` while set, and a 1 s keepalive. Idle upstream
+        traffic no longer streams at 33 Hz. The seq/ack handshake is unchanged.
+      - The HUD's queued actions (P0.1) and quick-tap `shootStart` latch drain
+        through the same send gate, so a tap between sends is never lost.
+      - Not implemented: the keybind remap UI/CRC sharing and gamepad mapping.
+        These are optional for Android (the defaults are the web defaults);
+        `plan.md` §5.4's BT-keyboard requirement is met by a fixed default set.
+      - Android BT keyboards: axmol's `AxmolGLSurfaceView` only forwards
+        DPAD/BACK to the engine, so `AppActivity` sends gameplay letters/digits
+        through `SurvBridge.hardwareKey`; `UiBridge` marshals them onto the GL
+        thread and `GameScene::onHardwareKey` maps Android `AKEYCODE_*` values
+        into `HardwareInput`. Desktop builds use the axmol key listener directly.
+      - Acceptance: host tests cover bind edges/order, wheel/use-item mapping,
+        mouse state/touch handoff, the angle/length/action/keepalive gates; the
+        x86_64 native and debug APK builds pass. Device check on the x86_64
+        emulator: `adb shell input keyevent KEYCODE_R` / `KEYCODE_1` produced
+        InputMsg actions 5 (Reload) / 11 (EquipPrimary) in logcat. Emulator mouse
+        is delivered as touch by Android, so the touch path covers it.
 
-- [ ] **P1.7 Menus / metadata / localization polish.**
-      - Quick-play buttons and team availability should come from
-        `site_info.modes` (labels/icons/`enabled`/teamMode) instead of hardcoded
-        Solo/Duo/Squad + `gameModeIdx 0/1/2` (`MenuFragment.java:274-320,705`).
-      - Region list should use `site_info` with localized names and require a
-        successful fetch before enabling Play; currently falls back to `"na"`.
-      - Localize the Java menu/settings/pause/loadout (all hardcoded English) and
-        fix the language list (P0.7).
-      - News images/date/badge, play spinner/lockout (web backoff), leaderboard
-        entry point (`LeaderboardModal` exists but is unreachable), Help content
-        (currently describes non-existent features), attributions/HoF/changelog.
-      - Item source badges and the per-item lore modal; menu character preview
-        (`opponentDisplay.ts`). (Crosshair types, item art and the
-        confirm-on-acquire flow are done in P0.6.)
-      - Use `GameConfig.protocolVersion` instead of `"version":1028`.
-      - Acceptance: menu looks/behaves like the web at 1280×720 and honours
-        `site_info` + locale.
+- [x] **P1.7 Menus / metadata / localization polish.**
+      **Done (core menu metadata + localization; the residual art polish moved to
+      P2).**
+      - Quick play is driven by `site_info.modes`: `MenuFragment` builds the
+        buttons from `mapName`/`teamMode`/`enabled`, labels them with
+        `index-play-<buttonText>` (`index-play-solo/duo/squad/50v50`), sends the
+        site_info index as `gameModeIdx`, hides disabled modes, and only shows
+        Join/Create Team when an enabled mode has `teamMode > 1`.
+      - Play is unavailable until the fetch succeeds: an indeterminate spinner
+        runs, failures show a tappable retry status, and play buttons dim/disable
+        while `find_game` is in flight (the web spinner/lockout).
+      - Regions use each pop's `l10n` key (e.g. `index-local`) and the localized
+        `index-players`, with the persisted `regionSelected` choice preserved.
+      - `L10n.java` caches the C++ flattened table and reloads it whenever
+        `SurvBridge.getLanguage()` changes; `UiBridge::l10nJson()` also re-syncs
+        its standalone table with the saved config language. The main menu
+        re-renders immediately when Settings closes, and Settings/Help/Pause
+        labels are localized when each screen is created (verified en/es incl.
+        cold start; in-place relabel of an already-open Settings screen is P2).
+      - Help content now documents the real touch HUD and the default
+        keyboard/mouse binds instead of sprint/pinch/building features the port
+        does not have.
+      - News shows the entry date, title and up to two paragraph summaries from
+        `NewsJson`; attributions/HOF/changelog and the Leaderboards entry open
+        the corresponding web pages (the in-game `LeaderboardModal` still needs a
+        live-stats bridge, tracked in P2).
+      - `MenuFragment` uses `SurvBridge.getProtocolVersion()` for find_game (the
+        old hard-coded `1028` was already gone).
+      - Acceptance: x86_64 debug APK on the emulator shows site_info-driven
+        Solo/Duo/Squad, localized region/player counts and Spanish menu strings
+        after changing the language; attributions/HOF/changelog open the site.
 
-- [ ] **P1.8 Team/account refinements.**
-      - Quitting a team match must return to the team room, not close it
-        (`JavaUiHost.quitToMenu` calls `showMenu()` first; web
-        `main.ts:351-358`).
-      - Persist room props on leave (`gameModeIdx`, `teamAutoFill`, `region`).
-      - `changeName` in the room; invite link should use the local web origin
-        (config `webBaseUrl`) rather than always `https://survev.io`.
-      - Feed `account.items` into the loadout, call `set_item_status` (ack/confirm
-        + new-item badge), and refresh the profile/pass when `newItems` is set.
-      - Handle `?u=<b64>&jt=` join links and `https://…/#CODE` App Links
-        (`main.ts:816-837`; native only handles `survev://team/`).
-      - Acceptance: full team/account flow matches the web (except OAuth).
+- [x] **P1.8 Team/account refinements.**
+      **Done.**
+      - Quitting a team match no longer drops to the main menu: `quitToMenu`
+        leaves `mInTeam` intact, the C++ `returnToMenu` reaches
+        `TeamFragment.onGameComplete()`, and the room re-appears with its
+        socket alive (device-verified: Quit Game from a team match returned to the
+        same invite code).
+      - Room props persist on leave: `TeamFragment.hide()` writes
+        `gameModeIdx`, `teamAutoFill` and (leader only) `region` through the
+        config bridge, mirroring `teamMenu.leaveCb`; a new room now starts from
+        the saved mode/auto-fill/region (device-verified: Mode Squad + Auto-fill
+        OFF survived an app restart).
+      - `changeName` is wired into the room: a Change-name button opens an edit
+        dialog, validates 1-16 chars, sends `{"type":"changeName"}`, updates the
+        roster and persists `playerName` (device-verified; the renamed player
+        survived a restart).
+      - Invite links use the config `webBaseUrl` (default `https://survev.io`)
+        through `TeamLinks`, and the Settings web links do too.
+      - Deep links: `AppActivity` now handles `?u=<base64 urls>&jt=<token>`
+        (base64 URL-safe fallback, comma-split URLs, direct join), `survev://team/CODE`
+        and `https://<web>/#CODE` (fragment or `TeamLinks.extractCode`). The
+        manifest adds a BROWSABLE https filter for `survev.io`.
+        Device-verified: `https://survev.io/#ABCD` opened the join screen, and a
+        real `?u=&jt=` link joined a match.
+      - Account/pass: `getPass` now reloads the profile when
+        `pass.newItems` is set (account.ts:284), so freshly unlocked items reach
+        the loadout/new-item badges; the existing `set_item_status` ack/confirm
+        flow and loadout badge remain in place.
+      - Acceptance: team quit/room persistence, rename, invite/join links and
+        the pass-new-items profile refresh are code-complete and device-checked;
+        a full two-device team match and a pass-unlock grant still need a live
+        account/device pass.
 
 ### 3.4 P2 — polish / smaller parity gaps
 
-- **Rendering:** faction patch sprite, shell casings, body-radius easing, bleed
-  particles, bush particle/sound per def, `maxVisualRadius` 3.75 vs 1.0,
-  additive blend (currently a no-op), particle colour variance, river-shore
-  `"stone"` surface, map label alpha/stroke, `MapSprite` z-order, ceiling destroy
-  particles, obstacle button image swap, plane/airstrike visuals.
-- **HUD/menus:** kill-feed colours/role lines, squad bar role/team colours and
-  downed pulse, gas icon/pulse, gear order/levels/tap-to-drop, minimap alpha
-  fade + body tap-to-expand + hide toggle, big-map dim, pie-timer label, menu
+Done in the first P2 pass (2026-10-26):
+- Additive blend now reaches axmol (`BlendProtocol`: flares, projectile trails and
+  particles use `BlendFunc::ADDITIVE` instead of normal alpha blending).
+- `CycleUIMode` (V) hides/shows the minimap (frame, map, expand affordance)
+  without opening the big map, matching `ui.ts:1900-1912`.
+- Loadout "Newest" sorts by account `timeAcquired`; item tiles show a gold NEW
+  badge for status==0 items, and the detail panel shows `Acquired: <source>`
+  (source/timeAcquired parsed from `account.items`).
+
+Remaining:
+- **Rendering:** shell casings, body-radius easing, bush particle/sound per def,
+  `maxVisualRadius` 3.75 vs 1.0, particle colour variance, river-shore `"stone"`
+  surface, `MapSprite` z-order, ceiling destroy particles, obstacle button image
+  swap, plane/airstrike visuals.
+- **HUD/menus:** kill-feed role lines, squad bar role/team colours and downed
+  pulse, gas icon/pulse, gear order/levels/tap-to-drop, menu
   splash/background/clientTheme, mode icons, news images/badges, social/streamer
-  blocks, loadout sorting/confirm, stats links, settings links.
-- **Audio:** `maxInstances`/coalesce/delay/detune, music channel volume quirk
-  (web routes music through `soundVolume`), exact EQ/convolution timbre.
+  blocks, menu character preview (`opponentDisplay.ts`), live in-game leaderboard
+  bridge, in-place relabel of an already-open settings/loadout screen after a
+  language change.
+- **Audio:** music channel volume quirk (web routes music through `soundVolume`),
+  exact EQ/convolution timbre.
 - **Platform/perf:** unload map atlases on map change and preload map audio
-  (`resources.ts:137-246`), device/tablet/perf tiers, 33 Hz input policy,
-  keyboard/gamepad bind editor, C++ error-report call sites + NDK signal handler.
+  (`resources.ts:137-246`), device/tablet/perf tiers, keyboard/gamepad bind
+  editor, C++ error-report call sites + NDK signal handler.
 - **Release:** real upload keystore/Play upload, physical mid-range 60 fps soak,
   final UI polish from device testing.
 
@@ -500,7 +564,8 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
    (done; see §3.3).
 6. **P1.3 + P1.4** - render feedback + live inventory HUD (done; only the
    perk-mode role picker moved to P1.7/P2).
-7. **P1.6-P1.8** - input/metadata/team/account parity.
+7. **P1.6-P1.8** - input (done), menu metadata/localization (done, P1.7),
+   team/account refinements (done, P1.8).
 8. **P2** — polish, then a physical-device soak and store upload.
 
 ### 3.7 Acceptance for "1:1 playable" (next milestone gate)
@@ -516,13 +581,22 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
   players; disconnect reasons are localized.
 - The live HUD includes inventory v2, interaction prompt, messages and spectator
   state; the major visual/audio effects from P1.3/P1.5 are present.
+- BT keyboard/mouse (or desktop/emulator mouse) play through the default
+  `inputBinds.ts` set with cursor aim/wheel; idle upstream traffic matches the
+  web's change-gated InputMsg (1 s keepalive).
+- The Java menu's quick-play buttons/regions come from site_info, Play waits for
+  the fetch, and menu/settings/help/pause labels render in the saved locale
+  (verified en/es on the emulator).
+- Team: quitting a team match returns to the room, room mode/auto-fill/region
+  persist, in-room rename works, and `survev://` / `https://…/#CODE` /
+  `?u=&jt=` links open the correct screen (device-verified).
 
 ## 4. Verification workflow
 
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (190 tests, 0 failures expected)
+# host tests (195 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe

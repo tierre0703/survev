@@ -749,6 +749,25 @@ public class LoadoutFragment {
 
         final String cat = mCategories[mSelectedCat];
         final int slot = mEmoteSlot;
+        // Newly acquired item (account status == New): small gold NEW tag.
+        if (entry.isNew) {
+            TextView badge = new TextView(mActivity);
+            badge.setText("NEW");
+            badge.setTextColor(Color.BLACK);
+            badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 8);
+            badge.setTypeface(null, android.graphics.Typeface.BOLD);
+            badge.setGravity(Gravity.CENTER);
+            GradientDrawable badgeBg = new GradientDrawable();
+            badgeBg.setColor(GOLD);
+            badgeBg.setCornerRadius(dp(3));
+            badge.setBackground(badgeBg);
+            FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, dp(14), Gravity.TOP | Gravity.RIGHT);
+            blp.topMargin = dp(2);
+            blp.rightMargin = dp(2);
+            badge.setPadding(dp(3), 0, dp(3), 0);
+            tile.addView(badge, blp);
+        }
         tile.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -824,8 +843,14 @@ public class LoadoutFragment {
         sb.append(getRarityName(entry.rarity)).append(" | ");
         sb.append(entry.displayName).append("\n");
         if (entry.description != null && !entry.description.isEmpty()) {
-            sb.append(entry.description);
+            sb.append(entry.description).append("\n");
         }
+        String source = entry.source == null || entry.source.isEmpty() ? "Unknown" : entry.source;
+        String sourceLabel = L10n.t("loadout-" + source, source);
+        if (sourceLabel == null || sourceLabel.isEmpty()) {
+            sourceLabel = source;
+        }
+        sb.append(L10n.t("loadout-acquired", "Acquired")).append(": ").append(sourceLabel);
         mDetailPanel.setText(sb.toString());
         mDetailPanel.setTextColor(entry.rarityColor);
         mDetailPanel.setVisibility(View.VISIBLE);
@@ -857,8 +882,16 @@ public class LoadoutFragment {
                     return Integer.compare(b.rarity, a.rarity);
                 }
             });
+        } else {
+            // Newest first (web `loadout-newest`; timeAcquired comes from the
+            // account item list, 0 for catalog-only items).
+            items.sort(new Comparator<ItemEntry>() {
+                @Override
+                public int compare(ItemEntry a, ItemEntry b) {
+                    return Long.compare(b.timeAcquired, a.timeAcquired);
+                }
+            });
         }
-        // mode 0 = newest (default order)
     }
 
     // --- Category/Item selection ---
@@ -982,6 +1015,9 @@ public class LoadoutFragment {
         String description;
         String sprite;
         int tint = 0xFFFFFF;
+        String source = "";
+        long timeAcquired = 0L;
+        boolean isNew = false;
     }
 
     // Reads the C++ item snapshot: [{"type","category","name","lore","sprite",
@@ -1028,6 +1064,26 @@ public class LoadoutFragment {
             }
         } catch (Exception e) {
             Log.w(TAG, "loadout items parse failed: " + e.getMessage());
+        }
+        applyAccountMetadata();
+    }
+
+    /** Attach account-only fields (source/time/status) for the detail panel. */
+    private void applyAccountMetadata() {
+        AccountManager account = AccountManager.peek();
+        if (account == null || !account.isLoggedIn()) {
+            return;
+        }
+        List<AccountManager.ItemInfo> owned = account.getItems();
+        for (ItemEntry e : mItems) {
+            for (AccountManager.ItemInfo info : owned) {
+                if (e.type.equals(info.type)) {
+                    e.source = info.source;
+                    e.timeAcquired = info.timeAcquired;
+                    e.isNew = info.status == 0;
+                    break;
+                }
+            }
         }
     }
 

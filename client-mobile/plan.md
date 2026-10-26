@@ -159,8 +159,9 @@ the original TS and makes bugs easier to diff against the browser client.
 - `input.ts` → touch/mouse listeners via `EventListenerTouchOneByOne` +
   `EventListenerMouse`; replicate the same virtual joystick / aim dead-zone logic from
   `ui/touch.ts`.
-- `inputBinds.ts` → config-driven key map (mostly irrelevant on touch, but keep for
-  BT-keyboard/controller support).
+- `inputBinds.ts` → `game/HardwareInput.h` (P1.6): the default bind set is
+  ported for BT-keyboard/mouse support; the remap editor/CRC is not exposed.
+  The touch pads remain the primary input and can hand control back and forth.
 
 ### 5.5 Audio
 - `audioManager.ts` / `soundDefs.ts` → `ax::AudioEngine` wrapper. Map preloaded sound
@@ -333,16 +334,25 @@ scaffolded and require the axmol SDK (M0) to compile.
   `InputMsg` (`touchMoveDir`/`touchMoveLen`, `toMouseDir`/`toMouseLen`,
   `shootStart`/`shootHold`, `portrait`), including the turn-to-move aim
   cooldown and the throwable priming latch.
-- `src/app/GameScene.cpp` — `updateInput()` builds the message every frame and
-  sends it via `Game::sendInput()` at the server net-sync/input rate
-  (`kNetSyncTps` = 33), latching a quick `shootStart` tap so it isn't dropped
-  between sends. `Game` now assigns input seq/ack (`UpdateMsg.ack`), mirroring
-  `game.ts` `seq`/`seqInFlight`.
+- `src/game/HardwareInput.h` — P1.6 keyboard/mouse path: default
+  `inputBinds.ts` binds (WASD/arrows, R/F/X, 1–4, wheel, Q/E/T, 7–0, M/G) plus
+  mouse cursor aim, left-click fire and a touch handoff. `GameScene` translates
+  axmol key/mouse events into this engine-free state; on Android, where axmol's
+  GLSurfaceView only forwards DPAD/BACK, `AppActivity`/`SurvBridge.hardwareKey`
+  forwards the gameplay letters/digits through the bridge.
+- `src/game/InputSync.h` — P1.6 send policy from `game.ts:731-771`: send on a
+  changed message, aim direction >0.1 deg, aim length >0.5, non-empty `inputs`,
+  `shootStart` while set, and a 1 s keepalive (no unconditional 33 Hz sends).
+- `src/app/GameScene.cpp` — `updateInput()` builds the message every frame,
+  merges the HUD/keyboard queued one-shots, latches a quick `shootStart` tap and
+  hands it to `Game::sendInput()`. `Game` owns input seq/ack
+  (`UpdateMsg.ack`), mirroring `game.ts` `seq`/`seqInFlight`.
 - `src/ui/Touch.h` — added `turnDirCooldown`/`turnDirTicker`/`setAimDir` used by
   the turn-to-move aim logic.
-- `tests/test_touch_input.cpp` — 4 tests covering move/aim scaling, zero-move,
-  and the throwable latch (all 33 `surv_tests` pass). On-device move/aim/fire
-  verification against a dev server remains (needs M4 rendering).
+- `tests/test_touch_input.cpp` / `tests/test_input_policy.cpp` — move/aim
+  scaling, throwable latch, bind edges/order, mouse handoff and the
+  change-gated/keepalive send policy. On-device move/aim/fire plus BT
+  keyboard/mouse verification remains.
 
 **Verifying the M3 gate against a dev server** (`pnpm dev:server` starts the API
 on `:8000` and a game process on `:9000`):
@@ -529,9 +539,10 @@ client-mobile/build-tests/Release/surv_tests.exe
 2. **M4**: rendering port is implemented and host-verified against the adapter
    (map/terrain, renderer z-sort, barns, codegen'd defs); remaining is on-device
    visual verification (and the M4 polish list above).
-3. **M5**: input → `InputMsg` is implemented and host-tested (`TouchInput.h` +
-   `GameScene::updateInput`); remaining is on-device verification of
-   move/aim/fire once M4 rendering lands.
+3. **M5**: input → `InputMsg` is implemented and host-tested (`TouchInput.h`,
+   `HardwareInput.h`, `InputSync.h` + `GameScene::updateInput`), including the
+   P1.6 keyboard/mouse defaults and change-gated sends; remaining is on-device
+   verification of move/aim/fire and BT keyboard/mouse.
 4. **M7**: UI split per `ARCHITECTURE.md` — **S1 (the `UiHost` +
    `SurvBridge.java` bridge + the Java UI container) landed 2026-10-15**, then
    **S2** FairyGUI gameplay HUD, then the Java menu/loadout/team screens (§7).

@@ -1,7 +1,9 @@
 #pragma once
 #include "axmol.h"
 #include "../game/Game.h"
+#include "../game/HardwareInput.h"
 #include "../game/InputActions.h"
+#include "../game/InputSync.h"
 #include "../game/TouchInput.h"
 #include "../net/ErrorLog.h"
 #include "../net/Net.h"
@@ -164,6 +166,10 @@ public:
     void pauseGame();
     void resumeGame();
 
+    // P1.6: BT-keyboard key state from the Java bridge (Android KeyEvent codes),
+    // marshalled onto the game thread by UiBridge. No-op off Android.
+    void onHardwareKey(int androidKeyCode, bool down);
+
     // Called from Game::handlePickup to play the item pickup sound.
     void onPickupSound(const std::string& item);
 
@@ -190,6 +196,9 @@ public:
 private:
     // M5: build an InputMsg from Touch and send it at the server's input rate.
     void updateInput(float dt);
+    // P1.6: keyboard/mouse UI keys (map toggle, spectate arrows) outside the
+    // InputMsg path. Called once per frame after updateInput().
+    void updateHardwareUi();
     // Web screen point (y down, visible pixels) -> HUD design space (y up,
     // 1280x720 bottom-left origin): the inverse of the _hudRoot transform.
     Vec2 screenToDesign(float x, float y) const;
@@ -321,7 +330,11 @@ private:
     bool tryReconnect();
 
     TouchInput _touchInput;
-    float _inputMsgTimeout = 0.0f;
+    // P1.6 hardware input (BT keyboard/mouse, emulator/desktop mouse). Touch
+    // remains authoritative until a hardware key/mouse event arrives.
+    HardwareInput _hw;
+    // Change-gated InputMsg sends + 1 s keepalive (game.ts:731-771).
+    InputSync _inputSync;
     bool _shootStartPending = false;
     // P0.4: the Java pause dialog shows Spectate after the local death; notify
     // it once per match (UiHost::showResult).

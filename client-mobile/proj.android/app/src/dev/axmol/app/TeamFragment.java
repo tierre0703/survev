@@ -17,6 +17,7 @@
 package dev.axmol.app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
@@ -79,6 +80,7 @@ public class TeamFragment {
     private final TextView mStatusText;
     private final Button mPlayBtn;
     private final Button mLeaveBtn;
+    private final Button mChangeNameBtn;
 
     // --- state ---
     private boolean mOpen = false;
@@ -267,6 +269,18 @@ public class TeamFragment {
         mStatusText.setPadding(0, dp(4), 0, dp(4));
         panel.addView(mStatusText);
 
+        // ===== Change name (web teamMenu player-name edit / changeName) =====
+        mChangeNameBtn = makeSmallButton("\u270F Change name");
+        mChangeNameBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { promptChangeName(); }
+        });
+        LinearLayout nameRow = new LinearLayout(activity);
+        nameRow.setOrientation(LinearLayout.HORIZONTAL);
+        nameRow.setGravity(Gravity.CENTER);
+        nameRow.addView(mChangeNameBtn, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(30)));
+        panel.addView(nameRow);
+
         // ===== Actions =====
         LinearLayout btnRow = new LinearLayout(activity);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -340,7 +354,7 @@ public class TeamFragment {
         mInGame = false;
         mFindingGame = false;
         mCaptchaEnabled = false;
-        mAutoFill = true;
+        mAutoFill = defaultAutoFill();
         mUserClosing = false;
         mLocalPlayerId = -1;
         mMaxPlayers = 4;
@@ -807,6 +821,8 @@ public class TeamFragment {
     }
 
     public void hide() {
+        // web teamMenu.onClose: keep the room props for the next room/create.
+        persistRoomConfig();
         mUserClosing = true;
         closeSocket();
         mHandler.removeCallbacks(mKeepAlive);
@@ -815,6 +831,57 @@ public class TeamFragment {
         mJoined = false;
         mRoot.setVisibility(View.GONE);
         Log.i(TAG, "team hide");
+    }
+
+    /** Persist the room props the web saves in teamMenu.leaveCb. */
+    private void persistRoomConfig() {
+        if (!mJoined || mCode.isEmpty()) {
+            return;
+        }
+        SurvBridge.setConfigValue("gameModeIdx", String.valueOf(mGameModeIdx));
+        SurvBridge.setConfigValue("teamAutoFill", mAutoFill ? "true" : "false");
+        // Only the leader's region controls the room (web teamMenu.ts:268).
+        if (isLeader()) {
+            SurvBridge.setConfigValue("region", mRegion);
+        }
+        SurvBridge.saveConfig();
+    }
+
+    /** Web teamMenu changeName: edit the room name, persist it and notify the server. */
+    private void promptChangeName() {
+        if (!mJoined) {
+            return;
+        }
+        final EditText input = new EditText(mActivity);
+        input.setSingleLine(true);
+        input.setText(mPlayerName);
+        input.setSelection(input.getText().length());
+        input.setHint(l10n("index-enter-name", "Enter name"));
+        new AlertDialog.Builder(mActivity)
+                .setTitle(l10n("index-change-name", "Change name"))
+                .setView(input)
+                .setPositiveButton(l10n("index-confirm", "Confirm"),
+                        new android.content.DialogInterface.OnClickListener() {
+                            @Override public void onClick(android.content.DialogInterface d, int which) {
+                                String name = input.getText().toString().trim();
+                                if (name.isEmpty() || name.length() > 16) {
+                                    setStatus(l10n("index-invalid-name", "Name must be 1-16 characters."));
+                                    return;
+                                }
+                                changeName(name);
+                            }
+                        })
+                .setNegativeButton(l10n("game-cancel", "Cancel"), null)
+                .show();
+    }
+
+    private void changeName(String name) {
+        mPlayerName = name;
+        SurvBridge.setConfigValue("playerName", name);
+        SurvBridge.saveConfig();
+        send("{\"type\":\"changeName\",\"data\":{\"name\":\""
+                + SurvApi.escapeJson(name) + "\"}}");
+        render();
     }
 
     private void closeSocket() {
@@ -858,6 +925,11 @@ public class TeamFragment {
             return name;
         }
         return "Player";
+    }
+
+    /** Config `teamAutoFill` (saved when leaving the previous room). */
+    private boolean defaultAutoFill() {
+        return Json.peekBool(SurvBridge.getConfigJson(), "teamAutoFill", true);
     }
 
     private void loadSiteInfo(String json) {
@@ -904,8 +976,7 @@ public class TeamFragment {
     }
 
     private String defaultRegion() {
-        String configured = Json.peekString(SurvBridge.getConfigJson(), "region");
-        if (configured != null && mRegions.contains(configured)) {
+        String configured = Json.peekString(SurvBridge.getConfigJson(), "region");        if (configured != null && mRegions.contains(configured)) {
             return configured;
         }
         if (!mRegions.isEmpty()) {

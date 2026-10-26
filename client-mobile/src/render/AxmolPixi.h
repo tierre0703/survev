@@ -91,7 +91,35 @@ public:
     }
     void setVisible(bool visible) override { _node->setVisible(visible); }
     void setTint(uint color) override { _node->setColor(detail::toColor3B(color)); }
-    void setBlendMode(BlendMode) override {}
+    // PIXI blend modes. axmol exposes setBlendFunc through BlendProtocol on
+    // Sprite/DrawNode (the only nodes the game sets a blend mode on). Additive
+    // is the important one: flares, projectile trails and particles were drawing
+    // with normal alpha blending before this, so glows looked flat.
+    void setBlendMode(BlendMode mode) override {
+        auto* blend = dynamic_cast<ax::BlendProtocol*>(_node);
+        if (!blend) {
+            return;
+        }
+        switch (mode) {
+            case BlendMode::Add:
+                blend->setBlendFunc(ax::BlendFunc::ADDITIVE);
+                break;
+            case BlendMode::Multiply:
+                blend->setBlendFunc(ax::BlendFunc{
+                    ax::backend::BlendFactor::DST_COLOR,
+                    ax::backend::BlendFactor::ONE_MINUS_SRC_ALPHA});
+                break;
+            case BlendMode::Screen:
+                blend->setBlendFunc(ax::BlendFunc{
+                    ax::backend::BlendFactor::ONE,
+                    ax::backend::BlendFactor::ONE_MINUS_SRC_COLOR});
+                break;
+            case BlendMode::Normal:
+            default:
+                blend->setBlendFunc(ax::BlendFunc::ALPHA_NON_PREMULTIPLIED);
+                break;
+        }
+    }
     void setLocalZOrder(int z) override { (_clipper ? static_cast<ax::Node*>(_clipper) : _node)->setLocalZOrder(z); }
     void setSortKey(int ord, int idx) override {
         _sortOrd = ord;

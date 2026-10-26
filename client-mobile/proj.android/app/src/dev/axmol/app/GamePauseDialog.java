@@ -233,7 +233,7 @@ public class GamePauseDialog {
 
         // Spectate button (visible only when dead)
         mSpectateBtn = new Button(activity);
-        mSpectateBtn.setText("\uD83D\uDCF1 Spectate");
+        mSpectateBtn.setText("\uD83D\uDCF1 " + L10n.t("game-spectate", "Spectate"));
         mSpectateBtn.setBackgroundColor(0xFF4A4A4A);
         mSpectateBtn.setTextColor(Color.WHITE);
         mSpectateBtn.setVisibility(View.GONE); // Hidden until player dies
@@ -258,7 +258,7 @@ public class GamePauseDialog {
 
         // === Action Buttons ===
         mReturnBtn = new Button(activity);
-        mReturnBtn.setText("\u25B6 Return to Game");
+        mReturnBtn.setText("\u25B6 " + L10n.t("game-return-to-game", "Return to Game"));
         mReturnBtn.setBackgroundColor(GREEN);
         mReturnBtn.setShadowLayer(dp(2), 0, dp(2), GREEN_SHADOW);
         mReturnBtn.setLayoutParams(new ViewGroup.LayoutParams(
@@ -274,7 +274,7 @@ public class GamePauseDialog {
         addGap(card, dp(6));
 
         mQuitBtn = new Button(activity);
-        mQuitBtn.setText("\u2716 Quit to Menu");
+        mQuitBtn.setText("\u2716 " + L10n.t("game-quit-game", "Quit Game"));
         mQuitBtn.setBackgroundColor(RED);
         mQuitBtn.setShadowLayer(dp(2), 0, dp(2), RED_SHADOW);
         mQuitBtn.setLayoutParams(new ViewGroup.LayoutParams(
@@ -463,7 +463,7 @@ public class GamePauseDialog {
     public void setPlayerDead(boolean dead) {
         mIsDead = dead;
         mSpectateBtn.setVisibility(dead ? View.VISIBLE : View.GONE);
-        mReturnBtn.setText("\u25B6 Return to Game");
+        mReturnBtn.setText("\u25B6 " + L10n.t("game-return-to-game", "Return to Game"));
     }
     
     public void setStatus(String text) {

@@ -16,8 +16,10 @@
 package dev.axmol.app;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -48,6 +50,7 @@ public class SettingsModal {
     private final Activity mActivity;
     private final FrameLayout mRoot;
     private boolean mOpen = false;
+    private Runnable mOnHidden = null;
 
     // --- widgets ---
     private final Button mLanguageBtn;
@@ -96,7 +99,7 @@ public class SettingsModal {
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         
         TextView title = new TextView(activity);
-        title.setText("\u2699 Settings");
+        title.setText("\u2699 " + L10n.t("index-settings", "Settings"));
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         title.setGravity(Gravity.CENTER);
@@ -135,6 +138,8 @@ public class SettingsModal {
                 mLanguageBtn.setText(locale.name);
                 SurvBridge.setLanguage(locale.code);
                 SurvBridge.saveConfig();
+                L10n.invalidate();
+                mStatusText.setText("");
             }
         });
         content.addView(mLanguageBtn);
@@ -144,7 +149,7 @@ public class SettingsModal {
         addSectionHeader(content, "\uD83C\uDFB5 Audio");
 
         // Master Volume slider
-        LinearLayout masterRow = makeSliderRow("Master", 100);
+        LinearLayout masterRow = makeSliderRow(L10n.t("index-master-volume", "Master Volume"), 100);
         mMasterLabel = (TextView) masterRow.getChildAt(1);
         mMasterSlider = (SeekBar) masterRow.getChildAt(2);
         mMasterSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -162,7 +167,7 @@ public class SettingsModal {
         content.addView(masterRow);
 
         // SFX Volume slider
-        LinearLayout sfxRow = makeSliderRow("SFX", 100);
+        LinearLayout sfxRow = makeSliderRow(L10n.t("index-sfx-volume", "SFX Volume"), 100);
         mSfxLabel = (TextView) sfxRow.getChildAt(1);
         mSfxSlider = (SeekBar) sfxRow.getChildAt(2);
         mSfxSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -180,7 +185,7 @@ public class SettingsModal {
         content.addView(sfxRow);
 
         // Music Volume slider
-        LinearLayout musicRow = makeSliderRow("Music", 100);
+        LinearLayout musicRow = makeSliderRow(L10n.t("index-music-volume", "Music Volume"), 100);
         mMusicLabel = (TextView) musicRow.getChildAt(1);
         mMusicSlider = (SeekBar) musicRow.getChildAt(2);
         mMusicSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -205,7 +210,7 @@ public class SettingsModal {
         // the pause dialog (RenderScale), so the control is absent.
         addSectionHeader(content, "\uD83D\uDCF8 Graphics");
 
-        mInterpolation = makeCheckbox("Client-side Interpolation", true);
+        mInterpolation = makeCheckbox(L10n.t("index-client-side-interp", "Client side interpolation"), true);
         mInterpolation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
                 SurvBridge.setConfigValue("interpolation", checked ? "true" : "false");
@@ -214,7 +219,7 @@ public class SettingsModal {
         });
         content.addView(mInterpolation);
 
-        mScreenShake = makeCheckbox("Screen Shake Effects", true);
+        mScreenShake = makeCheckbox(L10n.t("index-screen-shake", "Screen shake"), true);
         mScreenShake.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
                 SurvBridge.setConfigValue("screenShake", checked ? "true" : "false");
@@ -266,7 +271,7 @@ public class SettingsModal {
         // === Game section ===
         addSectionHeader(content, "\uD83C\uDFAE Game");
 
-        mAnonNames = makeCheckbox("Anonymize Player Names", false);
+        mAnonNames = makeCheckbox(L10n.t("index-anon-player-names", "Anonymize player names"), false);
         mAnonNames.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
                 SurvBridge.setConfigValue("anonPlayerNames", checked ? "true" : "false");
@@ -277,21 +282,27 @@ public class SettingsModal {
 
         // === Links ===
         addGap(content, dp(10));
-        Button attribBtn = makeLinkButton("\u00A9 Attributions");
+        Button leaderboardBtn = makeLinkButton("\uD83C\uDFC6 " + L10n.t("index-leaderboards", "Leaderboards"));
+        leaderboardBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openWebPage("/stats"); }
+        });
+        content.addView(leaderboardBtn);
+
+        Button attribBtn = makeLinkButton("\u00A9 " + L10n.t("index-attributions", "attributions"));
         attribBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { Log.i(TAG, "Attributions link (stub)"); }
+            @Override public void onClick(View v) { openWebPage("/attribution.txt"); }
         });
         content.addView(attribBtn);
 
-        Button hofBtn = makeLinkButton("\uD83C\uDFC6 Hall of Fame");
+        Button hofBtn = makeLinkButton("\uD83C\uDFC6 " + L10n.t("index-hof", "Hall of Fame"));
         hofBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { Log.i(TAG, "Hall of Fame link (stub)"); }
+            @Override public void onClick(View v) { openWebPage("/hof.html"); }
         });
         content.addView(hofBtn);
 
-        Button changelogBtn = makeLinkButton("\uD83D\uDCDD Changelog");
+        Button changelogBtn = makeLinkButton("\uD83D\uDCDD " + L10n.t("index-original-changelog", "Changelog"));
         changelogBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { Log.i(TAG, "Changelog link (stub)"); }
+            @Override public void onClick(View v) { openWebPage("/changelogRec.html"); }
         });
         content.addView(changelogBtn);
 
@@ -416,6 +427,21 @@ public class SettingsModal {
         btn.setPadding(dp(12), dp(6), dp(12), dp(6));
         return btn;
     }
+
+    /**
+     * Opens a web-only page (attribution/HOF/changelog). P1.8 will route this
+     * through the config `webBaseUrl`; the store origin is the same for now.
+     */
+    private void openWebPage(String path) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse(TeamLinks.webBaseUrl() + path));
+            mActivity.startActivity(intent);
+        } catch (Exception e) {
+            Log.w(TAG, "No browser for " + path + ": " + e.getMessage());
+            mStatusText.setText(L10n.t("index-error", "Error") + ": " + path);
+        }
+    }
     
     private Button makeSmallButton(String label) {
         Button btn = new Button(mActivity);
@@ -439,9 +465,13 @@ public class SettingsModal {
     public void hide() {
         mOpen = false;
         mRoot.setVisibility(View.GONE);
+        if (mOnHidden != null) mOnHidden.run();
     }
 
     public boolean isOpen() { return mOpen; }
+
+    /** Called after hide() (menu re-localizes when the language changed). */
+    public void setOnHidden(Runnable onHidden) { mOnHidden = onHidden; }
 
     private void applyTouchStyleButtons() {
         mMoveStyleBtn.setText(mMoveLocked ? "Move Style: Locked" : "Move Style: Anywhere");
@@ -463,6 +493,7 @@ public class SettingsModal {
             mLanguageBtn.setText(mLocales.get(mLocaleIdx).name);
         }
         SurvBridge.setLanguage("en");
+        L10n.invalidate();
 
         // Volumes (web defaults: master 1, sound 1, music 1).
         mMasterSlider.setProgress(100);

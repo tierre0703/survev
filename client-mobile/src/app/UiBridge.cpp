@@ -309,8 +309,13 @@ public:
         // so the Java UI needs its own Localization instance. Load it lazily
         // from the bundled l10n assets using the config language.
         ensureStandaloneLocalization();
+        // The config may have been loaded after the first l10n request; keep the
+        // standalone table on the persisted language instead of caching English.
+        _standaloneLocalization->setLocale(config().getString("language", "en"));
         return uikit::l10nTableToJson(_standaloneLocalization->flattened());
     }
+
+    std::string language() override { return config().getString("language", "en"); }
 
     std::string loadoutJson() override {
         uikit::Loadout loadout(&config());
@@ -471,6 +476,14 @@ public:
         });
     }
 
+    void hardwareKey(int androidKeyCode, bool down) override {
+        runOnGameThread([this, androidKeyCode, down] {
+            if (_game) {
+                _game->onHardwareKey(androidKeyCode, down);
+            }
+        });
+    }
+
     void saveConfig() override {
         if (_menu) {
             _menu->saveConfig();
@@ -599,6 +612,11 @@ JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_spectate(JNIEnv*, jclass, j
     surv::uiBridge()->spectate(static_cast<int>(action));
 }
 
+JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_hardwareKey(JNIEnv*, jclass, jint keyCode,
+                                                                jboolean down) {
+    surv::uiBridge()->hardwareKey(static_cast<int>(keyCode), down == JNI_TRUE);
+}
+
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setPlayerName(JNIEnv* env, jclass, jstring name) {
     surv::uiBridge()->setPlayerName(surv::fromJstring(env, name));
 }
@@ -639,6 +657,10 @@ JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getConfigJson(JNIEnv* en
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getL10nJson(JNIEnv* env, jclass) {
     return surv::toJstring(env, surv::uiBridge()->l10nJson());
+}
+
+JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLanguage(JNIEnv* env, jclass) {
+    return surv::toJstring(env, surv::uiBridge()->language());
 }
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLocalesJson(JNIEnv* env, jclass) {

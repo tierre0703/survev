@@ -62,6 +62,7 @@ const std::map<std::string, JsonValue>& webDefaults() {
         // target the local dev region without a UI toggle (set SURV_REGION=local).
         text("region", envOrDefault("SURV_REGION", "na"));
         boolean("regionSelected", false);
+        text("webBaseUrl", "https://survev.io");
         text("sessionCookie", "");
         num("gameModeIdx", 2);
         boolean("teamAutoFill", true);

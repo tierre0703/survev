@@ -131,6 +131,11 @@ Hud::TapResult Hud::hitTest(float designX, float designY) const {
     if (_reloadRect.contains(px, py)) {
         return TapResult{TapKind::Reload, -1};
     }
+    // ui.ts binds touchstart to #ui-interaction (the prompt itself), so tapping
+    // the visible "PICK UP <TYPE>" text interacts just like the action pill.
+    if (!_lastPrompt.empty() && _promptRect.contains(px, py)) {
+        return TapResult{TapKind::Interact, -1};
+    }
     if (_interactRect.contains(px, py)) {
         return TapResult{TapKind::Interact, -1};
     }
@@ -588,6 +593,12 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         _killFeedRows[i]->setPosition(X(boxX - 8.0f), Y(boxY + boxH + 8.0f - 16.0f * i));
     }
     _promptText->setPosition(X(vw * 0.5f), Y(vh * 0.2f));
+    // Touch target around the prompt (ui.ts interactionElems). Stored in the
+    // centred HUD container like the other rects.
+    _promptRect = Rect{X(vw * 0.5f - kPromptHitWidth * 0.5f),
+                       Y(vh * 0.2f - kPromptHitHeight * 0.5f),
+                       kPromptHitWidth,
+                       kPromptHitHeight};
     _announcementText->setPosition(X(vw * 0.5f), Y(vh - 110.0f));
     _waitingText->setPosition(X(vw * 0.5f), Y(vh * 0.62f));
 
@@ -724,7 +735,9 @@ void Hud::setVisible(bool visible) {
     show(_healthText);
     show(_ammoText);
     show(_lootCountsText);
-    show(_mapFrame);
+    if (_mapFrame) {
+        _mapFrame->setVisible(visible && !_minimapHidden && !_bigMapVisible);
+    }
     show(_aliveText);
     show(_killsText);
     show(_killLeaderText);
@@ -768,7 +781,7 @@ void Hud::setVisible(bool visible) {
         show(_pickupText);
     }
     const bool big = visible && _bigMapVisible;
-    _miniMap.setVisible(visible && !big);
+    _miniMap.setVisible(visible && !big && !_minimapHidden);
     _bigMap.setVisible(big);
     if (_bigMapBackdrop) {
         _bigMapBackdrop->setVisible(big);
@@ -780,10 +793,10 @@ void Hud::setVisible(bool visible) {
         _bigMapCloseText->setVisible(big);
     }
     if (_mapExpandBg) {
-        _mapExpandBg->setVisible(visible && !big);
+        _mapExpandBg->setVisible(visible && !big && !_minimapHidden);
     }
     if (_mapExpandIcon) {
-        _mapExpandIcon->setVisible(visible && !big);
+        _mapExpandIcon->setVisible(visible && !big && !_minimapHidden);
     }
     for (size_t i = 0; i < _squad.size(); ++i) {
         const bool showRow = visible && i < _squadState.size();
@@ -897,7 +910,7 @@ void Hud::setMinimap(pix::RenderTexture* texture, float mapWidth, float mapHeigh
     _miniMap.setTexture(texture);
     _bigMap.setMapSize(mapWidth, mapHeight);
     _bigMap.setTexture(texture);
-    _miniMap.setVisible(_visible && !_bigMapVisible);
+    _miniMap.setVisible(_visible && !_bigMapVisible && !_minimapHidden);
 }
 
 void Hud::updateMapPings(const std::vector<MapPing>& pings) {
@@ -946,8 +959,16 @@ void Hud::setBigMapVisible(bool visible) {
     setVisible(_visible);
 }
 
+void Hud::setMinimapHidden(bool hidden) {
+    _minimapHidden = hidden;
+    if (!_built) {
+        return;
+    }
+    setVisible(_visible);
+}
+
 bool Hud::minimapExpandHit(float designX, float designY) const {
-    if (!_visible || _bigMapVisible || !_miniMap.visible()) {
+    if (!_visible || _bigMapVisible || _minimapHidden || !_miniMap.visible()) {
         return false;
     }
     // Callers pass design-space coordinates (0..design); the widget positions

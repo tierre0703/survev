@@ -42,6 +42,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -77,9 +78,6 @@ public class MenuFragment {
     private final EditText mName;
     private final TextView mCustomizeBtn;
     private final TextView mRegionLabel;
-    private final TextView mPlaySolo;
-    private final TextView mPlayDuo;
-    private final TextView mPlaySquad;
     private final TextView mJoinTeamBtn;
     private final TextView mCreateTeamBtn;
     private final TextView mHelpBtn;
@@ -93,11 +91,19 @@ public class MenuFragment {
     private final ScrollView mNewsScrollView;
     private final LinearLayout mTopBarRow;
     private final LinearLayout mBottomRow;
+    private final LinearLayout mModeArea;
+    private final LinearLayout mTeamRow;
+    private final ProgressBar mPlaySpinner;
     private final TextView mPlayerCountLbl;
     private final JavaUiHost mHost;
 
     // --- state ---
     private List<PopEntry> mPops = new ArrayList<PopEntry>();
+    // site_info.modes (siteInfo.ts getGameModeStyles): the quick-play buttons
+    // are built from this list, never hard-coded.
+    private List<Json.ModeEntry> mModes = new ArrayList<Json.ModeEntry>();
+    private final List<TextView> mModeButtons = new ArrayList<TextView>();
+    private boolean mSiteInfoLoaded = false;
     // M8 region latency test results (client/src/pingTest.ts port), one entry per
     // site_info pop; empty until the probes finish.
     private List<Json.PingEntry> mPings = new ArrayList<Json.PingEntry>();
@@ -206,7 +212,7 @@ public class MenuFragment {
         LinearLayout nameRow = row(activity);
         mName = new EditText(activity);
         mName.setSingleLine(true);
-        mName.setHint("Enter your name");
+        mName.setHint(L10n.t("index-enter-name-here", "Enter your name here"));
         mName.setTextColor(Color.BLACK);
         mName.setHintTextColor(0xFF808080);
         mName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
@@ -234,7 +240,7 @@ public class MenuFragment {
 
         // ===== Row 2: region select (click opens dropdown) =====
         mRegionLabel = new TextView(activity);
-        mRegionLabel.setText("Local [0 players]");
+        mRegionLabel.setText(L10n.t("index-region", "Region"));
         mRegionLabel.setTextColor(Color.WHITE);
         mRegionLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         mRegionLabel.setGravity(Gravity.CENTER);
@@ -272,56 +278,45 @@ public class MenuFragment {
         card.addView(mRegionDropdown, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // ===== Row 3: Play Solo =====
-        mPlaySolo = makeButton("\u25B6 Play Solo", GREEN, GREEN_SHADOW, 18);
-        mPlaySolo.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { 
-                animatePress(v);
-                onPlay(1); 
-            }
-        });
-        card.addView(mPlaySolo, rowParams(dp(42)));
+        // ===== Rows 3/4: quick-play modes (site_info.modes) =====
+        // Buttons are created by buildModeButtons() once /api/site_info answers;
+        // until then the spinner is shown and Play is unavailable (P1.7).
+        mModeArea = new LinearLayout(activity);
+        mModeArea.setOrientation(LinearLayout.VERTICAL);
+        card.addView(mModeArea, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // ===== Row 4: Duo | Squad =====
-        LinearLayout modeRow = row(activity);
-        mPlayDuo = makeButton("Duo", GREEN, GREEN_SHADOW, 16);
-        mPlayDuo.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { 
-                animatePress(v);
-                onPlay(2); 
-            }
-        });
-        mPlaySquad = makeButton("Squad", GREEN, GREEN_SHADOW, 16);
-        mPlaySquad.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { 
-                animatePress(v);
-                onPlay(4); 
-            }
-        });
-        addHalfPair(modeRow, mPlayDuo, mPlaySquad);
-        card.addView(modeRow, rowParams(dp(38)));
+        mPlaySpinner = new ProgressBar(activity, null, android.R.attr.progressBarStyleSmall);
+        mPlaySpinner.setVisibility(View.VISIBLE);
+        LinearLayout spinnerRow = row(activity);
+        spinnerRow.setGravity(Gravity.CENTER);
+        spinnerRow.addView(mPlaySpinner, new LinearLayout.LayoutParams(dp(28), dp(28)));
+        card.addView(spinnerRow, rowParams(dp(30)));
 
         // ===== Row 5: Join Team | Create Team =====
-        LinearLayout teamRow = row(activity);
-        mJoinTeamBtn = makeButton("Join Team", TEAL, TEAL_SHADOW, 15);
+        mTeamRow = row(activity);
+        mJoinTeamBtn = makeButton(L10n.t("index-join-team", "Join Team"), TEAL, TEAL_SHADOW, 15);
         mJoinTeamBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 animatePress(v);
                 if (mHost != null) mHost.showTeam(false, "");
             }
         });
-        mCreateTeamBtn = makeButton("Create Team", TEAL, TEAL_SHADOW, 15);
+        mCreateTeamBtn = makeButton(L10n.t("index-create-team", "Create Team"), TEAL, TEAL_SHADOW, 15);
         mCreateTeamBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 animatePress(v);
                 if (mHost != null) mHost.showTeam(true, "");
             }
         });
-        addHalfPair(teamRow, mJoinTeamBtn, mCreateTeamBtn);
-        card.addView(teamRow, rowParams(dp(38)));
+        addHalfPair(mTeamRow, mJoinTeamBtn, mCreateTeamBtn);
+        // siteInfo.ts: team buttons only when an enabled mode has teamMode > 1.
+        mTeamRow.setVisibility(View.GONE);
+        card.addView(mTeamRow, rowParams(dp(38)));
 
         // ===== Row 6: How to Play =====
-        mHelpBtn = makeButton("\uD83D\uDCD6 How to Play", GREY, GREY_SHADOW, 15);
+        mHelpBtn = makeButton("\uD83D\uDCD6 " + L10n.t("index-how-to-play", "How to Play"),
+                GREY, GREY_SHADOW, 15);
         mHelpBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 animatePress(v);
@@ -384,6 +379,15 @@ public class MenuFragment {
         mStatus.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         mStatus.setGravity(Gravity.CENTER);
         mStatus.setVisibility(View.GONE);
+        mStatus.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                // Retry the metadata fetch when it failed; Play stays hidden
+                // until site_info answers (P1.7).
+                if (!mSiteInfoLoaded && !mFindingGame) {
+                    fetchSiteInfo();
+                }
+            }
+        });
         card.addView(mStatus, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
@@ -392,6 +396,17 @@ public class MenuFragment {
 
         seedFromConfig();
         fetchSiteInfo();
+        // The Java UI is constructed before the C++ config/locale handshake on
+        // a cold start; re-localize once the bridge has applied the saved
+        // language (and retry the metadata fetch if it ran too early).
+        mRoot.postDelayed(new Runnable() {
+            @Override public void run() {
+                refresh();
+                if (mSiteInfoJson.isEmpty() && !mFindingGame) {
+                    fetchSiteInfo();
+                }
+            }
+        }, 1000);
     }
 
     // ===================== Layout helpers ===================================
@@ -492,24 +507,34 @@ public class MenuFragment {
         if (name != null && !name.isEmpty()) {
             mName.setText(name);
         }
-        String region = Json.peekString(config, "region");
-        if (region != null && !region.isEmpty()) {
-            mRegionLabel.setText(regionText(region, 0));
-        }
         mMuted = Json.peekBool(config, "muteAudio", false);
         updateMuteButton();
     }
 
     private String regionText(String region, int players) {
-        String name = region.length() > 0
-                ? Character.toUpperCase(region.charAt(0)) + region.substring(1)
-                : region;
-        String text = name + " [" + players + (players == 1 ? " player]" : " players]") + "";
+        String name = null;
+        for (PopEntry p : mPops) {
+            if (p.region.equals(region)) {
+                name = L10n.t(p.l10n, capitalizeRegion(region));
+                break;
+            }
+        }
+        if (name == null) {
+            name = capitalizeRegion(region);
+        }
+        String playersWord = L10n.t("index-players", "players");
+        String text = name + " [" + players + " " + playersWord + "]";
         int ping = pingFor(region);
         if (ping >= 0) {
             text += " \u00B7 " + ping + " ms";
         }
         return text;
+    }
+
+    private static String capitalizeRegion(String region) {
+        return region != null && region.length() > 0
+                ? Character.toUpperCase(region.charAt(0)) + region.substring(1)
+                : "";
     }
 
     /** Latency of `region` from the last ping test, or -1 when it did not answer. */
@@ -570,19 +595,35 @@ public class MenuFragment {
     private void toggleNews() {
         mNewsExpanded = !mNewsExpanded;
         mNewsScrollView.setVisibility(mNewsExpanded ? View.VISIBLE : View.GONE);
-        mNewsBtn.setText(mNewsExpanded ? "\u25B2 Hide News" : "\uD83D\uDCF0 News");
+        mNewsBtn.setText((mNewsExpanded ? "\u25B2 " : "\uD83D\uDCF0 ")
+                + L10n.t("index-news", "News"));
     }
 
     private void fetchSiteInfo() {
-        setStatus("Connecting to server...");
+        mSiteInfoLoaded = false;
+        mPlaySpinner.setVisibility(View.VISIBLE);
+        setStatus(L10n.t("index-connecting", "Connecting to server..."));
         SurvApi.siteInfo(mApiBaseUrl, new SurvApi.Callback() {
             @Override public void onResult(String json) {
                 if (json == null) {
-                    setStatus("Cannot reach server");
+                    mPlaySpinner.setVisibility(View.GONE);
+                    setStatus(L10n.t("index-cannot-reach-server", "Cannot reach server"));
                     return;
                 }
                 Log.i(TAG, "site_info response: " + json.substring(0, Math.min(json.length(), 200)));
                 mSiteInfoJson = json;
+                mModes = Json.parseModes(json);
+                buildModeButtons();
+                // siteInfo.ts: Join/Create Team only when an enabled team mode exists.
+                boolean supportsTeam = false;
+                for (Json.ModeEntry mode : mModes) {
+                    if (mode.enabled && mode.teamMode > 1) {
+                        supportsTeam = true;
+                        break;
+                    }
+                }
+                mTeamRow.setVisibility(supportsTeam ? View.VISIBLE : View.GONE);
+
                 List<Json.PopEntry> parsed = Json.parsePops(json);
                 mPops.clear();
                 for (Json.PopEntry p : parsed) {
@@ -604,10 +645,21 @@ public class MenuFragment {
                     }
                     showRegion();
                     buildRegionDropdown();
-                    setStatus("");
                 } else {
                     Log.w(TAG, "No regions parsed from site_info.");
-                    setStatus("No regions available from server");
+                    setStatus(L10n.t("index-no-regions", "No regions available from server"));
+                }
+                // Only reveal Play once site_info has supplied a usable mode and
+                // region list (P1.7: no hard-coded "na" fallback).
+                mSiteInfoLoaded = !mModes.isEmpty() && !mPops.isEmpty();
+                mPlaySpinner.setVisibility(View.GONE);
+                // The Java UI is built before the C++ locale/config handshake on
+                // a cold start; site_info lands afterwards, so re-read the l10n
+                // table here and re-render the menu chrome in the saved locale.
+                L10n.invalidate();
+                applyLocalization();
+                if (mSiteInfoLoaded && mPops.size() > 0) {
+                    setStatus("");
                 }
                 String newsJson = SurvBridge.getNewsJson();
                 String newsText = parseNewsText(newsJson);
@@ -620,6 +672,59 @@ public class MenuFragment {
         });
     }
 
+    /** site_info.modes -> the quick-play button rows (siteInfo.ts getGameModeStyles). */
+    private void buildModeButtons() {
+        mModeArea.removeAllViews();
+        mModeButtons.clear();
+        LinearLayout halfRow = null;
+        for (int i = 0; i < mModes.size(); i++) {
+            final Json.ModeEntry mode = mModes.get(i);
+            final int modeIdx = i;
+            String buttonText = modeButtonText(mode);
+            String label = L10n.t("index-play-" + buttonText,
+                    buttonText.length() > 0
+                            ? "Play " + Character.toUpperCase(buttonText.charAt(0)) + buttonText.substring(1)
+                            : "Play");
+            TextView btn = makeButton(label, GREEN, GREEN_SHADOW, i == 0 ? 18 : 16);
+            btn.setEnabled(mode.enabled);
+            btn.setAlpha(mode.enabled ? 1.0f : 0.45f);
+            btn.setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    if (!mode.enabled || !mSiteInfoLoaded) return;
+                    animatePress(v);
+                    onPlay(modeIdx);
+                }
+            });
+            mModeButtons.add(btn);
+            if (i == 0) {
+                mModeArea.addView(btn, rowParams(dp(42)));
+            } else {
+                if (halfRow == null || halfRow.getChildCount() >= 2) {
+                    halfRow = row(mActivity);
+                    mModeArea.addView(halfRow, rowParams(dp(38)));
+                }
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+                if (halfRow.getChildCount() == 0) {
+                    lp.rightMargin = dp(4);
+                } else {
+                    lp.leftMargin = dp(4);
+                }
+                halfRow.addView(btn, lp);
+            }
+        }
+    }
+
+    /** MapDef.desc.buttonText, else GameConfig.TeamModeToString[teamMode]. */
+    private static String modeButtonText(Json.ModeEntry mode) {
+        if (mode.mapName != null && mode.mapName.startsWith("faction")) {
+            return "50v50";
+        }
+        if (mode.teamMode == 1) return "solo";
+        if (mode.teamMode == 2) return "duo";
+        return "squad";
+    }
+
     // ===================== Region latency (M8) =============================
 
     /** C++ finished every probe: show the latencies and pick the closest region. */
@@ -630,6 +735,14 @@ public class MenuFragment {
         }
         mPings = pings;
         Log.i(TAG, "pingTest results " + json);
+        // The first ping snapshot arrives after the C++ bridge/locale install;
+        // use it as the reliable cold-start point to re-read l10n and, if the
+        // early site_info request lost the startup race, retry it.
+        L10n.invalidate();
+        applyLocalization();
+        if (mSiteInfoJson.isEmpty() && !mFindingGame) {
+            fetchSiteInfo();
+        }
 
         if (!mRegionChosen) {
             // pingTest.ts getRegion(): the lowest latency wins, ties keep the
@@ -693,17 +806,20 @@ public class MenuFragment {
 
     // ===================== Play ============================================
 
-    private void onPlay(final int teamMode) {
-        if (mFindingGame) return;
+    private void onPlay(final int gameModeIdx) {
+        if (mFindingGame || !mSiteInfoLoaded) return;
+        if (gameModeIdx < 0 || gameModeIdx >= mModes.size() || !mModes.get(gameModeIdx).enabled) {
+            return;
+        }
         mFindingGame = true;
-        setStatus("Finding game...");
+        setPlayLockout(true);
+        setStatus(L10n.t("index-finding-game", "Finding game..."));
         String region = "na";
         if (mSelectedRegionIdx >= 0 && mSelectedRegionIdx < mPops.size()) {
             region = mPops.get(mSelectedRegionIdx).region;
         }
         SurvBridge.setRegion(region);
 
-        int gameModeIdx = teamMode == 1 ? 0 : teamMode == 2 ? 1 : 2;
         final String bodyStr = "{\"region\":\"" + escapeJson(region) + "\""
                 + ",\"zones\":" + zonesJson(region)
                 + ",\"version\":" + SurvBridge.getProtocolVersion()
@@ -716,6 +832,17 @@ public class MenuFragment {
         AccountManager account = AccountManager.peek();
         final String token = account != null ? account.getSessionToken() : "";
         findGameAttempt(bodyStr, token, 0);
+    }
+
+    /** Play buttons dim/disable and the loading spinner follows the request. */
+    private void setPlayLockout(boolean lock) {
+        for (TextView btn : mModeButtons) {
+            int i = mModeButtons.indexOf(btn);
+            boolean enabled = i >= 0 && i < mModes.size() && mModes.get(i).enabled;
+            btn.setEnabled(!lock && enabled);
+            btn.setAlpha(lock ? 0.5f : (enabled ? 1.0f : 0.45f));
+        }
+        mPlaySpinner.setVisibility(lock ? View.VISIBLE : View.GONE);
     }
 
     /** main.ts findGame(): 2 attempts, 500 ms apart, transport failures only. */
@@ -740,6 +867,7 @@ public class MenuFragment {
                         return;
                     }
                     mFindingGame = false;
+                    setPlayLockout(false);
                     setStatus(l10n("index-failed-finding-game", "Failed finding game."));
                     return;
                 }
@@ -751,10 +879,11 @@ public class MenuFragment {
                     if (urls.size() > 0 && joinToken != null) {
                         String[] urlArray = urls.toArray(new String[urls.size()]);
                         SurvBridge.onJoinUrls(urlArray, joinToken);
-                        setStatus("Joining...");
+                        setStatus(l10n("index-joining-game", "Joining game"));
                         return;
                     }
                 }
+                setPlayLockout(false);
                 if ("banned".equals(type)) {
                     showIpBan(json);
                     return;
@@ -869,6 +998,8 @@ public class MenuFragment {
 
     public void show() {
         mRoot.setVisibility(View.VISIBLE);
+        mFindingGame = false;
+        setPlayLockout(false);
         refresh();
     }
 
@@ -877,6 +1008,10 @@ public class MenuFragment {
     }
 
     public void refresh() {
+        // The settings screen changes the language behind this menu: drop the
+        // cached table and re-render every label from the active locale.
+        L10n.invalidate();
+        applyLocalization();
         String config = SurvBridge.getConfigJson();
         String name = Json.peekString(config, "playerName");
         if (name != null && !name.isEmpty() && !mName.hasFocus()) {
@@ -887,6 +1022,28 @@ public class MenuFragment {
         AccountManager account = AccountManager.peek();
         if (account != null) {
             updateAccountButton(account.getProfile());
+        }
+    }
+
+    /** Re-applies the l10n table to the always-visible menu chrome. */
+    private void applyLocalization() {
+        mName.setHint(L10n.t("index-enter-name-here", "Enter your name here"));
+        mJoinTeamBtn.setText(L10n.t("index-join-team", "Join Team"));
+        mCreateTeamBtn.setText(L10n.t("index-create-team", "Create Team"));
+        mHelpBtn.setText("\uD83D\uDCD6 " + L10n.t("index-how-to-play", "How to Play"));
+        mPassBtn.setText("\uD83C\uDFC6 " + L10n.t("index-pass", "Pass"));
+        mNewsBtn.setText((mNewsExpanded ? "\u25B2 " : "\uD83D\uDCF0 ")
+                + L10n.t("index-news", "News"));
+        mSettingsBtn.setContentDescription(L10n.t("index-settings", "Settings"));
+        mProfileBtn.setContentDescription(L10n.t("index-account", "Account"));
+        if (mPops.isEmpty()) {
+            mRegionLabel.setText(L10n.t("index-region", "Region"));
+        } else {
+            showRegion();
+            buildRegionDropdown();
+        }
+        if (mSiteInfoLoaded) {
+            buildModeButtons();
         }
     }
 
@@ -974,28 +1131,37 @@ public class MenuFragment {
     private String parseNewsText(String json) {
         if (json == null) return null;
         StringBuilder out = new StringBuilder();
-        int at = json.indexOf('[');
-        if (at < 0) return null;
-        int depth = 0, objStart = -1;
-        for (int i = at; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (c == '{') { if (depth == 0) objStart = i; depth++; }
-            else if (c == '}') {
-                depth--;
-                if (depth == 0 && objStart >= 0) {
-                    String obj = json.substring(objStart, i + 1);
-                    String title = Json.peekString(obj, "title");
-                    if (title != null) {
-                        if (out.length() > 0) out.append('\n');
-                        out.append("\u2726 ").append(title);
-                        String desc = Json.peekString(obj, "body");
-                        if (desc != null && !desc.isEmpty()) {
-                            out.append("\n   ").append(desc.length() > 100 ? desc.substring(0, 100) + "..." : desc);
-                        }
+        try {
+            com.google.gson.JsonArray arr = com.google.gson.JsonParser.parseString(json).getAsJsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                com.google.gson.JsonElement el = arr.get(i);
+                if (el == null || !el.isJsonObject()) continue;
+                com.google.gson.JsonObject entry = el.getAsJsonObject();
+                String title = entry.has("title") ? entry.get("title").getAsString() : "";
+                String date = entry.has("date") ? entry.get("date").getAsString() : "";
+                if (out.length() > 0) out.append("\n\n");
+                out.append("\u2726 ");
+                if (!date.isEmpty()) out.append(date).append("  ");
+                out.append(title);
+                if (entry.has("paragraphs") && entry.get("paragraphs").isJsonArray()) {
+                    com.google.gson.JsonArray paragraphs = entry.getAsJsonArray("paragraphs");
+                    for (int j = 0; j < paragraphs.size(); j++) {
+                        com.google.gson.JsonElement pEl = paragraphs.get(j);
+                        if (pEl == null || !pEl.isJsonObject()) continue;
+                        com.google.gson.JsonObject paragraph = pEl.getAsJsonObject();
+                        if (!paragraph.has("text")) continue;
+                        String text = paragraph.get("text").getAsString();
+                        if (text.isEmpty()) continue;
+                        out.append("\n   ");
+                        out.append(text.length() > 140 ? text.substring(0, 140) + "..." : text);
                     }
-                    objStart = -1;
                 }
+                // The menu box is short; the two newest entries are enough.
+                if (i >= 1) break;
             }
+        } catch (Exception e) {
+            Log.w(TAG, "parseNewsText failed: " + e.getMessage());
+            return null;
         }
         return out.toString();
     }
