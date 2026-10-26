@@ -2511,3 +2511,78 @@ TEST(building_ceiling_destroy_particles) {
     b.update(0.016f, world);
     CHECK_EQ(activeParticles() - before, 25);
 }
+
+// util.ts hsvToRgb/rgbToInt port used by particles.ts color closures.
+TEST(hsv_to_rgb_matches_web) {
+    CHECK_EQ(math::hsvToRgbInt(0.0f, 0.0f, 1.0f), 0xffffffu);
+    CHECK_EQ(math::hsvToRgbInt(0.0f, 1.0f, 1.0f), 0xff0000u);
+    CHECK_EQ(math::hsvToRgbInt(1.0f / 3.0f, 1.0f, 1.0f), 0x00ff00u);
+    CHECK_EQ(math::hsvToRgbInt(2.0f / 3.0f, 1.0f, 1.0f), 0x0000ffu);
+    CHECK_EQ(math::hsvToRgbInt(0.0f, 0.0f, 0.0f), 0x000000u);
+    CHECK_EQ(math::hsvToRgbInt(0.0f, 0.0f, 0.5f), 0x808080u);
+}
+
+// P2 rendering parity: particles.ts color closures are generated as HSV ranges
+// and each Particle picks a fresh value (blood/leaf/chip variance).
+TEST(particle_color_variance) {
+    installGeneratedDefs();
+    const auto* defs = getDefProvider();
+    const ParticleDef* leaf = defs->particle("leaf");
+    CHECK(leaf != nullptr);
+    CHECK(leaf && leaf->colorVariance);
+    CHECK_NEAR(leaf->colorHueMin, 0.29f, 1e-5f);
+    CHECK_NEAR(leaf->colorHueMax, 0.29f, 1e-5f);
+    CHECK_NEAR(leaf->colorSatMin, 1.0f, 1e-5f);
+    CHECK_NEAR(leaf->colorValMin, 0.5f, 1e-5f);
+    CHECK_NEAR(leaf->colorValMax, 0.75f, 1e-5f);
+
+    // Static colors stay exact (glassChip = 0x80d9ff) and do not vary.
+    const ParticleDef* glass = defs->particle("glassChip");
+    CHECK(glass != nullptr);
+    CHECK(glass && glass->hasColor);
+    CHECK(glass && !glass->colorVariance);
+    CHECK(glass && glass->color == 0x80d9ffu);
+
+    pix::NullPixiFactory factory;
+    std::vector<uint32_t> tints;
+    for (int i = 0; i < 96; i++) {
+        Particle p;
+        p.m_init(&factory, "leaf", 0, Vec2(0.0f, 0.0f), Vec2(), 1.0f, 0.0f, nullptr, -1, 1.0f);
+        CHECK(p.sprite != nullptr);
+        tints.push_back(sprite(p.sprite)->tint);
+    }
+    const uint32_t lo = math::hsvToRgbInt(0.29f, 1.0f, 0.5f);
+    const uint32_t hi = math::hsvToRgbInt(0.29f, 1.0f, 0.75f);
+    int distinct = 0;
+    for (size_t i = 0; i < tints.size(); i++) {
+        const uint32_t c = tints[i];
+        CHECK(((c >> 16) & 0xff) >= ((lo >> 16) & 0xff) && ((c >> 16) & 0xff) <= ((hi >> 16) & 0xff));
+        CHECK(((c >> 8) & 0xff) >= ((lo >> 8) & 0xff) && ((c >> 8) & 0xff) <= ((hi >> 8) & 0xff));
+        CHECK((c & 0xff) <= (hi & 0xff));
+        bool first = true;
+        for (size_t j = 0; j < i; j++) {
+            if (tints[j] == c) {
+                first = false;
+                break;
+            }
+        }
+        if (first) distinct++;
+    }
+    CHECK(distinct > 8);
+}
+
+// P2 rendering parity: the river-shore footstep surface comes from
+// mapDef.biome.sound.riverShore (stone on the spring maps, sand elsewhere).
+TEST(river_shore_surface_from_map_def) {
+    installGeneratedDefs();
+    const auto* defs = getDefProvider();
+    const auto* main = defs->mapRender("main");
+    const auto* spring = defs->mapRender("main_spring");
+    const auto* woodsSpring = defs->mapRender("woods_spring");
+    CHECK(main != nullptr);
+    CHECK(spring != nullptr);
+    CHECK(woodsSpring != nullptr);
+    CHECK(main && main->riverShoreSurface == SurfaceType::Sand);
+    CHECK(spring && spring->riverShoreSurface == SurfaceType::Stone);
+    CHECK(woodsSpring && woodsSpring->riverShoreSurface == SurfaceType::Stone);
+}

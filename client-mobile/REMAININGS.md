@@ -17,7 +17,8 @@ real additive blending, the V minimap toggle, shell casings, newest/item-source/
 NEW-badge loadout polish, plus the P1.4–P1.7 HUD/menu/input/audio set. The
 second P2 pass adds eased player body radius, `maxVisualRadius` 3.75, def-driven
 bush rustle/particles, button useImg/offImg + useParticle, once-only obstacle
-destroy debris, and ceiling destroy particles. **198 host
+destroy debris, and ceiling destroy particles. The third adds per-particle
+HSV color variance and the map's river-shore footstep surface. **201 host
 tests pass, 0 fail.**
 
 ---
@@ -54,7 +55,7 @@ tests pass, 0 fail.**
 | `shared/defs/*` → `render/GeneratedDefs.cpp` (codegen) | ✅ generated |
 | `client/src/camera.ts` → `render/Camera.h` | ✅ |
 | `client/src/renderer.ts` → `render/Renderer.*` | ✅ transform/z-sort/mask ported; `GameWorld::update` calls `setActiveLayer`/`setUnderground` before `m_update` |
-| `client/src/map.ts` → `game/Map.*` | ✅ terrain, surfaces, pools, camera emitter, baked minimap texture, big map (`game/MapView`); river-shore surface is always sand (P2) |
+| `client/src/map.ts` → `game/Map.*` | ✅ terrain, surfaces, pools, camera emitter, baked minimap texture, big map (`game/MapView`); river-shore surface comes from `mapDef.biome.sound.riverShore` |
 | `client/src/gas.ts` → `game/Gas.*` | ✅ |
 | `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | ✅ dispatch/net, match-over latch + death/spectate, player/camera/projectile interpolation (P0.3), keyboard/mouse input + change-gated InputMsg (P1.6); local rotation remains desktop-only (P2) |
 | `client/src/objects/objectPool.ts` → `game/objects/GameObject.h` | ✅ |
@@ -73,7 +74,7 @@ tests pass, 0 fail.**
 | `client/src/objects/plane.ts` → `objects/Barns.*` | ✅ plane engine loop and airstrike zones instantiated |
 | `client/src/objects/flare.ts` → `objects/Barns.*` | 🔶 additive blend is a no-op (P2) |
 | `client/src/objects/structure.ts` → `objects/Structure.*` | ✅ bounds/masks/stairs/map icons + `interiorSound` ambience tracks |
-| `client/src/objects/particles.ts` → `objects/Barns.*` (ParticleBarn + Emitter) | ✅ near line-for-line; static colour per def (P2) |
+| `client/src/objects/particles.ts` → `objects/Barns.*` (ParticleBarn + Emitter) | ✅ near line-for-line; per-particle HSV color variance from the TS colour closures |
 | `client/src/audioManager.ts` → `audio/AudioManager.*` | ✅ startup volumes/mute, master folded into live type volumes, maxInstances/coalesce/delay/detune, ambient retention and stopAll semantics |
 | `client/src/soundDefs.ts` → `audio/GeneratedSoundDefs.cpp` (codegen) | ✅ generated |
 | `client/src/ambiance.ts` → `audio/Ambiance.*` | ✅ in-game tracks + menu music (GameScene ticks it while the Java menu is up), retained across match end, completed-track restart |
@@ -547,10 +548,21 @@ Done in the second P2 pass (2026-10-26):
   `obstacle_button_swap_and_destroy_fx`,
   `building_ceiling_destroy_particles`.
 
+Done in the third P2 pass (2026-10-26):
+- Particle colors: codegen samples each `particles.ts` colour closure at the
+  `util.random` endpoints and emits HSV ranges (`colorVariance`); each spawned
+  particle picks a fresh hue/sat/value (blood splats, leaves, wood/glass chips,
+  explosion bursts, ...). Plain numeric colours stay exact.
+- River-shore footstep surface comes from `mapDef.biome.sound.riverShore`:
+  `stone` on `main_spring`/`woods_spring`, `sand` elsewhere (was always sand).
+- Host tests: `hsv_to_rgb_matches_web`, `particle_color_variance`,
+  `river_shore_surface_from_map_def`.
+
 Remaining:
-- **Rendering:** particle colour variance (the web `color: () => ...` functions),
-  river-shore `"stone"` surface, `MapSprite` z-order, plane/airstrike visuals,
-  reload-timing casings (revolvers/pistols), body-easing edge cases.
+- **Rendering:** `MapSprite` z-order (the live HUD uses `MapView`/`EmoteManager`
+  ping layers; `MapSpriteBarn`/`MapIndicator` are only reachable from the dead
+  `FguiHud`), plane/airstrike visuals, reload-timing casings
+  (revolvers/pistols), body-easing edge cases.
 - **HUD/menus:** kill-feed role lines, squad bar role/team colours and downed
   pulse, gas icon/pulse, gear order/levels/tap-to-drop, menu
   splash/background/clientTheme, mode icons, news images/badges, social/streamer
@@ -621,7 +633,7 @@ Remaining:
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (198 tests, 0 failures expected)
+# host tests (201 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -887,3 +899,11 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - Ceiling destroy FX uses `def.ceilingDestroyParticle` �
   `def.ceilingDestroyParticleCount` inside `surfaces[0]` and the sound from
   `ceiling.destroy.sound` (codegen: never emit `def.sound`, it is an object).
+- Particle colours with a TS closure become HSV ranges in codegen
+  (`ParticleDef.colorVariance/colorHueMin..colorValMax`) and
+  `Particle::m_init` picks a fresh `math::hsvToRgbInt` colour per particle; plain
+  numeric defs keep `ParticleDef.color`. Do not reintroduce the codegen-time
+  averaged RGB (it removed all per-particle variance).
+- `Map::getGroundSurface` uses `mapDef.riverShoreSurface` on river banks
+  (codegen from `mapDef.biome.sound.riverShore`); only `main_spring` and
+  `woods_spring` are `stone`, every other map is `sand`.

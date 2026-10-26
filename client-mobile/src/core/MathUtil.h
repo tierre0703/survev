@@ -2,6 +2,7 @@
 #include "Vec2.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace surv {
 
@@ -309,6 +310,31 @@ inline Vec2 v2Clamp(const Vec2& vector, const Vec2& minV2, const Vec2& maxV2) {
     const float resX = vector.x < maxX ? (vector.x > minX ? vector.x : minX) : maxX;
     const float resY = vector.y < maxY ? (vector.y > minY ? vector.y : minY) : maxY;
     return Vec2(resX, resY);
+}
+
+// util.ts hsvToRgb + rgbToInt: h/s/v in 0..1, returns 0xRRGGBB.
+inline uint32_t hsvToRgbInt(float h, float s, float v) {
+    const int i = static_cast<int>(std::floor(h * 6.0f));
+    const float f = h * 6.0f - static_cast<float>(i);
+    const float p = v * (1.0f - s);
+    const float q = v * (1.0f - f * s);
+    const float t = v * (1.0f - (1.0f - f) * s);
+    float r = 0.0f;
+    float g = 0.0f;
+    float b = 0.0f;
+    switch (i % 6) {
+        case 0: r = v; g = t; b = p; break;
+        case 1: r = q; g = v; b = p; break;
+        case 2: r = p; g = v; b = t; break;
+        case 3: r = p; g = q; b = v; break;
+        case 4: r = t; g = p; b = v; break;
+        case 5: r = v; g = p; b = q; break;
+        default: break;
+    }
+    const uint32_t ri = static_cast<uint32_t>(std::round(r * 255.0f));
+    const uint32_t gi = static_cast<uint32_t>(std::round(g * 255.0f));
+    const uint32_t bi = static_cast<uint32_t>(std::round(b * 255.0f));
+    return (ri << 16) | (gi << 8) | bi;
 }
 
 } // namespace math

@@ -35,6 +35,28 @@ const mapTypes = MapObjectDefs.getAllTypes();
 const gameTypes = GameObjectDefs.getAllTypes();
 
 const n = (x, d = 0) => (Number.isFinite(Number(x)) ? Number(x) : d);
+// shared/defs/mapDefs biome.sound.riverShore (SurfaceType string) -> Defs.h
+// SurfaceType enum ordinal.
+const surfaceTypeNames = [
+    "water",
+    "sand",
+    "grass",
+    "tile",
+    "asphalt",
+    "brick",
+    "stone",
+    "carpet",
+    "bunker",
+    "container",
+    "warehouse",
+    "house",
+    "shack",
+    "snow",
+];
+const surfaceTypeCode = (s) => {
+    const i = surfaceTypeNames.indexOf(String(s ?? ""));
+    return i < 0 ? 1 : i;
+};
 // Float literal helper: clamps out-of-float-range constants (Number.MAX_VALUE)
 // so the generated braced initializers don't trip -Wc++11-narrowing.
 const f = (x, d = 0) => {
@@ -503,7 +525,9 @@ for (const [name, def] of Object.entries(MapDefs)) {
         str(
             def?.biome?.airdrop?.planeSound || "plane_01",
         )
-    },${str(def?.biome?.airdrop?.airdropImg || "map-chute-01.img")}},\n`;
+    },${str(def?.biome?.airdrop?.airdropImg || "map-chute-01.img")},${
+        surfaceTypeCode(def?.biome?.sound?.riverShore || "sand")
+    }},\n`;
 }
 
 // Game object render defs (loot images and separate player skin/held images).
@@ -745,37 +769,69 @@ function flat(v, dmin = 0, dmax = 0) {
 const rangeInit = (r) => `{${n(r.min)},${n(r.max)},${r.isConstant}}`;
 
 function sampleColor(color) {
-    if (color === undefined) return { has: 0, value: 0xffffff };
+    if (color === undefined) {
+        return {
+            has: 0,
+            value: 0xffffff,
+            variance: 0,
+            hMin: 0,
+            hMax: 0,
+            sMin: 1,
+            sMax: 1,
+            vMin: 1,
+            vMax: 1,
+        };
+    }
     if (typeof color === "function") {
-        // Average several samples so random color closures land near their mean.
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        const samples = 16;
-        // Keep generated files reproducible when rebuilding the player tables.
-        // Restore the global immediately after sampling the color closure.
-        const random = Math.random;
-        let seed = 0x4d34504f;
-        Math.random = () => {
-            seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-            return seed / 0x100000000;
+        // Most particles.ts colors are `rgbToInt(hsvToRgb(H, S, random(v0, v1)))`.
+        // Record the HSV arguments at the random endpoints so the runtime can
+        // pick a fresh color per particle instead of a codegen-time average.
+        const origRandom = util.random;
+        const origHsv = util.hsvToRgb;
+        const samples = [];
+        let recorded = null;
+        util.hsvToRgb = (h, s, v) => {
+            recorded = { h, s, v };
+            return origHsv(h, s, v);
         };
         try {
-            for (let i = 0; i < samples; i++) {
-                const c = color() & 0xffffff;
-                r += (c >> 16) & 0xff;
-                g += (c >> 8) & 0xff;
-                b += c & 0xff;
+            for (const t of [0, 1]) {
+                recorded = null;
+                util.random = (a, b) => a + (b - a) * t;
+                color();
+                if (recorded) samples.push(recorded);
             }
         } finally {
-            Math.random = random;
+            util.random = origRandom;
+            util.hsvToRgb = origHsv;
         }
-        r = Math.round(r / samples);
-        g = Math.round(g / samples);
-        b = Math.round(b / samples);
-        return { has: 1, value: (r << 16) | (g << 8) | b };
+        if (samples.length === 2) {
+            const [lo, hi] = samples;
+            return {
+                has: 1,
+                value: 0,
+                variance: 1,
+                hMin: lo.h,
+                hMax: hi.h,
+                sMin: lo.s,
+                sMax: hi.s,
+                vMin: lo.v,
+                vMax: hi.v,
+            };
+        }
+        return {
+            has: 1,
+            value: n(color()) & 0xffffff,
+            variance: 0,
+            hMin: 0,
+            hMax: 0,
+            sMin: 1,
+            sMax: 1,
+            vMin: 1,
+            vMax: 1,
+        };
     }
-    return { has: 1, value: n(color) & 0xffffff };
+    return { has: 1, value: n(color) & 0xffffff, variance: 0, hMin: 0, hMax: 0, sMin: 1, sMax: 1, vMin: 1, vMax: 1 };
 }
 
 let particleArrays = "";
@@ -816,6 +872,8 @@ for (const [name, def] of Object.entries(ParticleDefs)) {
         )
     },${n(def.alphaIn?.end, 0)},${rangeInit(alphaInLerp)},${color.has},${color.value},${
         def.ignoreValueAdjust ? 1 : 0
+    },${color.variance},${f(color.hMin)},${f(color.hMax)},${f(color.sMin)},${f(color.sMax)},${f(color.vMin)},${
+        f(color.vMax)
     }},\n`;
 }
 
@@ -1043,6 +1101,7 @@ struct RawMapRender {
     const char* const* atlases; int atlasCount;
     const char* ambMusic; const char* ambWind; const char* ambRiver; const char* ambWaves;
     const char* airdropPlaneImg; const char* airdropPlaneSound; const char* airdropChuteImg;
+    int riverShoreSurface;
 };
 struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura;
     int hasAttack; float attackOffX, attackOffY, attackRad; int cleave;
@@ -1063,6 +1122,7 @@ struct RawParticle {
     float alphaStart, alphaEnd; RawRange alphaLerp; int alphaUseExp; float alphaExp;
     int hasAlphaIn; float alphaInStart, alphaInEnd; RawRange alphaInLerp;
     int hasColor; unsigned color; int ignoreValueAdjust;
+    int colorVariance; float colorHMin, colorHMax, colorSMin, colorSMax, colorVMin, colorVMax;
 };
 struct RawEmitter {
     const char* name; const char* particle; RawRange rate; float radius; RawRange speed; float angle;
@@ -1391,6 +1451,7 @@ public:
             d.airdropPlaneImg = r.airdropPlaneImg ? r.airdropPlaneImg : "map-plane-01.img";
             d.airdropPlaneSound = r.airdropPlaneSound ? r.airdropPlaneSound : "plane_01";
             d.airdropChuteImg = r.airdropChuteImg ? r.airdropChuteImg : "map-chute-01.img";
+            d.riverShoreSurface = static_cast<SurfaceTypeDef>(r.riverShoreSurface);
             _mapRenders[r.name] = d;
         }
         for (const auto& r : kGameObjs) {
@@ -1473,6 +1534,13 @@ ${
             d.hasColor = r.hasColor != 0;
             d.color = r.color;
             d.ignoreValueAdjust = r.ignoreValueAdjust != 0;
+            d.colorVariance = r.colorVariance != 0;
+            d.colorHueMin = r.colorHMin;
+            d.colorHueMax = r.colorHMax;
+            d.colorSatMin = r.colorSMin;
+            d.colorSatMax = r.colorSMax;
+            d.colorValMin = r.colorVMin;
+            d.colorValMax = r.colorVMax;
             _particles[r.name] = std::move(d);
         }
         for (const auto& r : kEmitters) {

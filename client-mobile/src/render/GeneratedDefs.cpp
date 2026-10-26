@@ -67,6 +67,7 @@ struct RawMapRender {
     const char* const* atlases; int atlasCount;
     const char* ambMusic; const char* ambWind; const char* ambRiver; const char* ambWaves;
     const char* airdropPlaneImg; const char* airdropPlaneSound; const char* airdropChuteImg;
+    int riverShoreSurface;
 };
 struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura;
     int hasAttack; float attackOffX, attackOffY, attackRad; int cleave;
@@ -87,6 +88,7 @@ struct RawParticle {
     float alphaStart, alphaEnd; RawRange alphaLerp; int alphaUseExp; float alphaExp;
     int hasAlphaIn; float alphaInStart, alphaInEnd; RawRange alphaInLerp;
     int hasColor; unsigned color; int ignoreValueAdjust;
+    int colorVariance; float colorHMin, colorHMax, colorSMin, colorSMax, colorVMin, colorVMax;
 };
 struct RawEmitter {
     const char* name; const char* particle; RawRange rate; float radius; RawRange speed; float angle;
@@ -3906,158 +3908,158 @@ static const RawCollider kMask_996[] = {
     {1,-19,-85.31,39,-75.31},
 };
 static const char* const kParticleImgs_0[] = {"part-panel-01.img"};
-static const char* const kParticleImgs_169[] = {"part-splat-01.img","part-splat-02.img","part-splat-03.img"};
-static const char* const kParticleImgs_325[] = {"part-plank-01.img"};
-static const char* const kParticleImgs_510[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_667[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_820[] = {"part-woodchip-01.img"};
-static const char* const kParticleImgs_1002[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_1155[] = {"part-book-01.img"};
-static const char* const kParticleImgs_1334[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_1528[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_1724[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_1915[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_2113[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_2311[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_2504[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_2661[] = {"part-cloth-01.img"};
-static const char* const kParticleImgs_2815[] = {"part-cloth-01.img"};
-static const char* const kParticleImgs_2972[] = {"part-plate-01.img"};
-static const char* const kParticleImgs_3149[] = {"part-plate-01.img"};
-static const char* const kParticleImgs_3327[] = {"part-plate-01.img"};
-static const char* const kParticleImgs_3507[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_3695[] = {"part-plank-01.img"};
-static const char* const kParticleImgs_3877[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_4034[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_4217[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_4401[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_4586[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_4743[] = {"part-plank-01.img"};
-static const char* const kParticleImgs_4926[] = {"part-spark-02.img","part-plate-01.img","part-panel-01.img"};
-static const char* const kParticleImgs_5122[] = {"part-panel-01.img"};
-static const char* const kParticleImgs_5292[] = {"part-leaf-01.img"};
-static const char* const kParticleImgs_5470[] = {"part-leaf-01.img"};
-static const char* const kParticleImgs_5656[] = {"part-leaf-01sv.img"};
-static const char* const kParticleImgs_5842[] = {"part-leaf-02.img"};
-static const char* const kParticleImgs_6026[] = {"part-plate-01.img"};
-static const char* const kParticleImgs_6195[] = {"part-woodchip-01.img"};
-static const char* const kParticleImgs_6380[] = {"part-woodchip-01.img"};
-static const char* const kParticleImgs_6566[] = {"part-panel-01.img"};
-static const char* const kParticleImgs_6740[] = {"part-plank-01.img"};
-static const char* const kParticleImgs_6925[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_7081[] = {"part-pot-01.img"};
-static const char* const kParticleImgs_7233[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_7391[] = {"part-pumpkin-01.img"};
-static const char* const kParticleImgs_7545[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_7707[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_7868[] = {"part-pumpkin-01.img"};
-static const char* const kParticleImgs_8026[] = {"part-pumpkin-01.img"};
-static const char* const kParticleImgs_8183[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_8343[] = {"part-pumpkin-01.img"};
-static const char* const kParticleImgs_8499[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_8657[] = {"part-pumpkin-01.img"};
-static const char* const kParticleImgs_8811[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_8966[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_9117[] = {"part-plank-01.img"};
-static const char* const kParticleImgs_9297[] = {"map-stone-01.img"};
-static const char* const kParticleImgs_9454[] = {"map-stone-01.img"};
-static const char* const kParticleImgs_9607[] = {"map-stone-01.img"};
-static const char* const kParticleImgs_9766[] = {"map-stone-01.img"};
-static const char* const kParticleImgs_9922[] = {"part-panel-01.img"};
-static const char* const kParticleImgs_10093[] = {"part-panel-01.img"};
-static const char* const kParticleImgs_10270[] = {"part-woodchip-01.img"};
-static const char* const kParticleImgs_10452[] = {"part-panel-01.img"};
-static const char* const kParticleImgs_10627[] = {"part-panel-01.img"};
-static const char* const kParticleImgs_10806[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_10962[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_11126[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_11286[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_11446[] = {"part-feather-01.img","part-feather-02.img"};
-static const char* const kParticleImgs_11624[] = {"part-feather-01.img","part-feather-02.img"};
-static const char* const kParticleImgs_11805[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_11964[] = {"part-plank-01.img"};
-static const char* const kParticleImgs_12148[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_12340[] = {"part-woodchip-01.img"};
-static const char* const kParticleImgs_12523[] = {"part-log-01.img"};
-static const char* const kParticleImgs_12703[] = {"part-plank-01.img"};
-static const char* const kParticleImgs_12885[] = {"part-spark-02.img"};
-static const char* const kParticleImgs_13068[] = {"part-shell-01.img"};
-static const char* const kParticleImgs_13259[] = {"part-shell-01.img"};
-static const char* const kParticleImgs_13457[] = {"part-shell-02.img"};
-static const char* const kParticleImgs_13651[] = {"part-shell-04.img"};
-static const char* const kParticleImgs_13845[] = {"part-shell-03.img"};
-static const char* const kParticleImgs_14030[] = {"part-shell-01.img"};
-static const char* const kParticleImgs_14222[] = {"part-shell-06.img"};
-static const char* const kParticleImgs_14415[] = {"part-shell-05.img"};
-static const char* const kParticleImgs_14609[] = {"part-shell-03.img"};
-static const char* const kParticleImgs_14792[] = {"part-shell-01.img"};
-static const char* const kParticleImgs_14977[] = {"part-wedge-01.img"};
-static const char* const kParticleImgs_15168[] = {"part-note-02.img"};
-static const char* const kParticleImgs_15357[] = {"part-frag-pin-01.img"};
-static const char* const kParticleImgs_15514[] = {"part-frag-lever-01.img"};
-static const char* const kParticleImgs_15707[] = {"part-frag-burst-01.img"};
-static const char* const kParticleImgs_15858[] = {"part-frag-burst-01.img"};
-static const char* const kParticleImgs_16008[] = {"part-smoke-01.img"};
-static const char* const kParticleImgs_16199[] = {"part-frag-burst-01.img"};
-static const char* const kParticleImgs_16349[] = {"part-frag-burst-03.img"};
-static const char* const kParticleImgs_16501[] = {"part-frag-burst-02.img"};
-static const char* const kParticleImgs_16651[] = {"part-frag-burst-01.img"};
-static const char* const kParticleImgs_16803[] = {"part-frag-burst-01.img"};
-static const char* const kParticleImgs_16958[] = {"part-smoke-02.img","part-smoke-03.img"};
-static const char* const kParticleImgs_17151[] = {"part-airdrop-01.img"};
-static const char* const kParticleImgs_17346[] = {"part-airdrop-01h.img"};
-static const char* const kParticleImgs_17542[] = {"part-airdrop-01x.img"};
-static const char* const kParticleImgs_17738[] = {"part-airdrop-02.img"};
-static const char* const kParticleImgs_17920[] = {"part-airdrop-02h.img"};
-static const char* const kParticleImgs_18103[] = {"part-airdrop-02x.img"};
-static const char* const kParticleImgs_18286[] = {"part-airdrop-03.img"};
-static const char* const kParticleImgs_18481[] = {"part-airdrop-04.img"};
-static const char* const kParticleImgs_18663[] = {"part-class-shell-01a.img"};
-static const char* const kParticleImgs_18857[] = {"part-class-shell-01b.img"};
-static const char* const kParticleImgs_19038[] = {"part-class-shell-02a.img"};
-static const char* const kParticleImgs_19232[] = {"part-class-shell-02b.img"};
-static const char* const kParticleImgs_19413[] = {"part-class-shell-03a.img"};
-static const char* const kParticleImgs_19607[] = {"part-class-shell-03b.img"};
-static const char* const kParticleImgs_19788[] = {"part-smoke-02.img","part-smoke-03.img"};
-static const char* const kParticleImgs_19988[] = {"part-smoke-02.img","part-smoke-03.img"};
-static const char* const kParticleImgs_20192[] = {"player-ripple-01.img"};
-static const char* const kParticleImgs_20395[] = {"player-ripple-01.img"};
-static const char* const kParticleImgs_20551[] = {"part-leaf-03.img","part-leaf-04.img","part-leaf-05.img","part-leaf-06.img"};
-static const char* const kParticleImgs_20744[] = {"part-leaf-03.img","part-leaf-04.img","part-leaf-05.img","part-leaf-06.img"};
-static const char* const kParticleImgs_20939[] = {"part-blossom-01.img","part-blossom-02.img","part-blossom-03.img","part-blossom-04.img"};
-static const char* const kParticleImgs_21132[] = {"part-leaf-06.img"};
-static const char* const kParticleImgs_21325[] = {"part-blossom-01.img","part-blossom-02.img","part-blossom-03.img","part-blossom-04.img","part-potato-02.img"};
-static const char* const kParticleImgs_21518[] = {"part-potato-02.img"};
-static const char* const kParticleImgs_21707[] = {"part-potato-02.img","part-tomato-02.img"};
-static const char* const kParticleImgs_21905[] = {"part-snow-01.img"};
-static const char* const kParticleImgs_22091[] = {"part-snow-01.img"};
-static const char* const kParticleImgs_22286[] = {"part-potato-01.img"};
-static const char* const kParticleImgs_22479[] = {"part-potato-01.img"};
-static const char* const kParticleImgs_22676[] = {"part-coconut-01.img","part-coconut-02.img","part-coconut-03.img"};
-static const char* const kParticleImgs_22870[] = {"part-tomato-01.img"};
-static const char* const kParticleImgs_23063[] = {"part-heal-basic.img"};
-static const char* const kParticleImgs_23228[] = {"part-heal-heart.img"};
-static const char* const kParticleImgs_23393[] = {"part-heal-moon.img"};
-static const char* const kParticleImgs_23591[] = {"part-heal-tomoe.img"};
-static const char* const kParticleImgs_23789[] = {"part-heal-diamond.img"};
-static const char* const kParticleImgs_23956[] = {"part-heal-ankh.img"};
-static const char* const kParticleImgs_24153[] = {"part-heal-menacing.img"};
-static const char* const kParticleImgs_24321[] = {"part-boost-basic.img"};
-static const char* const kParticleImgs_24515[] = {"part-boost-star.img"};
-static const char* const kParticleImgs_24708[] = {"part-boost-naturalize.img"};
-static const char* const kParticleImgs_24906[] = {"part-boost-shuriken.img"};
-static const char* const kParticleImgs_25101[] = {"part-boost-club.img"};
-static const char* const kParticleImgs_25294[] = {"part-boost-lightning.img"};
-static const char* const kParticleImgs_25492[] = {"part-boost-hermes.img"};
-static const char* const kParticleImgs_25687[] = {"part-boost-gearshift-01.img"};
-static const char* const kParticleImgs_25854[] = {"part-boost-gearshift-02.img"};
-static const char* const kParticleImgs_26053[] = {"part-heal-basic.img"};
-static const char* const kParticleImgs_26220[] = {"part-blossom-01.img","part-blossom-02.img","part-blossom-03.img","part-blossom-04.img"};
-static const char* const kParticleImgs_26406[] = {"part-takedown-01.img"};
-static const char* const kParticleImgs_26599[] = {"part-note-01.img"};
-static const char* const kParticleImgs_26791[] = {"part-boost-basic.img"};
-static const char* const kParticleImgs_26984[] = {"part-boost-basic.img"};
-static const char* const kParticleImgs_27175[] = {"part-boost-basic.img"};
+static const char* const kParticleImgs_195[] = {"part-splat-01.img","part-splat-02.img","part-splat-03.img"};
+static const char* const kParticleImgs_377[] = {"part-plank-01.img"};
+static const char* const kParticleImgs_585[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_768[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_947[] = {"part-woodchip-01.img"};
+static const char* const kParticleImgs_1149[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_1325[] = {"part-book-01.img"};
+static const char* const kParticleImgs_1529[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_1737[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_1947[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_2152[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_2364[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_2576[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_2783[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_2960[] = {"part-cloth-01.img"};
+static const char* const kParticleImgs_3124[] = {"part-cloth-01.img"};
+static const char* const kParticleImgs_3291[] = {"part-plate-01.img"};
+static const char* const kParticleImgs_3482[] = {"part-plate-01.img"};
+static const char* const kParticleImgs_3685[] = {"part-plate-01.img"};
+static const char* const kParticleImgs_3878[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_4080[] = {"part-plank-01.img"};
+static const char* const kParticleImgs_4276[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_4457[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_4656[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_4861[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_5068[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_5248[] = {"part-plank-01.img"};
+static const char* const kParticleImgs_5445[] = {"part-spark-02.img","part-plate-01.img","part-panel-01.img"};
+static const char* const kParticleImgs_5655[] = {"part-panel-01.img"};
+static const char* const kParticleImgs_5848[] = {"part-leaf-01.img"};
+static const char* const kParticleImgs_6045[] = {"part-leaf-01.img"};
+static const char* const kParticleImgs_6254[] = {"part-leaf-01sv.img"};
+static const char* const kParticleImgs_6452[] = {"part-leaf-02.img"};
+static const char* const kParticleImgs_6648[] = {"part-plate-01.img"};
+static const char* const kParticleImgs_6841[] = {"part-woodchip-01.img"};
+static const char* const kParticleImgs_7050[] = {"part-woodchip-01.img"};
+static const char* const kParticleImgs_7261[] = {"part-panel-01.img"};
+static const char* const kParticleImgs_7461[] = {"part-plank-01.img"};
+static const char* const kParticleImgs_7671[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_7852[] = {"part-pot-01.img"};
+static const char* const kParticleImgs_8029[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_8214[] = {"part-pumpkin-01.img"};
+static const char* const kParticleImgs_8395[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_8574[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_8761[] = {"part-pumpkin-01.img"};
+static const char* const kParticleImgs_8936[] = {"part-pumpkin-01.img"};
+static const char* const kParticleImgs_9119[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_9295[] = {"part-pumpkin-01.img"};
+static const char* const kParticleImgs_9470[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_9654[] = {"part-pumpkin-01.img"};
+static const char* const kParticleImgs_9834[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_10009[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_10181[] = {"part-plank-01.img"};
+static const char* const kParticleImgs_10382[] = {"map-stone-01.img"};
+static const char* const kParticleImgs_10552[] = {"map-stone-01.img"};
+static const char* const kParticleImgs_10718[] = {"map-stone-01.img"};
+static const char* const kParticleImgs_10892[] = {"map-stone-01.img"};
+static const char* const kParticleImgs_11063[] = {"part-panel-01.img"};
+static const char* const kParticleImgs_11259[] = {"part-panel-01.img"};
+static const char* const kParticleImgs_11450[] = {"part-woodchip-01.img"};
+static const char* const kParticleImgs_11656[] = {"part-panel-01.img"};
+static const char* const kParticleImgs_11855[] = {"part-panel-01.img"};
+static const char* const kParticleImgs_12050[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_12225[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_12414[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_12599[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_12785[] = {"part-feather-01.img","part-feather-02.img"};
+static const char* const kParticleImgs_12977[] = {"part-feather-01.img","part-feather-02.img"};
+static const char* const kParticleImgs_13172[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_13350[] = {"part-plank-01.img"};
+static const char* const kParticleImgs_13553[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_13759[] = {"part-woodchip-01.img"};
+static const char* const kParticleImgs_13962[] = {"part-log-01.img"};
+static const char* const kParticleImgs_14162[] = {"part-plank-01.img"};
+static const char* const kParticleImgs_14364[] = {"part-spark-02.img"};
+static const char* const kParticleImgs_14567[] = {"part-shell-01.img"};
+static const char* const kParticleImgs_14770[] = {"part-shell-01.img"};
+static const char* const kParticleImgs_14980[] = {"part-shell-02.img"};
+static const char* const kParticleImgs_15186[] = {"part-shell-04.img"};
+static const char* const kParticleImgs_15392[] = {"part-shell-03.img"};
+static const char* const kParticleImgs_15589[] = {"part-shell-01.img"};
+static const char* const kParticleImgs_15793[] = {"part-shell-06.img"};
+static const char* const kParticleImgs_15998[] = {"part-shell-05.img"};
+static const char* const kParticleImgs_16204[] = {"part-shell-03.img"};
+static const char* const kParticleImgs_16399[] = {"part-shell-01.img"};
+static const char* const kParticleImgs_16596[] = {"part-wedge-01.img"};
+static const char* const kParticleImgs_16801[] = {"part-note-02.img"};
+static const char* const kParticleImgs_17004[] = {"part-frag-pin-01.img"};
+static const char* const kParticleImgs_17175[] = {"part-frag-lever-01.img"};
+static const char* const kParticleImgs_17382[] = {"part-frag-burst-01.img"};
+static const char* const kParticleImgs_17554[] = {"part-frag-burst-01.img"};
+static const char* const kParticleImgs_17717[] = {"part-smoke-01.img"};
+static const char* const kParticleImgs_17920[] = {"part-frag-burst-01.img"};
+static const char* const kParticleImgs_18089[] = {"part-frag-burst-03.img"};
+static const char* const kParticleImgs_18263[] = {"part-frag-burst-02.img"};
+static const char* const kParticleImgs_18427[] = {"part-frag-burst-01.img"};
+static const char* const kParticleImgs_18593[] = {"part-frag-burst-01.img"};
+static const char* const kParticleImgs_18762[] = {"part-smoke-02.img","part-smoke-03.img"};
+static const char* const kParticleImgs_18967[] = {"part-airdrop-01.img"};
+static const char* const kParticleImgs_19176[] = {"part-airdrop-01h.img"};
+static const char* const kParticleImgs_19386[] = {"part-airdrop-01x.img"};
+static const char* const kParticleImgs_19596[] = {"part-airdrop-02.img"};
+static const char* const kParticleImgs_19792[] = {"part-airdrop-02h.img"};
+static const char* const kParticleImgs_19989[] = {"part-airdrop-02x.img"};
+static const char* const kParticleImgs_20186[] = {"part-airdrop-03.img"};
+static const char* const kParticleImgs_20395[] = {"part-airdrop-04.img"};
+static const char* const kParticleImgs_20591[] = {"part-class-shell-01a.img"};
+static const char* const kParticleImgs_20799[] = {"part-class-shell-01b.img"};
+static const char* const kParticleImgs_20994[] = {"part-class-shell-02a.img"};
+static const char* const kParticleImgs_21202[] = {"part-class-shell-02b.img"};
+static const char* const kParticleImgs_21397[] = {"part-class-shell-03a.img"};
+static const char* const kParticleImgs_21605[] = {"part-class-shell-03b.img"};
+static const char* const kParticleImgs_21800[] = {"part-smoke-02.img","part-smoke-03.img"};
+static const char* const kParticleImgs_22014[] = {"part-smoke-02.img","part-smoke-03.img"};
+static const char* const kParticleImgs_22232[] = {"player-ripple-01.img"};
+static const char* const kParticleImgs_22445[] = {"player-ripple-01.img"};
+static const char* const kParticleImgs_22615[] = {"part-leaf-03.img","part-leaf-04.img","part-leaf-05.img","part-leaf-06.img"};
+static const char* const kParticleImgs_22820[] = {"part-leaf-03.img","part-leaf-04.img","part-leaf-05.img","part-leaf-06.img"};
+static const char* const kParticleImgs_23028[] = {"part-blossom-01.img","part-blossom-02.img","part-blossom-03.img","part-blossom-04.img"};
+static const char* const kParticleImgs_23233[] = {"part-leaf-06.img"};
+static const char* const kParticleImgs_23438[] = {"part-blossom-01.img","part-blossom-02.img","part-blossom-03.img","part-blossom-04.img","part-potato-02.img"};
+static const char* const kParticleImgs_23643[] = {"part-potato-02.img"};
+static const char* const kParticleImgs_23844[] = {"part-potato-02.img","part-tomato-02.img"};
+static const char* const kParticleImgs_24054[] = {"part-snow-01.img"};
+static const char* const kParticleImgs_24252[] = {"part-snow-01.img"};
+static const char* const kParticleImgs_24459[] = {"part-potato-01.img"};
+static const char* const kParticleImgs_24664[] = {"part-potato-01.img"};
+static const char* const kParticleImgs_24875[] = {"part-coconut-01.img","part-coconut-02.img","part-coconut-03.img"};
+static const char* const kParticleImgs_25081[] = {"part-tomato-01.img"};
+static const char* const kParticleImgs_25286[] = {"part-heal-basic.img"};
+static const char* const kParticleImgs_25460[] = {"part-heal-heart.img"};
+static const char* const kParticleImgs_25634[] = {"part-heal-moon.img"};
+static const char* const kParticleImgs_25841[] = {"part-heal-tomoe.img"};
+static const char* const kParticleImgs_26048[] = {"part-heal-diamond.img"};
+static const char* const kParticleImgs_26224[] = {"part-heal-ankh.img"};
+static const char* const kParticleImgs_26430[] = {"part-heal-menacing.img"};
+static const char* const kParticleImgs_26607[] = {"part-boost-basic.img"};
+static const char* const kParticleImgs_26815[] = {"part-boost-star.img"};
+static const char* const kParticleImgs_27022[] = {"part-boost-naturalize.img"};
+static const char* const kParticleImgs_27234[] = {"part-boost-shuriken.img"};
+static const char* const kParticleImgs_27443[] = {"part-boost-club.img"};
+static const char* const kParticleImgs_27650[] = {"part-boost-lightning.img"};
+static const char* const kParticleImgs_27862[] = {"part-boost-hermes.img"};
+static const char* const kParticleImgs_28071[] = {"part-boost-gearshift-01.img"};
+static const char* const kParticleImgs_28252[] = {"part-boost-gearshift-02.img"};
+static const char* const kParticleImgs_28465[] = {"part-heal-basic.img"};
+static const char* const kParticleImgs_28647[] = {"part-blossom-01.img","part-blossom-02.img","part-blossom-03.img","part-blossom-04.img"};
+static const char* const kParticleImgs_28852[] = {"part-takedown-01.img"};
+static const char* const kParticleImgs_29059[] = {"part-note-01.img"};
+static const char* const kParticleImgs_29267[] = {"part-boost-basic.img"};
+static const char* const kParticleImgs_29482[] = {"part-boost-basic.img"};
+static const char* const kParticleImgs_29695[] = {"part-boost-basic.img"};
 static const RawPlane kPlanes[] = {
     {0,48,150,2.5,0.25,92,0},
     {0,350,120,18,18,48,1.25},
@@ -5242,48 +5244,48 @@ static const RawMapObj kMapObjs[] = {
     {"loot_tier_helmet_forest",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,0,"","","",0,2,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","","","","","","","","","","","","","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0,"","","","",0},
 };
 static const char* const kMapAtlases_0[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_248[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_524[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_783[] = {"loadout","shared","desert"};
-static const char* const kMapAtlases_1037[] = {"loadout","shared","faction"};
-static const char* const kMapAtlases_1287[] = {"loadout","shared","faction","potato"};
-static const char* const kMapAtlases_1555[] = {"loadout","shared","halloween"};
-static const char* const kMapAtlases_1832[] = {"loadout","shared","main","potato"};
-static const char* const kMapAtlases_2099[] = {"loadout","shared","main","potato"};
-static const char* const kMapAtlases_2378[] = {"loadout","shared","snow"};
-static const char* const kMapAtlases_2646[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_2910[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_3182[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_3460[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_3740[] = {"loadout","shared","savannah"};
-static const char* const kMapAtlases_3996[] = {"loadout","shared","cobalt"};
-static const char* const kMapAtlases_4243[] = {"loadout","shared","turkey"};
-static const char* const kMapAtlases_4497[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_4751[] = {"loadout","shared","main","beach"};
-static const char* const kMapAtlases_5005[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_5263[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_250[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_528[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_789[] = {"loadout","shared","desert"};
+static const char* const kMapAtlases_1045[] = {"loadout","shared","faction"};
+static const char* const kMapAtlases_1297[] = {"loadout","shared","faction","potato"};
+static const char* const kMapAtlases_1567[] = {"loadout","shared","halloween"};
+static const char* const kMapAtlases_1846[] = {"loadout","shared","main","potato"};
+static const char* const kMapAtlases_2115[] = {"loadout","shared","main","potato"};
+static const char* const kMapAtlases_2396[] = {"loadout","shared","snow"};
+static const char* const kMapAtlases_2666[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_2932[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_3206[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_3486[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_3768[] = {"loadout","shared","savannah"};
+static const char* const kMapAtlases_4026[] = {"loadout","shared","cobalt"};
+static const char* const kMapAtlases_4275[] = {"loadout","shared","turkey"};
+static const char* const kMapAtlases_4531[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_4787[] = {"loadout","shared","main","beach"};
+static const char* const kMapAtlases_5043[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_5303[] = {"loadout","shared","main"};
 static const RawMapRender kMapRenders[] = {
-    {"main",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_0,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"main_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_248,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"main_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_524,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"desert",6976835,13206586,14657367,11689508,9083726,13756037,9530919,4370618,11792639,4001027,0,0,0,0,1,"",kMapAtlases_783,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"faction",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,0,0,0,1,"",kMapAtlases_1037,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"faction_potato",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,1,0,0,1,"falling_pvt",kMapAtlases_1287,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"halloween",1507328,6570254,2171908,3939077,2621440,1048833,3939077,2621440,1048833,1181697,0,0,0,0,0.3,"falling_leaf_halloween",kMapAtlases_1555,3,"menu_music_02","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"potato",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,1,0,0,1,"falling_potato",kMapAtlases_1832,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"potato_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,1,0,0,1,"falling_leaf_potato",kMapAtlases_2099,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_fast",kMapAtlases_2378,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01x.img","plane_02","map-chute-01x.img"},
-    {"woods",2118510,15709019,9339690,7812619,3310251,11792639,7812619,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf",kMapAtlases_2646,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"woods_snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_slow",kMapAtlases_2910,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"woods_spring",2118510,15709019,4351497,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_3182,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"woods_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_summer",kMapAtlases_3460,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"savannah",1858399,13332786,11841582,11689508,4301994,9892086,11689508,4301994,9892086,4001027,0,0,0,0,1,"",kMapAtlases_3740,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"cobalt",134680,6834230,5069416,4472122,13681,11792639,4472122,13681,11792639,1772803,0,0,1,0,1,"",kMapAtlases_3996,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"turkey",4672842,13408091,10521391,12409889,7371638,8292740,12409889,7371638,8292740,1772803,0,0,0,1,1,"",kMapAtlases_4243,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"birthday",2118510,7444036,8433481,9461284,8433481,11792639,9461284,8433481,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4497,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"beach",2118510,16771002,8104037,10711321,4370618,11792639,10711321,4370618,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4751,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"test_normal",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_5005,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
-    {"test_faction",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,1,0,0,0,1,"",kMapAtlases_5263,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img"},
+    {"main",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_0,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"main_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_250,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",6},
+    {"main_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_528,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"desert",6976835,13206586,14657367,11689508,9083726,13756037,9530919,4370618,11792639,4001027,0,0,0,0,1,"",kMapAtlases_789,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"faction",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,0,0,0,1,"",kMapAtlases_1045,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"faction_potato",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,1,0,0,1,"falling_pvt",kMapAtlases_1297,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"halloween",1507328,6570254,2171908,3939077,2621440,1048833,3939077,2621440,1048833,1181697,0,0,0,0,0.3,"falling_leaf_halloween",kMapAtlases_1567,3,"menu_music_02","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"potato",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,1,0,0,1,"falling_potato",kMapAtlases_1846,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"potato_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,1,0,0,1,"falling_leaf_potato",kMapAtlases_2115,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_fast",kMapAtlases_2396,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01x.img","plane_02","map-chute-01x.img",1},
+    {"woods",2118510,15709019,9339690,7812619,3310251,11792639,7812619,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf",kMapAtlases_2666,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"woods_snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_slow",kMapAtlases_2932,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"woods_spring",2118510,15709019,4351497,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_3206,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",6},
+    {"woods_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_summer",kMapAtlases_3486,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"savannah",1858399,13332786,11841582,11689508,4301994,9892086,11689508,4301994,9892086,4001027,0,0,0,0,1,"",kMapAtlases_3768,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"cobalt",134680,6834230,5069416,4472122,13681,11792639,4472122,13681,11792639,1772803,0,0,1,0,1,"",kMapAtlases_4026,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"turkey",4672842,13408091,10521391,12409889,7371638,8292740,12409889,7371638,8292740,1772803,0,0,0,1,1,"",kMapAtlases_4275,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"birthday",2118510,7444036,8433481,9461284,8433481,11792639,9461284,8433481,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4531,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"beach",2118510,16771002,8104037,10711321,4370618,11792639,10711321,4370618,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4787,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"test_normal",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_5043,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"test_faction",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,1,0,0,0,1,"",kMapAtlases_5303,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
 };
 static const RawEmote kEmotes[] = {
     {"emote_medical","emote-medical-healthkit.img","emote_01","ui","",1,0},
@@ -6398,159 +6400,159 @@ static const RawLoadoutItem kLoadoutItems[] = {
     {"outfitStumpAxe","outfit","Stump Axe Costume","","loot-shirt-01.img",0,11100701},
 };
 static const RawParticle kParticles[] = {
-    {"archwayBreak",kParticleImgs_0,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.2,0.35,0},{0.08,0.12,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,7878419,0},
-    {"bloodSplat",kParticleImgs_169,3,20,{0.5,0.5,1},{1,1,1},{0,0,1},{0.04,0.04,1},{0.15,0.2,0},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,10485760,0},
-    {"barrelPlank",kParticleImgs_325,1,20,{1,1.5,0},{3,5,0},{9.42477796076938,9.42477796076938,1},{0.08,0.18,0},{0.07,0.17,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,11234338,0},
-    {"barrelChip",kParticleImgs_510,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,6644579,0},
-    {"barrelBreak",kParticleImgs_667,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,6644579,0},
-    {"blackChip",kParticleImgs_820,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,2828328,0},
-    {"blueChip",kParticleImgs_1002,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,8918,0},
-    {"book",kParticleImgs_1155,1,20,{1,1.5,0},{3,5,0},{9.42477796076938,9.42477796076938,1},{0.09,0.19,0},{0.07,0.17,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,12227180,0},
-    {"bottleBrownChip",kParticleImgs_1334,1,20,{0.5,0.5,1},{1,5,0},{3.141592653589793,18.84955592153876,0},{0.02,0.04,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,7878664,0},
-    {"bottleBrownBreak",kParticleImgs_1528,1,20,{0.4,0.8,0},{1,4,0},{3.141592653589793,18.84955592153876,0},{0.03,0.06,0},{0.05,0.1,0},{0,1,0},0,0,0.8,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,7878664,0},
-    {"bottleBlueChip",kParticleImgs_1724,1,20,{0.5,0.5,1},{1,5,0},{3.141592653589793,18.84955592153876,0},{0.02,0.04,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,19544,0},
-    {"bottleWhiteBreak",kParticleImgs_1915,1,20,{0.4,0.8,0},{1,4,0},{3.141592653589793,18.84955592153876,0},{0.03,0.06,0},{0.05,0.1,0},{0,1,0},0,0,0.75,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"bottleWhiteChip",kParticleImgs_2113,1,20,{0.5,0.5,1},{1,5,0},{3.141592653589793,18.84955592153876,0},{0.02,0.04,0},{0.01,0.02,0},{0,1,0},0,0,0.75,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"bottleBlueBreak",kParticleImgs_2311,1,20,{0.4,0.8,0},{1,4,0},{3.141592653589793,18.84955592153876,0},{0.03,0.06,0},{0.05,0.1,0},{0,1,0},0,0,0.8,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,19544,0},
-    {"brickChip",kParticleImgs_2504,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,5511192,0},
-    {"clothBreak",kParticleImgs_2661,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16382457,0},
-    {"clothHit",kParticleImgs_2815,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16382457,0},
-    {"depositBoxGreyBreak",kParticleImgs_2972,1,20,{0.5,1,0},{7,8,0},{0,9.42477796076938,0},{0.15,0.25,0},{0.12,0.2,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,6184542,0},
-    {"depositBoxGoldBreak",kParticleImgs_3149,1,20,{0.5,1,0},{6,8,0},{0,9.42477796076938,0},{0.2,0.35,0},{0.18,0.25,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,10909210,0},
-    {"depositBoxSilverBreak",kParticleImgs_3327,1,20,{0.5,1,0},{6,8,0},{0,9.42477796076938,0},{0.2,0.35,0},{0.18,0.25,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,11776947,0},
-    {"glassChip",kParticleImgs_3507,1,20,{0.5,0.5,1},{1,5,0},{3.141592653589793,18.84955592153876,0},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,8444415,0},
-    {"glassPlank",kParticleImgs_3695,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,8444415,0},
-    {"goldChip",kParticleImgs_3877,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,14918180,0},
-    {"pinkChip",kParticleImgs_4034,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16611705,0},
-    {"ltblueChip",kParticleImgs_4217,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,5832189,0},
-    {"yellowChip",kParticleImgs_4401,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16643396,0},
-    {"greenChip",kParticleImgs_4586,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,7704448,0},
-    {"greenPlank",kParticleImgs_4743,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.08,0.16,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,3884335,0},
-    {"greenhouseBreak",kParticleImgs_4926,3,20,{0.5,1.5,0},{1,5,0},{3.141592653589793,18.84955592153876,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,0.8,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,8444415,0},
-    {"hutBreak",kParticleImgs_5122,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,13404711,0},
-    {"leaf",kParticleImgs_5292,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,2793472,0},
-    {"leafSynthetic",kParticleImgs_5470,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,868397,0},
-    {"leafPrickly",kParticleImgs_5656,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,13882323,0},
-    {"leafRiver",kParticleImgs_5842,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,10526880,0},
-    {"lockerBreak",kParticleImgs_6026,1,20,{0.5,1,0},{7,8,0},{0,9.42477796076938,0},{0.15,0.2,0},{0.12,0.15,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,8747110,0},
-    {"ltgreenChip",kParticleImgs_6195,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,6121019,0},
-    {"outhouseChip",kParticleImgs_6380,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,7228719,0},
-    {"outhouseBreak",kParticleImgs_6566,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,8867868,0},
-    {"outhousePlank",kParticleImgs_6740,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,7228719,0},
-    {"potChip",kParticleImgs_6925,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,12539935,0},
-    {"potBreak",kParticleImgs_7081,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,12539935,0},
-    {"potatoChip",kParticleImgs_7233,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,8216391,0},
-    {"potatoBreak",kParticleImgs_7391,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,8216391,0},
-    {"tomatoChip_01",kParticleImgs_7545,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,11752275,0},
-    {"tomatoChip_02",kParticleImgs_7707,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,6261819,0},
-    {"tomatoBreak_01",kParticleImgs_7868,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,11752275,0},
-    {"tomatoBreak_02",kParticleImgs_8026,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,6261819,0},
-    {"pumpkinChip",kParticleImgs_8183,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16607744,0},
-    {"pumpkinBreak",kParticleImgs_8343,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16086272,0},
-    {"squashChip",kParticleImgs_8499,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,1595917,0},
-    {"squashBreak",kParticleImgs_8657,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,1595917,0},
-    {"redChip",kParticleImgs_8811,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,8847376,0},
-    {"redBreak",kParticleImgs_8966,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,8847376,0},
-    {"redPlank",kParticleImgs_9117,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,4524032,0},
-    {"rockChip",kParticleImgs_9297,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,10526880,0},
-    {"rockBreak",kParticleImgs_9454,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,10526880,0},
-    {"rockEyeChip",kParticleImgs_9607,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.03,0.06,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,2696225,0},
-    {"rockEyeBreak",kParticleImgs_9766,1,20,{0.8,1,0},{4,12,0},{0,0,1},{0.05,0.1,0},{0.03,0.06,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,2696225,0},
-    {"shackBreak",kParticleImgs_9922,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,6642509,0},
-    {"shackGreenBreak",kParticleImgs_10093,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,5730406,0},
-    {"tanChip",kParticleImgs_10270,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,8416851,0},
-    {"teahouseBreak",kParticleImgs_10452,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,5069423,0},
-    {"teapavilionBreak",kParticleImgs_10627,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,10231583,0},
-    {"toiletBreak",kParticleImgs_10806,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16119285,0},
-    {"toiletGoldChip",kParticleImgs_10962,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,13020457,0},
-    {"toiletGoldBreak",kParticleImgs_11126,1,20,{0.8,1,0},{4,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,13020457,0},
-    {"toiletMetalBreak",kParticleImgs_11286,1,20,{0.8,1,0},{4,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,6644579,0},
-    {"turkeyFeathersHit",kParticleImgs_11446,2,20,{1,1.5,0},{1,10,0},{0,9.42477796076938,0},{0.1,0.2,0},{0.08,0.12,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"turkeyFeathersDeath",kParticleImgs_11624,2,20,{1,1.5,0},{1,10,0},{0,9.42477796076938,0},{0.15,0.25,0},{0.12,0.2,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"whiteChip",kParticleImgs_11805,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16119285,0},
-    {"whitePlank",kParticleImgs_11964,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16119285,0},
-    {"windowBreak",kParticleImgs_12148,1,20,{0.4,0.8,0},{1,4,0},{3.141592653589793,18.84955592153876,0},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,0.8,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,8444415,0},
-    {"woodChip",kParticleImgs_12340,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,6692608,0},
-    {"woodLog",kParticleImgs_12523,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,6692608,0},
-    {"woodPlank",kParticleImgs_12703,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,5052160,0},
-    {"woodShard",kParticleImgs_12885,1,20,{1,1.5,0},{3,5,0},{9.42477796076938,9.42477796076938,1},{0.06,0.15,0},{0.02,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,5052160,0},
-    {"9mm",kParticleImgs_13068,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.0625,0.0625,1},{0.0325,0.0325,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"9mm_cursed",kParticleImgs_13259,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.0625,0.0625,1},{0.0325,0.0325,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"762mm",kParticleImgs_13457,1,20,{0.75,1,0},{1.5,2.5,0},{7.853981633974483,7.853981633974483,1},{0.075,0.075,1},{0.045,0.045,1},{0,1,0},0,0,1,0,{0.925,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"556mm",kParticleImgs_13651,1,20,{0.75,1,0},{1.5,2.5,0},{7.853981633974483,7.853981633974483,1},{0.075,0.075,1},{0.045,0.045,1},{0,1,0},0,0,1,0,{0.925,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"12gauge",kParticleImgs_13845,1,20,{0.5,0.75,0},{1,2,0},{9.42477796076938,9.42477796076938,1},{0.1,0.1,1},{0.05,0.05,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"50AE",kParticleImgs_14030,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.0625,0.0625,1},{0.0325,0.0325,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"50cal",kParticleImgs_14222,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.0625,0.0625,1},{0.0325,0.0325,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"308sub",kParticleImgs_14415,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.0625,0.0625,1},{0.0325,0.0325,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"flare",kParticleImgs_14609,1,20,{0.5,0.75,0},{1,2,0},{9.42477796076938,9.42477796076938,1},{0.1,0.1,1},{0.05,0.05,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"45acp",kParticleImgs_14792,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.07,0.07,1},{0.04,0.04,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"potato_ammo",kParticleImgs_14977,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.07,0.07,1},{0.04,0.04,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"bugle_ammo",kParticleImgs_15168,1,20,{1.25,1.3,0},{3,4,0},{3.141592653589793,3.141592653589793,1},{0.1,0.1,1},{0.14,0.14,1},{0,1,0},0,0,1,0,{0.5,1,0},0,0,0,0,0,{0,1,1},1,16767488,0},
-    {"fragPin",kParticleImgs_15357,1,20,{0.5,0.5,1},{0.9,1,0},{0,0,1},{0.18,0.18,1},{0.14,0.14,1},{0,1,0},0,0,1,0,{0.5,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"fragLever",kParticleImgs_15514,1,20,{0.5,0.5,1},{0.9,1,0},{28.274333882308138,28.274333882308138,1},{0.18,0.18,1},{0.14,0.14,1},{0,1,0},0,0,1,0,{0.5,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"explosionBurst",kParticleImgs_15707,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,16474624,0},
-    {"explosionMIRV",kParticleImgs_15858,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,13893632,0},
-    {"explosionSmoke",kParticleImgs_16008,1,20,{2,3,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"explosionUSAS",kParticleImgs_16199,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,16480256,0},
-    {"explosionRounds",kParticleImgs_16349,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,13008443,0},
-    {"explosionBomb",kParticleImgs_16501,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"explosionPotato",kParticleImgs_16651,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,11363866,0},
-    {"explosionPotatoSMG",kParticleImgs_16803,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,12888074,0},
-    {"airdropSmoke",kParticleImgs_16958,2,499,{1,1.5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.67,0.72,0},{0.55,0.61,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"airdropCrate01",kParticleImgs_17151,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"airdropCrate01h",kParticleImgs_17346,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"airdropCrate01x",kParticleImgs_17542,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"airdropCrate02",kParticleImgs_17738,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"airdropCrate02h",kParticleImgs_17920,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"airdropCrate02x",kParticleImgs_18103,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"airdropCrate03",kParticleImgs_18286,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"airdropCrate04",kParticleImgs_18481,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"classShell01a",kParticleImgs_18663,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"classShell01b",kParticleImgs_18857,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"classShell02a",kParticleImgs_19038,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"classShell02b",kParticleImgs_19232,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"classShell03a",kParticleImgs_19413,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"classShell03b",kParticleImgs_19607,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0},
-    {"cabinSmoke",kParticleImgs_19788,2,20,{3,3.25,0},{0.2,0.22,0},{0.7853981633974483,1.5707963267948966,0},{0.2,0.25,0},{0.6,0.65,0},{0,1,0},0,0,0.7,0,{0.9,1,0},0,0,1,0,0.7,{0,0.1,0},1,11645361,0},
-    {"bathhouseSteam",kParticleImgs_19988,2,20,{10,12,0},{0.04,0.06,0},{0.7853981633974483,1.5707963267948966,0},{0.2,0.25,0},{0.9,0.95,0},{0,1,0},0,0,0.5,0,{0.9,1,0},0,0,1,0,0.5,{0,0.1,0},1,16645629,0},
-    {"bunkerBubbles",kParticleImgs_20192,1,10,{2.25,2.5,0},{1.85,2.15,0},{0.7853981633974483,1.5707963267948966,0},{0.2,0.25,0},{0.65,0.7,0},{0,1,0},0,0,0.25,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16382457,0},
-    {"waterRipple",kParticleImgs_20395,1,10,{1.75,1.75,1},{0,0,1},{0,0,1},{0.15,0.15,1},{0,0,1},{0,1,1},1,0.5,1,0,{0,1,1},1,-1,0,0,0,{0,1,1},1,11792639,0},
-    {"leafAutumn",kParticleImgs_20551,4,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,15527148,0},
-    {"leafHalloween",kParticleImgs_20744,4,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,8816262,1},
-    {"leafSpring",kParticleImgs_20939,4,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,15527148,0},
-    {"leafSummer",kParticleImgs_21132,1,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,13882323,1},
-    {"leafPotato",kParticleImgs_21325,5,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,15527148,0},
-    {"potato",kParticleImgs_21518,1,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,15527148,0},
-    {"potato_factions",kParticleImgs_21707,2,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,15527148,0},
-    {"snow",kParticleImgs_21905,1,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,15527148,0},
-    {"snowball_impact",kParticleImgs_22091,1,20,{0.5,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.23,0},{0.07,0.14,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"potato_impact",kParticleImgs_22286,1,20,{0.5,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.23,0},{0.07,0.14,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"potato_smg_impact",kParticleImgs_22479,1,20,{0.5,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.23,0},{0.07,0.14,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16770437,0},
-    {"coconut_impact",kParticleImgs_22676,3,20,{0.5,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.23,0},{0.07,0.14,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"tomato_impact",kParticleImgs_22870,1,20,{0.5,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.23,0},{0.07,0.14,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,15527148,0},
-    {"heal_basic",kParticleImgs_23063,1,20,{0.75,1,0},{0.25,0.25,1},{0,0,1},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,14221312,1},
-    {"heal_heart",kParticleImgs_23228,1,20,{0.75,1,0},{0.25,0.25,1},{0,0,1},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,14221312,1},
-    {"heal_moon",kParticleImgs_23393,1,20,{0.75,1,0},{0.25,0.25,1},{0.7853981633974483,1.5707963267948966,0},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,14221312,1},
-    {"heal_tomoe",kParticleImgs_23591,1,20,{0.75,1,0},{0.25,0.25,1},{1.5707963267948966,3.141592653589793,0},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,14221312,1},
-    {"heal_diamond",kParticleImgs_23789,1,20,{0.75,1,0},{0.25,0.25,1},{0,0,1},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,14221312,1},
-    {"heal_ankh",kParticleImgs_23956,1,20,{0.75,1,0},{0.25,0.25,1},{1.5707963267948966,3.141592653589793,0},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,14221312,1},
-    {"heal_menacing",kParticleImgs_24153,1,20,{0.75,1,0},{0.25,0.25,1},{0,0,1},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,14221312,1},
-    {"boost_basic",kParticleImgs_24321,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,2939136,1},
-    {"boost_star",kParticleImgs_24515,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,2939136,1},
-    {"boost_naturalize",kParticleImgs_24708,1,20,{0.75,1,0},{0,0,1},{1.0995574287564276,2.199114857512855,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,2939136,1},
-    {"boost_shuriken",kParticleImgs_24906,1,20,{0.75,1,0},{0,0,1},{3.141592653589793,6.283185307179586,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,2939136,1},
-    {"boost_club",kParticleImgs_25101,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,2939136,1},
-    {"boost_lightning",kParticleImgs_25294,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,2939136,1},
-    {"boost_hermes",kParticleImgs_25492,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,2939136,1},
-    {"boost_gearshift_01",kParticleImgs_25687,1,20,{0.75,1,0},{0,0,1},{0,0,1},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,2939136,1},
-    {"boost_gearshift_02",kParticleImgs_25854,1,20,{0.75,1,0},{0,0,1},{3.141592653589793,6.283185307179586,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,2939136,1},
-    {"revive_basic",kParticleImgs_26053,1,20,{0.75,1,0},{0.25,0.25,1},{0,0,1},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,13959385,1},
-    {"leafStim",kParticleImgs_26220,4,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,63799,0},
-    {"takedownStim",kParticleImgs_26406,1,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,13107200,0},
-    {"inspireStim",kParticleImgs_26599,1,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,16631040,0},
-    {"xp_common",kParticleImgs_26791,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,16305668,1},
-    {"xp_rare",kParticleImgs_26984,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,15291661,1},
-    {"xp_mythic",kParticleImgs_27175,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,15539210,1},
+    {"archwayBreak",kParticleImgs_0,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.2,0.35,0},{0.08,0.12,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.06,0.06,0.84,0.84,0.46,0.48},
+    {"bloodSplat",kParticleImgs_195,3,20,{0.5,0.5,1},{1,1,1},{0,0,1},{0.04,0.04,1},{0.15,0.2,0},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,16711680,16711680,1,1,0.45,0.8},
+    {"barrelPlank",kParticleImgs_377,1,20,{1,1.5,0},{3,5,0},{9.42477796076938,9.42477796076938,1},{0.08,0.18,0},{0.07,0.17,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.09,0.09,0.8,0.8,0.66,0.68},
+    {"barrelChip",kParticleImgs_585,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.01,0.01,0.02,0.02,0.38,0.41},
+    {"barrelBreak",kParticleImgs_768,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.01,0.01,0.02,0.02,0.38,0.41},
+    {"blackChip",kParticleImgs_947,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0.08,0.08,0.16,0.18},
+    {"blueChip",kParticleImgs_1149,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.64,0.64,1,1,0.83,0.85},
+    {"book",kParticleImgs_1325,1,20,{1,1.5,0},{3,5,0},{9.42477796076938,9.42477796076938,1},{0.09,0.19,0},{0.07,0.17,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.08,0.08,0.42,0.42,0.72,0.74},
+    {"bottleBrownChip",kParticleImgs_1529,1,20,{0.5,0.5,1},{1,5,0},{3.141592653589793,18.84955592153876,0},{0.02,0.04,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,7878664,0,0,0,0,1,1,1,1},
+    {"bottleBrownBreak",kParticleImgs_1737,1,20,{0.4,0.8,0},{1,4,0},{3.141592653589793,18.84955592153876,0},{0.03,0.06,0},{0.05,0.1,0},{0,1,0},0,0,0.8,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,7878664,0,0,0,0,1,1,1,1},
+    {"bottleBlueChip",kParticleImgs_1947,1,20,{0.5,0.5,1},{1,5,0},{3.141592653589793,18.84955592153876,0},{0.02,0.04,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,19544,0,0,0,0,1,1,1,1},
+    {"bottleWhiteBreak",kParticleImgs_2152,1,20,{0.4,0.8,0},{1,4,0},{3.141592653589793,18.84955592153876,0},{0.03,0.06,0},{0.05,0.1,0},{0,1,0},0,0,0.75,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"bottleWhiteChip",kParticleImgs_2364,1,20,{0.5,0.5,1},{1,5,0},{3.141592653589793,18.84955592153876,0},{0.02,0.04,0},{0.01,0.02,0},{0,1,0},0,0,0.75,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"bottleBlueBreak",kParticleImgs_2576,1,20,{0.4,0.8,0},{1,4,0},{3.141592653589793,18.84955592153876,0},{0.03,0.06,0},{0.05,0.1,0},{0,1,0},0,0,0.8,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,19544,0,0,0,0,1,1,1,1},
+    {"brickChip",kParticleImgs_2783,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0.71,0.71,0.32,0.34},
+    {"clothBreak",kParticleImgs_2960,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.95,1},
+    {"clothHit",kParticleImgs_3124,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.95,1},
+    {"depositBoxGreyBreak",kParticleImgs_3291,1,20,{0.5,1,0},{7,8,0},{0,9.42477796076938,0},{0.15,0.25,0},{0.12,0.2,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.36,0.38},
+    {"depositBoxGoldBreak",kParticleImgs_3482,1,20,{0.5,1,0},{6,8,0},{0,9.42477796076938,0},{0.2,0.35,0},{0.18,0.25,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.11,0.11,0.84,0.84,0.64,0.66},
+    {"depositBoxSilverBreak",kParticleImgs_3685,1,20,{0.5,1,0},{6,8,0},{0,9.42477796076938,0},{0.2,0.35,0},{0.18,0.25,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.68,0.72},
+    {"glassChip",kParticleImgs_3878,1,20,{0.5,0.5,1},{1,5,0},{3.141592653589793,18.84955592153876,0},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,8444415,0,0,0,0,1,1,1,1},
+    {"glassPlank",kParticleImgs_4080,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,8444415,0,0,0,0,1,1,1,1},
+    {"goldChip",kParticleImgs_4276,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.11,0.11,0.84,0.84,0.88,0.9},
+    {"pinkChip",kParticleImgs_4457,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0.52,0.52,0.98,1},
+    {"ltblueChip",kParticleImgs_4656,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.5,0.5,0.65,0.65,0.98,1},
+    {"yellowChip",kParticleImgs_4861,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.16,0.16,0.73,0.73,0.98,1},
+    {"greenChip",kParticleImgs_5068,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.4,0.4,0.18,0.18,0.5,0.62},
+    {"greenPlank",kParticleImgs_5248,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.08,0.16,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,3884335,0,0,0,0,1,1,1,1},
+    {"greenhouseBreak",kParticleImgs_5445,3,20,{0.5,1.5,0},{1,5,0},{3.141592653589793,18.84955592153876,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,0.8,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,8444415,0,0,0,0,1,1,1,1},
+    {"hutBreak",kParticleImgs_5655,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.1,0.1,0.81,0.81,0.78,0.82},
+    {"leaf",kParticleImgs_5848,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.29,0.29,1,1,0.5,0.75},
+    {"leafSynthetic",kParticleImgs_6045,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.44,0.44,0.8,0.8,0.2,0.3},
+    {"leafPrickly",kParticleImgs_6254,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.8,0.85},
+    {"leafRiver",kParticleImgs_6452,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.5,0.75},
+    {"lockerBreak",kParticleImgs_6648,1,20,{0.5,1,0},{7,8,0},{0,9.42477796076938,0},{0.15,0.2,0},{0.12,0.15,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.1,0.1,0.23,0.23,0.51,0.53},
+    {"ltgreenChip",kParticleImgs_6841,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.2,0.2,0.42,0.42,0.38,0.42},
+    {"outhouseChip",kParticleImgs_7050,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.08,0.08,0.57,0.57,0.4,0.46},
+    {"outhouseBreak",kParticleImgs_7261,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.08,0.08,0.79,0.79,0.52,0.54},
+    {"outhousePlank",kParticleImgs_7461,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.08,0.08,0.57,0.57,0.4,0.46},
+    {"potChip",kParticleImgs_7671,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.06,0.06,0.84,0.84,0.73,0.77},
+    {"potBreak",kParticleImgs_7852,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.06,0.06,0.84,0.84,0.73,0.77},
+    {"potatoChip",kParticleImgs_8029,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.075,0.075,0.43,0.43,0.48,0.5},
+    {"potatoBreak",kParticleImgs_8214,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.075,0.075,0.43,0.43,0.48,0.5},
+    {"tomatoChip_01",kParticleImgs_8395,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0.43,0.64,0.7,0.7},
+    {"tomatoChip_02",kParticleImgs_8574,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.26,0.26,0.53,0.63,0.55,0.55},
+    {"tomatoBreak_01",kParticleImgs_8761,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0.43,0.64,0.7,0.7},
+    {"tomatoBreak_02",kParticleImgs_8936,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.26,0.26,0.53,0.63,0.55,0.55},
+    {"pumpkinChip",kParticleImgs_9119,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.07,0.07,1,1,0.98,1},
+    {"pumpkinBreak",kParticleImgs_9295,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.08,0.08,1,1,0.95,0.97},
+    {"squashChip",kParticleImgs_9470,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.31,0.31,0.86,0.86,0.35,0.36},
+    {"squashBreak",kParticleImgs_9654,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.31,0.31,0.86,0.86,0.35,0.36},
+    {"redChip",kParticleImgs_9834,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.98,0.98,1,1,0.52,0.54},
+    {"redBreak",kParticleImgs_10009,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.98,0.98,1,1,0.52,0.54},
+    {"redPlank",kParticleImgs_10181,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.02,0.02,1,1,0.26,0.28},
+    {"rockChip",kParticleImgs_10382,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.5,0.75},
+    {"rockBreak",kParticleImgs_10552,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.5,0.75},
+    {"rockEyeChip",kParticleImgs_10718,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.03,0.06,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,2696225,0,0,0,0,1,1,1,1},
+    {"rockEyeBreak",kParticleImgs_10892,1,20,{0.8,1,0},{4,12,0},{0,0,1},{0.05,0.1,0},{0.03,0.06,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,2696225,0,0,0,0,1,1,1,1},
+    {"shackBreak",kParticleImgs_11063,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.1,0.1,0.24,0.24,0.38,0.41},
+    {"shackGreenBreak",kParticleImgs_11259,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,5730406,0,0,0,0,1,1,1,1},
+    {"tanChip",kParticleImgs_11450,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.1,0.1,0.35,0.35,0.48,0.52},
+    {"teahouseBreak",kParticleImgs_11656,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.6,0.6,0.31,0.31,0.42,0.45},
+    {"teapavilionBreak",kParticleImgs_11855,1,20,{0.5,1.5,0},{1,5,0},{0,9.42477796076938,0},{0.25,0.55,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0.8,0.8,0.6,0.62},
+    {"toiletBreak",kParticleImgs_12050,1,20,{0.8,1,0},{1,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.97,0.97,0,0,0.95,0.97},
+    {"toiletGoldChip",kParticleImgs_12225,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.14,0.14,0.72,0.86,0.71,0.85},
+    {"toiletGoldBreak",kParticleImgs_12414,1,20,{0.8,1,0},{4,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.14,0.14,0.72,0.86,0.71,0.85},
+    {"toiletMetalBreak",kParticleImgs_12599,1,20,{0.8,1,0},{4,5,0},{0,0,1},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.01,0.01,0.02,0.02,0.38,0.41},
+    {"turkeyFeathersHit",kParticleImgs_12785,2,20,{1,1.5,0},{1,10,0},{0,9.42477796076938,0},{0.1,0.2,0},{0.08,0.12,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"turkeyFeathersDeath",kParticleImgs_12977,2,20,{1,1.5,0},{1,10,0},{0,9.42477796076938,0},{0.15,0.25,0},{0.12,0.2,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"whiteChip",kParticleImgs_13172,1,20,{0.5,0.5,1},{1,10,0},{0,0,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.97,0.97,0,0,0.95,0.97},
+    {"whitePlank",kParticleImgs_13350,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.97,0.97,0,0,0.95,0.97},
+    {"windowBreak",kParticleImgs_13553,1,20,{0.4,0.8,0},{1,4,0},{3.141592653589793,18.84955592153876,0},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,0.8,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,8444415,0,0,0,0,1,1,1,1},
+    {"woodChip",kParticleImgs_13759,1,20,{0.5,1,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.04,0.08,0},{0.01,0.02,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.05,0.05,1,1,0.35,0.45},
+    {"woodLog",kParticleImgs_13962,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.05,0.05,1,1,0.35,0.45},
+    {"woodPlank",kParticleImgs_14162,1,20,{1,1.5,0},{1,5,0},{9.42477796076938,9.42477796076938,1},{0.1,0.2,0},{0.08,0.18,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.05,0.05,1,1,0.25,0.35},
+    {"woodShard",kParticleImgs_14364,1,20,{1,1.5,0},{3,5,0},{9.42477796076938,9.42477796076938,1},{0.06,0.15,0},{0.02,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.05,0.05,1,1,0.25,0.35},
+    {"9mm",kParticleImgs_14567,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.0625,0.0625,1},{0.0325,0.0325,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"9mm_cursed",kParticleImgs_14770,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.0625,0.0625,1},{0.0325,0.0325,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"762mm",kParticleImgs_14980,1,20,{0.75,1,0},{1.5,2.5,0},{7.853981633974483,7.853981633974483,1},{0.075,0.075,1},{0.045,0.045,1},{0,1,0},0,0,1,0,{0.925,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"556mm",kParticleImgs_15186,1,20,{0.75,1,0},{1.5,2.5,0},{7.853981633974483,7.853981633974483,1},{0.075,0.075,1},{0.045,0.045,1},{0,1,0},0,0,1,0,{0.925,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"12gauge",kParticleImgs_15392,1,20,{0.5,0.75,0},{1,2,0},{9.42477796076938,9.42477796076938,1},{0.1,0.1,1},{0.05,0.05,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"50AE",kParticleImgs_15589,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.0625,0.0625,1},{0.0325,0.0325,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"50cal",kParticleImgs_15793,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.0625,0.0625,1},{0.0325,0.0325,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"308sub",kParticleImgs_15998,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.0625,0.0625,1},{0.0325,0.0325,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"flare",kParticleImgs_16204,1,20,{0.5,0.75,0},{1,2,0},{9.42477796076938,9.42477796076938,1},{0.1,0.1,1},{0.05,0.05,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"45acp",kParticleImgs_16399,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.07,0.07,1},{0.04,0.04,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"potato_ammo",kParticleImgs_16596,1,20,{0.5,0.75,0},{3,4,0},{9.42477796076938,9.42477796076938,1},{0.07,0.07,1},{0.04,0.04,1},{0,1,0},0,0,1,0,{0.95,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"bugle_ammo",kParticleImgs_16801,1,20,{1.25,1.3,0},{3,4,0},{3.141592653589793,3.141592653589793,1},{0.1,0.1,1},{0.14,0.14,1},{0,1,0},0,0,1,0,{0.5,1,0},0,0,0,0,0,{0,1,1},1,16767488,0,0,0,0,1,1,1,1},
+    {"fragPin",kParticleImgs_17004,1,20,{0.5,0.5,1},{0.9,1,0},{0,0,1},{0.18,0.18,1},{0.14,0.14,1},{0,1,0},0,0,1,0,{0.5,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"fragLever",kParticleImgs_17175,1,20,{0.5,0.5,1},{0.9,1,0},{28.274333882308138,28.274333882308138,1},{0.18,0.18,1},{0.14,0.14,1},{0,1,0},0,0,1,0,{0.5,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"explosionBurst",kParticleImgs_17382,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.065,0.065,1,1,0.98,0.99},
+    {"explosionMIRV",kParticleImgs_17554,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,1,1,0.82,0.84},
+    {"explosionSmoke",kParticleImgs_17717,1,20,{2,3,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"explosionUSAS",kParticleImgs_17920,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.08,0.08,1,1,0.98,0.99},
+    {"explosionRounds",kParticleImgs_18089,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0.08,0.08,0.7,0.7,0.75,0.8},
+    {"explosionBomb",kParticleImgs_18263,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"explosionPotato",kParticleImgs_18427,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,11363866,0,0,0,0,1,1,1,1},
+    {"explosionPotatoSMG",kParticleImgs_18593,1,20,{0.5,0.5,1},{0,0,1},{0,0,1},{1,1,1},{4,4,1},{0,1,0},0,0,1,0,{0.75,1,0},0,0,0,0,0,{0,1,1},1,12888074,0,0,0,0,1,1,1,1},
+    {"airdropSmoke",kParticleImgs_18762,2,499,{1,1.5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.67,0.72,0},{0.55,0.61,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"airdropCrate01",kParticleImgs_18967,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"airdropCrate01h",kParticleImgs_19176,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"airdropCrate01x",kParticleImgs_19386,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"airdropCrate02",kParticleImgs_19596,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"airdropCrate02h",kParticleImgs_19792,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"airdropCrate02x",kParticleImgs_19989,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"airdropCrate03",kParticleImgs_20186,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"airdropCrate04",kParticleImgs_20395,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"classShell01a",kParticleImgs_20591,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"classShell01b",kParticleImgs_20799,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"classShell02a",kParticleImgs_20994,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"classShell02b",kParticleImgs_21202,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"classShell03a",kParticleImgs_21397,1,20,{0.85,1.15,0},{2,2.25,0},{3.141592653589793,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"classShell03b",kParticleImgs_21605,1,20,{0.85,1.15,0},{1.85,2.15,0},{0,6.283185307179586,0},{0.5,0.5,1},{0.4,0.4,1},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16777215,0,0,0,0,1,1,1,1},
+    {"cabinSmoke",kParticleImgs_21800,2,20,{3,3.25,0},{0.2,0.22,0},{0.7853981633974483,1.5707963267948966,0},{0.2,0.25,0},{0.6,0.65,0},{0,1,0},0,0,0.7,0,{0.9,1,0},0,0,1,0,0.7,{0,0.1,0},1,0,0,1,0,0,0,0,0.69,0.695},
+    {"bathhouseSteam",kParticleImgs_22014,2,20,{10,12,0},{0.04,0.06,0},{0.7853981633974483,1.5707963267948966,0},{0.2,0.25,0},{0.9,0.95,0},{0,1,0},0,0,0.5,0,{0.9,1,0},0,0,1,0,0.5,{0,0.1,0},1,0,0,1,0,0,0,0,0.99,0.995},
+    {"bunkerBubbles",kParticleImgs_22232,1,10,{2.25,2.5,0},{1.85,2.15,0},{0.7853981633974483,1.5707963267948966,0},{0.2,0.25,0},{0.65,0.7,0},{0,1,0},0,0,0.25,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.95,1},
+    {"waterRipple",kParticleImgs_22445,1,10,{1.75,1.75,1},{0,0,1},{0,0,1},{0.15,0.15,1},{0,0,1},{0,1,1},1,0.5,1,0,{0,1,1},1,-1,0,0,0,{0,1,1},1,11792639,0,0,0,0,1,1,1,1},
+    {"leafAutumn",kParticleImgs_22615,4,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"leafHalloween",kParticleImgs_22820,4,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,0,0,0.5,0.55},
+    {"leafSpring",kParticleImgs_23028,4,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"leafSummer",kParticleImgs_23233,1,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,0,0,0.7,0.95},
+    {"leafPotato",kParticleImgs_23438,5,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"potato",kParticleImgs_23643,1,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"potato_factions",kParticleImgs_23844,2,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.15,0},{0.08,0.11,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"snow",kParticleImgs_24054,1,20,{10,15,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.07,0.12,0},{0.05,0.1,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"snowball_impact",kParticleImgs_24252,1,20,{0.5,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.23,0},{0.07,0.14,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"potato_impact",kParticleImgs_24459,1,20,{0.5,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.23,0},{0.07,0.14,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"potato_smg_impact",kParticleImgs_24664,1,20,{0.5,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.23,0},{0.07,0.14,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,16770437,0,0,0,0,1,1,1,1},
+    {"coconut_impact",kParticleImgs_24875,3,20,{0.5,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.23,0},{0.07,0.14,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"tomato_impact",kParticleImgs_25081,1,20,{0.5,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.13,0.23,0},{0.07,0.14,0},{0,1,0},0,0,1,0,{0.9,1,0},0,0,0,0,0,{0,1,1},1,0,0,1,0,0,0,0,0.9,0.95},
+    {"heal_basic",kParticleImgs_25286,1,20,{0.75,1,0},{0.25,0.25,1},{0,0,1},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,1,1,0.7,1},
+    {"heal_heart",kParticleImgs_25460,1,20,{0.75,1,0},{0.25,0.25,1},{0,0,1},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,1,1,0.7,1},
+    {"heal_moon",kParticleImgs_25634,1,20,{0.75,1,0},{0.25,0.25,1},{0.7853981633974483,1.5707963267948966,0},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,1,1,0.7,1},
+    {"heal_tomoe",kParticleImgs_25841,1,20,{0.75,1,0},{0.25,0.25,1},{1.5707963267948966,3.141592653589793,0},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,1,1,0.7,1},
+    {"heal_diamond",kParticleImgs_26048,1,20,{0.75,1,0},{0.25,0.25,1},{0,0,1},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,1,1,0.7,1},
+    {"heal_ankh",kParticleImgs_26224,1,20,{0.75,1,0},{0.25,0.25,1},{1.5707963267948966,3.141592653589793,0},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,1,1,0.7,1},
+    {"heal_menacing",kParticleImgs_26430,1,20,{0.75,1,0},{0.25,0.25,1},{0,0,1},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,1,1,0.7,1},
+    {"boost_basic",kParticleImgs_26607,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.3,0.3,1,1,0.7,1},
+    {"boost_star",kParticleImgs_26815,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.3,0.3,1,1,0.7,1},
+    {"boost_naturalize",kParticleImgs_27022,1,20,{0.75,1,0},{0,0,1},{1.0995574287564276,2.199114857512855,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.3,0.3,1,1,0.7,1},
+    {"boost_shuriken",kParticleImgs_27234,1,20,{0.75,1,0},{0,0,1},{3.141592653589793,6.283185307179586,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.3,0.3,1,1,0.7,1},
+    {"boost_club",kParticleImgs_27443,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.3,0.3,1,1,0.7,1},
+    {"boost_lightning",kParticleImgs_27650,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.3,0.3,1,1,0.7,1},
+    {"boost_hermes",kParticleImgs_27862,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.3,0.3,1,1,0.7,1},
+    {"boost_gearshift_01",kParticleImgs_28071,1,20,{0.75,1,0},{0,0,1},{0,0,1},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.3,0.3,1,1,0.7,1},
+    {"boost_gearshift_02",kParticleImgs_28252,1,20,{0.75,1,0},{0,0,1},{3.141592653589793,6.283185307179586,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.3,0.3,1,1,0.7,1},
+    {"revive_basic",kParticleImgs_28465,1,20,{0.75,1,0},{0.25,0.25,1},{0,0,1},{0.1,0.12,0},{0.05,0.07,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.83,0.83,1,1,0.7,1},
+    {"leafStim",kParticleImgs_28647,4,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0.37,0.37,1,1,0.95,1},
+    {"takedownStim",kParticleImgs_28852,1,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,13107200,0,0,0,0,1,1,1,1},
+    {"inspireStim",kParticleImgs_29059,1,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0.13,0.13,1,1,0.98,1},
+    {"xp_common",kParticleImgs_29267,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.12,0.12,0.97,0.97,0.95,1},
+    {"xp_rare",kParticleImgs_29482,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.05,0.06,0.94,0.95,0.85,1},
+    {"xp_mythic",kParticleImgs_29695,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.03,0.03,0.95,0.95,0.92,0.95},
 };
 static const RawEmitter kEmitters[] = {
     {"smoke_barrel","explosionSmoke",{0.2,0.3,0},0,{2,3,0},0.3141592653589793,1,{0,6.283185307179586,0},3.402823466e+38,0,{0,0,1},0,0,0},
@@ -6783,6 +6785,7 @@ public:
             d.airdropPlaneImg = r.airdropPlaneImg ? r.airdropPlaneImg : "map-plane-01.img";
             d.airdropPlaneSound = r.airdropPlaneSound ? r.airdropPlaneSound : "plane_01";
             d.airdropChuteImg = r.airdropChuteImg ? r.airdropChuteImg : "map-chute-01.img";
+            d.riverShoreSurface = static_cast<SurfaceTypeDef>(r.riverShoreSurface);
             _mapRenders[r.name] = d;
         }
         for (const auto& r : kGameObjs) {
@@ -13652,6 +13655,13 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
             d.hasColor = r.hasColor != 0;
             d.color = r.color;
             d.ignoreValueAdjust = r.ignoreValueAdjust != 0;
+            d.colorVariance = r.colorVariance != 0;
+            d.colorHueMin = r.colorHMin;
+            d.colorHueMax = r.colorHMax;
+            d.colorSatMin = r.colorSMin;
+            d.colorSatMax = r.colorSMax;
+            d.colorValMin = r.colorVMin;
+            d.colorValMax = r.colorVMax;
             _particles[r.name] = std::move(d);
         }
         for (const auto& r : kEmitters) {

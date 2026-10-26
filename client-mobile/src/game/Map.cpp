@@ -382,7 +382,7 @@ Map::GroundSurface Map::getGroundSurface(const Vec2& pos, int layer) const {
     GroundSurface out;
     if (math::pointInsidePolygon(pos, terrain.grass.data(),
                                  static_cast<int>(terrain.grass.size()))) {
-        out.type = onRiverShore ? SurfaceType::Sand : SurfaceType::Grass;
+        out.type = onRiverShore ? mapDef.riverShoreSurface : SurfaceType::Grass;
     } else if (math::pointInsidePolygon(pos, terrain.shore.data(),
                                         static_cast<int>(terrain.shore.size()))) {
         out.type = SurfaceType::Sand;

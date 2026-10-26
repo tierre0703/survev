@@ -367,6 +367,9 @@ struct BiomeColors {
 
 struct MapRenderDef {
     BiomeColors colors;
+    // mapDef.biome.sound.riverShore: footstep surface on river banks
+    // ("sand" everywhere except main_spring/woods_spring -> "stone").
+    SurfaceTypeDef riverShoreSurface = SurfaceTypeDef::Sand;
     bool factionMode = false;
     bool potatoMode = false;
     bool perkMode = false;
@@ -601,6 +604,15 @@ struct ParticleDef {
     bool hasColor = false;
     uint32_t color = 0xffffff;
     bool ignoreValueAdjust = false;
+    // particles.ts color closures: HSV ranges sampled from the TS function.
+    // colorVariance picks a fresh hue/sat/value per particle at runtime.
+    bool colorVariance = false;
+    float colorHueMin = 0.0f;
+    float colorHueMax = 0.0f;
+    float colorSatMin = 1.0f;
+    float colorSatMax = 1.0f;
+    float colorValMin = 1.0f;
+    float colorValMax = 1.0f;
 };
 
 // particles.ts EmitterDef.

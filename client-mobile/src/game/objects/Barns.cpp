@@ -18,6 +18,14 @@ static float rnd(float a, float b) {
     return a + (b - a) * (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX));
 }
 
+// particles.ts color closures: pick a fresh HSV colour per particle from the
+// ranges the codegen sampled out of the TS closure.
+static uint32_t randomParticleColor(const ParticleDef& def) {
+    return math::hsvToRgbInt(rnd(def.colorHueMin, def.colorHueMax),
+                             rnd(def.colorSatMin, def.colorSatMax),
+                             rnd(def.colorValMin, def.colorValMax));
+}
+
 static const MapObjectDef* mapDefFor(const std::string& type) {
     const DefProvider* p = getDefProvider();
     return p ? p->mapObject(type) : nullptr;
@@ -3077,7 +3085,9 @@ void Particle::m_init(pix::Factory* factory, const std::string& type, int layer_
         sprite->setFrame(def->images[idx]);
     }
     sprite->setVisible(false);
-    if (def->hasColor) {
+    if (def->colorVariance) {
+        setColor(randomParticleColor(*def));
+    } else if (def->hasColor) {
         setColor(def->color);
     } else {
         sprite->setTint(0xffffff);
