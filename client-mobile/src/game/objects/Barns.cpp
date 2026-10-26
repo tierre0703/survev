@@ -37,15 +37,6 @@ static void placeInWorldLayer(pix::Node* node, const Vec2& worldPos) {
     node->setPosition(worldPos.x, worldPos.y);
 }
 
-// AABB of a map-object def collider (obstacle.ts uses collider.toAabb).
-static Collider colliderToAabbDef(const Collider& c) {
-    if (c.type == Collider::Circle) {
-        return Collider::createAabb(Vec2(c.pos.x - c.rad, c.pos.y - c.rad),
-                                    Vec2(c.pos.x + c.rad, c.pos.y + c.rad));
-    }
-    return Collider::createAabb(c.min, c.max);
-}
-
 // util.sameLayer (shared/utils/util.ts): objects on the same render layer.
 static bool sameGameLayer(int a, int b) {
     return ((a & 0x1) == (b & 0x1)) || (((a & 0x2) != 0) && ((b & 0x2) != 0));
@@ -159,10 +150,14 @@ void Obstacle::m_free() {
 void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_, Ctx& ctx) {
     const bool first = _firstUpdate;
     _firstUpdate = false;
-    const MapObjectDef* def = mapDefFor(data.type);
-
+    // Partial updates only carry pos/ori/scale; resolve the def from the
+    // persisted type (data.type is empty on a partial update).
     if (fullUpdate) {
         type = data.type;
+    }
+    const MapObjectDef* def = mapDefFor(type);
+
+    if (fullUpdate) {
         layer = data.layer;
         healthT = data.healthT;
         // obstacle.ts: the collider is transformed once from the def and the
@@ -234,7 +229,11 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
         }
     }
 
-    if (data.isDoor && doorHasInterp) {
+    // obstacle.ts only reads door/button/dead/health state from a full update.
+    // Partial updates carry just pos/ori/scale, so resetting those fields from
+    // the partial ObjectData would clear the button state, door interpolation
+    // and health tint every net tick.
+    if (fullUpdate && isDoor && doorHasInterp) {
         const float slideOffset = def ? def->doorSlideOffset : 0.0f;
         const Vec2 offset = v2Rotate(Vec2(slideOffset, 0.0f), rot + pi * 0.5f);
         // `closedPos` is where the *casing* stays; the door itself is at
@@ -248,16 +247,18 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
             doorInterpRot = rot;
         }
     }
-    doorOpen = data.doorOpen;
-    doorCanUse = data.doorCanUse;
-    doorLocked = data.doorLocked;
-    doorSeq = data.doorSeq;
-    isButton = data.isButton;
-    buttonOnOff = data.buttonOnOff;
-    buttonCanUse = data.buttonCanUse;
-    buttonSeq = data.buttonSeq;
-    isPuzzlePiece = data.isPuzzlePiece;
-    parentBuildingId = data.isPuzzlePiece ? data.parentBuildingId : 0;
+    if (fullUpdate) {
+        doorOpen = data.doorOpen;
+        doorCanUse = data.doorCanUse;
+        doorLocked = data.doorLocked;
+        doorSeq = data.doorSeq;
+        isButton = data.isButton;
+        buttonOnOff = data.buttonOnOff;
+        buttonCanUse = data.buttonCanUse;
+        buttonSeq = data.buttonSeq;
+        isPuzzlePiece = data.isPuzzlePiece;
+        parentBuildingId = data.isPuzzlePiece ? data.parentBuildingId : 0;
+    }
     if (isNew) {
         // obstacle.ts seeds seqOld/wasOpen/wasLocked from the first full data so
         // a streamed-in door/button does not play a change sound on spawn.
@@ -268,8 +269,9 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
     }
 
     // Health smoke emitter for explodable obstacles (obstacle.ts uses a higher
-    // health threshold for player skins).
-    if (def && def->hasExplosion && !smokeEmitter && data.healthT < 0.5f && !data.dead) {
+    // health threshold for player skins). Health/dead only change on full
+    // updates, so read the persistent member state here.
+    if (def && def->hasExplosion && !smokeEmitter && healthT < 0.5f && !dead) {
         const Vec2 dir = v2Normalize(Vec2(1.0f, 1.0f));
         EmitterOptions opts;
         opts.pos = pos;
@@ -278,8 +280,16 @@ void Obstacle::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
         smokeEmitter = ctx.particleBarn().addEmitter(ctx.factory(), "smoke_barrel", opts);
     }
 
-    // obstacle.ts `this.img`: only rebake when the sprite name changes.
-    std::string currentImg = data.dead ? (def ? def->img.residue : "") : (def ? def->img.sprite : "");
+    // obstacle.ts `this.img`: only rebake when the sprite name changes. Button
+    // switches swap to def.button.useImg/offImg while their state is active.
+    std::string currentImg = dead ? (def ? def->img.residue : "") : (def ? def->img.sprite : "");
+    if (isButton && def && !dead) {
+        if (buttonOnOff && !def->buttonUseImg.empty()) {
+            currentImg = def->buttonUseImg;
+        } else if (!buttonCanUse && !def->buttonOffImg.empty()) {
+            currentImg = def->buttonOffImg;
+        }
+    }
     if (currentImg != frame) {
         frame = currentImg;
         imgDirty = true;
@@ -353,25 +363,36 @@ void Obstacle::update(float dt, Ctx& ctx) {
     }
     _mapValueAdjust = ctx.map().mapDef.valueAdjust;
 
-    // obstacle.ts button/door state-change sounds (audioManager.playSound sfx).
-    if (ctx.audio()) {
-        auto playSfx = [&](const std::string& sound) {
-            if (sound.empty()) {
-                return;
-            }
-            audio::PlaySoundOptions opts;
-            opts.channel = "sfx";
-            opts.hasSoundPos = true;
-            opts.soundPos = pos;
-            opts.hasLayer = true;
-            opts.layer = layer;
-            opts.filter = "muffled";
-            ctx.audio()->playSound(sound, opts);
-        };
-        if (isButton && buttonSeq != buttonSeqOld) {
-            playSfx(buttonOnOff ? def->buttonSoundOn : def->buttonSoundOff);
+    // obstacle.ts button state change: useParticle + sound (particles do not
+    // depend on an audio backend).
+    auto playSfx = [&](const std::string& sound) {
+        if (sound.empty() || !ctx.audio()) {
+            return;
         }
-        buttonSeqOld = buttonSeq;
+        audio::PlaySoundOptions opts;
+        opts.channel = "sfx";
+        opts.hasSoundPos = true;
+        opts.soundPos = pos;
+        opts.hasLayer = true;
+        opts.layer = layer;
+        opts.filter = "muffled";
+        ctx.audio()->playSound(sound, opts);
+    };
+    if (isButton && buttonSeq != buttonSeqOld) {
+        // obstacle.ts: spawn the button's useParticle at the collider centre.
+        if (!def->buttonUseParticle.empty()) {
+            const Collider aabb = colliderToAabb(collider);
+            const Vec2 extent = v2Mul(v2Sub(aabb.max, aabb.min), 0.5f);
+            const Vec2 center = v2Add(aabb.min, extent);
+            const Vec2 vel = v2RandomUnit(rnd(5.0f, 15.0f));
+            ctx.particleBarn().addParticle(ctx.factory(), def->buttonUseParticle, layer, center, vel);
+        }
+        playSfx(buttonOnOff ? def->buttonSoundOn : def->buttonSoundOff);
+    }
+    buttonSeqOld = buttonSeq;
+
+    // obstacle.ts door state-change sounds (audioManager.playSound sfx).
+    if (ctx.audio()) {
         if (isDoor) {
             if (doorSeq != doorSeqOld) {
                 playSfx(def->doorSoundChange);
@@ -397,6 +418,21 @@ void Obstacle::update(float dt, Ctx& ctx) {
         if (smokeEmitter) {
             smokeEmitter->stop();
             smokeEmitter = nullptr;
+        }
+        // obstacle.ts destroy effect: only for streamed-in objects (a
+        // pre-destroyed obstacle does not explode when it first appears), once.
+        if (!isNew) {
+            const Collider aabb = colliderToAabb(collider);
+            const Vec2 extent = v2Mul(v2Sub(aabb.max, aabb.min), 0.5f);
+            const Vec2 center = v2Add(aabb.min, extent);
+            const int numParticles = static_cast<int>(rnd(5.0f, 11.0f));
+            const bool useAlt = !def->explodeParticleAlt.empty() && (std::rand() & 1) != 0;
+            const std::string& particle = useAlt ? def->explodeParticleAlt : def->explodeParticle;
+            for (int i = 0; i < numParticles; i++) {
+                if (particle.empty()) break;
+                const Vec2 vel = v2RandomUnit(rnd(5.0f, 15.0f));
+                ctx.particleBarn().addParticle(ctx.factory(), particle, layer, center, vel);
+            }
         }
         if (ctx.audio() && !def->explodeSound.empty()) {
             audio::PlaySoundOptions opts;
@@ -438,18 +474,6 @@ void Obstacle::update(float dt, Ctx& ctx) {
 
 void Obstacle::render(Ctx& ctx, int activeLayer) {
     const MapObjectDef* def = mapDefFor(type);
-    const bool explodedNow = dead && !exploded;
-
-    if (dead && !explodedNow && def && def->hasExplosion && !isNew) {
-        const Collider aabb = colliderToAabbDef(def->hasCollision ? def->collision : Collider{});
-        const Vec2 extent = v2Mul(v2Sub(aabb.max, aabb.min), 0.5f);
-        const Vec2 center = v2Add(aabb.min, extent);
-        const int numParticles = static_cast<int>(rnd(5.0f, 11.0f));
-        for (int i = 0; i < numParticles; i++) {
-            const Vec2 vel = v2RandomUnit(rnd(5.0f, 15.0f));
-            ctx.particleBarn().addParticle(ctx.factory(), def->explosionParticle, layer, center, vel);
-        }
-    }
 
     if (!sprite) {
         sprite = ctx.factory()->createSprite();
@@ -757,23 +781,39 @@ void Building::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew_
 
 void Building::update(float dt, Ctx& ctx) {
     const bool wasNew = isNew;
-    // Destroy ceiling fx (audio/particles are stubbed; the residue + reveal
-    // below carry the visual).
+    // Destroy ceiling fx (building.ts destroyCeilingFx: particles + sound).
     if (ceilingDead && !playedCeilingDeadFx) {
         const MapObjectDef* def = mapDefFor(type);
         ctx.map().deadCeilingIds.push_back(__id);
         playedCeilingDeadFx = true;
-        if (!wasNew && ctx.audio()) {
-            audio::PlaySoundOptions opts;
-            opts.channel = "sfx";
-            opts.hasSoundPos = true;
-            opts.soundPos = pos;
-            opts.hasLayer = true;
-            opts.layer = layer;
-            const std::string& sound =
-                def && !def->ceilingDestroySound.empty() ? def->ceilingDestroySound
-                                                         : std::string("ceiling_break_01");
-            ctx.audio()->playSound(sound, opts);
+        if (!wasNew) {
+            // Spawn particles at random points inside the first surface collider
+            // (building.ts uses surfaces[0] and stops after one collider).
+            if (def && !def->ceilingDestroyParticle.empty() && !surfaces.empty()) {
+                for (const Collider& surfaceCollider : surfaces[0].colliders) {
+                    const Collider aabb = colliderToAabb(surfaceCollider);
+                    for (int j = 0; j < def->ceilingDestroyParticleCount; j++) {
+                        const Vec2 particlePos(rnd(aabb.min.x, aabb.max.x),
+                                               rnd(aabb.min.y, aabb.max.y));
+                        const Vec2 vel = v2RandomUnit(rnd(0.0f, 15.0f));
+                        ctx.particleBarn().addParticle(
+                            ctx.factory(), def->ceilingDestroyParticle, layer, particlePos, vel);
+                    }
+                    break;
+                }
+            }
+            if (ctx.audio()) {
+                audio::PlaySoundOptions opts;
+                opts.channel = "sfx";
+                opts.hasSoundPos = true;
+                opts.soundPos = pos;
+                opts.hasLayer = true;
+                opts.layer = layer;
+                const std::string& sound =
+                    def && !def->ceilingDestroySound.empty() ? def->ceilingDestroySound
+                                                             : std::string("ceiling_break_01");
+                ctx.audio()->playSound(sound, opts);
+            }
         }
     }
     isNew = false;

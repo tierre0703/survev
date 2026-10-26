@@ -2314,3 +2314,200 @@ TEST(player_anim_effects_and_decals) {
 
     installGeneratedDefs();
 }
+
+// P2 rendering parity: player.ts eases m_bodyRad (scale pickups/adrenaline) and
+// the body/gun/melee visual scale follows it instead of snapping to the net
+// scale. gameConfig.player.maxVisualRadius is 3.75 (used by the stairs sort).
+TEST(player_body_radius_eases) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    d.scale = 1.0f;
+    p.m_updateData(d, true, true, world);
+    p.update(0.0f, world);
+    CHECK_NEAR(p.rad, 1.0f, 1e-5f);
+    CHECK_NEAR(p.bodyRad, 1.0f, 1e-5f);
+    CHECK_NEAR(container(p.bodyContainer)->sx, 1.0f, 1e-5f);
+    CHECK_NEAR(PlayerConfig::maxVisualRadius, 3.75f, 1e-5f);
+
+    // A scale change (e.g. adrenaline) snaps into m_rad but eases m_bodyRad.
+    d.scale = 1.5f;
+    p.m_updateData(d, true, false, world);
+    CHECK_NEAR(p.rad, 1.5f, 1e-5f);
+    CHECK_NEAR(p.bodyRad, 1.0f, 1e-5f);
+    p.update(0.05f, world);
+    CHECK_NEAR(p.bodyRad, 1.0f + 0.5f * 0.05f * 6.0f, 1e-5f);
+    CHECK_NEAR(container(p.bodyContainer)->sx, p.bodyRad, 1e-5f);
+    for (int i = 0; i < 100; i++) p.update(0.016f, world);
+    CHECK_NEAR(p.bodyRad, 1.5f, 1e-4f);
+    CHECK_NEAR(container(p.bodyContainer)->sx, 1.5f, 1e-4f);
+
+    // A respawn/new object snaps rather than growing in from the old size.
+    Player fresh;
+    fresh.m_init();
+    d.scale = 2.0f;
+    fresh.m_updateData(d, true, true, world);
+    CHECK_NEAR(fresh.bodyRad, 2.0f, 1e-5f);
+    fresh.update(0.0f, world);
+    CHECK_NEAR(container(fresh.bodyContainer)->sx, 2.0f, 1e-5f);
+}
+
+// P2 rendering parity: obstacle.ts swaps button useImg/offImg sprites with the
+// button state, spawns the button useParticle, and emits the def's destroy
+// particles exactly once (the old port spawned them every render frame).
+TEST(obstacle_button_swap_and_destroy_fx) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    const auto* defs = getDefProvider();
+
+    auto activeParticles = [&]() {
+        int n = 0;
+        for (auto* particle : world.particleBarn().particles) {
+            if (particle->active) n++;
+        }
+        return n;
+    };
+
+    // switch_01 carries both useImg and offImg.
+    const MapObjectDef* sw = defs->mapObject("switch_01");
+    CHECK(sw != nullptr);
+    CHECK(sw && !sw->buttonUseImg.empty());
+    CHECK(sw && !sw->buttonOffImg.empty());
+
+    Obstacle b;
+    b.active = true;
+    b.__id = 77;
+    ObjectData bd;
+    bd.type = "switch_01";
+    bd.pos = Vec2(10.0f, 10.0f);
+    bd.layer = 0;
+    bd.scale = 1.0f;
+    bd.isButton = true;
+    bd.buttonCanUse = true;
+    bd.buttonOnOff = false;
+    bd.buttonSeq = 1;
+    b.m_updateData(bd, true, true, world);
+    CHECK_EQ(b.frame, sw->img.sprite);
+
+    bd.buttonOnOff = true;
+    bd.buttonSeq = 2;
+    b.m_updateData(bd, true, false, world);
+    CHECK_EQ(b.frame, sw->buttonUseImg);
+
+    bd.buttonOnOff = false;
+    bd.buttonCanUse = false;
+    bd.buttonSeq = 3;
+    b.m_updateData(bd, true, false, world);
+    CHECK_EQ(b.frame, sw->buttonOffImg);
+
+    // A partial update (pos/ori/scale only) must not clear the button state.
+    ObjectData partial;
+    partial.pos = bd.pos;
+    partial.scale = bd.scale;
+    partial.ori = bd.ori;
+    b.m_updateData(partial, false, false, world);
+    CHECK(b.isButton);
+    CHECK(!b.buttonCanUse);
+    CHECK_EQ(b.buttonSeq, 3);
+    CHECK_EQ(b.frame, sw->buttonOffImg);
+
+    // Airdrop crates have button.useParticle; a seq change spawns one.
+    const MapObjectDef* crate = defs->mapObject("airdrop_crate_01");
+    CHECK(crate != nullptr);
+    CHECK(crate && !crate->buttonUseParticle.empty());
+    Obstacle c;
+    c.active = true;
+    c.__id = 78;
+    ObjectData cd;
+    cd.type = "airdrop_crate_01";
+    cd.pos = Vec2(20.0f, 20.0f);
+    cd.layer = 0;
+    cd.scale = 1.0f;
+    cd.isButton = true;
+    cd.buttonCanUse = true;
+    cd.buttonSeq = 1;
+    c.m_updateData(cd, true, true, world);
+    c.update(0.016f, world); // first frame: no FX
+    const int beforeButton = activeParticles();
+    cd.buttonSeq = 2;
+    c.m_updateData(cd, true, false, world);
+    c.update(0.016f, world);
+    CHECK_EQ(activeParticles(), beforeButton + 1);
+
+    // Destroy FX: barrel_01 has explodeParticle "barrelBreak" -> 5..10 pieces
+    // on the death update, and the same pieces must not spawn again.
+    Obstacle o;
+    o.active = true;
+    o.__id = 91;
+    ObjectData d;
+    d.type = "barrel_01";
+    d.pos = Vec2(30.0f, 30.0f);
+    d.layer = 0;
+    d.scale = 1.0f;
+    o.m_updateData(d, true, true, world);
+    o.update(0.016f, world); // clear isNew
+    const int beforeDeath = activeParticles();
+    d.dead = true;
+    o.m_updateData(d, true, false, world);
+    o.update(0.016f, world);
+    const int afterDeath = activeParticles();
+    CHECK(afterDeath - beforeDeath >= 5);
+    CHECK(afterDeath - beforeDeath <= 10);
+    o.update(0.016f, world);
+    CHECK_EQ(activeParticles(), afterDeath);
+
+    // A partial update keeps the destroyed state (dead is a full-update field).
+    ObjectData deadPart;
+    deadPart.pos = d.pos;
+    deadPart.scale = d.scale;
+    o.m_updateData(deadPart, false, false, world);
+    CHECK(o.dead);
+    CHECK_EQ(o.frame, getDefProvider()->mapObject("barrel_01")->img.residue);
+}
+
+// P2 rendering parity: building.ts destroyCeilingFx spawns the def's ceiling
+// destroy particle at random points inside the first surface collider.
+TEST(building_ceiling_destroy_particles) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    const auto* defs = getDefProvider();
+
+    const MapObjectDef* shack = defs->mapObject("shack_01");
+    CHECK(shack != nullptr);
+    CHECK(shack && shack->ceilingDestroyParticle == "shackBreak");
+    CHECK(shack && shack->ceilingDestroyParticleCount == 25);
+    // The ceiling destroy sound is a distinct def field (not the whole
+    // building `sound` object); shack_01 uses the native default.
+    CHECK(shack && shack->ceilingDestroySound.empty());
+
+    auto activeParticles = [&]() {
+        int n = 0;
+        for (auto* particle : world.particleBarn().particles) {
+            if (particle->active) n++;
+        }
+        return n;
+    };
+
+    Building b;
+    b.m_init();
+    b.type = "shack_01";
+    b.layer = 0;
+    b.ceilingDead = true;
+    b.isNew = false;
+    Building::Surface surface;
+    surface.type = "wood";
+    surface.colliders.push_back(Collider::createAabb(Vec2(0.0f, 0.0f), Vec2(4.0f, 4.0f)));
+    b.surfaces.push_back(surface);
+
+    const int before = activeParticles();
+    b.update(0.016f, world);
+    CHECK_EQ(activeParticles() - before, 25);
+    b.update(0.016f, world);
+    CHECK_EQ(activeParticles() - before, 25);
+}

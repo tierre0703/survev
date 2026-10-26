@@ -370,12 +370,14 @@ for (let i = 0; i < mapTypes.length; i++) {
 
     entries += `    {${str(type)},${imgInit(img)},${hasImg ? 1 : 0},${colInit(collision)},${hasCollision ? 1 : 0},${
         def.isDoor ? 1 : 0
-    },${def.isButton ? 1 : 0},${def.isTree ? 1 : 0},${def.isWall ? 1 : 0},${
+    },${def.isButton ? 1 : 0},${def.isTree ? 1 : 0},${def.isBush ? 1 : 0},${def.isWall ? 1 : 0},${
         def.img && def.img.randomRotation ? 1 : 0
     },${def.explosion !== undefined ? 1 : 0},${
         str(
             Array.isArray(def.explosion) ? def.explosion[0] : def.explosion,
         )
+    },${str(Array.isArray(def.explodeParticle) ? def.explodeParticle[0] : def.explodeParticle)},${
+        str(Array.isArray(def.explodeParticle) && def.explodeParticle.length > 1 ? def.explodeParticle[1] : "")
     },${n(def.door?.slideOffset, 0)},${n(def.door?.openSpeed, 2)},${str(def.door?.casingImg?.sprite)},${
         n(
             def.door?.casingImg?.pos?.x,
@@ -401,7 +403,9 @@ for (let i = 0; i < mapTypes.length; i++) {
         )
     },${str(def.button?.sound?.on)},${str(def.button?.sound?.off)},${str(def.sound?.explode)},${
         str(def.sound?.bullet)
-    },${surface ? 1 : 0},${surfaceTypeId},${n(surface?.data?.waterColor, 0)},${
+    },${str(def.sound?.enter)},${str(def.button?.useImg)},${str(def.button?.offImg)},${str(def.button?.useParticle)},${
+        surface ? 1 : 0
+    },${surfaceTypeId},${n(surface?.data?.waterColor, 0)},${
         n(
             surface?.data?.rippleColor,
             0,
@@ -455,7 +459,9 @@ for (let i = 0; i < mapTypes.length; i++) {
         interiorSound && interiorSound.undergroundVolume !== undefined ? 1 : 0
     },${n(interiorSound?.undergroundVolume, 1)},${refs.soundEmitters},${buildingSoundEmitters.length},${
         str(def.puzzle?.sound?.fail)
-    },${str(def.puzzle?.sound?.complete)},${str(def.sound)}},\n`;
+    },${str(def.puzzle?.sound?.complete)},${str(def.ceiling?.destroy?.sound)},${str(def.ceiling?.destroy?.particle)},${
+        n(def.ceiling?.destroy?.particleCount, 0)
+    }},\n`;
 }
 
 // Map render defs.
@@ -992,7 +998,8 @@ struct RawSoundEmitter {
 };
 struct RawMapObj {
     const char* type; RawImg img; int hasImg; RawCollider collision; int hasCollision;
-    int isDoor, isButton, isTree, isWall; int randomRotation, hasExplosion; const char* explosionParticle;
+    int isDoor, isButton, isTree, isBush, isWall; int randomRotation, hasExplosion;
+    const char* explosionParticle; const char* explodeParticle; const char* explodeParticleAlt;
     float doorSlideOffset, doorOpenSpeed;
     const char* doorCasingSprite; float doorCasingPx, doorCasingPy, doorCasingScale; unsigned doorCasingTint; float doorCasingAlpha;
     float doorSpriteAnchorX, doorSpriteAnchorY;
@@ -1001,6 +1008,7 @@ struct RawMapObj {
     const char* doorSoundChange; const char* doorSoundOpen; const char* doorSoundClose; const char* doorSoundUnlock;
     const char* buttonSoundOn; const char* buttonSoundOff; const char* explodeSound;
     const char* bulletSound;
+    const char* soundEnter; const char* buttonUseImg; const char* buttonOffImg; const char* buttonUseParticle;
     int hasSurface, surfaceType; unsigned surfaceWaterColor, surfaceRippleColor;
     int hasGore; float goreFadeStart, goreFadeEnd, goreFadePow, goreFadeSpeed;
     int goreHasTint; unsigned goreTint; int goreHasAlpha; float goreAlpha;
@@ -1026,6 +1034,7 @@ struct RawMapObj {
     int hasInteriorUndergroundVolume; float interiorUndergroundVolume;
     const RawSoundEmitter* soundEmitters; int soundEmitterCount;
     const char* puzzleSoundFail; const char* puzzleSoundComplete; const char* ceilingDestroySound;
+    const char* ceilingDestroyParticle; int ceilingDestroyParticleCount;
 };
 struct RawMapRender {
     const char* name;
@@ -1204,10 +1213,13 @@ public:
             d.isDoor = r.isDoor != 0;
             d.isButton = r.isButton != 0;
             d.isTree = r.isTree != 0;
+            d.isBush = r.isBush != 0;
             d.isWall = r.isWall != 0;
             d.randomRotation = r.randomRotation != 0;
             d.hasExplosion = r.hasExplosion != 0;
             d.explosionParticle = r.explosionParticle ? r.explosionParticle : "";
+            d.explodeParticle = r.explodeParticle ? r.explodeParticle : "";
+            d.explodeParticleAlt = r.explodeParticleAlt ? r.explodeParticleAlt : "";
             d.doorSlideOffset = r.doorSlideOffset;
             d.doorOpenSpeed = r.doorOpenSpeed;
             d.doorCasingSprite = r.doorCasingSprite ? r.doorCasingSprite : "";
@@ -1229,6 +1241,10 @@ public:
             d.buttonSoundOff = r.buttonSoundOff ? r.buttonSoundOff : "";
             d.explodeSound = r.explodeSound ? r.explodeSound : "";
             d.bulletSound = r.bulletSound ? r.bulletSound : "";
+            d.soundEnter = r.soundEnter ? r.soundEnter : "";
+            d.buttonUseImg = r.buttonUseImg ? r.buttonUseImg : "";
+            d.buttonOffImg = r.buttonOffImg ? r.buttonOffImg : "";
+            d.buttonUseParticle = r.buttonUseParticle ? r.buttonUseParticle : "";
             d.hasSurface = r.hasSurface != 0;
             d.surfaceType = r.surfaceType == 2
                 ? SurfaceTypeDef::Grass
@@ -1332,6 +1348,8 @@ public:
             d.puzzleSoundFail = r.puzzleSoundFail ? r.puzzleSoundFail : "";
             d.puzzleSoundComplete = r.puzzleSoundComplete ? r.puzzleSoundComplete : "";
             d.ceilingDestroySound = r.ceilingDestroySound ? r.ceilingDestroySound : "";
+            d.ceilingDestroyParticle = r.ceilingDestroyParticle ? r.ceilingDestroyParticle : "";
+            d.ceilingDestroyParticleCount = r.ceilingDestroyParticleCount;
             for (int i = 0; i < r.soundEmitterCount; i++) {
                 BuildingSoundEmitterDef e;
                 e.sound = r.soundEmitters[i].sound ? r.soundEmitters[i].sound : "";

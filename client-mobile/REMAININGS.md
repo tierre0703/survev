@@ -10,11 +10,14 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-26 (P1.8 + P2 pass)** — team matches
+Latest recorded state: **2026-10-26 (P1.8 + P2 passes)** — team matches
 return to their room, room props persist, in-room rename and invite/join links
 work, and the pass reloads the profile for new items. The P2 pass adds
 real additive blending, the V minimap toggle, shell casings, newest/item-source/
-NEW-badge loadout polish, plus the P1.4–P1.7 HUD/menu/input/audio set. **195 host
+NEW-badge loadout polish, plus the P1.4–P1.7 HUD/menu/input/audio set. The
+second P2 pass adds eased player body radius, `maxVisualRadius` 3.75, def-driven
+bush rustle/particles, button useImg/offImg + useParticle, once-only obstacle
+destroy debris, and ceiling destroy particles. **198 host
 tests pass, 0 fail.**
 
 ---
@@ -55,12 +58,12 @@ tests pass, 0 fail.**
 | `client/src/gas.ts` → `game/Gas.*` | ✅ |
 | `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | ✅ dispatch/net, match-over latch + death/spectate, player/camera/projectile interpolation (P0.3), keyboard/mouse input + change-gated InputMsg (P1.6); local rotation remains desktop-only (P2) |
 | `client/src/objects/objectPool.ts` → `game/objects/GameObject.h` | ✅ |
-| `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | ✅ poses/animations faithful; faction patch, last-stand/bleed particles, same-group nametags and real action-sound keys; minor radius/easing nuances P2 |
+| `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | ✅ poses/animations faithful; faction patch, last-stand/bleed particles, same-group nametags, real action-sound keys, eased `m_bodyRad` and `maxVisualRadius` 3.75; minor easing nuances P2 |
 | `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | ✅ travelling tracer sprite, per-def palette/width/length, suppression, collision FX + hit groups, blood/pan sparks, stairs layer |
 | `client/src/objects/explosion.ts` → `objects/Barns.*` (ExplosionBarn) + `GameWorld.cpp` | ✅ generated burst/scatter/ripple/shake/lifetime/indoor suppression; physics particles |
 | `client/src/objects/shot.ts` → `objects/Barns.*` (ShotBarn) | 🔶 fire sound + shell casings (ammo/custom particle, reload-timing exclusion); last/alt/team variants and cycle/pull timing remain P2 |
-| `client/src/objects/obstacle.ts` → `objects/Barns.*` | 🔶 door/button/destroy sounds, particles and button sprite swap missing (P1.3/P2) |
-| `client/src/objects/building.ts` → `objects/Barns.*` | 🔶 ceiling reveal/sounds partial; puzzle FX and ceiling debris particles missing (P2) |
+| `client/src/objects/obstacle.ts` → `objects/Barns.*` | ✅ door/button/destroy sounds, button useParticle + useImg/offImg swap, once-only destroy debris (def explodeParticle, 2-item pick) |
+| `client/src/objects/building.ts` → `objects/Barns.*` | 🔶 ceiling reveal/sounds/residue + destroy particles; puzzle FX remain partial (P2) |
 | `client/src/objects/loot.ts` → `objects/Barns.*` | ✅ rarity border/outer ring, inner-art scale/rotation/mirror, tint |
 | `client/src/objects/decal.ts` → `objects/Barns.*` | ✅ |
 | `client/src/objects/deadBody.ts` → `objects/Barns.*` | ✅ (interpolation P0.3) |
@@ -524,11 +527,30 @@ Done in the first P2 pass (2026-10-26):
   per-shot velocity/rotation, reload-timing guns excluded) and covered by the
   shot host test.
 
+Done in the second P2 pass (2026-10-26):
+- Player body radius now eases (`m_bodyRad`, `dt * 6`, snap on `isNew`) and the
+  body/gun/mag/melee scales follow it; `maxVisualRadius` is the web's 3.75
+  (the old 1.0 hardcode was used for the stairs sort).
+- Bush enter/exit FX is def-driven: `isBush`, `sound.enter` and `hitParticle`
+  (3–4 particles) instead of `isTree`/`bush_enter_01`/`leaf`.
+- Obstacles swap `button.useImg`/`offImg` sprites with button state, spawn
+  `button.useParticle` on a seq change, and emit destroy debris (def
+  `explodeParticle`, string or 2-item random pick) exactly once — the old code
+  spawned it every render frame and only for explodable defs.
+- Building ceilings spawn `ceiling.destroy.particle` × `particleCount` inside
+  the first surface collider; the destroy sound now comes from
+  `ceiling.destroy.sound` (the old codegen wrote the whole `sound` object).
+- Partial obstacle updates (pos/ori/scale) no longer clear full-update state
+  (type/button/door/health/dead): the def is resolved from the persisted type
+  and the sprite swap/interpolation survive delta ticks.
+- Host tests: `player_body_radius_eases`,
+  `obstacle_button_swap_and_destroy_fx`,
+  `building_ceiling_destroy_particles`.
+
 Remaining:
-- **Rendering:** body-radius easing, bush particle/sound per def,
-  `maxVisualRadius` 3.75 vs 1.0, particle colour variance, river-shore `"stone"`
-  surface, `MapSprite` z-order, ceiling destroy particles, obstacle button image
-  swap, plane/airstrike visuals, reload-timing casings (revolvers/pistols).
+- **Rendering:** particle colour variance (the web `color: () => ...` functions),
+  river-shore `"stone"` surface, `MapSprite` z-order, plane/airstrike visuals,
+  reload-timing casings (revolvers/pistols), body-easing edge cases.
 - **HUD/menus:** kill-feed role lines, squad bar role/team colours and downed
   pulse, gas icon/pulse, gear order/levels/tap-to-drop, menu
   splash/background/clientTheme, mode icons, news images/badges, social/streamer
@@ -599,7 +621,7 @@ Remaining:
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (195 tests, 0 failures expected)
+# host tests (198 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -845,3 +867,23 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   `CreateFromDirectory` writes backslashes on Windows and bundletool rejects it.
   Proto resources come from `aapt2 link --proto-format`; the rest is copied from
   the release APK.
+- Obstacle destroy debris is spawned **once** from `Obstacle::update` (guarded by
+  `dead && !exploded && !isNew`) using `colliderToAabb(collider)` and the def's
+  `explodeParticle`/`explodeParticleAlt`; do not move it back into `render` (the
+  old render-time condition spawned 5-11 particles every frame).
+- Button sprites come from `def.buttonUseImg` (on) / `def.buttonOffImg`
+  (not usable), and `def.buttonUseParticle` spawns on the button seq change.
+  `buttonSeqOld` advances even without an audio backend.
+- `Obstacle::m_updateData` resolves the def from the persisted `type` and only
+  reads full state (type/layer/health/dead/button/door/puzzle/skin) when
+  `fullUpdate` is set: partial updates carry pos/ori/scale only. Do not read
+  `data.type`/`data.dead`/`data.healthT` there — a partial ObjectData is empty
+  and would clear the button sprite, door interpolation and health tint.
+- Player visual scale is `m_bodyRad / PlayerConfig::radius` (eased at `dt * 6`
+  in `Player::update`, snapped on `isNew`), not the raw net `scale`; the body,
+  gun/mag and melee sprites all use it. `maxVisualRadius` is 3.75.
+- Bush rustle uses `def.isBush` + `def.soundEnter` + `def.hitParticle`; do not
+  reintroduce the `isTree`/`bush_enter_01`/`leaf` hardcodes.
+- Ceiling destroy FX uses `def.ceilingDestroyParticle` �
+  `def.ceilingDestroyParticleCount` inside `surfaces[0]` and the sound from
+  `ceiling.destroy.sound` (codegen: never emit `def.sound`, it is an object).

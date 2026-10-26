@@ -202,12 +202,17 @@ struct MapObjectDef {
     bool isDoor = false;
     bool isButton = false;
     bool isTree = false;
+    // obstacle.ts `isBush`: player player.ts bush enter/exit rustle FX.
+    bool isBush = false;
     bool isWall = false;
     // obstacle.ts `randomRotation`: rotate the obstacle image by __id % 360.
     bool randomRotation = false;
     // obstacle.ts `explosion` particle (hasExplosion gates the health smoke).
     bool hasExplosion = false;
     std::string explosionParticle;
+    // obstacle.ts `explodeParticle` (destroy FX; string or 2-item random pick).
+    std::string explodeParticle;
+    std::string explodeParticleAlt;
     // obstacle.ts door.slideOffset (used to compute the open door position).
     float doorSlideOffset = 0.0f;
     // obstacle.ts door.openSpeed (position/rotation interpolation speed).
@@ -240,6 +245,12 @@ struct MapObjectDef {
     std::string explodeSound;
     // obstacle.ts def.sound.bullet (bullet impact hit group).
     std::string bulletSound;
+    // obstacle.ts def.sound.enter (bush rustle on enter/exit).
+    std::string soundEnter;
+    // obstacle.ts button useImg/offImg sprite swap + useParticle on seq change.
+    std::string buttonUseImg;
+    std::string buttonOffImg;
+    std::string buttonUseParticle;
 
     // decalDefs (decal.ts): `surface` recolours getGroundSurface for decals
     // painted over water; `gore` fades that water colour with the gore level.
@@ -294,6 +305,9 @@ struct MapObjectDef {
     std::string ceilingDestroySound;
     CeilingVisionDef ceilingVision;
     std::string ceilingDestroyResidue;
+    // building.ts ceiling.destroy: particle count + sprite (destroyCeilingFx).
+    std::string ceilingDestroyParticle;
+    int ceilingDestroyParticleCount = 0;
     std::vector<BuildingEmitterDef> occupiedEmitters;
 
     // pre-computed bounding collider (mapHelpers.getBoundingCollider)

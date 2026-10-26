@@ -157,8 +157,8 @@ struct PlayerConfig {
     // player.ts aura (medic heal/revive circle) radii.
     static constexpr float medicHealRange = 8.0f;
     static constexpr float medicReviveRange = 6.0f;
-    // player.ts maxVisualRadius (stairs sort test).
-    static constexpr float maxVisualRadius = 1.0f;
+    // player.ts maxVisualRadius (stairs sort test); gameConfig.ts = 3.75.
+    static constexpr float maxVisualRadius = 3.75f;
     // emote.ts throttle (gameConfig.ts player.emoteSoftCooldown etc.).
     static constexpr float emoteSoftCooldown = 2.0f;
     static constexpr float emoteHardCooldown = 6.0f;

@@ -83,6 +83,9 @@ void Player::m_init() {
     throwableState = 0;
     visualsDirty = true;
     scale = 1.0f;
+    // player.ts constructor seeds m_bodyRad from m_rad; net updates ease it.
+    rad = PlayerConfig::radius;
+    bodyRad = PlayerConfig::radius;
     teamId = 0;
     gunRecoil = {};
     healEffect = false;
@@ -166,6 +169,11 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
     }
     // player.ts: m_rad = netData.m_scale * GameConfig.player.radius.
     rad = data.scale * PlayerConfig::radius;
+    if (isNew) {
+        // player.ts snaps m_bodyRad on the first update (isNew forces the full
+        // step) so a respawn never visibly grows/shrinks into the new size.
+        bodyRad = rad;
+    }
     if ((hasteType != data.hasteType || hasteSeq != data.hasteSeq) && hasteEmitter) {
         hasteEmitter->stop();
         hasteEmitter = nullptr;
@@ -317,6 +325,9 @@ void Player::updateVisuals(Ctx& ctx) {
     if (!outfitDef) return;
     const auto& skin = outfitDef->skin;
     const bool ghillie = outfitDef->ghillie;
+    // player.ts updateVisuals: bodyScale = m_bodyRad / GameConfig.player.radius.
+    // Eased so scale pickups grow the body (and shrink guns/melee to fit).
+    const float bodyScale = bodyRad / PlayerConfig::radius;
     const uint32_t ghillieTint = ctx.map().mapDef.colors.playerGhillie;
     skinSprite(bodySprite, skin.baseSprite, ghillie ? ghillieTint : skin.baseTint, 0.25f);
     skinSprite(limbSprites[0], skin.handL, ghillie ? ghillieTint : skin.handTint, 0.175f);
@@ -389,12 +400,12 @@ void Player::updateVisuals(Ctx& ctx) {
             // (0.5, 0); using 1 here put the grip at the muzzle and flipped
             // the gun 180 degrees around the hand.
             gunSprites[i]->setAnchor(0.5f, 0.0f);
-            gunSprites[i]->setScale(weapon->worldImg.scale.x * 0.5f / scale, weapon->worldImg.scale.y * 0.5f / scale);
+            gunSprites[i]->setScale(weapon->worldImg.scale.x * 0.5f / bodyScale, weapon->worldImg.scale.y * 0.5f / bodyScale);
             gunContainers[i]->setRotation(pi / 2.0f);
             gunContainers[i]->setPosition((weapon->isDual ? -5.95f : -4.25f) + weapon->gunOffset.x,
                                           (weapon->isDual ? 0.0f : -1.75f) + weapon->gunOffset.y);
-            skinSprite(magSprites[i], weapon->magSprite, 0xffffff, 0.25f / scale);
-            magSprites[i]->setPosition(weapon->magPos.x / scale, weapon->magPos.y / scale);
+            skinSprite(magSprites[i], weapon->magSprite, 0xffffff, 0.25f / bodyScale);
+            magSprites[i]->setPosition(weapon->magPos.x / bodyScale, weapon->magPos.y / bodyScale);
             gunContainers[i]->setChildIndex(magSprites[i], weapon->magTop ? 1 : 0);
             boneContainers[i]->setChildIndex(gunContainers[i], weapon->worldImg.handsBelow ? 2 : 0);
         }
@@ -428,7 +439,14 @@ void Player::update(float dt, Ctx& ctx) {
     if (!container) return;
     dt = std::max(dt, 0.0f);
     // player.ts gives the stairs test a larger radius (GameConfig.player.maxVisualRadius).
-    const float maxVisualRadius = 1.0f;
+    const float maxVisualRadius = PlayerConfig::maxVisualRadius;
+    // player.ts: ease radius transitions (scale pickups / adrenaline).
+    if (!math::eqAbs(rad, bodyRad)) {
+        const float bodyRadDist = rad - bodyRad;
+        float bodyRadStep = std::fabs(bodyRadDist) > 0.0001f ? bodyRadDist * dt * 6.0f : bodyRadDist;
+        bodyRad += bodyRadStep;
+        visualsDirty = true;
+    }
     for (auto& recoil : gunRecoil) recoil = std::max(0.0f, recoil - recoil * dt * 5.0f - dt);
     scale = std::max(scale, 0.001f);
     const auto* provider = getDefProvider();
@@ -488,15 +506,16 @@ void Player::update(float dt, Ctx& ctx) {
     if (weapon && weapon->category == "melee") {
         const auto& bone = bones[5];
         const auto& img = weapon->worldImg;
+        const float bodyScale = bodyRad / PlayerConfig::radius;
         const float r = img.rot + bone.rot;
         Vec2 offset = v2Add(bone.pos, img.pos);
-        offset = Vec2(offset.x * img.scale.x / scale, offset.y * img.scale.y / scale);
+        offset = Vec2(offset.x * img.scale.x / bodyScale, offset.y * img.scale.y / bodyScale);
         offset = v2Sub(v2Rotate(offset, r), bone.pivot);
         meleeSprite->setPosition(offset.x, offset.y);
         meleeSprite->setRotation(r);
-        meleeSprite->setScale(img.scale.x / scale, img.scale.y / scale);
+        meleeSprite->setScale(img.scale.x / bodyScale, img.scale.y / bodyScale);
     }
-    bodyContainer->setScale(scale, scale);
+    bodyContainer->setScale(bodyRad / PlayerConfig::radius, bodyRad / PlayerConfig::radius);
     // player.ts update(): interpolate the render position/direction between the
     // previous and the current net position over camera.m_interpInterval. The
     // camera follows m_visualPos, so this is what makes 33 Hz motion smooth.
@@ -692,15 +711,17 @@ void Player::update(float dt, Ctx& ctx) {
             const auto& obstacles = ctx.map().obstaclePool.m_getPool();
             bool isInBush = false;
             std::string bushType;
+            const MapObjectDef* bushDef = nullptr;
             for (auto* obstacle : obstacles) {
                 if (!obstacle || !obstacle->active || obstacle->dead ||
                     obstacle->layer != layer) continue;
                 const MapObjectDef* od = getDefProvider() ? getDefProvider()->mapObject(obstacle->type) : nullptr;
-                if (od && od->isTree) {
+                if (od && od->isBush) {
                     const float bushRad = rad * 0.25f;
                     if (colliderIntersectCircle(obstacle->collider, pos, bushRad)) {
                         isInBush = true;
                         bushType = obstacle->type;
+                        bushDef = od;
                         break;
                     }
                 }
@@ -709,27 +730,32 @@ void Player::update(float dt, Ctx& ctx) {
             const bool wasInside = wasInsideObstacle;
             wasInsideObstacle = isInBush;
             if (isInBush) insideObstacleType = bushType;
-            if (wasInside != isInBush && lastInsideObstacleTime < 0) {
+            if (wasInside != isInBush && lastInsideObstacleTime < 0 && bushDef) {
                 lastInsideObstacleTime = 0.2f;
-                const std::string bushSound = "bush_enter_01";
-                audio::PlaySoundOptions bushOpts;
-                bushOpts.channel = "sfx";
-                bushOpts.hasSoundPos = true;
-                bushOpts.soundPos = pos;
-                bushOpts.fallOff = 1.0f;
-                bushOpts.hasLayer = true;
-                bushOpts.layer = layer;
-                bushOpts.filter = "muffled";
-                audio->playSound(bushSound, bushOpts);
+                // player.ts: the bush cue/particle come from the obstacle def
+                // (sound.enter / hitParticle), not a hardcoded leaf.
+                if (!bushDef->soundEnter.empty() && bushDef->soundEnter != "none") {
+                    audio::PlaySoundOptions bushOpts;
+                    bushOpts.channel = "sfx";
+                    bushOpts.hasSoundPos = true;
+                    bushOpts.soundPos = pos;
+                    bushOpts.fallOff = 1.0f;
+                    bushOpts.hasLayer = true;
+                    bushOpts.layer = layer;
+                    bushOpts.filter = "muffled";
+                    audio->playSound(bushDef->soundEnter, bushOpts);
+                }
                 const Vec2 moveDir = v2NormalizeSafe(v2Sub(posOld, pos), Vec2(1.0f, 0.0f));
                 const float partDir = isInBush ? 1.0f : -1.0f;
-                const int numParts = 3 + (std::rand() % 3);
+                const int numParts = static_cast<int>(randRange(3.0f, 5.0f));
                 for (int i = 0; i < numParts; i++) {
                     const Vec2 vel = v2Mul(
                         v2Rotate(v2Mul(moveDir, partDir),
                                  ((randf() - 0.5f) * pi) / 1.5f),
                         6.0f + randf() * 2.0f);
-                    ctx.particleBarn().addParticle(ctx.factory(), "leaf", layer, pos, vel);
+                    if (!bushDef->hitParticle.empty()) {
+                        ctx.particleBarn().addParticle(ctx.factory(), bushDef->hitParticle, layer, pos, vel);
+                    }
                 }
             }
         }

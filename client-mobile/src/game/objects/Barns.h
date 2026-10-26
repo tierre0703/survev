@@ -857,6 +857,8 @@ public:
     float auraRadius = 0.0f;
     // player.ts m_rad = netData.scale * GameConfig.player.radius.
     float rad = 1.0f;
+    // player.ts m_bodyRad: eased radius used for the body/gun/melee scale.
+    float bodyRad = 1.0f;
     float auraViewFade = 0.0f;
     float auraPulseTicker = 0.0f;
     float auraPulseDir = 1.0f;
