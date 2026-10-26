@@ -611,7 +611,9 @@ for (const type of gameTypes) {
         throwPhysics.randomizeSpinDir ? 1 : 0
     },${def.alwaysRenderOntop ? 1 : 0},${f(def.rad, 1)},${str(def.particle?.casing || def.ammo || "")},${
         def.caseTiming === "reload" ? 1 : 0
-    }},\n`;
+    },${n(def.maxReload, 1)},${f(def.particle?.shellScale, 1)},${f(def.particle?.shellOffset, 0.375)},${
+        f(def.particle?.shellOffsetY, 0)
+    },${f(def.particle?.shellForward, 0)},${def.particle?.shellReverse ? 1 : 0}},\n`;
     if (
         !def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack"
         && !def.frozenSprites
@@ -1113,7 +1115,8 @@ struct RawGameObj { const char* type; const char* category; RawImg img; int hasI
     const char* explosionEffectType;
     int hasTrail; float trailMaxLength, trailWidth, trailAlpha; unsigned trailTint;
     float throwSpeed, spinVel, spinDrag; int randomizeSpinDir, alwaysRenderOntop; float projectileRad;
-    const char* casing; int casingOnReload; };
+    const char* casing; int casingOnReload; int maxReload;
+    float shellScale, shellOffset, shellOffsetY, shellForward; int shellReverse; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -1501,6 +1504,12 @@ public:
             d.projectileRad = r.projectileRad;
             d.casing = r.casing ? r.casing : "";
             d.casingOnReload = r.casingOnReload != 0;
+            d.maxReload = r.maxReload;
+            d.shellScale = r.shellScale;
+            d.shellOffset = r.shellOffset;
+            d.shellOffsetY = r.shellOffsetY;
+            d.shellForward = r.shellForward;
+            d.shellReverse = r.shellReverse != 0;
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}

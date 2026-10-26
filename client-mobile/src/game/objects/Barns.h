@@ -756,6 +756,12 @@ public:
     void clear();
 };
 
+// shot.ts createCasingParticle: ejected shell for a gun (used by ShotBarn and
+// the player reload action for caseTiming == "reload" weapons).
+void createCasingParticle(pix::Factory* factory, const GameObjRenderDef& weapDef, float casingAngle,
+                          float casingSpeedMult, const Vec2& pos, const Vec2& dir, int layer,
+                          int zOrd, ParticleBarn& particleBarn);
+
 // --- player.ts skeletal rendering -----------------------------------------
 class Player : public AbstractObject {
 public:

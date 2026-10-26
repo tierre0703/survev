@@ -18,8 +18,9 @@ NEW-badge loadout polish, plus the P1.4–P1.7 HUD/menu/input/audio set. The
 second P2 pass adds eased player body radius, `maxVisualRadius` 3.75, def-driven
 bush rustle/particles, button useImg/offImg + useParticle, once-only obstacle
 destroy debris, and ceiling destroy particles. The third adds per-particle
-HSV color variance and the map's river-shore footstep surface. **201 host
-tests pass, 0 fail.**
+HSV color variance and the map's river-shore footstep surface. The fourth adds
+shot/reload casing parity (shell offset/scale/forward/reverse and revolver
+reload casings). **202 host tests pass, 0 fail.**
 
 ---
 
@@ -62,7 +63,7 @@ tests pass, 0 fail.**
 | `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | ✅ poses/animations faithful; faction patch, last-stand/bleed particles, same-group nametags, real action-sound keys, eased `m_bodyRad` and `maxVisualRadius` 3.75; minor easing nuances P2 |
 | `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | ✅ travelling tracer sprite, per-def palette/width/length, suppression, collision FX + hit groups, blood/pan sparks, stairs layer |
 | `client/src/objects/explosion.ts` → `objects/Barns.*` (ExplosionBarn) + `GameWorld.cpp` | ✅ generated burst/scatter/ripple/shake/lifetime/indoor suppression; physics particles |
-| `client/src/objects/shot.ts` → `objects/Barns.*` (ShotBarn) | 🔶 fire sound + shell casings (ammo/custom particle, reload-timing exclusion); last/alt/team variants and cycle/pull timing remain P2 |
+| `client/src/objects/shot.ts` → `objects/Barns.*` (ShotBarn) | ✅ fire sound, shot casings (`createCasingParticle`: shell offset/scale/forward/reverse) and reload-timing casings (`caseTiming == "reload"`, maxReload shells); last/alt/team variants and cycle/pull timing remain P2 |
 | `client/src/objects/obstacle.ts` → `objects/Barns.*` | ✅ door/button/destroy sounds, button useParticle + useImg/offImg swap, once-only destroy debris (def explodeParticle, 2-item pick) |
 | `client/src/objects/building.ts` → `objects/Barns.*` | 🔶 ceiling reveal/sounds/residue + destroy particles; puzzle FX remain partial (P2) |
 | `client/src/objects/loot.ts` → `objects/Barns.*` | ✅ rarity border/outer ring, inner-art scale/rotation/mirror, tint |
@@ -558,11 +559,20 @@ Done in the third P2 pass (2026-10-26):
 - Host tests: `hsv_to_rgb_matches_web`, `particle_color_variance`,
   `river_shore_surface_from_map_def`.
 
+Done in the fourth P2 pass (2026-10-26):
+- `shot.ts createCasingParticle` is now the single shell helper for shot and
+  reload casings: gun `particle.shellOffset`/`shellOffsetY`/`shellScale`/
+  `shellForward`/`shellReverse` and `maxReload` are generated, and
+  `caseTiming == "reload"` guns (revolvers/pistols) eject `maxReload` shells
+  from the `Action_Reload`/`Action_ReloadAlt` start instead of on every shot.
+- Shot casings now use the player position and `renderZOrd + 1` like the web.
+- Host test: `gun_casing_fields_and_reload_shells`.
+
 Remaining:
-- **Rendering:** `MapSprite` z-order (the live HUD uses `MapView`/`EmoteManager`
-  ping layers; `MapSpriteBarn`/`MapIndicator` are only reachable from the dead
-  `FguiHud`), plane/airstrike visuals, reload-timing casings
-  (revolvers/pistols), body-easing edge cases.
+- **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
+  alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
+  implemented; `MapSprite` z-order only affects the dead `FguiHud` path (the
+  live HUD uses `MapView`/`EmoteManager` ping layers).
 - **HUD/menus:** kill-feed role lines, squad bar role/team colours and downed
   pulse, gas icon/pulse, gear order/levels/tap-to-drop, menu
   splash/background/clientTheme, mode icons, news images/badges, social/streamer
@@ -633,7 +643,7 @@ Remaining:
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (201 tests, 0 failures expected)
+# host tests (202 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -907,3 +917,8 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - `Map::getGroundSurface` uses `mapDef.riverShoreSurface` on river banks
   (codegen from `mapDef.biome.sound.riverShore`); only `main_spring` and
   `woods_spring` are `stone`, every other map is `sand`.
+- Shell casings go through `createCasingParticle` (Barns.cpp): gun codegen
+  supplies `shellOffset/shellOffsetY/shellScale/shellForward/shellReverse`,
+  `maxReload` and the resolved casing type. Shot casings use `renderZOrd + 1`;
+  `casingOnReload` guns spawn `maxReload` shells once per reload action start,
+  never per shot.

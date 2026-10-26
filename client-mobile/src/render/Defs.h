@@ -507,6 +507,14 @@ struct GameObjRenderDef {
     // pistols eject when reloading, not on every shot).
     std::string casing;
     bool casingOnReload = false;
+    // shot.ts createCasingParticle: shell placement/scale/forward/reverse and
+    // the reload-shot count (revolvers eject maxReload casings).
+    int maxReload = 1;
+    float shellScale = 1.0f;
+    float shellOffset = 0.375f;
+    float shellOffsetY = 0.0f;
+    float shellForward = 0.0f;
+    bool shellReverse = false;
 
     // Map indicator (item/role minimap marker) fields.
     std::string mapIndicatorSprite;

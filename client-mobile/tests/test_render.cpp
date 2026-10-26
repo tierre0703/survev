@@ -2586,3 +2586,74 @@ TEST(river_shore_surface_from_map_def) {
     CHECK(spring && spring->riverShoreSurface == SurfaceType::Stone);
     CHECK(woodsSpring && woodsSpring->riverShoreSurface == SurfaceType::Stone);
 }
+
+// shot.ts createCasingParticle: shot casings use the gun's shell offset/scale,
+// and caseTiming == "reload" guns (revolvers/pistols) eject maxReload shells on
+// the reload action instead of on every shot.
+TEST(gun_casing_fields_and_reload_shells) {
+    installGeneratedDefs();
+    const auto* defs = getDefProvider();
+    const auto* m9 = defs->gameObject("m9");
+    const auto* ot38 = defs->gameObject("ot38");
+    const auto* bugle = defs->gameObject("bugle");
+    CHECK(m9 != nullptr);
+    CHECK(ot38 != nullptr);
+    CHECK(bugle != nullptr);
+    CHECK(m9 && !m9->casingOnReload);
+    CHECK(m9 && m9->maxReload == 15);
+    CHECK_NEAR(m9 ? m9->shellOffset : 0.0f, 0.25f, 1e-5f);
+    CHECK_NEAR(m9 ? m9->shellScale : 0.0f, 1.0f, 1e-5f);
+    CHECK(ot38 && ot38->casingOnReload);
+    CHECK(ot38 && ot38->maxReload == 5);
+    CHECK(bugle && bugle->shellForward == 1.0f);
+    CHECK(bugle && bugle->shellScale == 4.0f);
+
+    auto activeParticles = [&](GameWorld& world) {
+        int n = 0;
+        for (auto* particle : world.particleBarn().particles) {
+            if (particle->active) n++;
+        }
+        return n;
+    };
+
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    // A single shot casing at the expected muzzle offset.
+    createCasingParticle(&factory, *m9, -3.14159265358979f * 0.5f, 1.0f, Vec2(10.0f, 20.0f), Vec2(1.0f, 0.0f),
+                         0, 19, world.particleBarn());
+    CHECK_EQ(activeParticles(world), 1);
+    const Particle* casing = nullptr;
+    for (auto* particle : world.particleBarn().particles) {
+        if (particle->active) casing = particle;
+    }
+    CHECK(casing != nullptr);
+    if (casing) {
+        CHECK_NEAR(casing->pos.x, 10.0f + PlayerConfig::radius + m9->shellOffset, 1e-5f);
+        CHECK_NEAR(casing->pos.y, 20.0f, 1e-5f);
+        CHECK_NEAR(v2Length(casing->vel), 9.5f, 1e-4f);
+        CHECK_EQ(casing->layer, 0);
+        CHECK_NEAR(casing->rot, 3.14159265358979f * 0.5f, 1e-5f);
+        CHECK_EQ(casing->zOrd, 19);
+    }
+
+    // Revolver reload ejects maxReload shells (5 for ot38), and a
+    // caseTiming == "shoot" gun spawns none on reload.
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    d.activeWeapon = "ot38";
+    p.m_updateData(d, true, true, world);
+    const int beforeReload = activeParticles(world);
+    p.updateActions(Action_Reload, "ot38", world);
+    const int afterReload = activeParticles(world);
+    CHECK_EQ(afterReload - beforeReload, 5);
+    int reloadShells = 0;
+    for (auto* particle : world.particleBarn().particles) {
+        if (particle->active && particle->zOrd == p.renderZOrd + 1) reloadShells++;
+    }
+    CHECK(reloadShells >= 6); // includes the earlier shot casing
+
+    p.updateActions(Action_None, "", world);
+    p.updateActions(Action_Reload, "m9", world);
+    CHECK_EQ(activeParticles(world), afterReload);
+}

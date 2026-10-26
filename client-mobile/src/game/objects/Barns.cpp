@@ -2992,18 +2992,8 @@ void ShotBarn::update(float dt, GameWorld& ctx) {
                 // whose caseTiming is "shoot" (revolvers/pistols eject on
                 // reload, so casingOnReload skips this branch).
                 if (def && def->category == "gun" && !def->casingOnReload) {
-                    const std::string casingType = def->casing.empty() ? def->ammoType : def->casing;
-                    if (!casingType.empty()) {
-                        const Vec2 dir = v2NormalizeSafe(player->dir, Vec2(1.0f, 0.0f));
-                        Vec2 shellDir = v2Rotate(dir, -3.14159265358979f * 0.5f);
-                        Vec2 vel = v2Mul(shellDir, 9.5f);
-                        vel = v2Rotate(vel, (rnd(0.0f, 1.0f) - 0.5f) * 3.14159265358979f / 3.0f);
-                        const Vec2 shellPos = v2Add(shot->pos,
-                                                    v2Mul(dir, PlayerConfig::radius + 0.375f));
-                        ctx.particleBarn().addParticle(
-                            ctx.factory(), casingType, shot->layer, shellPos, vel, 1.0f,
-                            -std::atan2(shellDir.y, shellDir.x), nullptr, player->renderZOrd);
-                    }
+                    createCasingParticle(ctx.factory(), *def, -pi * 0.5f, 1.0f, player->pos, player->dir,
+                                         shot->layer, player->renderZOrd + 1, ctx.particleBarn());
                 }
             }
         }
@@ -3317,6 +3307,29 @@ void ParticleBarn::clear() {
     // next match from stepping a previous match's (now inactive) objects.
     emitters.clear();
     particles.clear();
+}
+
+void createCasingParticle(pix::Factory* factory, const GameObjRenderDef& weapDef, float casingAngle,
+                          float casingSpeedMult, const Vec2& pos, const Vec2& dir, int layer,
+                          int zOrd, ParticleBarn& particleBarn) {
+    Vec2 shellDir = v2Rotate(dir, casingAngle);
+    if (weapDef.shellForward != 0.0f) {
+        shellDir = v2Mul(dir, weapDef.shellForward);
+    }
+    Vec2 vel = v2Mul(shellDir, casingSpeedMult * 9.5f);
+    vel = v2Rotate(vel, (rnd(0.0f, 1.0f) - 0.5f) * pi / 3.0f);
+    Vec2 shellPos = v2Add(pos, v2Mul(dir, PlayerConfig::radius + weapDef.shellOffset));
+    if (weapDef.shellOffsetY != 0.0f) {
+        shellPos = v2Add(shellPos, v2Mul(shellDir, weapDef.shellOffsetY));
+    }
+    if (weapDef.shellReverse) {
+        vel = v2Mul(vel, -1.0f);
+    }
+    if (weapDef.casing.empty()) {
+        return;
+    }
+    particleBarn.addParticle(factory, weapDef.casing, layer, shellPos, vel, weapDef.shellScale,
+                             -std::atan2(shellDir.y, shellDir.x), nullptr, zOrd);
 }
 
 } // namespace surv

@@ -941,6 +941,22 @@ void Player::updateActions(int actionType, const std::string& actionItem, Ctx& c
             actionSoundInstance = ctx.audio()->playSound(soundName, opts);
         }
     }
+
+    // player.ts playActionStartEffect: reload caseTiming == "reload" guns eject
+    // one casing per chambered round (revolvers/pistols), alternating sides.
+    if ((actionType == Action_Reload || actionType == Action_ReloadAlt) && !actionItem.empty()) {
+        const GameObjRenderDef* actionItemDef = item(actionItem);
+        if (actionItemDef && actionItemDef->casingOnReload) {
+            const int maxReload = std::max(1, actionItemDef->maxReload);
+            for (int n = 0; n < maxReload; n++) {
+                const float shellDir = (n % 2 == 0) ? -1.0f : 1.0f;
+                const float shellAngle = pi + (pi / 4.0f) * shellDir;
+                const float shellSpeedMult = maxReload <= 2 ? 1.0f : math::lerp(randf(), 0.8f, 1.2f);
+                createCasingParticle(ctx.factory(), *actionItemDef, shellAngle, shellSpeedMult, pos, dir,
+                                     renderZLayer, renderZOrd + 1, ctx.particleBarn());
+            }
+        }
+    }
 }
 
 void Player::updateAura(float dt, Ctx& ctx, bool isActivePlayer) {
