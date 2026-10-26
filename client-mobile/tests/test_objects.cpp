@@ -468,6 +468,20 @@ TEST(shot_handles_recoil_and_dual) {
     CHECK(p->gunRecoil[0] > 0.0f);
     CHECK_NEAR(p->gunRecoil[1], 0.0f, 1e-5f);
 
+    // P2: shot.ts createCasingParticle ejected a 9mm shell for this shot.
+    bool casing = false;
+    for (const Particle* particle : world.particleBarn().particles) {
+        if (!particle || !particle->def) continue;
+        for (const std::string& image : particle->def->images) {
+            if (image.find("part-shell-01") != std::string::npos) {
+                casing = true;
+                break;
+            }
+        }
+        if (casing) break;
+    }
+    CHECK(casing);
+
     // The shot is released once the pull delay elapses (0 for a gun without one).
     world.shotBarn().update(1.0f, world);
     CHECK(!shot->active);

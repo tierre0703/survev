@@ -485,6 +485,11 @@ struct GameObjRenderDef {
     std::vector<std::string> frozenSprites;
     std::vector<std::string> unlocks; // unlock_default and future account unlocks
     std::string ammoType; // gun reserve-ammo inventory key
+    // shot.ts createCasingParticle: custom casing particle type (gunDefs
+    // particle.casing; empty = ammoType) and caseTiming == "reload" (revolvers/
+    // pistols eject when reloading, not on every shot).
+    std::string casing;
+    bool casingOnReload = false;
 
     // Map indicator (item/role minimap marker) fields.
     std::string mapIndicatorSprite;

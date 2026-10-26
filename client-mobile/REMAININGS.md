@@ -10,12 +10,12 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-26 (P1.8 + first P2 pass)** — team matches
+Latest recorded state: **2026-10-26 (P1.8 + P2 pass)** — team matches
 return to their room, room props persist, in-room rename and invite/join links
-work, and the pass reloads the profile for new items. The first P2 pass adds
-real additive blending, the V minimap toggle, newest/item-source/NEW-badge
-loadout polish, plus the P1.4–P1.7 HUD/menu/input/audio set. **195 host tests
-pass, 0 fail.**
+work, and the pass reloads the profile for new items. The P2 pass adds
+real additive blending, the V minimap toggle, shell casings, newest/item-source/
+NEW-badge loadout polish, plus the P1.4–P1.7 HUD/menu/input/audio set. **195 host
+tests pass, 0 fail.**
 
 ---
 
@@ -58,7 +58,7 @@ pass, 0 fail.**
 | `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | ✅ poses/animations faithful; faction patch, last-stand/bleed particles, same-group nametags and real action-sound keys; minor radius/easing nuances P2 |
 | `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | ✅ travelling tracer sprite, per-def palette/width/length, suppression, collision FX + hit groups, blood/pan sparks, stairs layer |
 | `client/src/objects/explosion.ts` → `objects/Barns.*` (ExplosionBarn) + `GameWorld.cpp` | ✅ generated burst/scatter/ripple/shake/lifetime/indoor suppression; physics particles |
-| `client/src/objects/shot.ts` → `objects/Barns.*` (ShotBarn) | 🔶 fire sound; no last/alt/team variants, cycle/pull timing or casings (P1.3/P2) |
+| `client/src/objects/shot.ts` → `objects/Barns.*` (ShotBarn) | 🔶 fire sound + shell casings (ammo/custom particle, reload-timing exclusion); last/alt/team variants and cycle/pull timing remain P2 |
 | `client/src/objects/obstacle.ts` → `objects/Barns.*` | 🔶 door/button/destroy sounds, particles and button sprite swap missing (P1.3/P2) |
 | `client/src/objects/building.ts` → `objects/Barns.*` | 🔶 ceiling reveal/sounds partial; puzzle FX and ceiling debris particles missing (P2) |
 | `client/src/objects/loot.ts` → `objects/Barns.*` | ✅ rarity border/outer ring, inner-art scale/rotation/mirror, tint |
@@ -520,12 +520,15 @@ Done in the first P2 pass (2026-10-26):
 - Loadout "Newest" sorts by account `timeAcquired`; item tiles show a gold NEW
   badge for status==0 items, and the detail panel shows `Acquired: <source>`
   (source/timeAcquired parsed from `account.items`).
+- Shell casings: shot.ts casing ejection is ported (ammo/custom casing particle,
+  per-shot velocity/rotation, reload-timing guns excluded) and covered by the
+  shot host test.
 
 Remaining:
-- **Rendering:** shell casings, body-radius easing, bush particle/sound per def,
+- **Rendering:** body-radius easing, bush particle/sound per def,
   `maxVisualRadius` 3.75 vs 1.0, particle colour variance, river-shore `"stone"`
   surface, `MapSprite` z-order, ceiling destroy particles, obstacle button image
-  swap, plane/airstrike visuals.
+  swap, plane/airstrike visuals, reload-timing casings (revolvers/pistols).
 - **HUD/menus:** kill-feed role lines, squad bar role/team colours and downed
   pulse, gas icon/pulse, gear order/levels/tap-to-drop, menu
   splash/background/clientTheme, mode icons, news images/badges, social/streamer

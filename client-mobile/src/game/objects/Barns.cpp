@@ -2939,6 +2939,24 @@ void ShotBarn::update(float dt, GameWorld& ctx) {
                     if (leftHand) player->gunRecoil[0] += def->recoil;
                     if (rightHand) player->gunRecoil[1] += def->recoil;
                 }
+
+                // shot.ts createCasingParticle: eject a shell on shoot for guns
+                // whose caseTiming is "shoot" (revolvers/pistols eject on
+                // reload, so casingOnReload skips this branch).
+                if (def && def->category == "gun" && !def->casingOnReload) {
+                    const std::string casingType = def->casing.empty() ? def->ammoType : def->casing;
+                    if (!casingType.empty()) {
+                        const Vec2 dir = v2NormalizeSafe(player->dir, Vec2(1.0f, 0.0f));
+                        Vec2 shellDir = v2Rotate(dir, -3.14159265358979f * 0.5f);
+                        Vec2 vel = v2Mul(shellDir, 9.5f);
+                        vel = v2Rotate(vel, (rnd(0.0f, 1.0f) - 0.5f) * 3.14159265358979f / 3.0f);
+                        const Vec2 shellPos = v2Add(shot->pos,
+                                                    v2Mul(dir, PlayerConfig::radius + 0.375f));
+                        ctx.particleBarn().addParticle(
+                            ctx.factory(), casingType, shot->layer, shellPos, vel, 1.0f,
+                            -std::atan2(shellDir.y, shellDir.x), nullptr, player->renderZOrd);
+                    }
+                }
             }
         }
 
