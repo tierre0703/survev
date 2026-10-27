@@ -53,9 +53,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 
 public class MenuFragment {
     private static final String TAG = "MenuFragment";
@@ -129,6 +133,8 @@ public class MenuFragment {
     private final LinearLayout mRegionDropdown;
     private final FrameLayout mRegionRowContainer;
     private final ImageView mBackground;
+    private Drawable mNewsIcon;
+    private String mNewsLatestDate = "";
 
     public MenuFragment(Activity activity, JavaUiHost host) {
         mActivity = activity;
@@ -368,7 +374,9 @@ public class MenuFragment {
         passLp.rightMargin = dp(4);
         mBottomRow.addView(mPassBtn, passLp);
 
-        mNewsBtn = makeButton("\uD83D\uDCF0 News", 0xFF555555, 0xFF333333, 14);
+        mNewsBtn = makeButton(L10n.t("index-news", "News"), 0xFF555555, 0xFF333333, 14);
+        mNewsIcon = loadAssetDrawable("gui/news.png", 16);
+        updateNewsBadge();
         mNewsBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 animatePress(v);
@@ -616,8 +624,44 @@ public class MenuFragment {
     private void toggleNews() {
         mNewsExpanded = !mNewsExpanded;
         mNewsScrollView.setVisibility(mNewsExpanded ? View.VISIBLE : View.GONE);
-        mNewsBtn.setText((mNewsExpanded ? "\u25B2 " : "\uD83D\uDCF0 ")
+        mNewsBtn.setText((mNewsExpanded ? "\u25B2 " : "")
                 + L10n.t("index-news", "News"));
+        if (mNewsExpanded) {
+            // main.ts: mark the news read when it is shown.
+            SurvBridge.setConfigValue("lastNewsTimestamp", String.valueOf(System.currentTimeMillis()));
+            SurvBridge.saveConfig();
+        }
+        updateNewsBadge();
+    }
+
+    /** main.ts: unread news dot when the newest entry is newer than lastNewsTimestamp. */
+    private void updateNewsBadge() {
+        if (mNewsBtn == null) return;
+        long latest = newsDateMs(mNewsLatestDate);
+        float last = Json.peekFloat(SurvBridge.getConfigJson(), "lastNewsTimestamp", 0.0f);
+        Drawable badge = null;
+        if (latest > 0 && latest > last) {
+            GradientDrawable dot = new GradientDrawable();
+            dot.setShape(GradientDrawable.OVAL);
+            dot.setColor(0xFFFF3B30);
+            int px = dp(7);
+            dot.setBounds(0, 0, px, px);
+            badge = dot;
+        }
+        mNewsBtn.setCompoundDrawables(mNewsIcon, null, badge, null);
+        mNewsBtn.setCompoundDrawablePadding(dp(5));
+    }
+
+    private static long newsDateMs(String isoDate) {
+        if (isoDate == null || isoDate.isEmpty()) return 0;
+        try {
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            format.setTimeZone(TimeZone.getTimeZone("UTC"));
+            Date date = format.parse(isoDate);
+            return date != null ? date.getTime() : 0;
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     /**
@@ -637,24 +681,29 @@ public class MenuFragment {
         }
     }
 
+    /** Loads a packaged PNG as a Drawable with a fixed dp bound (GUI/menu art). */
+    private Drawable loadAssetDrawable(String asset, int sizeDp) {
+        if (asset == null || asset.isEmpty()) return null;
+        try (InputStream in = mActivity.getAssets().open(asset)) {
+            Bitmap bitmap = BitmapFactory.decodeStream(in);
+            if (bitmap == null) return null;
+            BitmapDrawable drawable = new BitmapDrawable(mActivity.getResources(), bitmap);
+            int px = dp(sizeDp);
+            drawable.setBounds(0, 0, px, px);
+            return drawable;
+        } catch (Exception e) {
+            Log.w(TAG, "asset drawable " + asset + ": " + e.getMessage());
+            return null;
+        }
+    }
+
     /**
      * siteInfo.ts mode buttons: MapDef.desc.icon (rasterized to
      * Content/img/menu/<mapName>.png by tools/build-menu-icons.mjs).
      */
     private Drawable loadModeIcon(String mapName) {
         String asset = GeneratedMenuData.modeIcon(mapName);
-        if (asset.isEmpty()) return null;
-        try (InputStream in = mActivity.getAssets().open(asset)) {
-            Bitmap bitmap = BitmapFactory.decodeStream(in);
-            if (bitmap == null) return null;
-            BitmapDrawable drawable = new BitmapDrawable(mActivity.getResources(), bitmap);
-            int px = dp(22);
-            drawable.setBounds(0, 0, px, px);
-            return drawable;
-        } catch (Exception e) {
-            Log.w(TAG, "mode icon " + asset + ": " + e.getMessage());
-            return null;
-        }
+        return asset.isEmpty() ? null : loadAssetDrawable(asset, 22);
     }
 
     private void fetchSiteInfo() {
@@ -728,6 +777,7 @@ public class MenuFragment {
                 } else {
                     mNewsText.setText("\uD83D\uDCE4 No news available.\nCheck back later for updates!");
                 }
+                updateNewsBadge();
             }
         });
     }
@@ -1098,7 +1148,7 @@ public class MenuFragment {
         mCreateTeamBtn.setText(L10n.t("index-create-team", "Create Team"));
         mHelpBtn.setText("\uD83D\uDCD6 " + L10n.t("index-how-to-play", "How to Play"));
         mPassBtn.setText("\uD83C\uDFC6 " + L10n.t("index-pass", "Pass"));
-        mNewsBtn.setText((mNewsExpanded ? "\u25B2 " : "\uD83D\uDCF0 ")
+        mNewsBtn.setText((mNewsExpanded ? "\u25B2 " : "")
                 + L10n.t("index-news", "News"));
         mSettingsBtn.setContentDescription(L10n.t("index-settings", "Settings"));
         mProfileBtn.setContentDescription(L10n.t("index-account", "Account"));
@@ -1205,6 +1255,7 @@ public class MenuFragment {
                 com.google.gson.JsonObject entry = el.getAsJsonObject();
                 String title = entry.has("title") ? entry.get("title").getAsString() : "";
                 String date = entry.has("date") ? entry.get("date").getAsString() : "";
+                if (i == 0) mNewsLatestDate = date;
                 if (out.length() > 0) out.append("\n\n");
                 out.append("\u2726 ");
                 if (!date.isEmpty()) out.append(date).append("  ");

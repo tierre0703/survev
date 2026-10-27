@@ -25,7 +25,8 @@ group-colour dots + downed pulse, the cyan group-colour fix, and in-place
 Settings re-localization. The sixth adds role promoted/dead kill-feed lines.
 The seventh adds the gas/danger HUD icon with its moving-gas pulse. The eighth
 adds the clientTheme menu splash background. The ninth adds the rasterized
-quick-play mode icons. **205 host tests pass, 0 fail.**
+quick-play mode icons. The tenth adds the news GUI icon and unread badge.
+**205 host tests pass, 0 fail.**
 
 ---
 
@@ -623,13 +624,21 @@ Done in the ninth P2 pass (2026-10-26):
   with themed modes for a visual check.
 - Host tests still pass (Java/assets change only).
 
+Done in the tenth P2 pass (2026-10-26):
+- News chrome: the News button uses the rasterized `gui/news.png` icon (no
+  emoji), and shows the web's red unread dot when the newest news date is newer
+  than config `lastNewsTimestamp`; expanding the panel marks it read (same as
+  `main.ts`).
+- APK rebuilt/installed on `emulator-5554`; menu launched, site_info loaded,
+  no drawable/crash errors.
+
 Remaining:
 - **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
   alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
   implemented; `MapSprite` z-order only affects the dead `FguiHud` path (the
   live HUD uses `MapView`/`EmoteManager` ping layers).
-- **HUD/menus:** news images/badges, social/streamer blocks, menu character
-  preview (`opponentDisplay.ts`), live in-game leaderboard bridge.
+- **HUD/menus:** social/streamer blocks, menu character preview
+  (`opponentDisplay.ts`), live in-game leaderboard bridge.
 - **Audio:** music channel volume quirk (web routes music through `soundVolume`),
   exact EQ/convolution timbre.
 - **Platform/perf:** unload map atlases on map change and preload map audio
@@ -1002,3 +1011,8 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   `tools/build-menu-icons.mjs` rasterizes it to `Content/img/menu/<map>.png`
   (run by `sync-content.ps1`), and `MenuFragment` attaches it as a left compound
   drawable when `GeneratedMenuData.modeIcon()` is non-empty.
+- News button chrome: `gui/news.png` is the left compound drawable; the right
+  compound drawable is the red unread dot while the newest news ISO date is
+  newer than config `lastNewsTimestamp` (UTC date parse). Expanding the panel
+  writes `System.currentTimeMillis()` through `SurvBridge.setConfigValue` and
+  re-renders the badge.
