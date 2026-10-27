@@ -169,6 +169,11 @@ public:
     // P1.6: BT-keyboard key state from the Java bridge (Android KeyEvent codes),
     // marshalled onto the game thread by UiBridge. No-op off Android.
     void onHardwareKey(int androidKeyCode, bool down);
+    // Key/mouse bind table (client/src/inputBinds.ts) applied from the persisted
+    // config and the Java Key Binds screen. HardwareInput resolves every action
+    // through it, so a remap takes effect on the next frame.
+    void setInputBinds(const input::InputBinds& binds) { _hw.setBinds(binds); }
+    const input::InputBinds& inputBinds() const { return _hw.binds(); }
     // Android gamepad axes from the Java bridge (native-only; see
     // HardwareInput.h for the mapping). -1..1 with +Y up, fire 0..1.
     void onGamepadMotion(float moveX, float moveY, float aimX, float aimY, float fire);

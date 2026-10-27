@@ -164,61 +164,100 @@ static const char* pickupErrorText(int type) {
     }
 }
 
-// inputBinds.ts default key codes -> HardwareInput's engine-independent keys.
-// Both the shifted (KEY_CAPITAL_*) and plain letter codes are accepted, and the
-// Android DPAD variants behave like the arrow keys.
-static bool hwKeyFromEvent(ax::EventKeyboard::KeyCode code, surv::HwKey& out) {
+// inputBinds.ts default key codes -> input.ts `Key` codes. Both the shifted
+// (KEY_CAPITAL_*) and plain letter codes are accepted, and the Android DPAD
+// variants behave like the arrow keys.
+static int webKeyFromEvent(ax::EventKeyboard::KeyCode code) {
     using KC = ax::EventKeyboard::KeyCode;
     switch (code) {
         case KC::KEY_A:
-        case KC::KEY_CAPITAL_A: out = surv::HwKey::A; return true;
-        case KC::KEY_C: out = surv::HwKey::C; return true;
-        case KC::KEY_CAPITAL_C: out = surv::HwKey::C; return true;
+        case KC::KEY_CAPITAL_A: return input::key::A;
+        case KC::KEY_B:
+        case KC::KEY_CAPITAL_B: return input::key::B;
+        case KC::KEY_C:
+        case KC::KEY_CAPITAL_C: return input::key::C;
         case KC::KEY_D:
-        case KC::KEY_CAPITAL_D: out = surv::HwKey::D; return true;
+        case KC::KEY_CAPITAL_D: return input::key::D;
         case KC::KEY_E:
-        case KC::KEY_CAPITAL_E: out = surv::HwKey::E; return true;
+        case KC::KEY_CAPITAL_E: return input::key::E;
         case KC::KEY_F:
-        case KC::KEY_CAPITAL_F: out = surv::HwKey::F; return true;
+        case KC::KEY_CAPITAL_F: return input::key::F;
         case KC::KEY_G:
-        case KC::KEY_CAPITAL_G: out = surv::HwKey::G; return true;
+        case KC::KEY_CAPITAL_G: return input::key::G;
+        case KC::KEY_H:
+        case KC::KEY_CAPITAL_H: return input::key::H;
+        case KC::KEY_I:
+        case KC::KEY_CAPITAL_I: return input::key::I;
+        case KC::KEY_J:
+        case KC::KEY_CAPITAL_J: return input::key::J;
+        case KC::KEY_K:
+        case KC::KEY_CAPITAL_K: return input::key::K;
         case KC::KEY_L:
-        case KC::KEY_CAPITAL_L: out = surv::HwKey::L; return true;
+        case KC::KEY_CAPITAL_L: return input::key::L;
         case KC::KEY_M:
-        case KC::KEY_CAPITAL_M: out = surv::HwKey::M; return true;
+        case KC::KEY_CAPITAL_M: return input::key::M;
+        case KC::KEY_N:
+        case KC::KEY_CAPITAL_N: return input::key::N;
+        case KC::KEY_O:
+        case KC::KEY_CAPITAL_O: return input::key::O;
+        case KC::KEY_P:
+        case KC::KEY_CAPITAL_P: return input::key::P;
         case KC::KEY_Q:
-        case KC::KEY_CAPITAL_Q: out = surv::HwKey::Q; return true;
+        case KC::KEY_CAPITAL_Q: return input::key::Q;
         case KC::KEY_R:
-        case KC::KEY_CAPITAL_R: out = surv::HwKey::R; return true;
+        case KC::KEY_CAPITAL_R: return input::key::R;
         case KC::KEY_S:
-        case KC::KEY_CAPITAL_S: out = surv::HwKey::S; return true;
+        case KC::KEY_CAPITAL_S: return input::key::S;
         case KC::KEY_T:
-        case KC::KEY_CAPITAL_T: out = surv::HwKey::T; return true;
+        case KC::KEY_CAPITAL_T: return input::key::T;
+        case KC::KEY_U:
+        case KC::KEY_CAPITAL_U: return input::key::U;
         case KC::KEY_V:
-        case KC::KEY_CAPITAL_V: out = surv::HwKey::V; return true;
+        case KC::KEY_CAPITAL_V: return input::key::V;
         case KC::KEY_W:
-        case KC::KEY_CAPITAL_W: out = surv::HwKey::W; return true;
+        case KC::KEY_CAPITAL_W: return input::key::W;
         case KC::KEY_X:
-        case KC::KEY_CAPITAL_X: out = surv::HwKey::X; return true;
-        case KC::KEY_0: out = surv::HwKey::Num0; return true;
-        case KC::KEY_1: out = surv::HwKey::Num1; return true;
-        case KC::KEY_2: out = surv::HwKey::Num2; return true;
-        case KC::KEY_3: out = surv::HwKey::Num3; return true;
-        case KC::KEY_4: out = surv::HwKey::Num4; return true;
-        case KC::KEY_5: out = surv::HwKey::Num5; return true;
-        case KC::KEY_6: out = surv::HwKey::Num6; return true;
-        case KC::KEY_7: out = surv::HwKey::Num7; return true;
-        case KC::KEY_8: out = surv::HwKey::Num8; return true;
-        case KC::KEY_9: out = surv::HwKey::Num9; return true;
+        case KC::KEY_CAPITAL_X: return input::key::X;
+        case KC::KEY_Y:
+        case KC::KEY_CAPITAL_Y: return input::key::Y;
+        case KC::KEY_Z:
+        case KC::KEY_CAPITAL_Z: return input::key::Z;
+        case KC::KEY_0: return input::key::Zero;
+        case KC::KEY_1: return input::key::One;
+        case KC::KEY_2: return input::key::Two;
+        case KC::KEY_3: return input::key::Three;
+        case KC::KEY_4: return input::key::Four;
+        case KC::KEY_5: return input::key::Five;
+        case KC::KEY_6: return input::key::Six;
+        case KC::KEY_7: return input::key::Seven;
+        case KC::KEY_8: return input::key::Eight;
+        case KC::KEY_9: return input::key::Nine;
         case KC::KEY_LEFT_ARROW:
-        case KC::KEY_DPAD_LEFT: out = surv::HwKey::Left; return true;
+        case KC::KEY_DPAD_LEFT: return input::key::Left;
         case KC::KEY_RIGHT_ARROW:
-        case KC::KEY_DPAD_RIGHT: out = surv::HwKey::Right; return true;
+        case KC::KEY_DPAD_RIGHT: return input::key::Right;
         case KC::KEY_UP_ARROW:
-        case KC::KEY_DPAD_UP: out = surv::HwKey::Up; return true;
+        case KC::KEY_DPAD_UP: return input::key::Up;
         case KC::KEY_DOWN_ARROW:
-        case KC::KEY_DPAD_DOWN: out = surv::HwKey::Down; return true;
-        default: return false;
+        case KC::KEY_DPAD_DOWN: return input::key::Down;
+        case KC::KEY_SPACE: return input::key::Space;
+        case KC::KEY_TAB: return input::key::Tab;
+        case KC::KEY_RETURN: return input::key::Enter;
+        case KC::KEY_BACKSPACE: return input::key::Backspace;
+        case KC::KEY_DELETE: return input::key::Delete;
+        case KC::KEY_F1: return input::key::F1;
+        case KC::KEY_F2: return input::key::F2;
+        case KC::KEY_F3: return input::key::F3;
+        case KC::KEY_F4: return input::key::F4;
+        case KC::KEY_F5: return input::key::F5;
+        case KC::KEY_F6: return input::key::F6;
+        case KC::KEY_F7: return input::key::F7;
+        case KC::KEY_F8: return input::key::F8;
+        case KC::KEY_F9: return input::key::F9;
+        case KC::KEY_F10: return input::key::F10;
+        case KC::KEY_F11: return input::key::F11;
+        case KC::KEY_F12: return input::key::F12;
+        default: return -1;
     }
 }
 
@@ -516,21 +555,21 @@ bool GameScene::init() {
     });
 
     // Android hardware back button / desktop Escape: pause/leave the game.
-    // P1.6: every other key feeds HardwareInput (default inputBinds.ts binds).
+    // P1.6: every other key feeds HardwareInput through the bind table.
     auto* keyListener = ax::EventListenerKeyboard::create();
     keyListener->onKeyPressed = [this](ax::EventKeyboard::KeyCode code, ax::Event*) {
         if (code == ax::EventKeyboard::KeyCode::KEY_ESCAPE) {
             handleBackPressed();
             return;
         }
-        HwKey key;
-        if (hwKeyFromEvent(code, key)) {
+        const int key = webKeyFromEvent(code);
+        if (key >= 0) {
             _hw.setKey(key, true);
         }
     };
     keyListener->onKeyReleased = [this](ax::EventKeyboard::KeyCode code, ax::Event*) {
-        HwKey key;
-        if (hwKeyFromEvent(code, key)) {
+        const int key = webKeyFromEvent(code);
+        if (key >= 0) {
             _hw.setKey(key, false);
         }
     };
@@ -2025,9 +2064,10 @@ void GameScene::updateInput(float dt) {
             msg.toMouseLen = z > 0.0f ? v2Length(Vec2(dx, dy)) / z : 0.0f;
             msg.toMouseLen = math::clamp(msg.toMouseLen, 0.0f, Constants::MouseMaxDist);
         }
-        msg.shootStart = msg.shootStart || _hw.firePressed();
-        msg.shootHold = msg.shootHold || _hw.fireDown();
     }
+    // Fire is a normal bind (mouse left by default, remappable to any key).
+    msg.shootStart = msg.shootStart || _hw.firePressed();
+    msg.shootHold = msg.shootHold || _hw.fireDown();
 
     // Gamepad (native-only, see HardwareInput.h): the left stick drives the same
     // analog move fields as the touch pads, the right stick aims like the mouse
@@ -2077,48 +2117,25 @@ void GameScene::updateInput(float dt) {
 
 void GameScene::onHardwareKey(int androidKeyCode, bool down) {
 #if AX_TARGET_PLATFORM == AX_PLATFORM_ANDROID
-    HwKey key;
+    // Keyboard letters/digits/arrows/F-keys/space/tab/enter/backspace: the same
+    // input.ts Key codes the bind table stores (input/InputBinds.h).
+    const int key = input::webKeyFromAndroidKeyCode(androidKeyCode);
+    if (key >= 0) {
+        _hw.setKey(key, down);
+        return;
+    }
+    // Gamepad buttons map onto fixed bind actions (native-only mapping, see
+    // HardwareInput.h). Triggers arrive as axes through onGamepadMotion, but
+    // some pads report R2/L2 as buttons; R2 sets the fire trigger and L2
+    // quick-uses a bandage.
     switch (androidKeyCode) {
-        case AKEYCODE_A: key = HwKey::A; break;
-        case AKEYCODE_C: key = HwKey::C; break;
-        case AKEYCODE_D: key = HwKey::D; break;
-        case AKEYCODE_E: key = HwKey::E; break;
-        case AKEYCODE_F: key = HwKey::F; break;
-        case AKEYCODE_G: key = HwKey::G; break;
-        case AKEYCODE_L: key = HwKey::L; break;
-        case AKEYCODE_M: key = HwKey::M; break;
-        case AKEYCODE_Q: key = HwKey::Q; break;
-        case AKEYCODE_R: key = HwKey::R; break;
-        case AKEYCODE_S: key = HwKey::S; break;
-        case AKEYCODE_T: key = HwKey::T; break;
-        case AKEYCODE_V: key = HwKey::V; break;
-        case AKEYCODE_W: key = HwKey::W; break;
-        case AKEYCODE_X: key = HwKey::X; break;
-        case AKEYCODE_0: key = HwKey::Num0; break;
-        case AKEYCODE_1: key = HwKey::Num1; break;
-        case AKEYCODE_2: key = HwKey::Num2; break;
-        case AKEYCODE_3: key = HwKey::Num3; break;
-        case AKEYCODE_4: key = HwKey::Num4; break;
-        case AKEYCODE_5: key = HwKey::Num5; break;
-        case AKEYCODE_6: key = HwKey::Num6; break;
-        case AKEYCODE_7: key = HwKey::Num7; break;
-        case AKEYCODE_8: key = HwKey::Num8; break;
-        case AKEYCODE_9: key = HwKey::Num9; break;
-        case AKEYCODE_DPAD_LEFT: key = HwKey::Left; break;
-        case AKEYCODE_DPAD_RIGHT: key = HwKey::Right; break;
-        case AKEYCODE_DPAD_UP: key = HwKey::Up; break;
-        case AKEYCODE_DPAD_DOWN: key = HwKey::Down; break;
-        // Gamepad buttons reuse the keyboard binds (native-only mapping, see
-        // HardwareInput.h). Triggers arrive as axes through onGamepadMotion, but
-        // some pads report R2/L2 as buttons; R2 sets the fire trigger and L2
-        // quick-uses a bandage.
-        case AKEYCODE_BUTTON_A: key = HwKey::F; break; // interact / revive / loot
-        case AKEYCODE_BUTTON_B: key = HwKey::X; break; // cancel
-        case AKEYCODE_BUTTON_X: key = HwKey::R; break; // reload
-        case AKEYCODE_BUTTON_Y: key = HwKey::T; break; // switch gun slots
-        case AKEYCODE_BUTTON_L2: key = HwKey::Num7; break;
-        case AKEYCODE_BUTTON_THUMBL: key = HwKey::E; break; // stow weapons
-        case AKEYCODE_BUTTON_THUMBR: key = HwKey::M; break; // large map
+        case AKEYCODE_BUTTON_A: _hw.setPadAction(Input_Interact, down); return;
+        case AKEYCODE_BUTTON_B: _hw.setPadAction(Input_Cancel, down); return;
+        case AKEYCODE_BUTTON_X: _hw.setPadAction(Input_Reload, down); return;
+        case AKEYCODE_BUTTON_Y: _hw.setPadAction(Input_SwapWeapSlots, down); return;
+        case AKEYCODE_BUTTON_L2: _hw.setPadAction(Input_UseBandage, down); return;
+        case AKEYCODE_BUTTON_THUMBL: _hw.setPadAction(Input_StowWeapons, down); return;
+        case AKEYCODE_BUTTON_THUMBR: _hw.setPadAction(Input_ToggleMap, down); return;
         case AKEYCODE_BUTTON_L1:
             if (down) _hw.addWheel(HardwareInput::kWheelUp); // previous weapon
             return;
@@ -2130,7 +2147,6 @@ void GameScene::onHardwareKey(int androidKeyCode, bool down) {
             return;
         default: return;
     }
-    _hw.setKey(key, down);
 #else
     (void)androidKeyCode;
     (void)down;
@@ -2146,11 +2162,12 @@ void GameScene::updateHardwareUi() {
     if (!_game) {
         return;
     }
-    // Spectating: arrow keys cycle the observed teammate (game.ts:709-715).
+    // Spectating: the raw arrow keys cycle the observed teammate
+    // (game.ts:709-715 uses Key.Left/Key.Right, not the movement binds).
     if (_game->isSpectating()) {
-        if (_hw.keyPressed(HwKey::Right)) {
+        if (_hw.keyPressed(input::key::Right)) {
             _game->sendSpectate(2);
-        } else if (_hw.keyPressed(HwKey::Left)) {
+        } else if (_hw.keyPressed(input::key::Left)) {
             _game->sendSpectate(3);
         }
         return;
@@ -2159,13 +2176,15 @@ void GameScene::updateHardwareUi() {
         _hud->overlayShown()) {
         return;
     }
-    // Large map: ToggleMap (M) or the unbound Key.G fallback (game.ts:452-458).
-    // The touch expand button and big-map tap targets already share this state.
-    if (_hw.keyPressed(HwKey::M) || _hw.keyPressed(HwKey::G)) {
+    // Large map: the ToggleMap bind (M) or the unbound Key.G fallback
+    // (game.ts:452-458). The touch expand button and big-map tap targets already
+    // share this state.
+    if (_hw.bindPressed(Input_ToggleMap) ||
+        (_hw.keyPressed(input::key::G) && !_hw.binds().isKeyBound(input::key::G))) {
         _hud->toggleBigMap();
     }
     // CycleUIMode (V): hide/show the minimap without opening the big map.
-    if (_hw.keyPressed(HwKey::V)) {
+    if (_hw.bindPressed(Input_CycleUIMode)) {
         _hud->toggleMinimapHidden();
     }
 }

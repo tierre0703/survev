@@ -159,14 +159,19 @@ the original TS and makes bugs easier to diff against the browser client.
 - `input.ts` → touch/mouse listeners via `EventListenerTouchOneByOne` +
   `EventListenerMouse`; replicate the same virtual joystick / aim dead-zone logic from
   `ui/touch.ts`.
-- `inputBinds.ts` → `game/HardwareInput.h` (P1.6): the default bind set is
-  ported for BT-keyboard/mouse support; the remap editor/CRC is not exposed.
+- `inputBinds.ts` → `game/InputBinds.h` + `game/HardwareInput.h` (P1.6/P2 pass 22):
+  the full bind table (34 `BindDefs`, 36 `Input` actions), the web's
+  `toArray`/`fromBase64` code (LSB-first bit stream + CRC-16) in the `binds`
+  config key, and the Java Key Binds screen (capture, clear, restore defaults,
+  share/import). `HardwareInput` resolves every action through the table, so a
+  remap applies on the next frame; mouse buttons/wheel and keys are supported.
   The touch pads remain the primary input and can hand control back and forth.
 - Android gamepads (native-only, P2 pass 21) reuse the same `HardwareInput`:
   left stick = analog move, right stick = aim, RT/R2 = fire, and the buttons are
-  translated to the default keyboard binds (A interact, B cancel, X reload,
-  Y swap slots, L1/R1 weapon cycle, L2 bandage, L3 stow, R3 map, Start pause).
-  Axes arrive through the Java `MotionEvent` bridge.
+  translated to fixed bind actions (A interact, B cancel, X reload, Y swap slots,
+  L1/R1 weapon cycle, L2 bandage, L3 stow, R3 map, Start pause) independent of
+  the keyboard/mouse bind table. Axes arrive through the Java `MotionEvent`
+  bridge.
 
 ### 5.5 Audio
 - `audioManager.ts` / `soundDefs.ts` → `ax::AudioEngine` wrapper. Map preloaded sound

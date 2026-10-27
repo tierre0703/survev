@@ -358,12 +358,18 @@ public class AppActivity extends AxmolActivity {
                 && !(mJavaUi != null && mJavaUi.isPauseOpen());
     }
 
-    /** Letters, digits, DPAD arrows and gamepad buttons are the default binds. */
+    /** Letters, digits, DPAD arrows, gamepad buttons and the bindable extras. */
     private static boolean isGameKey(final int keyCode) {
         return (keyCode >= KeyEvent.KEYCODE_A && keyCode <= KeyEvent.KEYCODE_Z)
                 || (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9)
                 // Gamepad buttons (A/B/X/Y, shoulders, triggers, sticks).
                 || (keyCode >= KeyEvent.KEYCODE_BUTTON_A && keyCode <= KeyEvent.KEYCODE_BUTTON_MODE)
+                // The remaining keys the Key Binds screen accepts (input.ts Key
+                // codes): space/tab/enter and F1-F12.
+                || keyCode == KeyEvent.KEYCODE_SPACE
+                || keyCode == KeyEvent.KEYCODE_TAB
+                || keyCode == KeyEvent.KEYCODE_ENTER
+                || (keyCode >= KeyEvent.KEYCODE_F1 && keyCode <= KeyEvent.KEYCODE_F12)
                 || keyCode == KeyEvent.KEYCODE_DPAD_LEFT
                 || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
                 || keyCode == KeyEvent.KEYCODE_DPAD_UP

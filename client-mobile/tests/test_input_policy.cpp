@@ -30,21 +30,21 @@ TEST(hardware_input_movement_and_edges) {
     HardwareInput hw;
     CHECK(!hw.anyMoveDown());
 
-    hw.setKey(HwKey::D, true);
+    hw.setKey(input::key::D, true);
     CHECK(hw.moveRight());
     CHECK(!hw.moveLeft());
-    hw.setKey(HwKey::Left, true);
+    hw.setKey(input::key::Left, true);
     CHECK(hw.moveLeft()); // arrows are unbound by default, like the web fallback
-    CHECK(hw.keyDown(HwKey::D));
+    CHECK(hw.keyDown(input::key::D));
 
     hw.flush();
-    CHECK(!hw.keyPressed(HwKey::D));
-    CHECK(!hw.keyPressed(HwKey::Left));
+    CHECK(!hw.keyPressed(input::key::D));
+    CHECK(!hw.keyPressed(input::key::Left));
 
     // A held key auto-repeats but must only count as one press while held.
-    hw.setKey(HwKey::R, true);
-    hw.setKey(HwKey::R, true);
-    CHECK(hw.keyPressed(HwKey::R));
+    hw.setKey(input::key::R, true);
+    hw.setKey(input::key::R, true);
+    CHECK(hw.keyPressed(input::key::R));
     InputActions actions;
     hw.collectActions(actions);
     CHECK_EQ(actions.inputs().size(), size_t(1));
@@ -56,9 +56,9 @@ TEST(hardware_input_movement_and_edges) {
     CHECK(held.empty());
 
     // Release + press after a new frame queues the action again.
-    hw.setKey(HwKey::R, false);
+    hw.setKey(input::key::R, false);
     hw.flush();
-    hw.setKey(HwKey::R, true);
+    hw.setKey(input::key::R, true);
     InputActions repeat;
     hw.collectActions(repeat);
     CHECK_EQ(repeat.inputs().size(), size_t(1));
@@ -68,13 +68,13 @@ TEST(hardware_input_actions_wheel_and_items) {
     HardwareInput hw;
     InputActions actions;
 
-    hw.setKey(HwKey::Num1, true);
-    hw.setKey(HwKey::Num2, true);
-    hw.setKey(HwKey::Num4, true);
-    hw.setKey(HwKey::Num3, true);
-    hw.setKey(HwKey::T, true);
-    hw.setKey(HwKey::F, true);
-    hw.setKey(HwKey::E, true);
+    hw.setKey(input::key::One, true);
+    hw.setKey(input::key::Two, true);
+    hw.setKey(input::key::Four, true);
+    hw.setKey(input::key::Three, true);
+    hw.setKey(input::key::T, true);
+    hw.setKey(input::key::F, true);
+    hw.setKey(input::key::E, true);
     hw.collectActions(actions);
     // game.ts checkInputs order: primary, secondary, throwable, melee, ...,
     // stow, then Interact, then Swap.
@@ -109,28 +109,28 @@ TEST(hardware_input_actions_wheel_and_items) {
 
     // 7/8/9/0 use the quick-use items, with the web's priority chain.
     hw.flush();
-    hw.setKey(HwKey::Num7, true);
+    hw.setKey(input::key::Seven, true);
     InputActions bandage;
     hw.collectActions(bandage);
     CHECK_EQ(bandage.useItem(), std::string("bandage"));
 
     hw.flush();
-    hw.setKey(HwKey::Num7, false);
-    hw.setKey(HwKey::Num8, true);
+    hw.setKey(input::key::Seven, false);
+    hw.setKey(input::key::Eight, true);
     InputActions medkit;
     hw.collectActions(medkit);
     CHECK_EQ(medkit.useItem(), std::string("healthkit"));
 
     hw.flush();
-    hw.setKey(HwKey::Num8, false);
-    hw.setKey(HwKey::Num9, true);
+    hw.setKey(input::key::Eight, false);
+    hw.setKey(input::key::Nine, true);
     InputActions soda;
     hw.collectActions(soda);
     CHECK_EQ(soda.useItem(), std::string("soda"));
 
     hw.flush();
-    hw.setKey(HwKey::Num9, false);
-    hw.setKey(HwKey::Num0, true);
+    hw.setKey(input::key::Nine, false);
+    hw.setKey(input::key::Zero, true);
     InputActions pills;
     hw.collectActions(pills);
     CHECK_EQ(pills.useItem(), std::string("painkiller"));
@@ -162,10 +162,10 @@ TEST(hardware_input_mouse_state_and_touch_handoff) {
     CHECK(!hw.mouseUsed());
 
     // reset() drops everything (pause/background).
-    hw.setKey(HwKey::W, true);
+    hw.setKey(input::key::W, true);
     hw.setMouseButton(0, true);
     hw.reset();
-    CHECK(!hw.keyDown(HwKey::W));
+    CHECK(!hw.keyDown(input::key::W));
     CHECK(!hw.fireDown());
     CHECK(!hw.mouseUsed());
 }

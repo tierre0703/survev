@@ -128,6 +128,31 @@ public:
         (void)name;
         (void)channel;
     }
+
+    // --- key/mouse binds (client/src/inputBinds.ts) -------------------------
+    // The Java Key Binds screen lists every BindDef and edits the table:
+    //   bindsJson()  [{"action","name","label","type","code"}, ...]
+    //   bindsCode()  the share/import code (base64 of toArray(), CRC-checked)
+    //   setBind()    capture result: action id + input.ts InputType + code. For
+    //                InputType::Key the code is an Android KeyEvent.KEYCODE_*
+    //                value (the C++ side maps it to an input.ts Key code).
+    //   resetBinds() restore the inputBinds.ts defaults
+    //   setBindsCode() import a shared code; false when the CRC/format is bad
+    // Every edit is persisted to the `binds` config key and applied to the live
+    // hardware input immediately.
+    virtual std::string bindsJson() { return "[]"; }
+    virtual std::string bindsCode() { return ""; }
+    virtual bool setBind(int action, int type, int code) {
+        (void)action;
+        (void)type;
+        (void)code;
+        return false;
+    }
+    virtual void resetBinds() {}
+    virtual bool setBindsCode(const std::string& code) {
+        (void)code;
+        return false;
+    }
 };
 
 // The C++ side of the bridge: the app installs one host at startup and the

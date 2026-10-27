@@ -130,6 +130,28 @@ public final class SurvBridge {
     /** The validated loadout selection. */
     public static native String getLoadoutJson();
 
+    // --- key/mouse binds (client/src/inputBinds.ts) -------------------------
+
+    /** The bind table: [{"action","name","label","type","code"}, ...]. */
+    public static native String getBindsJson();
+
+    /** The share/import code (base64 of the CRC-checked bind stream). */
+    public static native String getBindsCode();
+
+    /**
+     * Captured bind: `action` is a shared/gameConfig.ts Input id, `type` an
+     * input.ts InputType (0 none, 1 key, 2 mouse button, 3 wheel). For keys,
+     * `code` is an Android KeyEvent.KEYCODE_* value; C++ maps it to the web key
+     * code and persists/applies the table. Returns false for unsupported keys.
+     */
+    public static native boolean setBind(int action, int type, int code);
+
+    /** Restore the inputBinds.ts defaults. */
+    public static native void resetBinds();
+
+    /** Import a shared bind code; false when the CRC/format is invalid. */
+    public static native boolean setBindsCode(String code);
+
     /** Owned loadout items with shared-def metadata (JSON array; empty until defs load). */
     public static native String getLoadoutItemsJson();
 

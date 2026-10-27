@@ -24,6 +24,7 @@ add_executable(surv_tests
     test_touch_input.cpp
     test_input_actions.cpp
     test_input_policy.cpp
+    test_input_binds.cpp
     test_render.cpp
     test_objects.cpp
     test_audio.cpp

@@ -29,6 +29,7 @@ public class JavaUiHost {
     private TeamFragment mTeam;
     private GamePauseDialog mPause;
     private SettingsModal mSettings;
+    private BindEditorModal mBinds;
     private HelpModal mHelp;
     private LeaderboardModal mLeaderboard;
     private PassFragment mPass;
@@ -143,6 +144,7 @@ public class JavaUiHost {
         hideLoadout();
         hideTeam();
         hidePause();
+        hideBinds();
         hideSettings();
         hideHelp();
         hideLeaderboard();
@@ -166,6 +168,7 @@ public class JavaUiHost {
         hideLoadout();
         hidePause();
         if (mPause != null) mPause.setPlayerDead(false);
+        hideBinds();
         hideSettings();
         hideHelp();
         hideLeaderboard();
@@ -248,6 +251,10 @@ public class JavaUiHost {
             updateBackBtn();
             return true;
         }
+        if (mBinds != null && mBinds.isOpen()) {
+            hideBinds();
+            return true;
+        }
         if (mSettings != null && mSettings.isOpen()) {
             hideSettings();
             updateBackBtn();
@@ -289,6 +296,7 @@ public class JavaUiHost {
     // Show/hide the back arrow based on whether any sub-screen is open.
     private void updateBackBtn() {
         boolean anyOpen = (mPause != null && mPause.isOpen())
+                       || (mBinds != null && mBinds.isOpen())
                        || (mSettings != null && mSettings.isOpen())
                        || (mHelp != null && mHelp.isOpen())
                        || (mLeaderboard != null && mLeaderboard.isOpen())
@@ -523,10 +531,35 @@ public class JavaUiHost {
                     if (mMenu != null) mMenu.refresh();
                 }
             });
+            mSettings.setOnOpenBinds(new Runnable() {
+                @Override public void run() { showBinds(); }
+            });
             FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
             mContainer.addView(mSettings.root(), params);
         }
+    }
+
+    // --- Key Binds (client/src/inputBinds.ts) ---
+
+    private void ensureBinds() {
+        if (mBinds == null) {
+            mBinds = new BindEditorModal(mActivity);
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            mContainer.addView(mBinds.root(), params);
+        }
+    }
+
+    public void showBinds() {
+        ensureBinds();
+        mBinds.show();
+        updateBackBtn();
+    }
+
+    public void hideBinds() {
+        if (mBinds != null) mBinds.hide();
+        updateBackBtn();
     }
 
     private void ensureHelp() {

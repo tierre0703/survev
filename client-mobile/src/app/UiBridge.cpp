@@ -131,6 +131,8 @@ public:
         // game.ts: camera/player/touch/audio config listeners. The scene keeps
         // them for the next match world (none exists yet).
         applyGameSettings();
+        // inputBinds.ts: the persisted key/mouse table (defaults on first run).
+        loadInputBinds();
     }
 
     // Applies the persisted runtime settings (game.ts config listeners) to the
@@ -282,6 +284,55 @@ public:
             options.channel = channel.empty() ? "ui" : channel;
             audio->playSound(name, options);
         });
+    }
+
+    // --- key/mouse binds (client/src/inputBinds.ts) -------------------------
+
+    std::string bindsJson() override { return input::bindsJson(_inputBinds); }
+
+    std::string bindsCode() override { return _inputBinds.toBase64(); }
+
+    bool setBind(int action, int type, int code) override {
+        if (action < 0 || action >= input::kActionCount) {
+            return false;
+        }
+        input::InputValue value;
+        if (type != static_cast<int>(input::InputType::None)) {
+            if (type < static_cast<int>(input::InputType::Key) ||
+                type > static_cast<int>(input::InputType::MouseWheel)) {
+                return false;
+            }
+            value.type = static_cast<input::InputType>(type);
+            if (value.type == input::InputType::Key) {
+                // Java captures an Android KeyEvent.KEYCODE_* value; the bind
+                // table stores the input.ts Key code (web-compatible codes).
+                const int keyCode = input::webKeyFromAndroidKeyCode(code);
+                if (keyCode < 0) {
+                    return false;
+                }
+                value.code = static_cast<uint8_t>(keyCode);
+            } else {
+                value.code = static_cast<uint8_t>(code & 0xff);
+            }
+        }
+        _inputBinds.setBind(action, value);
+        persistInputBinds();
+        return true;
+    }
+
+    void resetBinds() override {
+        _inputBinds.loadDefaultBinds();
+        persistInputBinds();
+    }
+
+    bool setBindsCode(const std::string& code) override {
+        input::InputBinds next;
+        if (!next.fromBase64(code)) {
+            return false;
+        }
+        _inputBinds = next;
+        persistInputBinds();
+        return true;
     }
 
     void gamepadMotion(float moveX, float moveY, float aimX, float aimY, float fire) override {
@@ -526,6 +577,34 @@ public:
     }
 
 private:
+    // inputBinds.ts loadBinds(): the persisted `binds` code, or the defaults
+    // (written back so the next launch and the Java screen agree).
+    void loadInputBinds() {
+        _inputBinds.loadDefaultBinds();
+        const std::string saved = config().getString("binds", "");
+        if (!_inputBinds.loadFromConfigString(saved)) {
+            config().setString("binds", _inputBinds.toBase64());
+            config().save();
+            AXLOGI("[input] default key binds written");
+        }
+        if (_game) {
+            _game->setInputBinds(_inputBinds);
+        }
+    }
+
+    // inputBinds.ts saveBinds(): persist and apply to the live hardware input.
+    void persistInputBinds() {
+        config().setString("binds", _inputBinds.toBase64());
+        config().save();
+        const input::InputBinds copy = _inputBinds;
+        runOnGameThread([this, copy] {
+            if (_game) {
+                _game->setInputBinds(copy);
+            }
+        });
+        AXLOGI("[input] key binds updated");
+    }
+
     // Java-only builds have no C++ MenuScene to own the l10n tables; build the
     // same tables here from the bundled assets (ARCHITECTURE.md A5.3).
     void ensureStandaloneLocalization() {
@@ -547,6 +626,8 @@ private:
 
     MenuScene* _menu = nullptr;
     GameScene* _game = nullptr;
+    // inputBinds.ts table (UI-thread owned; copies are pushed to the scene).
+    input::InputBinds _inputBinds;
     std::unique_ptr<uikit::UserDefaultConfigStorage> _standaloneStorage;
     std::unique_ptr<uikit::Config> _standaloneConfig;
     std::unique_ptr<uikit::Localization> _standaloneLocalization;
@@ -733,6 +814,33 @@ JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLocalesJson(JNIEnv* e
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLoadoutJson(JNIEnv* env, jclass) {
     return surv::toJstring(env, surv::uiBridge()->loadoutJson());
+}
+
+// Key/mouse binds (client/src/inputBinds.ts): the Java Key Binds screen lists
+// the table, captures a key and imports/exports the share code.
+JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getBindsJson(JNIEnv* env, jclass) {
+    return surv::toJstring(env, surv::uiBridge()->bindsJson());
+}
+
+JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getBindsCode(JNIEnv* env, jclass) {
+    return surv::toJstring(env, surv::uiBridge()->bindsCode());
+}
+
+JNIEXPORT jboolean JNICALL Java_dev_axmol_app_SurvBridge_setBind(JNIEnv*, jclass, jint action,
+                                                                jint type, jint code) {
+    return surv::uiBridge()->setBind(static_cast<int>(action), static_cast<int>(type),
+                                     static_cast<int>(code))
+        ? JNI_TRUE
+        : JNI_FALSE;
+}
+
+JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_resetBinds(JNIEnv*, jclass) {
+    surv::uiBridge()->resetBinds();
+}
+
+JNIEXPORT jboolean JNICALL Java_dev_axmol_app_SurvBridge_setBindsCode(JNIEnv* env, jclass,
+                                                                     jstring code) {
+    return surv::uiBridge()->setBindsCode(surv::fromJstring(env, code)) ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLoadoutItemsJson(JNIEnv* env, jclass) {

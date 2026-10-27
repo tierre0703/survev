@@ -271,6 +271,38 @@ public final class Json {
         public String name = "";
     }
 
+    /** Key Binds list (client/src/inputBinds.ts): [{"action","name","label","type","code"}, ...]. */
+    public static List<BindEntry> parseBinds(String json) {
+        List<BindEntry> out = new ArrayList<>();
+        if (json == null) return out;
+        try {
+            JsonArray arr = JsonParser.parseString(json).getAsJsonArray();
+            for (int i = 0; i < arr.size(); i++) {
+                JsonElement el = arr.get(i);
+                if (el == null || !el.isJsonObject()) continue;
+                JsonObject obj = el.getAsJsonObject();
+                BindEntry e = new BindEntry();
+                e.action = obj.has("action") ? obj.get("action").getAsInt() : -1;
+                e.type = obj.has("type") ? obj.get("type").getAsInt() : 0;
+                e.code = obj.has("code") ? obj.get("code").getAsInt() : 0;
+                e.name = obj.has("name") ? obj.get("name").getAsString() : "";
+                e.label = obj.has("label") ? obj.get("label").getAsString() : "";
+                if (e.action >= 0) out.add(e);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "parseBinds failed: " + e.getMessage());
+        }
+        return out;
+    }
+
+    public static class BindEntry {
+        public int action = -1;
+        public int type = 0;
+        public int code = 0;
+        public String name = "";
+        public String label = "";
+    }
+
     /**
      * Parses `site_info.modes`: [{mapName, teamMode, enabled}, ...]. This is the
      * single source of truth for the quick-play buttons (siteInfo.ts

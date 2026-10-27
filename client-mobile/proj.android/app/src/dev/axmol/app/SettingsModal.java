@@ -76,6 +76,8 @@ public class SettingsModal {
     private boolean mMoveLocked = false;
     private boolean mAimLocked = false;
     private boolean mAimLine = true;
+    // Opens the Java Key Binds screen (JavaUiHost owns the modal).
+    private Runnable mOnOpenBinds = null;
 
     public SettingsModal(Activity activity) {
         mActivity = activity;
@@ -274,7 +276,17 @@ public class SettingsModal {
             }
         });
         content.addView(mAimLineBtn);
-        
+
+        // Key/mouse bind editor (client/src/inputBinds.ts InputBindUi): the
+        // table lives in C++ and is applied to the live hardware input.
+        Button bindsBtn = makeToggleButton("\u2328 " + L10n.t("index-keybinds", "Key Binds") + "...");
+        bindsBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                if (mOnOpenBinds != null) mOnOpenBinds.run();
+            }
+        });
+        content.addView(bindsBtn);
+
         addGap(content, dp(6));
 
         // === Game section ===
@@ -481,6 +493,9 @@ public class SettingsModal {
 
     /** Called after hide() (menu re-localizes when the language changed). */
     public void setOnHidden(Runnable onHidden) { mOnHidden = onHidden; }
+
+    /** Opens the Java Key Binds screen (owned by JavaUiHost). */
+    public void setOnOpenBinds(Runnable onOpenBinds) { mOnOpenBinds = onOpenBinds; }
 
     private void applyTouchStyleButtons() {
         mMoveStyleBtn.setText(mMoveLocked ? "Move Style: Locked" : "Move Style: Anywhere");
