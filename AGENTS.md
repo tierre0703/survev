@@ -161,6 +161,7 @@ node --experimental-transform-types tools/codegen_defs.mjs src/net/generatedDefs
 node --experimental-transform-types tools/codegen_render_defs.mjs   # -> src/render/GeneratedDefs.cpp
 node --experimental-transform-types tools/codegen_sound_defs.mjs    # -> src/audio/GeneratedSoundDefs.cpp
 node --experimental-transform-types tools/codegen_pass_defs.mjs    # -> proj.android/app/src/dev/axmol/app/GeneratedPassData.java
+node --experimental-transform-types tools/codegen_menu_defs.mjs    # -> proj.android/app/src/dev/axmol/app/GeneratedMenuData.java
 node tools/gen_reference.mjs                                        # tests/ReferenceData.h fixtures
 node tools/build-atlas.mjs --res low                                # sprite atlases -> Content/atlas
 node --experimental-transform-types tools/build-loadout-icons.mjs   # loadout item art -> Content/img/loadout

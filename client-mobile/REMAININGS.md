@@ -23,8 +23,8 @@ shot/reload casing parity (shell offset/scale/forward/reverse and revolver
 reload casings). The fifth adds live-HUD gear level badges/tap-to-drop, squad
 group-colour dots + downed pulse, the cyan group-colour fix, and in-place
 Settings re-localization. The sixth adds role promoted/dead kill-feed lines.
-The seventh adds the gas/danger HUD icon with its moving-gas pulse. **205 host
-tests pass, 0 fail.**
+The seventh adds the gas/danger HUD icon with its moving-gas pulse. The eighth
+adds the clientTheme menu splash background. **205 host tests pass, 0 fail.**
 
 ---
 
@@ -603,14 +603,22 @@ Done in the seventh P2 pass (2026-10-26):
   fallback; no atlas entry needed).
 - Host test: `hud_gas_icon_state`.
 
+Done in the eighth P2 pass (2026-10-26):
+- Menu splash background: `site_info.clientTheme` selects
+  `MapDefs[theme].desc.backgroundImg` (generated `GeneratedMenuData.java`), drawn
+  CENTER_CROP under the web's 30% black scrim (defaults to `main.webp`, decodes
+  the web `.webp` assets directly on Android).
+- Host tests: all existing suites still pass (Java-only change).
+- Build/install: x86_64 APK built and installed on `emulator-5554`; launched to
+  the menu with site_info loaded and no crash log.
+
 Remaining:
 - **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
   alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
   implemented; `MapSprite` z-order only affects the dead `FguiHud` path (the
   live HUD uses `MapView`/`EmoteManager` ping layers).
-- **HUD/menus:** menu splash/background/clientTheme, mode icons, news
-  images/badges, social/streamer blocks, menu character preview
-  (`opponentDisplay.ts`), live in-game leaderboard bridge.
+- **HUD/menus:** mode icons, news images/badges, social/streamer blocks, menu
+  character preview (`opponentDisplay.ts`), live in-game leaderboard bridge.
 - **Audio:** music channel volume quirk (web routes music through `soundVolume`),
   exact EQ/convolution timbre.
 - **Platform/perf:** unload map atlases on map change and preload map audio
@@ -698,6 +706,7 @@ node --experimental-transform-types tools/codegen_defs.mjs src/net/generatedDefs
 node --experimental-transform-types tools/codegen_render_defs.mjs
 node --experimental-transform-types tools/codegen_sound_defs.mjs
 node --experimental-transform-types tools/codegen_pass_defs.mjs
+node --experimental-transform-types tools/codegen_menu_defs.mjs
 node tools/gen_reference.mjs
 node tools/build-atlas.mjs --res low
 node tools/build-gui-icons.mjs
@@ -973,3 +982,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - `Hud::_gasIcon` uses `createSprite("gui/gas.png")` / `"gui/danger.png"`:
   `AxSprite::setFrame` falls back to `setTexture` for non-atlas names, so GUI
   PNGs work without atlas entries. Keep the 20 px scale and 2 s pulse.
+- `GeneratedMenuData.java` is generated from `shared/defs/maps/*` by
+  `tools/codegen_menu_defs.mjs` (never hand-edit): the Java menu looks up
+  `site_info.clientTheme` for the splash background and the map's mode icon.
+  Android decodes the packaged `.webp` splash directly under the 30% SCRIM.

@@ -23,6 +23,8 @@ package dev.axmol.app;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -41,12 +43,14 @@ import android.view.animation.ScaleAnimation;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -122,13 +126,28 @@ public class MenuFragment {
     private boolean mRegionDropdownOpen = false;
     private final LinearLayout mRegionDropdown;
     private final FrameLayout mRegionRowContainer;
+    private final ImageView mBackground;
 
     public MenuFragment(Activity activity, JavaUiHost host) {
         mActivity = activity;
         mHost = host;
 
         mRoot = new FrameLayout(activity);
-        mRoot.setBackgroundColor(SCRIM);
+        mRoot.setBackgroundColor(0xFF000000);
+
+        // #background: the map splash for site_info.clientTheme (siteInfo.ts
+        // MapDefs[clientTheme].desc.backgroundImg) under the web's dark scrim.
+        mBackground = new ImageView(activity);
+        mBackground.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        mBackground.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        mRoot.addView(mBackground);
+        View scrim = new View(activity);
+        scrim.setBackgroundColor(SCRIM);
+        scrim.setLayoutParams(new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        mRoot.addView(scrim);
+        loadMenuBackground("main");
 
         // Full-height ScrollView for landscape responsiveness
         ScrollView scrollView = new ScrollView(activity);
@@ -599,6 +618,23 @@ public class MenuFragment {
                 + L10n.t("index-news", "News"));
     }
 
+    /**
+     * siteInfo.ts: MapDefs[clientTheme].desc.backgroundImg -> the menu splash.
+     * Android decodes the web's .webp directly from the packaged assets.
+     */
+    private void loadMenuBackground(String theme) {
+        if (mBackground == null) return;
+        final String asset = GeneratedMenuData.background(theme);
+        try (InputStream in = mActivity.getAssets().open(asset)) {
+            Bitmap bitmap = BitmapFactory.decodeStream(in);
+            if (bitmap != null) {
+                mBackground.setImageBitmap(bitmap);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "menu background " + asset + ": " + e.getMessage());
+        }
+    }
+
     private void fetchSiteInfo() {
         mSiteInfoLoaded = false;
         mPlaySpinner.setVisibility(View.VISIBLE);
@@ -612,6 +648,8 @@ public class MenuFragment {
                 }
                 Log.i(TAG, "site_info response: " + json.substring(0, Math.min(json.length(), 200)));
                 mSiteInfoJson = json;
+                // siteInfo.ts: the menu background follows site_info.clientTheme.
+                loadMenuBackground(Json.peekString(json, "clientTheme"));
                 mModes = Json.parseModes(json);
                 buildModeButtons();
                 // siteInfo.ts: Join/Create Team only when an enabled team mode exists.
