@@ -169,6 +169,9 @@ public:
     // P1.6: BT-keyboard key state from the Java bridge (Android KeyEvent codes),
     // marshalled onto the game thread by UiBridge. No-op off Android.
     void onHardwareKey(int androidKeyCode, bool down);
+    // Android gamepad axes from the Java bridge (native-only; see
+    // HardwareInput.h for the mapping). -1..1 with +Y up, fire 0..1.
+    void onGamepadMotion(float moveX, float moveY, float aimX, float aimY, float fire);
 
     // Called from Game::handlePickup to play the item pickup sound.
     void onPickupSound(const std::string& item);

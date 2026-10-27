@@ -97,6 +97,15 @@ public:
         (void)androidKeyCode;
         (void)down;
     }
+    // Android gamepad axes forwarded by AppActivity's MotionEvents (native-only
+    // mapping): left/right stick and fire trigger, -1..1 with +Y up.
+    virtual void gamepadMotion(float moveX, float moveY, float aimX, float aimY, float fire) {
+        (void)moveX;
+        (void)moveY;
+        (void)aimX;
+        (void)aimY;
+        (void)fire;
+    }
     // Persist the config blob (Java calls this before backgrounding).
     virtual void saveConfig() {}
     // The bundled news entries as JSON (the Java menu's news column).
@@ -251,6 +260,14 @@ public:
         soundChannels.push_back(soundChannel);
         ++playSoundCalls;
     }
+    void gamepadMotion(float moveX, float moveY, float aimX, float aimY, float fire) override {
+        padMoveX = moveX;
+        padMoveY = moveY;
+        padAimX = aimX;
+        padAimY = aimY;
+        padFire = fire;
+        ++gamepadMotionCalls;
+    }
     std::string newsJson() override { return news; }
 
     std::string playerName, region, language, news = "[]";
@@ -258,11 +275,12 @@ public:
     std::vector<std::string> joinedUrls, audioKeys;
     std::vector<std::string> soundNames, soundChannels;
     float audioValue = 0.0f;
+    float padMoveX = 0.0f, padMoveY = 0.0f, padAimX = 0.0f, padAimY = 0.0f, padFire = 0.0f;
     int lastTeamMode = 0;
     int setPlayerNameCalls = 0, setRegionCalls = 0, setLoadoutCalls = 0, setAudioCalls = 0;
     int setLanguageCalls = 0, quickStartCalls = 0, joinCalls = 0, cancelCalls = 0;
     int quitCalls = 0, pauseCalls = 0, resumeCalls = 0, saveConfigCalls = 0;
-    int playSoundCalls = 0;
+    int playSoundCalls = 0, gamepadMotionCalls = 0;
 
 private:
     std::string _config = "{}", _l10n = "{}";

@@ -34,7 +34,9 @@ import android.os.Looper;
 import android.util.Base64;
 import dev.axmol.lib.AxmolActivity;
 import dev.axmol.lib.SharedLoader;
+import android.view.InputDevice;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -264,8 +266,17 @@ public class AppActivity extends AxmolActivity {
 
     @Override
     public boolean onKeyDown(final int pKeyCode, final KeyEvent pKeyEvent) {
-        if (pKeyCode == KeyEvent.KEYCODE_BACK) {
+        // BACK and the gamepad Start button open the Java pause dialog (or leave
+        // the current screen) before the GL surface sees them.
+        if (pKeyCode == KeyEvent.KEYCODE_BACK || pKeyCode == KeyEvent.KEYCODE_BUTTON_START) {
+            final boolean start = pKeyCode == KeyEvent.KEYCODE_BUTTON_START;
             if (mJavaUi != null && mJavaUi.handleBackPressed()) {
+                return true;
+            }
+            // Gamepad Start has no engine BACK path (axmol only maps the Android
+            // BACK key), so open the pause dialog directly while in a match.
+            if (start && mJavaUi != null && SurvBridge.isInGame()) {
+                mJavaUi.showPause();
                 return true;
             }
             // If the Java UI didn't handle it, pass to the GL surface (game control
@@ -273,7 +284,8 @@ public class AppActivity extends AxmolActivity {
             return false;
         }
         // P1.6: axmol's GLSurfaceView only forwards DPAD/BACK to the engine, so
-        // BT-keyboard gameplay keys go through the bridge (GL-thread marshalled).
+        // BT-keyboard/gamepad gameplay keys go through the bridge (GL-thread
+        // marshalled).
         if (shouldForwardGameKey(pKeyCode)) {
             SurvBridge.hardwareKey(pKeyCode, true);
             return true;
@@ -283,11 +295,61 @@ public class AppActivity extends AxmolActivity {
 
     @Override
     public boolean onKeyUp(final int pKeyCode, final KeyEvent pKeyEvent) {
+        // Start is a one-shot pause toggle: swallow its release.
+        if (pKeyCode == KeyEvent.KEYCODE_BUTTON_START) {
+            return true;
+        }
         if (shouldForwardGameKey(pKeyCode)) {
             SurvBridge.hardwareKey(pKeyCode, false);
             return true;
         }
         return super.onKeyUp(pKeyCode, pKeyEvent);
+    }
+
+    /**
+     * Android gamepads deliver the sticks/triggers as MotionEvent axes (the
+     * buttons arrive as KeyEvents through onKeyDown/onKeyUp). Forward the axes
+     * only in a match and never while the pause dialog is up. +Y is up for the
+     * native input state, so Android's down-positive axes are negated.
+     */
+    @Override
+    public boolean onGenericMotionEvent(final MotionEvent event) {
+        final int source = event.getSource();
+        if (SurvBridge.isInGame() && (mJavaUi == null || !mJavaUi.isPauseOpen())
+                && ((source & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
+                    || (source & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD)
+                && event.getAction() == MotionEvent.ACTION_MOVE) {
+            final float moveX = axis(event, MotionEvent.AXIS_X);
+            final float moveY = -axis(event, MotionEvent.AXIS_Y);
+            float aimX = axis(event, MotionEvent.AXIS_Z);
+            float aimY = -axis(event, MotionEvent.AXIS_RZ);
+            if (Math.abs(aimX) < 0.01f && Math.abs(aimY) < 0.01f) {
+                // Some pads expose the right stick as RX/RY instead of Z/RZ.
+                aimX = axis(event, MotionEvent.AXIS_RX);
+                aimY = -axis(event, MotionEvent.AXIS_RY);
+            }
+            final float fire = Math.max(axis(event, MotionEvent.AXIS_RTRIGGER),
+                    axis(event, MotionEvent.AXIS_GAS));
+            SurvBridge.gamepadAxes(moveX, moveY, aimX, aimY, fire);
+            return true;
+        }
+        return super.onGenericMotionEvent(event);
+    }
+
+    private static float axis(final MotionEvent event, final int axis) {
+        final InputDevice.MotionRange range = event.getDevice() != null
+                ? event.getDevice().getMotionRange(axis, event.getSource())
+                : null;
+        float value = event.getAxisValue(axis);
+        if (range != null) {
+            // Normalise odd-range axes (some pads report triggers as min..max).
+            final float min = range.getMin();
+            final float max = range.getMax();
+            if (max > min) {
+                value = (value - min) / (max - min) * 2.0f - 1.0f;
+            }
+        }
+        return value;
     }
 
     /** In a match, but not while the pause dialog wants DPAD focus navigation. */
@@ -296,10 +358,12 @@ public class AppActivity extends AxmolActivity {
                 && !(mJavaUi != null && mJavaUi.isPauseOpen());
     }
 
-    /** Letters, digits and DPAD arrows are the inputBinds.ts default keys. */
+    /** Letters, digits, DPAD arrows and gamepad buttons are the default binds. */
     private static boolean isGameKey(final int keyCode) {
         return (keyCode >= KeyEvent.KEYCODE_A && keyCode <= KeyEvent.KEYCODE_Z)
                 || (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9)
+                // Gamepad buttons (A/B/X/Y, shoulders, triggers, sticks).
+                || (keyCode >= KeyEvent.KEYCODE_BUTTON_A && keyCode <= KeyEvent.KEYCODE_BUTTON_MODE)
                 || keyCode == KeyEvent.KEYCODE_DPAD_LEFT
                 || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT
                 || keyCode == KeyEvent.KEYCODE_DPAD_UP

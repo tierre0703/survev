@@ -89,6 +89,12 @@ public final class SurvBridge {
      */
     public static native void playSound(String name, String channel);
 
+    /**
+     * Android gamepad axes from AppActivity's MotionEvents (native-only):
+     * sticks in -1..1 with +Y up, `fire` the trigger in 0..1.
+     */
+    public static native void gamepadAxes(float moveX, float moveY, float aimX, float aimY, float fire);
+
     public static native void setLanguage(String locale);
 
     /** Engine stats overlay (fps/draw calls); persisted as `showFps`. */

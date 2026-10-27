@@ -284,6 +284,14 @@ public:
         });
     }
 
+    void gamepadMotion(float moveX, float moveY, float aimX, float aimY, float fire) override {
+        // Android gamepad axes (MotionEvents arrive on the UI thread). The input
+        // state lives on the scene/game thread, so queue it like hardwareKey.
+        runOnGameThread([this, moveX, moveY, aimX, aimY, fire] {
+            if (_game) _game->onGamepadMotion(moveX, moveY, aimX, aimY, fire);
+        });
+    }
+
     void setConfigValue(const std::string& key, const std::string& value) override {
         // Java sends every value as a string; keep the JSON type so the C++ side
         // can read it with getFloat/getBool (e.g. renderScale, sensitivities).
@@ -678,6 +686,16 @@ JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setAudio(JNIEnv* env, jclas
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_playSound(JNIEnv* env, jclass, jstring name,
                                                               jstring channel) {
     surv::uiBridge()->playSound(surv::fromJstring(env, name), surv::fromJstring(env, channel));
+}
+
+// Android gamepad axes (AppActivity.onGenericMotionEvent): queued onto the GL
+// thread and applied to the scene's HardwareInput.
+JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_gamepadAxes(JNIEnv*, jclass, jfloat moveX,
+                                                                jfloat moveY, jfloat aimX,
+                                                                jfloat aimY, jfloat fire) {
+    surv::uiBridge()->gamepadMotion(static_cast<float>(moveX), static_cast<float>(moveY),
+                                    static_cast<float>(aimX), static_cast<float>(aimY),
+                                    static_cast<float>(fire));
 }
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setLanguage(JNIEnv* env, jclass, jstring locale) {

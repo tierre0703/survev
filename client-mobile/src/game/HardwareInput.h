@@ -1,5 +1,5 @@
 #pragma once
-// Keyboard/mouse state for the hardware-input path (P1.6).
+// Keyboard/mouse + gamepad state for the hardware-input path (P1.6).
 //
 // Port of the non-touch half of `client/src/game.ts` update() plus the default
 // key/mouse binds from `client/src/inputBinds.ts`. The Android client is
@@ -7,17 +7,25 @@
 // use this path; touch always keeps working, and a touch event switches the
 // active aim back to the pads.
 //
-// Engine-independent: `GameScene` translates axmol key/mouse events into
-// `setKey()`/`setMouse*()` and the host tests drive the same API directly.
+// Android gamepads are a native-only addition (the web has no controller
+// support): the left stick moves, the right stick aims, triggers fire and the
+// buttons map onto the same `HwKey` table so every existing action/edge/HUD
+// rule applies unchanged.
+//
+// Engine-independent: `GameScene` translates axmol key/mouse events and the
+// Java gamepad motion events into `setKey()`/`setMouse*()`/`setGamepad*()` and
+// the host tests drive the same API directly.
 //
 // The web keybind editor serializes a bind CRC for sharing; the native client
 // does not expose remapping yet, so the defaults below are the whole bind
 // model (documented in REMAININGS.md P1.6).
 #include "../core/GameConfig.h"
+#include "../core/MathUtil.h"
 #include "../core/Vec2.h"
 #include "InputActions.h"
 
 #include <array>
+#include <cmath>
 #include <cstdint>
 
 namespace surv {
@@ -92,9 +100,50 @@ public:
     }
 
     // A touch/joystick event takes the aim back from the mouse (hybrid device).
-    void noteTouchInput() { _mouseUsed = false; }
+    void noteTouchInput() {
+        _mouseUsed = false;
+        // ... and from the gamepad (its aim is latched like the cursor).
+        _padAimUsed = false;
+    }
+
+    // ---- Gamepad (native-only; Android pads deliver axes via MotionEvents) ----
+    //
+    // The web client has no controller support (`inputBinds.ts` is keyboard/mouse
+    // only), so this is a native adaptation. Axes are -1..1 with +Y up (the Java
+    // side negates Android's down-positive AXIS_Y/AXIS_RZ):
+    //   left stick  -> analog move (the same InputMsg fields as the touch pads)
+    //   right stick -> aim direction + pull (like the mouse cursor distance)
+    //   RT / R2     -> fire
+    // Buttons are translated to the HwKey table by GameScene (A interact,
+    // B cancel, X reload, Y swap slots, L1/R1 prev/next weapon, L2 bandage,
+    // L3 stow, R3 large map), so the existing edges/actions apply unchanged.
+    static constexpr float kPadDeadzone = 0.2f;
+    static constexpr float kPadFireThreshold = 0.5f;
+
+    void setGamepadAxes(float moveX, float moveY, float aimX, float aimY) {
+        _padMove = padCurve(moveX, moveY);
+        const Vec2 aim = padCurve(aimX, aimY);
+        const float aimLen = v2Length(aim);
+        if (aimLen > 0.0f) {
+            _padAim = Vec2(aim.x / aimLen, aim.y / aimLen);
+            _padAimPull = math::clamp(aimLen, 0.0f, 1.0f);
+            _padAimUsed = true;
+        }
+    }
+
+    void setGamepadTrigger(float value) { _padFire = value > kPadFireThreshold; }
 
     // ---- Queries ----
+    bool gamepadMoving() const { return v2LengthSqr(_padMove) > 0.0f; }
+    const Vec2& gamepadMove() const { return _padMove; }
+    // The aim direction latches (like the mouse cursor) until a touch takes it
+    // back; `gamepadAimPull` is the last right-stick deflection (0..1).
+    bool gamepadAiming() const { return _padAimUsed; }
+    const Vec2& gamepadAim() const { return _padAim; }
+    float gamepadAimPull() const { return _padAimPull; }
+    bool gamepadFire() const { return _padFire; }
+    bool gamepadFirePressed() const { return _padFire && !_oldPadFire; }
+
     bool keyDown(HwKey key) const {
         const int idx = static_cast<int>(key);
         return idx >= 0 && idx < static_cast<int>(HwKey::Count) &&
@@ -165,6 +214,7 @@ public:
     void flush() {
         _oldKeys = _keys;
         _oldMouseButtons = _mouseButtons;
+        _oldPadFire = _padFire;
         _wheel = 0;
     }
 
@@ -176,9 +226,23 @@ public:
         _oldMouseButtons.fill(false);
         _wheel = 0;
         _mouseUsed = false;
+        _padMove = Vec2(0.0f, 0.0f);
+        _padFire = false;
+        _oldPadFire = false;
+        _padAimUsed = false;
     }
 
 private:
+    // Radial deadzone with the remaining travel rescaled to 0..1.
+    static Vec2 padCurve(float x, float y) {
+        const float len = std::sqrt(x * x + y * y);
+        if (len <= kPadDeadzone) {
+            return Vec2(0.0f, 0.0f);
+        }
+        const float scaled = math::clamp((len - kPadDeadzone) / (1.0f - kPadDeadzone), 0.0f, 1.0f);
+        return Vec2(x / len * scaled, y / len * scaled);
+    }
+
     std::array<bool, static_cast<size_t>(HwKey::Count)> _keys{};
     std::array<bool, static_cast<size_t>(HwKey::Count)> _oldKeys{};
     std::array<bool, kMouseButtonCount> _mouseButtons{};
@@ -186,6 +250,12 @@ private:
     Vec2 _mousePos;
     int _wheel = 0;
     bool _mouseUsed = false;
+    Vec2 _padMove;
+    Vec2 _padAim{1.0f, 0.0f};
+    float _padAimPull = 0.5f;
+    bool _padAimUsed = false;
+    bool _padFire = false;
+    bool _oldPadFire = false;
 };
 
 } // namespace surv

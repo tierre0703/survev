@@ -109,6 +109,13 @@ TEST(bridge_slots_have_safe_defaults) {    setUiBridge(nullptr);
     CHECK_EQ(bridge.soundChannels[0], std::string("sfx"));
     CHECK_EQ(bridge.soundNames[1], std::string("clothes_pickup_01"));
     CHECK_EQ(bridge.soundChannels[1], std::string("ui"));
+    // Android gamepad axes arrive from AppActivity's MotionEvents.
+    bridge.gamepadMotion(0.5f, -0.25f, 0.0f, 1.0f, 1.0f);
+    CHECK_EQ(bridge.gamepadMotionCalls, 1);
+    CHECK_NEAR(bridge.padMoveX, 0.5f, 1e-6f);
+    CHECK_NEAR(bridge.padMoveY, -0.25f, 1e-6f);
+    CHECK_NEAR(bridge.padAimY, 1.0f, 1e-6f);
+    CHECK_NEAR(bridge.padFire, 1.0f, 1e-6f);
     setUiBridge(nullptr);
 }
 

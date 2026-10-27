@@ -2029,7 +2029,23 @@ void GameScene::updateInput(float dt) {
         msg.shootHold = msg.shootHold || _hw.fireDown();
     }
 
-    // Keyboard/mouse one-shot actions join the HUD's queued ones.
+    // Gamepad (native-only, see HardwareInput.h): the left stick drives the same
+    // analog move fields as the touch pads, the right stick aims like the mouse
+    // (direction latched, pull -> toMouseLen) and RT/R2 is the trigger.
+    if (_hw.gamepadMoving()) {
+        msg.touchMoveDir = v2NormalizeSafe(_hw.gamepadMove(), Vec2(1.0f, 0.0f));
+        msg.touchMoveLen = static_cast<uint8_t>(
+            std::lround(math::clamp(v2Length(_hw.gamepadMove()), 0.0f, 1.0f) * 255.0f));
+        msg.touchMoveActive = true;
+    }
+    if (_hw.gamepadAiming() || _hw.gamepadFire()) {
+        msg.toMouseDir = _hw.gamepadAim();
+        msg.toMouseLen = math::clamp(_hw.gamepadAimPull(), 0.0f, 1.0f) * Constants::MouseMaxDist;
+        msg.shootStart = msg.shootStart || _hw.gamepadFirePressed();
+        msg.shootHold = msg.shootHold || _hw.gamepadFire();
+    }
+
+    // Keyboard/mouse/gamepad one-shot actions join the HUD's queued ones.
     _hw.collectActions(_pendingInputs);
 
     // A quick tap can begin and end between two sends; latch shootStart so the
@@ -2092,6 +2108,26 @@ void GameScene::onHardwareKey(int androidKeyCode, bool down) {
         case AKEYCODE_DPAD_RIGHT: key = HwKey::Right; break;
         case AKEYCODE_DPAD_UP: key = HwKey::Up; break;
         case AKEYCODE_DPAD_DOWN: key = HwKey::Down; break;
+        // Gamepad buttons reuse the keyboard binds (native-only mapping, see
+        // HardwareInput.h). Triggers arrive as axes through onGamepadMotion, but
+        // some pads report R2/L2 as buttons; R2 sets the fire trigger and L2
+        // quick-uses a bandage.
+        case AKEYCODE_BUTTON_A: key = HwKey::F; break; // interact / revive / loot
+        case AKEYCODE_BUTTON_B: key = HwKey::X; break; // cancel
+        case AKEYCODE_BUTTON_X: key = HwKey::R; break; // reload
+        case AKEYCODE_BUTTON_Y: key = HwKey::T; break; // switch gun slots
+        case AKEYCODE_BUTTON_L2: key = HwKey::Num7; break;
+        case AKEYCODE_BUTTON_THUMBL: key = HwKey::E; break; // stow weapons
+        case AKEYCODE_BUTTON_THUMBR: key = HwKey::M; break; // large map
+        case AKEYCODE_BUTTON_L1:
+            if (down) _hw.addWheel(HardwareInput::kWheelUp); // previous weapon
+            return;
+        case AKEYCODE_BUTTON_R1:
+            if (down) _hw.addWheel(HardwareInput::kWheelDown); // next weapon
+            return;
+        case AKEYCODE_BUTTON_R2:
+            _hw.setGamepadTrigger(down ? 1.0f : 0.0f);
+            return;
         default: return;
     }
     _hw.setKey(key, down);
@@ -2099,6 +2135,11 @@ void GameScene::onHardwareKey(int androidKeyCode, bool down) {
     (void)androidKeyCode;
     (void)down;
 #endif
+}
+
+void GameScene::onGamepadMotion(float moveX, float moveY, float aimX, float aimY, float fire) {
+    _hw.setGamepadAxes(moveX, moveY, aimX, aimY);
+    _hw.setGamepadTrigger(fire);
 }
 
 void GameScene::updateHardwareUi() {

@@ -170,6 +170,59 @@ TEST(hardware_input_mouse_state_and_touch_handoff) {
     CHECK(!hw.mouseUsed());
 }
 
+TEST(gamepad_axes_map_to_move_aim_and_fire) {
+    HardwareInput hw;
+    CHECK(!hw.gamepadMoving());
+    CHECK(!hw.gamepadAiming());
+    CHECK(!hw.gamepadFire());
+
+    // Inside the radial deadzone nothing is reported.
+    hw.setGamepadAxes(0.1f, -0.1f, 0.05f, 0.0f);
+    CHECK(!hw.gamepadMoving());
+    CHECK(!hw.gamepadAiming());
+
+    // Full left stick: direction preserved, magnitude 1 (+Y up).
+    hw.setGamepadAxes(1.0f, 0.0f, 0.0f, 0.0f);
+    CHECK(hw.gamepadMoving());
+    CHECK_NEAR(v2Length(hw.gamepadMove()), 1.0f, 1e-4f);
+    CHECK_NEAR(hw.gamepadMove().x, 1.0f, 1e-4f);
+
+    // Half deflection: the remaining travel is rescaled to 0..1
+    // (0.6 -> (0.6 - 0.2) / 0.8 = 0.5).
+    hw.setGamepadAxes(0.0f, 0.6f, 0.0f, 0.0f);
+    CHECK_NEAR(hw.gamepadMove().y, 0.5f, 1e-4f);
+    CHECK_NEAR(hw.gamepadMove().x, 0.0f, 1e-4f);
+
+    // Right stick: normalized direction latched, pull kept for toMouseLen.
+    hw.setGamepadAxes(0.0f, 0.0f, 0.0f, -1.0f);
+    CHECK(hw.gamepadAiming());
+    CHECK_NEAR(hw.gamepadAim().y, -1.0f, 1e-4f);
+    CHECK_NEAR(hw.gamepadAimPull(), 1.0f, 1e-4f);
+    // Releasing the stick keeps the aim direction but stops reporting move.
+    hw.setGamepadAxes(0.0f, 0.0f, 0.0f, 0.0f);
+    CHECK(hw.gamepadAiming());
+    CHECK_NEAR(hw.gamepadAim().y, -1.0f, 1e-4f);
+    CHECK(!hw.gamepadMoving());
+
+    // A touch hands the aim back to the pads (hybrid device).
+    hw.noteTouchInput();
+    CHECK(!hw.gamepadAiming());
+
+    // Trigger threshold + one-frame press edge.
+    hw.setGamepadTrigger(0.4f);
+    CHECK(!hw.gamepadFire());
+    hw.setGamepadTrigger(0.8f);
+    CHECK(hw.gamepadFire());
+    CHECK(hw.gamepadFirePressed());
+    hw.flush();
+    CHECK(hw.gamepadFire());
+    CHECK(!hw.gamepadFirePressed());
+    hw.reset();
+    CHECK(!hw.gamepadFire());
+    CHECK(!hw.gamepadAiming());
+    CHECK(!hw.gamepadMoving());
+}
+
 TEST(input_sync_change_gating_and_keepalive) {
     InputSync sync;
     const InputMsg base = baseMessage();

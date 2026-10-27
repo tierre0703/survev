@@ -104,7 +104,7 @@ native asset-error reports. **207 host tests pass, 0 fail.**
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | ✅ indicators: `MapIndicatorBarn` (data) + `Hud::updateMapIndicators` and `MapView::setIndicators` draw the def sprite/tint/pulse ring at the world position on both map views (equipped markers sort over the dots); `mapSprite.ts` itself is unused by the live HUD (dots/pings/indicators are `MapView` sprites) |
-| `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | `game/HardwareInput.h` + `game/InputSync.h` | 🔶 default bind set ported (WASD/arrows, R/F/X, 1–4, wheel, Q/E/T, 7–0, M/G, Escape) with mouse aim/left-click fire/wheel, touch handoff and change-gated InputMsg sends (1 s keepalive); no bind-remap editor/CRC or controller mapping (not required for Android) |
+| `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | `game/HardwareInput.h` + `game/InputSync.h` | 🔶 default bind set ported (WASD/arrows, R/F/X, 1–4, wheel, Q/E/T, 7–0, M/G, Escape) with mouse aim/left-click fire/wheel, touch handoff and change-gated InputMsg sends (1 s keepalive); Android gamepads (native-only) map sticks/triggers/buttons onto the same state; no bind-remap editor/CRC |
 | `client/src/ui/opponentDisplay.ts` (menu character preview / opponent display) | 🔶 animated preview: `CharacterPreviewView` draws the outfit's body/hands and the selected melee on the animData.ts skeleton (`GeneratedPreviewAnims`: idle pose + melee deploy/idle/attack keyframes), framed to fit the art, and plays the outfit pickup + melee anim sounds through `SurvBridge.playSound`; heal/boost particle emitters are N/A while the preview has no heal/boost tab |
 | `client/src/resources.ts` (per-map load/unload, audio preload, MAX_TEXTURE_SIZE) | 🔶 map atlases load/unload on map change like `loadMapAssets`; audio is preloaded globally at startup (no per-map preload needed), `MAX_TEXTURE_SIZE` tiers remain P2 |
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ✅ keyed from the defs (`sound.reload/reloadAlt/deploy/use/pickup`); doors/buttons/puzzles/ceiling/plane loops and victory music wired; dry fire is approximate (P2) |
@@ -448,9 +448,10 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         traffic no longer streams at 33 Hz. The seq/ack handshake is unchanged.
       - The HUD's queued actions (P0.1) and quick-tap `shootStart` latch drain
         through the same send gate, so a tap between sends is never lost.
-      - Not implemented: the keybind remap UI/CRC sharing and gamepad mapping.
-        These are optional for Android (the defaults are the web defaults);
-        `plan.md` §5.4's BT-keyboard requirement is met by a fixed default set.
+      - Not implemented: the keybind remap UI/CRC sharing. These are optional for
+        Android (the defaults are the web defaults); `plan.md` §5.4's BT-keyboard
+        requirement is met by a fixed default set. Android gamepads landed in the
+        twenty-first P2 pass (see §3.4).
       - Android BT keyboards: axmol's `AxmolGLSurfaceView` only forwards
         DPAD/BACK to the engine, so `AppActivity` sends gameplay letters/digits
         through `SurvBridge.hardwareKey`; `UiBridge` marshals them onto the GL
@@ -799,6 +800,34 @@ Done in the twentieth P2 pass (2026-10-27):
   tint) with its `part-pulse-01.img` ring above Todestfelde; the hook was
   removed for the final build.
 
+Done in the twenty-first P2 pass (2026-10-27):
+- Android gamepad support (native-only; the web has no controller code). The
+  sticks/triggers arrive as `MotionEvent` axes: `AppActivity.onGenericMotionEvent`
+  normalises them (device ranges, `AXIS_X/Y`, `AXIS_Z/RZ` with an `RX/RY`
+  fallback, `AXIS_RTRIGGER`/`AXIS_GAS`) and sends
+  `SurvBridge.gamepadAxes(moveX, moveY, aimX, aimY, fire)` -> `UiBridge` ->
+  GL thread -> `GameScene::onGamepadMotion` -> `HardwareInput`.
+  - Left stick = analog move via the same `InputMsg.touchMoveDir/Len` fields as
+    the touch pads (radial deadzone 0.2 with the remaining travel rescaled).
+  - Right stick = aim: the direction latches like the mouse cursor (a touch
+    takes it back, `noteTouchInput`), the pull maps to `toMouseLen`
+    (`MouseMaxDist`).
+  - RT/R2 = fire (`shootStart`/`shootHold`, trigger threshold 0.5, one-frame
+    press edge). Pads that report R2 as a button also work.
+  - Buttons map onto the existing `HwKey` table, so every action/edge/HUD rule is
+    reused: A interact, B cancel, X reload, Y switch gun slots, L1/R1 previous/
+    next weapon (wheel), L2 bandage, L3 stow, R3 large map, D-pad move/spectate
+    and Start = pause (`showPause()`, since axmol only maps the Android BACK
+    key). `isGameKey` now forwards `KEYCODE_BUTTON_A..BUTTON_MODE`.
+  - Host tests: `gamepad_axes_map_to_move_aim_and_fire` (deadzone rescale, aim
+    latch/touch handoff, trigger threshold/edge, reset) and the bridge recording
+    in `bridge_ui_host_roundtrip`. 3613 assertions / 212 tests.
+  - Device check (x86_64 emulator, `adb shell input keyevent`): `KEYCODE_BUTTON_X`
+    / `A` / `B` / `R1` / `L1` produced InputMsg actions 5 (Reload) / 7 (Interact)
+    / 6 (Cancel) / 17 (EquipNextWeap) / 18 (EquipPrevWeap), and `BUTTON_START`
+    opened the pause dialog. Stick/trigger axes need a physical controller (the
+    emulator cannot synthesise MotionEvents).
+
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
   and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
@@ -811,7 +840,8 @@ Remaining:
   by an OpenAL low-pass); the web's channel-type volume quirk (ambient/map music
   follows `soundVolume`) is reproduced and locked by
   `audio_ui_cues_follow_the_channel_type_volume`.
-- **Platform/perf:** device/tablet/perf tiers, keyboard/gamepad bind editor.
+- **Platform/perf:** device/tablet UI tiers and the keybind remap editor
+  (gamepad mapping landed in the twenty-first pass); a physical gamepad soak.
 - **Release:** real upload keystore/Play upload, physical mid-range 60 fps soak,
   final UI polish from device testing.
 
@@ -1253,3 +1283,15 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   atlas unload must not release them (it only unloads per-map sheets).
 - `GameWorld::loadMap` clears the indicator barn, so a new match never inherits
   the previous match's markers.
+- Android gamepads are native-only: axes arrive through
+  `SurvBridge.gamepadAxes` -> `UiBridge::gamepadMotion` -> GL thread ->
+  `GameScene::onGamepadMotion` -> `HardwareInput` (`+Y` up, deadzone 0.2 with the
+  travel rescaled, aim latched like the mouse until `noteTouchInput`, trigger
+  threshold 0.5). Buttons are translated to `HwKey` in
+  `GameScene::onHardwareKey`, so the keyboard bind table stays the single source
+  of truth; `AppActivity.isGameKey` must keep forwarding
+  `KEYCODE_BUTTON_A..BUTTON_MODE`, and `onGenericMotionEvent` must stay guarded by
+  `isInGame()`/`isPauseOpen()`.
+- Gamepad Start opens the pause dialog directly (`JavaUiHost.showPause()`, which
+  also calls `SurvBridge.onPauseGame()`): axmol only maps the Android BACK key, so
+  forwarding Start as a game key would do nothing. Its key-up is swallowed.

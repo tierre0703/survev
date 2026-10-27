@@ -162,6 +162,11 @@ the original TS and makes bugs easier to diff against the browser client.
 - `inputBinds.ts` → `game/HardwareInput.h` (P1.6): the default bind set is
   ported for BT-keyboard/mouse support; the remap editor/CRC is not exposed.
   The touch pads remain the primary input and can hand control back and forth.
+- Android gamepads (native-only, P2 pass 21) reuse the same `HardwareInput`:
+  left stick = analog move, right stick = aim, RT/R2 = fire, and the buttons are
+  translated to the default keyboard binds (A interact, B cancel, X reload,
+  Y swap slots, L1/R1 weapon cycle, L2 bandage, L3 stow, R3 map, Start pause).
+  Axes arrive through the Java `MotionEvent` bridge.
 
 ### 5.5 Audio
 - `audioManager.ts` / `soundDefs.ts` → `ax::AudioEngine` wrapper. Map preloaded sound
