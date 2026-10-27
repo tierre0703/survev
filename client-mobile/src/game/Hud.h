@@ -204,6 +204,8 @@ public:
     // ui.ts updatePlayerMapSprites + m_render: player/team dots and gas.
     void updateMapOverlay(const std::vector<MapDot>& dots, const MapGas& gas,
                           const std::vector<MapAirstrike>& strikes);
+    // mapIndicator.ts: role/item markers (def sprite + pulse ring) on both views.
+    void updateMapIndicators(const std::vector<MapIndicatorMarker>& indicators);
     // map.ts renderMap place names, over both map views.
     void setMapLabels(const std::vector<MapPlace>& places);
     // ui.ts: keep the player-centred minimap scrolled to the active player.

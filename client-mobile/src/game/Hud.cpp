@@ -1138,6 +1138,14 @@ void Hud::updateMapOverlay(const std::vector<MapDot>& dots, const MapGas& gas,
     _bigMap.setAirstrikes(strikes);
 }
 
+void Hud::updateMapIndicators(const std::vector<MapIndicatorMarker>& indicators) {
+    if (!_built) {
+        return;
+    }
+    _miniMap.setIndicators(indicators);
+    _bigMap.setIndicators(indicators);
+}
+
 void Hud::setMapLabels(const std::vector<MapPlace>& places) {
     if (!_built) {
         return;

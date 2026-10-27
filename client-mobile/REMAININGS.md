@@ -103,7 +103,7 @@ native asset-error reports. **207 host tests pass, 0 fail.**
 | `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | ✅ health/boost, weapon/ammo, alive/kills, kill feed (incl. role lines), kill leader, gas timer + gas/danger icon, death/result + spectate overlay, post-match teammate stats, inventory v2 strip, interaction prompt/touch target, toasts, squad group-colour dots + downed pulse, and the perk-mode class picker are live |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
-| `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | 🔶 partial: barn exists but is constructed with a **null** sprite barn; `MapSprite` z-order/pulse not applied (P2) |
+| `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | ✅ indicators: `MapIndicatorBarn` (data) + `Hud::updateMapIndicators` and `MapView::setIndicators` draw the def sprite/tint/pulse ring at the world position on both map views (equipped markers sort over the dots); `mapSprite.ts` itself is unused by the live HUD (dots/pings/indicators are `MapView` sprites) |
 | `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | `game/HardwareInput.h` + `game/InputSync.h` | 🔶 default bind set ported (WASD/arrows, R/F/X, 1–4, wheel, Q/E/T, 7–0, M/G, Escape) with mouse aim/left-click fire/wheel, touch handoff and change-gated InputMsg sends (1 s keepalive); no bind-remap editor/CRC or controller mapping (not required for Android) |
 | `client/src/ui/opponentDisplay.ts` (menu character preview / opponent display) | 🔶 animated preview: `CharacterPreviewView` draws the outfit's body/hands and the selected melee on the animData.ts skeleton (`GeneratedPreviewAnims`: idle pose + melee deploy/idle/attack keyframes), framed to fit the art, and plays the outfit pickup + melee anim sounds through `SurvBridge.playSound`; heal/boost particle emitters are N/A while the preview has no heal/boost tab |
 | `client/src/resources.ts` (per-map load/unload, audio preload, MAX_TEXTURE_SIZE) | 🔶 map atlases load/unload on map change like `loadMapAssets`; audio is preloaded globally at startup (no per-map preload needed), `MAX_TEXTURE_SIZE` tiers remain P2 |
@@ -775,11 +775,35 @@ Done in the nineteenth P2 pass (2026-10-27):
   anims logged `[audio] play punch_swing_01sfx` (fists swing) with the expected
   volume, no crash/warning output; host tests 3526 assertions / 208 tests.
 
+Done in the twentieth P2 pass (2026-10-27):
+- Map indicators (`objects/mapIndicator.ts`): `UpdateMsg.mapIndicators` finally
+  reaches the map views. `MapIndicatorBarn` is a data-only model now (id/type/
+  pos/equipped + the pulse ticker; the never-wired `MapSpriteBarn` dependency is
+  gone) and `GameScene` builds `MapIndicatorMarker`s from the def
+  (`mapIndicator.sprite`/`tint`/`pulse`/`pulseTint`) for
+  `Hud::updateMapIndicators` -> both `MapView`s. Marker sprites go into the
+  existing sorted dot layer: equipped markers sort above the player dots
+  (655350), plain ones below (1), and the `part-pulse-01.img` ring sits one lower
+  (only for defs with `mapIndicator.pulse`) — the web's exact z-order rule
+  (`MapView::indicatorZOrder`). `GameWorld::update` ticks the pulse
+  (0.5..1 at 0.3/s, flipping at both ends, as in mapIndicator.ts), and a new map
+  clears the barn. The frames (`player-the-hunted.img`, `player-king-woods.img`,
+  `part-pulse-01.img`) are in the always-resident `loadout` atlas.
+- Host tests: `map_indicator_barn_data_and_pulse` (add/update/free/slot reuse +
+  the pulse ease), `map_indicator_defs_have_sprite_and_pulse` (the_hunted /
+  helmet03_forest defs, plain item has none) and
+  `map_view_indicator_markers_and_pulse_ring` (frame/tint/pos/scale/pulse ring +
+  hiding when cleared). 3583 assertions / 211 tests.
+- Device check (x86_64 emulator): with a temporary hook injecting a hunted
+  marker at the active player, the big map drew `player-the-hunted.img` (orange
+  tint) with its `part-pulse-01.img` ring above Todestfelde; the hook was
+  removed for the final build.
+
 Remaining:
-- **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
-  alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
-  implemented; `MapSprite` z-order only affects the dead `FguiHud` path (the
-  live HUD uses `MapView`/`EmoteManager` ping layers).
+- **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
+  and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
+  used by nothing at all (the live HUD draws dots/pings/indicators in
+  `MapView`), so its z-order path is dead code rather than a gap.
 - **HUD/menus:** menu preview heal/boost particle emitters (`opponentDisplay.ts`;
   the Java avatar has no heal/boost view, so this only matters if the preview
   gains those tabs).
@@ -1217,3 +1241,15 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   the per-item `SOUNDS` table), fired in the player.ts `(prevTicker, ticker]`
   window; the outfit pickup fires on `ui` when the outfit changes (never on the
   first load, like `opponentDisplay.ts` skipEffects).
+- Map indicators are **data** in `MapIndicatorBarn` (id/type/pos/equipped +
+  pulse ticker) and **drawn by `MapView`**: `GameScene` builds
+  `MapIndicatorMarker`s from the def (`mapIndicator.sprite/tint/pulse/pulseTint`)
+  and calls `Hud::updateMapIndicators`. Do not re-add a `MapSpriteBarn`/factory
+  dependency to the barn, and keep the web's z-order rule
+  (`MapView::indicatorZOrder`: equipped 655350, plain 1, pulse one lower) and the
+  0.5..1 @ 0.3/s pulse (`MapIndicatorBarn::updatePulses`).
+- The indicator frames (`player-the-hunted.img`, `player-king-woods.img`,
+  `part-pulse-01.img`) live in the always-resident `loadout` atlas; the map's
+  atlas unload must not release them (it only unloads per-map sheets).
+- `GameWorld::loadMap` clears the indicator barn, so a new match never inherits
+  the previous match's markers.

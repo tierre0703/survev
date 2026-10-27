@@ -1788,6 +1788,33 @@ void GameScene::update(float delta) {
             // player's world position (the big map stays fitted to the box).
             _hud->setMapCenter(me ? me->pos : gas.playerPos);
             _hud->updateMapOverlay(dots, gas, strikes);
+
+            // mapIndicator.ts: role/item markers (UpdateMsg.mapIndicators)
+            // drawn on both map views with the def's sprite/tints; an equipped
+            // indicator pulses and sorts above the player dots.
+            std::vector<MapIndicatorMarker> markers;
+            for (const auto& ind : _world->indicatorBarn().indicators) {
+                if (!ind.active || ind.type.empty() || !provider) {
+                    continue;
+                }
+                const GameObjRenderDef* def = provider->gameObject(ind.type);
+                if (!def || def->mapIndicatorSprite.empty()) {
+                    continue;
+                }
+                MapIndicatorMarker marker;
+                marker.pos = ind.pos;
+                marker.texture = def->mapIndicatorSprite;
+                marker.tint = def->mapIndicatorTint;
+                marker.equipped = ind.equipped;
+                marker.pulse = def->mapIndicatorPulse;
+                marker.pulseTint = def->mapIndicatorPulseTint;
+                marker.pulseScale = ind.pulseScale;
+                // ui.ts: (uiLayout Sm ? 0.15 : 0.2) * 1.25; Android is the small
+                // layout (ui/Device) so this is the 0.1875 branch.
+                marker.scale = 0.15f * 1.25f;
+                markers.push_back(marker);
+            }
+            _hud->updateMapIndicators(markers);
         }
     }
     // Emote wheel: same visibility rule as the HUD; refresh the loadout each

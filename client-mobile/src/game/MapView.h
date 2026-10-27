@@ -45,6 +45,20 @@ struct MapAirstrike {
     float alpha = 1.0f;
 };
 
+// One server map indicator (mapIndicator.ts Indicator): a role/item marker
+// drawn at its world position. `equipped` markers pulse and sort above the
+// player dots (zOrder 655350 vs 1 in the web's sorted mapSprites container).
+struct MapIndicatorMarker {
+    Vec2 pos;
+    std::string texture; // def mapIndicator.sprite
+    uint32_t tint = 0xffffff;
+    bool equipped = false;
+    bool pulse = false; // def mapIndicator.pulse
+    uint32_t pulseTint = 0xffffff;
+    float pulseScale = 0.5f; // MapIndicatorBarn pulse (0.5..1)
+    float scale = 0.1875f;   // ui.ts: (uiLayout Sm ? 0.15 : 0.2) * 1.25
+};
+
 // ui.ts updatePlayerMapSprites addSprite style for one player.
 struct MapDotStyle {
     std::string texture = "player-map-inner.img";
@@ -67,6 +81,7 @@ public:
     static constexpr int kDotPool = 40;
     static constexpr int kPingPool = 32;
     static constexpr int kLabelPool = 16;
+    static constexpr int kIndicatorPool = 24;
 
     // Builds the view under `parent`, anchored at `pos` (parent/design space,
     // y up) with a `size` x `size` square. The whole view is clipped to the box.
@@ -105,6 +120,13 @@ public:
 
     void setDots(const std::vector<MapDot>& dots);
     void setPings(const std::vector<MapPing>& pings);
+    // mapIndicator.ts: role/item markers (def sprite + optional pulse ring).
+    void setIndicators(const std::vector<MapIndicatorMarker>& indicators);
+    // mapIndicator.ts zOrder: an equipped indicator sorts above every player dot
+    // (500+), a plain one below them; the pulse ring sits one lower. Pure so the
+    // host tests can assert the rule (the Null adapter does not model z-sort).
+    static int indicatorZOrder(bool equipped) { return equipped ? 655350 : 1; }
+    static int indicatorPulseZOrder(bool equipped) { return indicatorZOrder(equipped) - 1; }
     void setGas(const MapGas& gas);
     void setAirstrikes(const std::vector<MapAirstrike>& strikes);
     // map.ts renderMap nameContainer: place names over the map.
@@ -120,6 +142,12 @@ public:
     }
     pix::Graphics* gasGraphics() const { return _gasGfx; }
     pix::Graphics* airstrikeGraphics() const { return _strikeGfx; }
+    pix::Sprite* indicatorSprite(int idx) const {
+        return (idx >= 0 && idx < kIndicatorPool) ? _indicatorSprites[static_cast<size_t>(idx)] : nullptr;
+    }
+    pix::Sprite* indicatorPulseSprite(int idx) const {
+        return (idx >= 0 && idx < kIndicatorPool) ? _indicatorPulseSprites[static_cast<size_t>(idx)] : nullptr;
+    }
     pix::Text* labelText(int idx) const {
         return (idx >= 0 && idx < kLabelPool) ? _labels[static_cast<size_t>(idx)] : nullptr;
     }
@@ -139,6 +167,8 @@ private:
     std::array<pix::Sprite*, kDotPool> _dotSprites{};
     std::array<pix::Text*, kLabelPool> _labels{};
     std::array<pix::Sprite*, kPingPool> _pingSprites{};
+    std::array<pix::Sprite*, kIndicatorPool> _indicatorSprites{};
+    std::array<pix::Sprite*, kIndicatorPool> _indicatorPulseSprites{};
     Vec2 _pos;
     float _size = 140.0f;
     float _mapW = 0.0f;

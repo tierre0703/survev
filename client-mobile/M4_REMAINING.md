@@ -1166,6 +1166,13 @@ One clipped square view of the whole map, used by the 140px minimap and the
   axmol's GL renderer when the HUD became visible; creating the same mask from
   the first `setPings()` call is safe.** Also `clear()` the gas DrawNode at
   creation so a contentless DrawNode never submits an empty command.
+- `setIndicators()` draws `UpdateMsg.mapIndicators` (mapIndicator.ts): the def's
+  `mapIndicator.sprite` tinted `mapIndicator.tint` at its world position, plus
+  the `part-pulse-01.img` ring (def `mapIndicator.pulse`, tint `pulseTint`,
+  scale from `MapIndicatorBarn`'s 0.5..1 ticker) for the equipped holder. They
+  share the sorted dot layer: equipped markers sort above the player dots
+  (`MapView::indicatorZOrder` 655350 vs 1, ring one lower). The frames live in
+  the always-resident `loadout` atlas.
 
 ### 19.2 Player/team dots + gas
 

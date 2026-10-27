@@ -261,6 +261,68 @@ void MapView::setPings(const std::vector<MapPing>& pings) {
     }
 }
 
+void MapView::setIndicators(const std::vector<MapIndicatorMarker>& indicators) {
+    if (!_dotLayer) {
+        return;
+    }
+    int used = 0;
+    const float artScale = _size / kTextureSize;
+    for (const auto& marker : indicators) {
+        if (marker.texture.empty() || used >= kIndicatorPool) {
+            continue;
+        }
+        pix::Sprite* sprite = _indicatorSprites[static_cast<size_t>(used)];
+        if (!sprite) {
+            sprite = _factory->createSprite();
+            sprite->setAnchor(0.5f, 0.5f);
+            _dotLayer->addChild(sprite);
+            _indicatorSprites[static_cast<size_t>(used)] = sprite;
+        }
+        const Vec2 p = project(marker.pos);
+        sprite->setPosition(p.x, p.y);
+        sprite->setFrame(marker.texture);
+        const float s = marker.scale * artScale;
+        sprite->setScale(s, s);
+        sprite->setTint(marker.tint);
+        sprite->setAlpha(1.0f);
+        // mapIndicator.ts zOrder: an equipped indicator sorts above every player
+        // dot, a plain one below them.
+        sprite->setLocalZOrder(indicatorZOrder(marker.equipped));
+        sprite->setVisible(true);
+
+        // The pulse ring only exists for defs with `mapIndicator.pulse` and is
+        // drawn for the equipped holder (mapIndicator.ts updateIndicatorPulses).
+        pix::Sprite* pulse = _indicatorPulseSprites[static_cast<size_t>(used)];
+        if (marker.pulse) {
+            if (!pulse) {
+                pulse = _factory->createSprite();
+                pulse->setAnchor(0.5f, 0.5f);
+                _dotLayer->addChild(pulse);
+                _indicatorPulseSprites[static_cast<size_t>(used)] = pulse;
+            }
+            pulse->setPosition(p.x, p.y);
+            pulse->setFrame("part-pulse-01.img");
+            const float ps = marker.pulseScale * artScale;
+            pulse->setScale(ps, ps);
+            pulse->setTint(marker.pulseTint);
+            pulse->setAlpha(1.0f);
+            pulse->setLocalZOrder(indicatorPulseZOrder(marker.equipped));
+            pulse->setVisible(true);
+        } else if (pulse) {
+            pulse->setVisible(false);
+        }
+        ++used;
+    }
+    for (int i = used; i < kIndicatorPool; ++i) {
+        if (_indicatorSprites[static_cast<size_t>(i)]) {
+            _indicatorSprites[static_cast<size_t>(i)]->setVisible(false);
+        }
+        if (_indicatorPulseSprites[static_cast<size_t>(i)]) {
+            _indicatorPulseSprites[static_cast<size_t>(i)]->setVisible(false);
+        }
+    }
+}
+
 void MapView::setLabels(const std::vector<MapPlace>& places) {
     if (!_labelLayer) {
         return;

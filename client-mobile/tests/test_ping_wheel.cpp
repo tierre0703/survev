@@ -7,6 +7,7 @@
 #include "game/EmoteManager.h"
 #include "game/Hud.h"
 #include "game/MapView.h"
+#include "game/objects/MapIndicator.h"
 #include "audio/AudioManager.h"
 #include "audio/GeneratedSoundDefs.h"
 #include "net/Messages.h"
@@ -522,6 +523,159 @@ TEST(map_view_dots_gas_and_pings) {
     CHECK_NEAR(label->y, 128.0f, 0.01f);
 }
 
+TEST(map_indicator_barn_data_and_pulse) {
+    // mapIndicator.ts: server data adds/updates/frees indicators; the pulse
+    // ticker eases between 0.5 and 1 (speed 0.3) and flips at both ends.
+    MapIndicatorBarn barn;
+    barn.addOrUpdate(7, false, true, "the_hunted", Vec2(100.0f, 50.0f));
+    CHECK_EQ(barn.indicators.size(), 1u);
+    const Indicator* ind = barn.find(7);
+    CHECK(ind != nullptr);
+    if (ind) {
+        CHECK(ind->active);
+        CHECK(ind->equipped);
+        CHECK_EQ(ind->type, std::string("the_hunted"));
+        CHECK_NEAR(ind->pos.x, 100.0f, 1e-4f);
+        CHECK_NEAR(ind->pulseTicker, 0.5f, 1e-4f);
+        CHECK_NEAR(ind->pulseDir, 1.0f, 1e-4f);
+    }
+
+    barn.updatePulses(1.0f); // 0.5 + 0.3 = 0.8, rising
+    ind = barn.find(7);
+    CHECK(ind != nullptr);
+    if (ind) {
+        CHECK_NEAR(ind->pulseTicker, 0.8f, 1e-4f);
+        CHECK_NEAR(ind->pulseScale, 0.8f, 1e-4f);
+        CHECK_NEAR(ind->pulseDir, 1.0f, 1e-4f);
+    }
+    barn.updatePulses(1.0f); // clamped at 1.0 -> flips down
+    ind = barn.find(7);
+    if (ind) {
+        CHECK_NEAR(ind->pulseTicker, 1.0f, 1e-4f);
+        CHECK_NEAR(ind->pulseDir, -1.0f, 1e-4f);
+    }
+    barn.updatePulses(1.0f); // 0.7, still falling
+    ind = barn.find(7);
+    if (ind) {
+        CHECK_NEAR(ind->pulseTicker, 0.7f, 1e-4f);
+        CHECK_NEAR(ind->pulseDir, -1.0f, 1e-4f);
+    }
+    barn.updatePulses(1.0f); // clamped at the 0.5 floor -> flips up
+    ind = barn.find(7);
+    if (ind) {
+        CHECK_NEAR(ind->pulseTicker, MapIndicatorBarn::kPulseScaleMin, 1e-4f);
+        CHECK_NEAR(ind->pulseDir, 1.0f, 1e-4f);
+    }
+
+    // An update moves the existing entry instead of adding a second one.
+    barn.addOrUpdate(7, false, false, "helmet03_forest", Vec2(10.0f, 20.0f));
+    CHECK_EQ(barn.indicators.size(), 1u);
+    ind = barn.find(7);
+    if (ind) {
+        CHECK(!ind->equipped);
+        CHECK_EQ(ind->type, std::string("helmet03_forest"));
+        CHECK_NEAR(ind->pos.y, 20.0f, 1e-4f);
+    }
+
+    // `dead` frees the slot; a later add reuses it (no unbounded growth).
+    barn.addOrUpdate(8, false, false, "the_hunted", Vec2(0.0f, 0.0f));
+    CHECK_EQ(barn.indicators.size(), 2u);
+    barn.addOrUpdate(7, true, false, "", Vec2(0.0f, 0.0f));
+    CHECK(barn.find(7) == nullptr);
+    barn.addOrUpdate(9, false, false, "the_hunted", Vec2(1.0f, 1.0f));
+    CHECK_EQ(barn.indicators.size(), 2u);
+    CHECK(barn.find(9) != nullptr);
+    barn.clear();
+    CHECK(barn.indicators.empty());
+}
+
+TEST(map_indicator_defs_have_sprite_and_pulse) {
+    installGeneratedDefs();
+    const DefProvider* provider = getDefProvider();
+    CHECK(provider != nullptr);
+    if (!provider) {
+        return;
+    }
+    // roleDefs.ts `the_hunted`: orange hunted marker with a pulse ring.
+    const GameObjRenderDef* hunted = provider->gameObject("the_hunted");
+    CHECK(hunted != nullptr);
+    if (hunted) {
+        CHECK_EQ(hunted->mapIndicatorSprite, std::string("player-the-hunted.img"));
+        CHECK_EQ(hunted->mapIndicatorTint, 0xff8400u);
+        CHECK(hunted->mapIndicatorPulse);
+        CHECK_EQ(hunted->mapIndicatorPulseTint, 0xff8400u);
+    }
+    // gearDefs.ts `helmet03_forest` (Shishigami no Kabuto): green woods-king.
+    const GameObjRenderDef* king = provider->gameObject("helmet03_forest");
+    CHECK(king != nullptr);
+    if (king) {
+        CHECK_EQ(king->mapIndicatorSprite, std::string("player-king-woods.img"));
+        CHECK_EQ(king->mapIndicatorTint, 0x00ff00u);
+        CHECK(king->mapIndicatorPulse);
+    }
+    // Plain items carry no map indicator.
+    const GameObjRenderDef* bandage = provider->gameObject("bandage");
+    CHECK(bandage == nullptr || bandage->mapIndicatorSprite.empty());
+}
+
+TEST(map_view_indicator_markers_and_pulse_ring) {
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    MapView view;
+    view.build(&factory, root, Vec2(0.0f, 0.0f), 256.0f);
+    auto* rt = static_cast<pix::NullRenderTexture*>(factory.createRenderTexture());
+    rt->resize(256.0f, 256.0f);
+    view.setTexture(rt);
+    view.setMapSize(512.0f, 512.0f);
+
+    std::vector<MapIndicatorMarker> markers(2);
+    markers[0].pos = Vec2(256.0f, 256.0f);
+    markers[0].texture = "player-the-hunted.img";
+    markers[0].tint = 0xff8400;
+    markers[0].equipped = true;
+    markers[0].pulse = true;
+    markers[0].pulseTint = 0xff8400;
+    markers[0].pulseScale = 0.75f;
+    markers[1].pos = Vec2(512.0f, 512.0f);
+    markers[1].texture = "player-king-woods.img";
+    markers[1].tint = 0x00ff00;
+    view.setIndicators(markers);
+
+    const auto* hunted = static_cast<const pix::NullSprite*>(view.indicatorSprite(0));
+    CHECK(hunted != nullptr && hunted->visible);
+    if (hunted) {
+        CHECK_EQ(hunted->frame, std::string("player-the-hunted.img"));
+        CHECK_EQ(hunted->getTint(), 0xff8400u);
+        CHECK_NEAR(hunted->x, 128.0f, 0.01f);
+        CHECK_NEAR(hunted->y, 128.0f, 0.01f);
+        // mapIndicator.ts: (Sm ? 0.15 : 0.2) * 1.25, 256px view / 256px texture.
+        CHECK_NEAR(hunted->sx, 0.15f * 1.25f, 1e-4f);
+        // Equipped markers sort above the player dots; plain ones below them.
+        CHECK_EQ(MapView::indicatorZOrder(true), 655350);
+        CHECK_EQ(MapView::indicatorZOrder(false), 1);
+        CHECK_EQ(MapView::indicatorPulseZOrder(true), 655349);
+    }
+    const auto* pulse = static_cast<const pix::NullSprite*>(view.indicatorPulseSprite(0));
+    CHECK(pulse != nullptr && pulse->visible);
+    if (pulse) {
+        CHECK_EQ(pulse->frame, std::string("part-pulse-01.img"));
+        CHECK_EQ(pulse->getTint(), 0xff8400u);
+        CHECK_NEAR(pulse->sx, 0.75f, 1e-4f);
+    }
+    const auto* king = static_cast<const pix::NullSprite*>(view.indicatorSprite(1));
+    CHECK(king != nullptr && king->visible);
+    if (king) {
+        CHECK_NEAR(king->x, 256.0f, 0.01f);
+    }
+    CHECK(view.indicatorPulseSprite(1) == nullptr); // def has no pulse ring
+
+    // Clearing markers hides the pooled sprites (new map / mode change).
+    view.setIndicators({});
+    CHECK(!hunted->visible);
+    CHECK(!pulse->visible);
+    CHECK(!king->visible);
+}
+
 TEST(map_view_minimap_is_zoom_centred_and_clipped) {
     pix::NullPixiFactory factory;
     pix::Container* root = factory.createContainer();
@@ -867,3 +1021,4 @@ TEST(ping_sound_leader_and_airstrike_falloff) {
     CHECK_NEAR(backend.played.back().volume, dangerVolume, 1e-4f);
     CHECK_NEAR(backend.played.back().pan, 0.0f, 1e-6f);
 }
+

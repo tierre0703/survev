@@ -191,9 +191,11 @@ void GameWorld::loadMap(const MapMsg& msg) {
     _gas.m_initFree();
     _lineSprites.m_free();
 
-    // Emote/ping cleanup on new map
+    // Emote/ping cleanup on new map (map indicators are data-only now: Hud and
+    // MapView draw the def markers on both map views).
     _emoteManager.reset();
     _playerGroups.clear();
+    _indicatorBarn.clear();
 
     // GameScene builds the world through resetWorld() on join and hands it the
     // session's cached MapMsg (replayMap), so this is the world's first load.
@@ -215,9 +217,6 @@ void GameWorld::loadMap(const MapMsg& msg) {
     if (_contentRoot && _gas.gasRenderer.display) {
         _contentRoot->addChild(_gas.gasRenderer.display);
     }
-
-    // Init the minimap indicator barn (data only; sprite barn set by FguiHud).
-    _indicatorBarn.init(nullptr);
 
     // Generate the minimap texture (one-shot, after terrain is loaded).
     _map->generateMinimapTexture(_factory, _camera);
@@ -398,7 +397,7 @@ void GameWorld::applyUpdate(const UpdateMsg& msg) {
 
     // Process map indicators from the update message.
     for (const auto& mi : msg.mapIndicators) {
-        _indicatorBarn.addOrUpdate(mi.id, mi.dead, mi.equipped, mi.type, mi.pos, _factory);
+        _indicatorBarn.addOrUpdate(mi.id, mi.dead, mi.equipped, mi.type, mi.pos);
     }
 }
 
