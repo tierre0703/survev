@@ -3,6 +3,7 @@
 // object pool, and structure mask transforms.
 #include "ReferenceData.h"
 #include "TestFramework.h"
+#include "FakeConnection.h"
 
 #include "audio/Ambiance.h"
 #include "audio/AudioManager.h"
@@ -24,6 +25,7 @@
 #include "render/Renderer.h"
 #include "render/Terrain.h"
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -2835,4 +2837,146 @@ TEST(hud_gas_icon_state) {
     gas.active = false;
     hud.setGasState(gas);
     CHECK(!icon->visible);
+}
+
+namespace {
+// Serializes an UpdateMsg for the fake connection (see tests/test_game.cpp).
+std::vector<uint8_t> updateFrame(UpdateMsg& msg) {
+    MsgStream stream(std::vector<uint8_t>(1024, 0));
+    stream.serializeMsg(MsgType_Update, [&msg](NetBitStream& s) { msg.serialize(s); });
+    return stream.getBuffer();
+}
+} // namespace
+
+TEST(hud_health_depleted_trail) {
+    // #ui-health-depleted: the grey trail lags the fill with the web's 1 s
+    // ease-out width transition (game.css #ui-health-counter #ui-health-depleted).
+    Game game;
+    std::vector<FakeConnection*> created;
+    game.init(nullptr, [&created](const std::string& url) -> std::unique_ptr<Connection> {
+        auto* conn = new FakeConnection(url);
+        created.push_back(conn);
+        return std::unique_ptr<Connection>(conn);
+    });
+    game.tryJoinGame("ws://dev/play", "tok");
+    CHECK_EQ(created.size(), size_t(1));
+    if (created.empty()) return;
+    created.back()->open();
+    game.update(0.0f);
+
+    UpdateMsg update;
+    FullObjectData fo;
+    fo.data.__id = 42;
+    fo.data.__type = ObjectType_Player;
+    fo.data.pos = Vec2(12.5f, 25.75f);
+    fo.data.dir = Vec2(0.1f, -0.99f);
+    fo.data.outfit = "outfitBase";
+    fo.data.backpack = "backpack00";
+    fo.data.helmet = "helmet02";
+    fo.data.chest = "chest02";
+    fo.data.activeWeapon = "ak47";
+    fo.data.layer = 1;
+    fo.data.scale = 1.1f;
+    fo.data.role = "";
+    update.fullObjects.push_back(fo);
+    update.activePlayerId = 42;
+    update.activePlayerIdDirty = true;
+    update.activePlayerData.healthDirty = true;
+    update.activePlayerData.health = 100.0f;
+    PlayerInfo pi;
+    pi.playerId = 42;
+    pi.teamId = 1;
+    pi.groupId = 0;
+    pi.name = "Player";
+    pi.heal = "bandage";
+    pi.boost = "soda";
+    update.playerInfos.push_back(pi);
+    created.back()->pushFrame(updateFrame(update));
+    game.update(0.0f);
+    CHECK_NEAR(game.activePlayerData().health, 100.0f, 0.01f);
+
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.setVisible(true);
+    hud.update(0.016f, game, true);
+    // The first render starts the trail at 0 and settles at 100 after ~1 s.
+    for (int i = 0; i < 70; ++i) hud.update(0.016f, game, true);
+    CHECK_NEAR(hud.healthDepletedWidth(), 100.0f, 0.5f);
+
+    // Damage to 50: the fill snaps to 50%, the grey trail is still wide, then
+    // settles at 50 over the 1 s transition.
+    update.activePlayerData.healthDirty = true;
+    update.activePlayerData.health = 50.0f;
+    created.back()->pushFrame(updateFrame(update));
+    game.update(0.0f);
+    // The wire quantises health (byte-scaled), so compare against the value the
+    // client actually received.
+    const float damagedHealth = game.activePlayerData().health;
+    CHECK(damagedHealth > 49.0f && damagedHealth < 51.0f);
+    hud.update(0.016f, game, true);
+    CHECK(hud.healthDepletedWidth() > damagedHealth);
+    CHECK(hud.healthDepletedWidth() < 100.0f);
+    for (int i = 0; i < 70; ++i) {
+        hud.update(0.016f, game, true);
+    }
+    CHECK_NEAR(hud.healthDepletedWidth(), damagedHealth, 0.5f);
+
+    // The graphics is a #929292 rect at the new width (400px * 50%).
+    const auto* depleted = static_cast<const pix::NullGraphics*>(hud.healthDepleted());
+    CHECK(depleted != nullptr);
+    bool sawFill = false;
+    bool sawRect = false;
+    if (depleted) {
+        for (const auto& cmd : depleted->commands) {
+            if (cmd.kind == pix::DrawCommand::BeginFill) {
+                CHECK_EQ(cmd.color, 0x929292u);
+                sawFill = true;
+            } else if (cmd.kind == pix::DrawCommand::Rect) {
+                CHECK_NEAR(cmd.c, 400.0f * damagedHealth / 100.0f, 0.5f);
+                CHECK_NEAR(cmd.d, 32.0f, 0.5f);
+                sawRect = true;
+            }
+        }
+    }
+    CHECK(sawFill);
+    CHECK(sawRect);
+}
+
+TEST(hud_faction_flair) {
+    // ui.ts faction flair: the red/blue player patch beside the health counter
+    // (map.factionMode only; team 1 = red, team 2 = blue).
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.setVisible(true);
+    Game game;
+
+    const auto* left = static_cast<const pix::NullSprite*>(hud.flairLeft());
+    const auto* right = static_cast<const pix::NullSprite*>(hud.flairRight());
+    CHECK(left != nullptr && right != nullptr);
+    if (!left || !right) return;
+    CHECK(!left->visible && !right->visible);
+
+    hud.setFactionMode(true);
+    hud.setLocalTeamId(1);
+    hud.update(0.016f, game, true);
+    CHECK(left->visible && right->visible);
+    CHECK_EQ(left->frame, std::string("gui/player-patch-red.png"));
+    CHECK_EQ(right->frame, std::string("gui/player-patch-red.png"));
+
+    hud.setLocalTeamId(2);
+    hud.update(0.016f, game, true);
+    CHECK_EQ(left->frame, std::string("gui/player-patch-blue.png"));
+
+    hud.setFactionMode(false);
+    hud.update(0.016f, game, true);
+    CHECK(!left->visible && !right->visible);
+
+    hud.setFactionMode(true);
+    hud.setLocalTeamId(0); // solo/team id: no faction patch
+    hud.update(0.016f, game, true);
+    CHECK(!left->visible && !right->visible);
 }

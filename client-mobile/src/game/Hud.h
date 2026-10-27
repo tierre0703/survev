@@ -285,6 +285,13 @@ public:
     const pix::Graphics* squadHealthFill(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].barFill : nullptr;
     }
+    // ui.ts faction flair (the red/blue patch beside the health counter).
+    void setLocalTeamId(uint8_t teamId) { _localTeamId = teamId; }
+    const pix::Sprite* flairLeft() const { return _flairLeft; }
+    const pix::Sprite* flairRight() const { return _flairRight; }
+    // #ui-health-depleted: the grey damage trail behind the health fill.
+    const pix::Graphics* healthDepleted() const { return _healthDepleted; }
+    float healthDepletedWidth() const { return _healthDepletedWidth; }
     const pix::Sprite* gearIcon(int idx) const {
         return (idx >= 0 && idx < kGearIconCount) ? _gearIcons[static_cast<size_t>(idx)] : nullptr;
     }
@@ -344,6 +351,7 @@ private:
     pix::Container* _root = nullptr;
 
     pix::Graphics* _healthBg = nullptr;
+    pix::Graphics* _healthDepleted = nullptr;
     pix::Graphics* _healthFill = nullptr;
     pix::Text* _healthText = nullptr;
     pix::Graphics* _boostSegments[4] = {nullptr, nullptr, nullptr, nullptr};
@@ -508,6 +516,11 @@ private:
     std::string _lastRoleFooter;
     float _announcementTicker = 0.0f;
     bool _factionMode = false;
+    // ui.ts faction flair: the local team id + the patch sprite frame in use.
+    uint8_t _localTeamId = 0;
+    std::string _flairFrame;
+    pix::Sprite* _flairLeft = nullptr;
+    pix::Sprite* _flairRight = nullptr;
     std::array<pix::Graphics*, 3> _teamArrows{};
     std::vector<TeammateArrow> _teamArrowState;
 
@@ -519,6 +532,12 @@ private:
 
     // Change detection (only repaint what moved).
     float _lastHealth = -1.0f;
+    // #ui-health-depleted: the rendered grey trail (0..100) lags the fill with
+    // the web's 1 s ease-out CSS width transition.
+    float _healthDepletedWidth = 0.0f;
+    float _healthDepletedFrom = 0.0f;
+    float _healthDepletedTo = 0.0f;
+    float _healthDepletedTicker = 1.0f;
     float _lastBoost = -1.0f;
     int _lastAlive = -1;
     int _lastKills = -1;

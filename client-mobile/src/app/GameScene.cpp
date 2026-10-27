@@ -1653,6 +1653,9 @@ void GameScene::update(float delta) {
             }
             _hud->setInteractionPrompt(prompt);
             _hud->setFactionMode(_world->map().mapDef.factionMode);
+            // ui.ts faction flair: the health counter shows the active player's
+            // red/blue patch in faction modes.
+            _hud->setLocalTeamId(_game->playerTeamId(_game->getActivePlayerId()));
 
             // ui.ts off-screen teammate arrows.
             std::vector<TeammateArrow> arrows;

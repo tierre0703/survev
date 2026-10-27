@@ -221,6 +221,10 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     // rgba(0,0,0,0.4) background).
     _healthBg = _factory->createGraphics();
     _root->addChild(_healthBg);
+    // #ui-health-depleted: grey #929292 trail behind the fill (game.css 1 s
+    // ease-out width transition); drawn before the fill so it stays behind.
+    _healthDepleted = _factory->createGraphics();
+    _root->addChild(_healthDepleted);
     _healthFill = _factory->createGraphics();
     _root->addChild(_healthFill);
     _healthText = _factory->createText();
@@ -228,6 +232,17 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _healthText->setColor(0xffffff, 0x000000, 2.0f, true);
     _healthText->setAnchor(0.5f, 0.5f);
     _root->addChild(_healthText);
+
+    // ui.ts faction flair: 64px red/blue player-patch sprites on the left/right
+    // of the health counter (only shown in faction mode).
+    _flairLeft = _factory->createSprite();
+    _flairLeft->setAnchor(0.5f, 0.5f);
+    _flairLeft->setVisible(false);
+    _root->addChild(_flairLeft);
+    _flairRight = _factory->createSprite();
+    _flairRight->setAnchor(0.5f, 0.5f);
+    _flairRight->setVisible(false);
+    _root->addChild(_flairRight);
 
     // #ui-boost-counter: four segments above the health bar.
     for (auto*& seg : _boostSegments) {
@@ -527,6 +542,23 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _healthBg->endFill();
 
     _healthFill->setPosition(X(hudX + kHealthBarPadding), Y(hudY + kHealthBarPadding));
+    _healthDepleted->setPosition(X(hudX + kHealthBarPadding), Y(hudY + kHealthBarPadding));
+    // game.css .ui-health-flair: 64x64, left:-32/top:13 (rotated 270deg) and
+    // right:-32/top:13 (90deg); the counter is hudH tall.
+    if (_flairLeft) {
+        _flairLeft->setPosition(X(hudX), Y(hudY + hudH - 13.0f - 32.0f));
+        _flairLeft->setRotation(-3.14159265358979f * 0.5f);
+        const float source = std::max(_flairLeft->sourceWidth(), _flairLeft->sourceHeight());
+        const float scale = source > 0.0f ? 64.0f / source : 1.0f;
+        _flairLeft->setScale(scale, scale);
+    }
+    if (_flairRight) {
+        _flairRight->setPosition(X(hudX + hudW), Y(hudY + hudH - 13.0f - 32.0f));
+        _flairRight->setRotation(3.14159265358979f * 0.5f);
+        const float source = std::max(_flairRight->sourceWidth(), _flairRight->sourceHeight());
+        const float scale = source > 0.0f ? 64.0f / source : 1.0f;
+        _flairRight->setScale(scale, scale);
+    }
     _healthText->setAnchor(0.5f, 0.5f);
     _healthText->setPosition(X(vw * 0.5f), Y(hudY + hudH * 0.5f));
     _ammoText->setAnchor(0.0f, 1.0f);
@@ -945,6 +977,7 @@ void Hud::setVisible(bool visible) {
         }
     };
     show(_healthBg);
+    show(_healthDepleted);
     show(_healthFill);
     show(_healthText);
     show(_ammoText);
@@ -2042,10 +2075,18 @@ void Hud::update(float dt, const Game& game, bool visible) {
     // less the CSS `ui-bar-danger` pulse (black <-> red, 1 s) overrides it.
     const bool downed = snap.health < 0.0f;
     const float health = downed ? 0.0f : std::clamp(snap.health, 0.0f, 100.0f);
+    const bool healthChanged = health != _lastHealth || downed;
     const bool healthDanger = health > 0.0f && health <= 25.0f;
     const float healthDangerMix =
         0.5f - 0.5f * std::cos(2.0f * 3.14159265358979f * _squadPulseTicker);
-    if (health != _lastHealth || downed || healthDanger) {
+    // #ui-health-depleted: a new target starts the web's 1 s ease-out width
+    // transition from the currently rendered trail.
+    if (healthChanged) {
+        _healthDepletedFrom = _healthDepletedWidth;
+        _healthDepletedTo = health;
+        _healthDepletedTicker = 0.0f;
+    }
+    if (healthChanged || healthDanger) {
         _lastHealth = health;
         const float fraction = health / 100.0f;
         const uint32_t color = healthDanger ? healthDangerColor(healthDangerMix)
@@ -2058,6 +2099,43 @@ void Hud::update(float dt, const Game& game, bool visible) {
             _healthFill->endFill();
         }
         _healthText->setText(std::to_string(static_cast<int>(std::round(health))));
+    }
+    if (_healthDepletedTicker < 1.0f && _healthDepleted) {
+        _healthDepletedTicker = std::min(1.0f, _healthDepletedTicker + dt);
+        const float t = _healthDepletedTicker;
+        const float ease = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t); // ease-out
+        _healthDepletedWidth =
+            _healthDepletedFrom + (_healthDepletedTo - _healthDepletedFrom) * ease;
+        _healthDepleted->clear();
+        if (_healthDepletedTo > 0.0f && _healthDepletedWidth > 0.01f) {
+            _healthDepleted->beginFill(0x929292, 1.0f);
+            _healthDepleted->drawRect(0.0f, 0.0f,
+                kHealthBarWidth * _healthDepletedWidth / 100.0f, kHealthBarHeight);
+            _healthDepleted->endFill();
+        }
+    }
+
+    // ui.ts faction flair: the red/blue player patch on both sides of the
+    // health counter (map.factionMode only; team 1 = red, 2 = blue).
+    if (_flairLeft && _flairRight) {
+        const bool factionTeam = _factionMode &&
+            (_localTeamId == FactionTeam_Red || _localTeamId == FactionTeam_Blue);
+        if (factionTeam) {
+            const std::string frame = _localTeamId == FactionTeam_Red
+                ? "gui/player-patch-red.png"
+                : "gui/player-patch-blue.png";
+            if (_flairFrame != frame) {
+                _flairLeft->setFrame(frame);
+                _flairRight->setFrame(frame);
+                _flairFrame = frame;
+                const float source = std::max(_flairLeft->sourceWidth(), _flairLeft->sourceHeight());
+                const float scale = source > 1.0f ? 64.0f / source : 1.0f;
+                _flairLeft->setScale(scale, scale);
+                _flairRight->setScale(scale, scale);
+            }
+        }
+        _flairLeft->setVisible(_visible && factionTeam);
+        _flairRight->setVisible(_visible && factionTeam);
     }
 
     // --- Boost: four segments, filled by their share of 100 ---

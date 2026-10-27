@@ -37,7 +37,8 @@ the web-compatible bind code. The twenty-third adds the pass reward art and
 level-up pulse plus the profile stats link. The twenty-fourth completes the
 crosshair editor (hex colour + web-range size/stroke sliders, seven stroke
 buckets). The twenty-fifth fixes the health-bar colour ramp and adds the
-low-health danger pulse. **219 host tests pass, 0 fail.**
+low-health danger pulse. The twenty-sixth adds the grey damage trail and the
+faction red/blue flair on the health bar. **221 host tests pass, 0 fail.**
 
 ---
 
@@ -954,6 +955,28 @@ Done in the twenty-fifth P2 pass (2026-10-27):
     grey full-health bar (the web's `#b3b3b3` 100 step), the health counter at
     100 and no GL/audio/crash errors.
 
+Done in the twenty-sixth P2 pass (2026-10-27):
+- Health-bar chrome (`game.css #ui-health-counter`):
+  - **Grey damage trail**: `#ui-health-depleted` (`#929292`, behind the fill)
+    now exists. A health change starts the web's 1 s ease-out width transition
+    from the currently rendered width, so damage leaves a grey trail that
+    catches up and healing grows it behind the fill (the web animates the CSS
+    `width` transition; the native uses an ease-out cubic on the same 1 s).
+    Hidden at 0 health like the web's `display` toggle.
+  - **Faction flair**: in `map.factionMode` the counter shows the active
+    player's red/blue player patch on both sides (`#ui-health-flair-left/right`:
+    64x64 at `left/right:-32`, `top:13`, rotated 270/90 deg; the art is
+    `gui/player-patch-red.png` / `gui/player-patch-blue.png`). `GameScene` now
+    passes the active player's team id to `Hud::setLocalTeamId`; the patch is
+    hidden outside faction modes.
+  - Host tests: `hud_health_depleted_trail` (settles at the received health, the
+    trail lags after damage, the graphics is a `#929292` 400px*health% rect) and
+    `hud_faction_flair` (red/blue frame, hidden outside faction mode or for a
+    non-faction team id). 3775 assertions / 221 tests.
+  - Device check (x86_64 emulator): a quick-play match rendered the HUD with no
+    GL/audio/crash errors (the trail/flair need a damage or faction match for a
+    visual check; both are host-tested).
+
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
   and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
@@ -1087,6 +1110,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - The minimap bakes the **static** `MapMsg.objects` (not the live pools, which are empty during `loadMap`); the big map uses the same texture fitted to 640px
 - `Hud` hit tests (`minimapExpandHit`, `bigMapContains/CloseHit`) take design-space coords; widget positions are centred HUD coords
 - Health colours follow the web exactly: the main bar uses `ui2.ts healthColourSteps` (strict `>` walk on the ceiled health, `delerp`/`lerp` in double, so 100 = grey `#b3b3b3`, 75..99 white, 50 = `#ff7878`, 25 = `#ff5252`, <=24 red) and the squad bars use `ui.ts updateHealthBar` (grey 100 / white 75..99 / darkpink->lightpink below 75 / red downed). At <=25 both add the CSS `ui-bar-danger` pulse (black <-> red, 0.8 alpha, 1 s cycle). Do not "simplify" these back to a flat colour or the `>=` walk
+- The health counter also owns `#ui-health-depleted` (grey `#929292`, behind the fill, 1 s ease-out trail) and the faction `#ui-health-flair-left/right` patches (`GameScene` -> `Hud::setLocalTeamId`); the depleted graphics is drawn before the fill so z-order stays behind it, and the flairs only show for team ids 1/2 in `map.factionMode`
 - P0.1 action taps are one-shot edits queued in `game/InputActions` and cleared only after `Game::sendInput` runs (clearing at tap time loses taps that land between the 33 Hz sends)
 - A normal match end is `GameOverMsg` followed by the server's `stop()` close (3000/0): `GameScene::update` must keep the world/result when `Game::gameOver() != nullptr` and skip reconnect/URL fallback/error, and the liveness watchdog skips once `_hasGameOver` is set
 - `PlayerStatsMsg` (team death, teammates alive) is the death-panel source (`Game::localStats`); the final `GameOverMsg.playerStats` entry is used for the result. Do not discard it again (`Game.cpp` used to)
