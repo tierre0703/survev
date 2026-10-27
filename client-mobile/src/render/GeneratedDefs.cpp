@@ -117,6 +117,8 @@ struct RawPing {
 struct RawRole {
     const char* type; const char* mapIconAlive; const char* mapIconDead;
     const char* soundAssign; const char* soundDead;
+    const char* name; const char* nameRed; const char* nameBlue;
+    int killFeedAssign, killFeedDead, hasKillFeedColor; unsigned killFeedColor;
 };
 
 static PlaneDef toPlane(const RawPlane& r) {
@@ -4059,8 +4061,8 @@ static const char* const kParticleImgs_28647[] = {"part-blossom-01.img","part-bl
 static const char* const kParticleImgs_28852[] = {"part-takedown-01.img"};
 static const char* const kParticleImgs_29059[] = {"part-note-01.img"};
 static const char* const kParticleImgs_29267[] = {"part-boost-basic.img"};
-static const char* const kParticleImgs_29482[] = {"part-boost-basic.img"};
-static const char* const kParticleImgs_29698[] = {"part-boost-basic.img"};
+static const char* const kParticleImgs_29476[] = {"part-boost-basic.img"};
+static const char* const kParticleImgs_29689[] = {"part-boost-basic.img"};
 static const RawPlane kPlanes[] = {
     {0,48,150,2.5,0.25,92,0},
     {0,350,120,18,18,48,1.25},
@@ -5409,25 +5411,25 @@ static const RawPing kPings[] = {
     {"ping_unlock","ping-team-unlock.img","ping-map-unlock.img","ping_unlock_01","",1,4,10,0,1,55551},
 };
 static const RawRole kRoles[] = {
-    {"leader","player-star.img","skull-leader.img","leader_assigned_01","leader_dead_01"},
-    {"captain","player-captain.img","","captain_assigned_01",""},
-    {"lieutenant","","","lt_assigned_01",""},
-    {"medic","player-medic.img","skull-leader.img","medic_assigned_01",""},
-    {"marksman","","","marksman_assigned_01",""},
-    {"recon","","","recon_assigned_01",""},
-    {"grenadier","","","grenadier_assigned_01",""},
-    {"bugler","","","bugler_assigned_01",""},
-    {"last_man","player-last-man.img","","last_man_assigned_01",""},
-    {"woods_king","","","","leader_dead_01"},
-    {"kill_leader","","","leader_assigned_01","leader_dead_01"},
-    {"the_hunted","","","leader_assigned_01","leader_dead_01"},
-    {"healer","","","spawn_01",""},
-    {"tank","","","spawn_01",""},
-    {"sniper","","","spawn_01",""},
-    {"scout","","","spawn_01",""},
-    {"demo","","","spawn_01",""},
-    {"assault","","","spawn_01",""},
-    {"classless","","","spawn_01",""},
+    {"leader","player-star.img","skull-leader.img","leader_assigned_01","leader_dead_01","Commander","Red Commander","Blue Commander",1,1,0,0},
+    {"captain","player-captain.img","","captain_assigned_01","","Captain","Red Commander","Blue Commander",1,0,0,0},
+    {"lieutenant","","","lt_assigned_01","","Lieutenant","Red Commander","Blue Commander",1,0,0,0},
+    {"medic","player-medic.img","skull-leader.img","medic_assigned_01","","Medic","Red Commander","Blue Commander",1,0,0,0},
+    {"marksman","","","marksman_assigned_01","","Marksman","Red Commander","Blue Commander",1,0,0,0},
+    {"recon","","","recon_assigned_01","","Recon","Red Commander","Blue Commander",1,0,0,0},
+    {"grenadier","","","grenadier_assigned_01","","Grenadier","Red Commander","Blue Commander",1,0,0,0},
+    {"bugler","","","bugler_assigned_01","","Bugler","Red Commander","Blue Commander",1,0,0,0},
+    {"last_man","player-last-man.img","","last_man_assigned_01","","Lone Survivr","Red Commander","Blue Commander",1,0,0,0},
+    {"woods_king","","","","leader_dead_01","The Woods King","Red Commander","Blue Commander",0,1,1,1244928},
+    {"kill_leader","","","leader_assigned_01","leader_dead_01","Kill Leader","Red Commander","Blue Commander",1,1,1,16745472},
+    {"the_hunted","","","leader_assigned_01","leader_dead_01","The Hunted","Red Commander","Blue Commander",1,1,1,16745472},
+    {"healer","","","spawn_01","","Medic","Red Commander","Blue Commander",0,0,0,0},
+    {"tank","","","spawn_01","","Tank","Red Commander","Blue Commander",0,0,0,0},
+    {"sniper","","","spawn_01","","Sniper","Red Commander","Blue Commander",0,0,0,0},
+    {"scout","","","spawn_01","","Scout","Red Commander","Blue Commander",0,0,0,0},
+    {"demo","","","spawn_01","","Demo","Red Commander","Blue Commander",0,0,0,0},
+    {"assault","","","spawn_01","","Assault","Red Commander","Blue Commander",0,0,0,0},
+    {"classless","","","spawn_01","","classless","Red Commander","Blue Commander",0,0,0,0},
 };
 static const RawGameObj kGameObjs[] = {
     {"bullet_mp5","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0,0,0,0,0,0,"","",0,"",0.0f,"",16777215,0,16777215,"","","","","","",0,0.8,0,0,"",0,0,0,1,16777215,20,0,1,0,0,1,"",0,1,1,0.375,0,0,0},
@@ -6551,9 +6553,9 @@ static const RawParticle kParticles[] = {
     {"leafStim",kParticleImgs_28647,4,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0.37,0.37,1,1,0.95,1},
     {"takedownStim",kParticleImgs_28852,1,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,13107200,0,0,0,0,1,1,1,1},
     {"inspireStim",kParticleImgs_29059,1,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0.13,0.13,1,1,0.98,1},
-    {"xp_common",kParticleImgs_29267,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.12,0.12,0.97,0.97,0.95,1},
-    {"xp_rare",kParticleImgs_29482,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.06,0.05,0.95,0.94,0.95,0.88},
-    {"xp_mythic",kParticleImgs_29698,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.03,0,0.95,0.96,0.92,0.94},
+    {"xp_common",kParticleImgs_29267,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.16,0.16,1,1,0.95,1},
+    {"xp_rare",kParticleImgs_29476,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.05,0.06,0.94,0.95,0.85,1},
+    {"xp_mythic",kParticleImgs_29689,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,0.96,0.96,0.91,0.94},
 };
 static const RawEmitter kEmitters[] = {
     {"smoke_barrel","explosionSmoke",{0.2,0.3,0},0,{2,3,0},0.3141592653589793,1,{0,6.283185307179586,0},3.402823466e+38,0,{0,0,1},0,0,0},
@@ -13718,6 +13720,13 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
             d.mapIconDead = r.mapIconDead ? r.mapIconDead : "";
             d.soundAssign = r.soundAssign ? r.soundAssign : "";
             d.soundDead = r.soundDead ? r.soundDead : "";
+            d.name = r.name ? r.name : "";
+            d.nameRed = r.nameRed ? r.nameRed : "";
+            d.nameBlue = r.nameBlue ? r.nameBlue : "";
+            d.killFeedAssign = r.killFeedAssign != 0;
+            d.killFeedDead = r.killFeedDead != 0;
+            d.hasKillFeedColor = r.hasKillFeedColor != 0;
+            d.killFeedColor = r.killFeedColor;
             _roles[r.type] = std::move(d);
         }
         _loadoutItems.reserve(sizeof(kLoadoutItems) / sizeof(kLoadoutItems[0]));

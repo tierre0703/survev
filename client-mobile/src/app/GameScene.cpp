@@ -20,6 +20,7 @@
 #include "../audio/GeneratedSoundDefs.h"
 #include "../ui/FguiHud.h"
 #include "../game/Hud.h"
+#include "../game/RoleFeed.h"
 #include "../game/EmoteWheel.h"
 #include "../game/PingWheel.h"
 #include "../ui/FguiPieTimer.h"
@@ -1324,16 +1325,27 @@ void GameScene::update(float delta) {
                 opts.channel = "ui";
                 _audio->playSound(sound, opts);
             }
+
+            // game.ts: role promoted/dead lines go into the kill feed with the
+            // role's own colour (or the player's team colour).
+            const uint8_t teamId = _game->playerTeamId(ann.playerId);
+            const std::string playerName = _game->displayName(ann.playerId);
+            const std::string killerName = ann.killerId != 0 && ann.killerId != ann.playerId
+                ? _game->displayName(ann.killerId)
+                : std::string();
+            const RoleFeedLine line =
+                roleFeedLine(*roleDef, ann.role, ann.assigned, ann.killed, teamId, playerName, killerName);
+            if (line.show) {
+                _game->addKillFeedText(line.text, line.color);
+            }
+
             // kill_leader has its own top-centre HUD line; announcing it here
             // would duplicate/spam every leader change.
             if (_hud && ann.role != "kill_leader" &&
                 ann.playerId == _game->getLocalPlayerId()) {
-                std::string role = ann.role;
-                for (char& c : role) {
-                    c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-                }
-                _hud->showAnnouncement(ann.assigned ? "ROLE ASSIGNED: " + role
-                                                    : "ROLE LOST: " + role);
+                const std::string roleName = roleDef->name.empty() ? ann.role : roleDef->name;
+                _hud->showAnnouncement(ann.assigned ? "ROLE ASSIGNED: " + roleName
+                                                    : "ROLE LOST: " + roleName);
             }
         }
     }

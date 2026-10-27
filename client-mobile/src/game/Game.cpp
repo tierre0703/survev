@@ -463,6 +463,26 @@ std::string Game::displayName(uint16_t playerId) const {
     return found->second.name;
 }
 
+uint8_t Game::playerTeamId(uint16_t playerId) const {
+    const auto found = _playersById.find(playerId);
+    return found == _playersById.end() ? 0 : found->second.teamId;
+}
+
+void Game::addKillFeedText(const std::string& text, uint32_t color) {
+    if (text.empty()) {
+        return;
+    }
+    KillFeedEntry entry;
+    entry.text = text;
+    entry.color = color;
+    entry.custom = true;
+    entry.timeLeft = 8.0f;
+    _killFeed.push_back(std::move(entry));
+    if (_killFeed.size() > 6) {
+        _killFeed.erase(_killFeed.begin());
+    }
+}
+
 void Game::handleKill(NetBitStream& s) {
     KillMsg m;
     m.deserialize(s);

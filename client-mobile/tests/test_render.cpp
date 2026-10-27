@@ -12,6 +12,7 @@
 #include "game/Gas.h"
 #include "game/Game.h"
 #include "game/Hud.h"
+#include "game/RoleFeed.h"
 #include "game/objects/Barns.h"
 #include "game/objects/GameObject.h"
 #include "game/objects/ObstacleScan.h"
@@ -2719,4 +2720,62 @@ TEST(hud_gear_levels_and_squad_polish) {
     Game game;
     hud.update(0.5f, game, true);
     CHECK(static_cast<const pix::NullGraphics*>(hud.squadColorDot(0))->alpha < 1.0f);
+}
+
+// game.ts RoleAnnouncement: promoted/dead lines go into the kill feed with the
+// role's name and colour (or the player's team colour), and the custom feed
+// lines are rendered by the HUD.
+TEST(role_killfeed_lines) {
+    installGeneratedDefs();
+    const auto* defs = getDefProvider();
+
+    const RoleRenderDef* leader = defs->role("leader");
+    CHECK(leader != nullptr);
+    CHECK(leader && leader->name == "Commander");
+    CHECK(leader && leader->nameRed == "Red Commander");
+    CHECK(leader && leader->nameBlue == "Blue Commander");
+    CHECK(leader && leader->killFeedAssign);
+    CHECK(leader && leader->killFeedDead);
+
+    RoleFeedLine promoted = roleFeedLine(*leader, "leader", true, false, 1, "Alice", "");
+    CHECK(promoted.show);
+    CHECK_EQ(promoted.text, std::string("Alice promoted to Red Commander!"));
+    CHECK_EQ(promoted.color, kTeamColors[0]);
+
+    RoleFeedLine killed = roleFeedLine(*leader, "leader", false, true, 2, "", "Bob");
+    CHECK(killed.show);
+    CHECK_EQ(killed.text, std::string("Bob killed Blue Commander!"));
+    CHECK_EQ(killed.color, kTeamColors[1]);
+
+    RoleFeedLine died = roleFeedLine(*leader, "leader", false, true, 1, "", "");
+    CHECK(died.show);
+    CHECK_EQ(died.text, std::string("Red Commander is dead!"));
+
+    // kill_leader carries its own orange colour.
+    const RoleRenderDef* killLeader = defs->role("kill_leader");
+    CHECK(killLeader != nullptr);
+    CHECK(killLeader && killLeader->hasKillFeedColor);
+    CHECK(killLeader && killLeader->killFeedColor == 0xff8400u);
+    RoleFeedLine leaderLine = roleFeedLine(*killLeader, "kill_leader", true, false, 1, "Alice", "");
+    CHECK_EQ(leaderLine.color, 0xff8400u);
+    CHECK_EQ(leaderLine.text, std::string("Alice promoted to Kill Leader!"));
+
+    // Captain only announces promotions (killFeed.assign, no dead line).
+    const RoleRenderDef* captain = defs->role("captain");
+    CHECK(captain != nullptr);
+    CHECK(captain && captain->killFeedAssign);
+    CHECK(captain && !captain->killFeedDead);
+    CHECK(!roleFeedLine(*captain, "captain", false, true, 1, "", "Bob").show);
+
+    // HUD renders custom role lines (Game::addKillFeedText).
+    pix::NullPixiFactory factory;
+    auto* root = static_cast<pix::NullContainer*>(factory.createContainer());
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    Game game;
+    game.addKillFeedText("Alice promoted to Commander!", 0xff8400);
+    hud.update(0.0f, game, true);
+    CHECK(static_cast<const pix::NullText*>(hud.killFeedRowText(0)) != nullptr);
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.killFeedRowText(0))->text,
+             std::string("Alice promoted to Commander!"));
 }

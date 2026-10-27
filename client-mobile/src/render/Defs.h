@@ -349,6 +349,14 @@ struct RoleRenderDef {
     std::string mapIconDead;  // e.g. "skull-leader.img" (optional)
     std::string soundAssign;  // game.ts RoleAnnouncement assigned sound
     std::string soundDead;    // ... dead sound
+    // game.ts getRoleAssignedKillFeedText / getRoleKilledKillFeedText metadata.
+    std::string name;         // e.g. "Commander"
+    std::string nameRed;      // leader-only faction names
+    std::string nameBlue;
+    bool killFeedAssign = false;
+    bool killFeedDead = false;
+    bool hasKillFeedColor = false;
+    uint32_t killFeedColor = 0; // roleDef.killFeed.color (#rrggbb)
 };
 
 struct BiomeColors {

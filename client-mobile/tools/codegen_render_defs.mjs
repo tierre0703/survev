@@ -927,15 +927,27 @@ for (const type of Object.keys(PingDefs)) {
 }
 
 // Role defs (shared/defs/gameObjects/roleDefs.ts): role-specific map icons
-// (leader/captain/medic/last-man) used by the minimap/big-map player dots.
+// (leader/captain/medic/last-man) used by the minimap/big-map player dots, plus
+// the kill-feed/announcement metadata (web getRoleAssignedKillFeedText etc.).
+const enStrings = JSON.parse(fs.readFileSync(path.join(clientDir, "src/en.json"), "utf8"));
+const roleName = (key, fallback) => enStrings[key] || fallback;
+const hexColor = (value) => {
+    if (typeof value !== "string") return 0;
+    const m = /^#?([0-9a-f]{6})$/i.exec(value.trim());
+    return m ? parseInt(m[1], 16) : 0;
+};
 let roleEntries = "";
 for (const type of Object.keys(RoleDefs)) {
     const d = RoleDefs[type] || {};
     const icon = d.mapIcon || {};
     const sound = d.sound || {};
+    const kf = d.killFeed || {};
+    const name = roleName(`game-${type}`, type);
     roleEntries += `    {${str(type)},${str(icon.alive || "")},${str(icon.dead || "")},${str(sound.assign || "")},${
         str(sound.dead || "")
-    }},\n`;
+    },${str(name)},${str(roleName("game-red-leader", "Red Commander"))},${
+        str(roleName("game-blue-leader", "Blue Commander"))
+    },${kf.assign ? 1 : 0},${kf.dead ? 1 : 0},${kf.color ? 1 : 0},${n(hexColor(kf.color), 0)}},\n`;
 }
 
 // GameConfig plane tuning + bullet tracer colours (plane.ts / flare.ts / shot.ts).
@@ -1153,6 +1165,8 @@ struct RawPing {
 struct RawRole {
     const char* type; const char* mapIconAlive; const char* mapIconDead;
     const char* soundAssign; const char* soundDead;
+    const char* name; const char* nameRed; const char* nameBlue;
+    int killFeedAssign, killFeedDead, hasKillFeedColor; unsigned killFeedColor;
 };
 
 static PlaneDef toPlane(const RawPlane& r) {
@@ -1599,6 +1613,13 @@ ${
             d.mapIconDead = r.mapIconDead ? r.mapIconDead : "";
             d.soundAssign = r.soundAssign ? r.soundAssign : "";
             d.soundDead = r.soundDead ? r.soundDead : "";
+            d.name = r.name ? r.name : "";
+            d.nameRed = r.nameRed ? r.nameRed : "";
+            d.nameBlue = r.nameBlue ? r.nameBlue : "";
+            d.killFeedAssign = r.killFeedAssign != 0;
+            d.killFeedDead = r.killFeedDead != 0;
+            d.hasKillFeedColor = r.hasKillFeedColor != 0;
+            d.killFeedColor = r.killFeedColor;
             _roles[r.type] = std::move(d);
         }
         _loadoutItems.reserve(sizeof(kLoadoutItems) / sizeof(kLoadoutItems[0]));

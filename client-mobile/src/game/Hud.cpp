@@ -1714,6 +1714,10 @@ void Hud::update(float dt, const Game& game, bool visible) {
     const auto& feed = game.killFeed();
     std::string feedKey;
     for (const auto& entry : feed) {
+        if (entry.custom) {
+            feedKey += "role:" + entry.text + "|" + std::to_string(entry.color) + ";";
+            continue;
+        }
         feedKey += std::to_string(entry.message.killerId) + ">" +
             std::to_string(entry.message.targetId) + "|" + entry.killerName + "|" +
             entry.targetName + ";";
@@ -1732,6 +1736,12 @@ void Hud::update(float dt, const Game& game, bool visible) {
                 continue;
             }
             const Game::KillFeedEntry& entry = feed[static_cast<size_t>(i)];
+            if (entry.custom) {
+                row->setText(entry.text);
+                row->setColor(entry.color, 0x000000, 1.0f, false);
+                row->setVisible(_visible && !_bigMapVisible);
+                continue;
+            }
             const std::string text = entry.killerName.empty()
                 ? entry.targetName
                 : entry.killerName + " -> " + entry.targetName;

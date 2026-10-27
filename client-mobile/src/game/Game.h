@@ -173,8 +173,16 @@ public:
         KillMsg message;
         std::string killerName, targetName;
         float timeLeft = 8.0f;
+        // Role-announcement lines (game.ts RoleAnnouncement kill feed) carry
+        // their own text/colour instead of a KillMsg.
+        std::string text;
+        uint32_t color = 0xffffff;
+        bool custom = false;
     };
     const std::vector<KillFeedEntry>& killFeed() const { return _killFeed; }
+    // Adds a pre-formatted kill-feed line (role promoted/dead, reuses Game's
+    // 6-row cap and 8 s lifetime).
+    void addKillFeedText(const std::string& text, uint32_t color);
     // JoinedMsg/JoinMsg emote loadout (4 emote types for the emote wheel).
     const std::vector<std::string>& emotes() const { return _emotes; }
     // JoinedMsg team mode (gameConfig.ts TeamMode: Solo = 1).
@@ -185,6 +193,8 @@ public:
     // playerBarn.getPlayerName(): the raw name, or "Player" for other groups
     // when anon names is on (kill feed / kill leader / spectate).
     std::string displayName(uint16_t playerId) const;
+    // PlayerInfo.teamId for role-feed colours/names (0 when unknown).
+    uint8_t playerTeamId(uint16_t playerId) const;
     // EmoteMsg send (game.ts newEmotes/newPings loop). The chat/emote wheel
     // queues into EmoteManager and GameScene forwards the queue here.
     void sendEmote(const std::string& type, const Vec2& pos, bool isPing);
