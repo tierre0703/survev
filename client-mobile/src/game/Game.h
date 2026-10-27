@@ -195,6 +195,9 @@ public:
     std::string displayName(uint16_t playerId) const;
     // PlayerInfo.teamId for role-feed colours/names (0 when unknown).
     uint8_t playerTeamId(uint16_t playerId) const;
+    // Live in-game leaderboard (pause dialog): player names, teams, kills and
+    // alive state as a JSON array + activePlayerId (UiBridge -> Java modal).
+    std::string leaderboardJson() const;
     // EmoteMsg send (game.ts newEmotes/newPings loop). The chat/emote wheel
     // queues into EmoteManager and GameScene forwards the queue here.
     void sendEmote(const std::string& type, const Vec2& pos, bool isPing);
@@ -288,6 +291,8 @@ private:
     PlayerStatsMsg _localStats;
     bool _hasLocalStats = false;
     std::unordered_map<uint16_t, PlayerInfo> _playersById;
+    // Latest KillMsg.killerKills per player (live leaderboard).
+    std::unordered_map<uint16_t, uint8_t> _playerKills;
     std::vector<uint16_t> _playerIds; // wire insertion order for playerStatus
     std::unordered_map<uint16_t, PlayerStatus> _playerStatus;
     std::vector<uint8_t> _aliveCounts;

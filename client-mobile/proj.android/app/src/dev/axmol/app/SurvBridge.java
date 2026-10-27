@@ -61,6 +61,9 @@ public final class SurvBridge {
     /** SpectateMsg action from the pause dialog: 1=Begin, 2=Next, 3=Prev. */
     public static native void spectate(int action);
 
+    /** Pause dialog: build/show the live in-game leaderboard snapshot. */
+    public static native void onRequestLeaderboard();
+
     /**
      * BT-keyboard key state (Android KeyEvent.KEYCODE_*). axmol's GLSurfaceView
      * only forwards DPAD/BACK to the engine, so AppActivity sends the gameplay
@@ -206,6 +209,19 @@ public final class SurvBridge {
                 JavaUiHost host = sHost;
                 if (host != null) {
                     host.pingResults(json);
+                }
+            }
+        });
+    }
+
+    /** Live in-game leaderboard snapshot (Game::leaderboardJson). */
+    static void onNativeLeaderboard(final String json) {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.showLeaderboard(json);
                 }
             }
         });

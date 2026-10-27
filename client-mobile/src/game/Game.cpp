@@ -46,6 +46,7 @@ void Game::free() {
     _inputSeq = 0;
     _inputSeqInFlight = false;
     _playersById.clear();
+    _playerKills.clear();
     _playerIds.clear();
     _playerStatus.clear();
     _aliveCounts.clear();
@@ -468,6 +469,68 @@ uint8_t Game::playerTeamId(uint16_t playerId) const {
     return found == _playersById.end() ? 0 : found->second.teamId;
 }
 
+namespace {
+std::string jsonEscape(const std::string& value) {
+    std::string out;
+    out.reserve(value.size() + 8);
+    for (const char c : value) {
+        switch (c) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default: out += c; break;
+        }
+    }
+    return out;
+}
+} // namespace
+
+std::string Game::leaderboardJson() const {
+    struct Row {
+        uint16_t id;
+        uint8_t teamId;
+        uint8_t kills;
+        bool dead;
+        std::string name;
+    };
+    std::vector<Row> rows;
+    rows.reserve(_playersById.size());
+    for (const auto& kv : _playersById) {
+        const uint16_t id = kv.first;
+        const PlayerInfo& info = kv.second;
+        bool dead = false;
+        const auto status = _playerStatus.find(id);
+        if (status != _playerStatus.end() && status->second.hasData) {
+            dead = status->second.dead;
+        }
+        const auto kills = _playerKills.find(id);
+        rows.push_back({id, info.teamId,
+                        static_cast<uint8_t>(kills == _playerKills.end() ? 0 : kills->second), dead,
+                        displayName(id)});
+    }
+    std::sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) {
+        if (a.kills != b.kills) return a.kills > b.kills;
+        return a.name < b.name;
+    });
+
+    std::string out = "{\"activePlayerId\":" + std::to_string(_activePlayerId) + ",\"players\":[";
+    for (size_t i = 0; i < rows.size(); ++i) {
+        if (i > 0) out += ",";
+        const Row& r = rows[i];
+        out += "{\"playerId\":" + std::to_string(r.id);
+        out += ",\"name\":\"" + jsonEscape(r.name) + "\"";
+        out += ",\"teamId\":" + std::to_string(r.teamId);
+        out += ",\"kills\":" + std::to_string(r.kills);
+        out += ",\"dead\":";
+        out += r.dead ? "true" : "false";
+        out += "}";
+    }
+    out += "]}";
+    return out;
+}
+
 void Game::addKillFeedText(const std::string& text, uint32_t color) {
     if (text.empty()) {
         return;
@@ -487,11 +550,19 @@ void Game::handleKill(NetBitStream& s) {
     KillMsg m;
     m.deserialize(s);
     _killFeed.push_back({m, displayName(m.killerId), displayName(m.targetId), 8.0f});
+    if (m.killerId != 0) {
+        auto& kills = _playerKills[m.killerId];
+        kills = std::max<uint8_t>(kills, m.killerKills);
+    }
     if (m.killed && (m.killCreditId != 0 ? m.killCreditId : m.killerId) == _localPlayerId) {
         ++_localKills;
     }
     if (_killFeed.size() > 6) _killFeed.erase(_killFeed.begin());
-    if (m.killed) _playerStatus[m.targetId].dead = true;
+    if (m.killed) {
+        PlayerStatus& status = _playerStatus[m.targetId];
+        status.hasData = true;
+        status.dead = true;
+    }
 }
 
 void Game::handleGameOver(NetBitStream& s) {

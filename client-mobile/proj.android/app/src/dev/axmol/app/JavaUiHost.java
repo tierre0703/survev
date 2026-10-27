@@ -351,7 +351,15 @@ public class JavaUiHost {
     // --- Leaderboard ---
 
     public void showLeaderboard() {
+        showLeaderboard(null);
+    }
+
+    /** Live snapshot from Game::leaderboardJson ({"activePlayerId","players":[...]}). */
+    public void showLeaderboard(String json) {
         ensureLeaderboard();
+        if (json != null && !json.isEmpty()) {
+            mLeaderboard.updateFromJson(json);
+        }
         mLeaderboard.show();
         updateBackBtn();
     }

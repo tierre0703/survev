@@ -247,6 +247,18 @@ public class GamePauseDialog {
         });
         card.addView(mSpectateBtn);
 
+        // Live in-game leaderboard (Game::leaderboardJson -> Java modal).
+        Button leaderboardBtn = new Button(activity);
+        leaderboardBtn.setText("\uD83C\uDFC6 " + L10n.t("index-leaderboards", "Leaderboard"));
+        leaderboardBtn.setBackgroundColor(0xFF4A4A4A);
+        leaderboardBtn.setTextColor(Color.WHITE);
+        leaderboardBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                SurvBridge.onRequestLeaderboard();
+            }
+        });
+        card.addView(leaderboardBtn);
+
         // Status text
         mStatusText = new TextView(activity);
         mStatusText.setTextColor(0xFF808080);

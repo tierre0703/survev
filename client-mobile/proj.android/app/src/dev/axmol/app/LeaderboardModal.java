@@ -87,15 +87,13 @@ public class LeaderboardModal {
         colHeader.setPadding(dp(4), dp(4), dp(4), dp(4));
 
         TextView rankH = makeColHeader("#", 30);
-        TextView nameH = makeColHeader("Player", 160);
-        TextView killsH = makeColHeader("Kills", 50);
-        TextView dmgH = makeColHeader("Damage", 60);
-        TextView statusH = makeColHeader("H", 30);
+        TextView nameH = makeColHeader("Player", 220);
+        TextView killsH = makeColHeader("Kills", 60);
+        TextView statusH = makeColHeader("H", 40);
 
         colHeader.addView(rankH);
         colHeader.addView(nameH);
         colHeader.addView(killsH);
-        colHeader.addView(dmgH);
         colHeader.addView(statusH);
         panel.addView(colHeader);
 
@@ -138,6 +136,33 @@ public class LeaderboardModal {
         mActivePlayerId = id;
     }
 
+    /** Parse Game::leaderboardJson: activePlayerId + players[name,teamId,kills,dead]. */
+    public void updateFromJson(String json) {
+        try {
+            com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            if (root.has("activePlayerId")) {
+                mActivePlayerId = root.get("activePlayerId").getAsInt();
+            }
+            List<Entry> entries = new ArrayList<Entry>();
+            if (root.has("players") && root.get("players").isJsonArray()) {
+                com.google.gson.JsonArray players = root.getAsJsonArray("players");
+                for (int i = 0; i < players.size(); i++) {
+                    com.google.gson.JsonObject p = players.get(i).getAsJsonObject();
+                    Entry e = new Entry();
+                    e.playerId = p.has("playerId") ? p.get("playerId").getAsInt() : 0;
+                    e.name = p.has("name") ? p.get("name").getAsString() : "Player";
+                    e.team = p.has("teamId") ? p.get("teamId").getAsInt() : 0;
+                    e.kills = p.has("kills") ? p.get("kills").getAsInt() : 0;
+                    e.isAlive = !(p.has("dead") && p.get("dead").getAsBoolean());
+                    entries.add(e);
+                }
+            }
+            update(entries);
+        } catch (Exception e) {
+            Log.w(TAG, "leaderboard json: " + e.getMessage());
+        }
+    }
+
     /** Update the leaderboard with current player data. */
     public void update(List<Entry> entries) {
         mList.removeAllViews();
@@ -164,15 +189,13 @@ public class LeaderboardModal {
             row.setBackgroundColor(bgColor);
 
             TextView rankTv = makeCell(String.valueOf(i + 1), 30, textColor, 14);
-            TextView nameTv = makeCell(e.name, 160, textColor, 14);
-            TextView killsTv = makeCell(String.valueOf(e.kills), 50, textColor, 14);
-            TextView dmgTv = makeCell(String.format("%.0f", e.damage), 60, textColor, 14);
-            TextView statusTv = makeCell(e.isAlive ? "A" : "D", 30, e.isAlive ? 0xFF83AF50 : 0xFFFF7878, 12);
+            TextView nameTv = makeCell(e.name, 220, textColor, 14);
+            TextView killsTv = makeCell(String.valueOf(e.kills), 60, textColor, 14);
+            TextView statusTv = makeCell(e.isAlive ? "A" : "D", 40, e.isAlive ? 0xFF83AF50 : 0xFFFF7878, 12);
 
             row.addView(rankTv);
             row.addView(nameTv);
             row.addView(killsTv);
-            row.addView(dmgTv);
             row.addView(statusTv);
             mList.addView(row);
         }

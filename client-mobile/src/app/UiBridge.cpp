@@ -476,6 +476,16 @@ public:
         });
     }
 
+    void requestLeaderboard() override {
+        runOnGameThread([this] {
+            if (!_game) return;
+            Game* game = _game->getGame();
+            if (!game) return;
+            ax::JniHelper::callStaticVoidMethod(kBridgeClass, "onNativeLeaderboard",
+                                                game->leaderboardJson());
+        });
+    }
+
     void hardwareKey(int androidKeyCode, bool down) override {
         runOnGameThread([this, androidKeyCode, down] {
             if (_game) {
@@ -546,6 +556,9 @@ public:
         notify("onNativeTogglePause");
         return true; // the Java UI owns the pause dialog
     }
+    void leaderboard(const std::string& json) override {
+        ax::JniHelper::callStaticVoidMethod(kBridgeClass, "onNativeLeaderboard", json);
+    }
 
 private:
     void notify(const char* method) {
@@ -606,6 +619,10 @@ JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_onPauseGame(JNIEnv*, jclass
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_onResumeGame(JNIEnv*, jclass) {
     surv::uiBridge()->resumeGame();
+}
+
+JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_onRequestLeaderboard(JNIEnv*, jclass) {
+    surv::uiBridge()->requestLeaderboard();
 }
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_spectate(JNIEnv*, jclass, jint action) {

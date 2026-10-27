@@ -87,6 +87,8 @@ public:
     virtual void resumeGame() = 0;
     // SpectateMsg action from the Java pause dialog: 1=Begin, 2=Next, 3=Prev.
     virtual void spectate(int action) { (void)action; }
+    // Java pause dialog: build the live leaderboard snapshot and show it.
+    virtual void requestLeaderboard() {}
     // BT-keyboard key event forwarded by AppActivity with an Android
     // KeyEvent.KEYCODE_* value. Routed to the active GameScene's HardwareInput
     // on the game thread (P1.6); axmol's Android GLSurfaceView only forwards
@@ -128,6 +130,8 @@ public:
     // Java: open/close the in-game pause dialog. Returns false when the host has
     // no such UI (desktop), so the caller can fall back to leaving the match.
     virtual bool togglePause() { return false; }
+    // Java: live in-game leaderboard snapshot (Game::leaderboardJson).
+    virtual void leaderboard(const std::string& json) { (void)json; }
 };
 
 // No-op host: used by the host tests and by any build without Java.

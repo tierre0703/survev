@@ -472,3 +472,42 @@ TEST(game_disconnect_reason_mapping) {
     // A late rejection after a rejoin attempt is still a lost connection.
     CHECK_EQ(disconnectReasonKey("invalid_token", true, true), std::string("index-host-closed"));
 }
+
+TEST(game_leaderboard_snapshot) {
+    Harness h;
+    h.game.tryJoinGame("ws://dev/play", "tok");
+    h.conn()->open();
+    h.game.update(0.0f);
+
+    UpdateMsg u = makeUpdate();
+    PlayerInfo other;
+    other.playerId = 43;
+    other.teamId = 1;
+    other.groupId = 1;
+    other.name = "Rival";
+    u.playerInfos.push_back(other);
+    u.playerStatus.resize(2);
+    u.playerStatus[0].hasData = true;
+    u.playerStatus[1].hasData = true;
+    u.playerStatus[1].dead = true;
+    u.playerStatusDirty = true;
+    h.conn()->pushFrame(makeFrame(MsgType_Update, u));
+    h.game.update(0.0f);
+
+    KillMsg k;
+    k.killerId = 42;
+    k.targetId = 43;
+    k.killCreditId = 42;
+    k.killerKills = 5;
+    k.killed = true;
+    h.conn()->pushFrame(makeFrame(MsgType_Kill, k));
+    h.game.update(0.0f);
+
+    const std::string json = h.game.leaderboardJson();
+    CHECK(json.find("\"activePlayerId\":42") != std::string::npos);
+    CHECK(json.find("\"name\":\"Player\"") != std::string::npos);
+    CHECK(json.find("\"name\":\"Rival\"") != std::string::npos);
+    CHECK(json.find("\"kills\":5") != std::string::npos);
+    CHECK(json.find("\"teamId\":1") != std::string::npos);
+    CHECK(json.find("\"dead\":true") != std::string::npos);
+}

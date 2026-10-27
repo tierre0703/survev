@@ -25,8 +25,9 @@ group-colour dots + downed pulse, the cyan group-colour fix, and in-place
 Settings re-localization. The sixth adds role promoted/dead kill-feed lines.
 The seventh adds the gas/danger HUD icon with its moving-gas pulse. The eighth
 adds the clientTheme menu splash background. The ninth adds the rasterized
-quick-play mode icons. The tenth adds the news GUI icon and unread badge. The
-twelfth adds the post-match teammate stats list. **205 host tests pass, 0 fail.**
+quick-play mode icons. The tenth adds the news GUI icon and unread badge. The twelfth adds the
+post-match teammate stats list. The thirteenth adds the live in-game
+leaderboard bridge. **206 host tests pass, 0 fail.**
 
 ---
 
@@ -638,13 +639,20 @@ Done in the twelfth P2 pass (2026-10-26):
   faction rows red/blue; the panel grows to 300 px to fit four rows.
 - Host test extended: `hud_gas_timer_and_result_overlay`.
 
+Done in the thirteenth P2 pass (2026-10-26):
+- Live in-game leaderboard: the pause dialog has a Leaderboard button ->
+  `SurvBridge.onRequestLeaderboard` -> `Game::leaderboardJson()`
+  (activePlayerId + each player's name/team/kills/dead, tracked from
+  `KillMsg.killerKills`) -> `SurvBridge.onNativeLeaderboard` -> the Java
+  `LeaderboardModal` (rank/name/kills/alive, local row green).
+- Host test: `game_leaderboard_snapshot`.
+
 Remaining:
 - **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
   alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
   implemented; `MapSprite` z-order only affects the dead `FguiHud` path (the
   live HUD uses `MapView`/`EmoteManager` ping layers).
-- **HUD/menus:** menu character preview (`opponentDisplay.ts`), live in-game
-  leaderboard bridge.
+- **HUD/menus:** menu character preview (`opponentDisplay.ts`).
 - **Audio:** music channel volume quirk (web routes music through `soundVolume`),
   exact EQ/convolution timbre.
 - **Platform/perf:** unload map atlases on map change and preload map audio
@@ -712,7 +720,7 @@ Remaining:
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (205 tests, 0 failures expected)
+# host tests (206 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -1029,3 +1037,9 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   `_overStatRowHas`) fed by `GameOverMsg.playerStats`, sorted by kills/damage;
   `Hud::showGameOver` takes an optional `const Game*` for names/team colours.
   Death-panel mode hides the rows. The panel is 300 px tall.
+- The in-game leaderboard is Java-only UI fed by the C++ snapshot:
+  `SurvBridge.onRequestLeaderboard` -> `UiBridge::requestLeaderboard` (game
+  thread) -> `Game::leaderboardJson()` -> `SurvBridge.onNativeLeaderboard` ->
+  `JavaUiHost.showLeaderboard(String)`. Kills come from the latest
+  `KillMsg.killerKills`; there is no live damage field, so the modal shows
+  rank/name/kills/alive only.
