@@ -240,6 +240,12 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _gasText->setVisible(false);
     _root->addChild(_gasText);
 
+    // #ui-gas-icon: GUI PNG loaded directly as a texture (no atlas frame).
+    _gasIcon = _factory->createSprite("gui/gas.png");
+    _gasIcon->setAnchor(0.0f, 0.0f);
+    _gasIcon->setVisible(false);
+    _root->addChild(_gasIcon);
+
     // Result screen (ui.ts displayStats): dim backdrop + centred panel.
     _overBackdrop = _factory->createGraphics();
     _overBackdrop->beginFill(0x000000, 0.55f);
@@ -490,6 +496,12 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _killLeaderText->setPosition(X(vw * 0.5f), Y(vh - 8.0f));
     _gasText->setAnchor(1.0f, 0.0f);
     _gasText->setPosition(X(mmX + mm), Y(mmY - 18.0f));
+    _gasIcon->setPosition(X(mmX), Y(mmY - 26.0f));
+    {
+        const float source = std::max(_gasIcon->sourceWidth(), _gasIcon->sourceHeight());
+        const float gasScale = source > 0.0f ? 20.0f / source : 1.0f;
+        _gasIcon->setScale(gasScale, gasScale);
+    }
 
     // #ui-bottom-right: four weapon cards, bottom right.
     const float boxW = kWeaponSlotWidth + 16.0f;
@@ -774,6 +786,9 @@ void Hud::setVisible(bool visible) {
     show(_killLeaderText);
     if (_gasText) {
         _gasText->setVisible(visible && _gas.active);
+    }
+    if (_gasIcon) {
+        _gasIcon->setVisible(visible && _gas.active);
     }
     show(_weaponBoxBg);
     show(_killFeedText);
@@ -1171,6 +1186,11 @@ void Hud::setGasState(const GasHudState& gas) {
         _lastGasText = text;
         _gasText->setText(text);
         _gasText->setColor(gas.moving ? 0xff6060 : 0xffffff, 0x000000, 2.0f, true);
+    }
+    if (_gasIcon) {
+        // gas.svg while waiting, danger.svg while the red zone moves.
+        _gasIcon->setFrame(gas.moving ? "gui/danger.png" : "gui/gas.png");
+        _gasIcon->setVisible(_visible && gas.active);
     }
     _gasText->setVisible(_visible && gas.active);
 }
@@ -1754,6 +1774,17 @@ void Hud::update(float dt, const Game& game, bool visible) {
                 row->setColor(0xffc896, 0x000000, 1.0f, false);
             }
             row->setVisible(_visible && !_bigMapVisible);
+        }
+    }
+
+    // ui-gas-icon danger pulse while the red zone is moving (2 s cycle).
+    _gasPulseTicker += dt;
+    if (_gasIcon) {
+        if (_gas.active && _gas.moving) {
+            const float t = 0.5f - 0.5f * std::cos(3.14159265358979f * _gasPulseTicker);
+            _gasIcon->setAlpha(0.55f + 0.45f * t);
+        } else {
+            _gasIcon->setAlpha(1.0f);
         }
     }
 

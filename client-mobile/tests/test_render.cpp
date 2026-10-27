@@ -2779,3 +2779,35 @@ TEST(role_killfeed_lines) {
     CHECK_EQ(static_cast<const pix::NullText*>(hud.killFeedRowText(0))->text,
              std::string("Alice promoted to Commander!"));
 }
+
+// ui.ts #ui-gas-icon: gas.svg while waiting, danger.svg while the gas moves,
+// with the danger pulse animation.
+TEST(hud_gas_icon_state) {
+    pix::NullPixiFactory factory;
+    auto* root = static_cast<pix::NullContainer*>(factory.createContainer());
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.setVisible(true);
+    const auto* icon = static_cast<const pix::NullSprite*>(hud.gasIcon());
+    CHECK(icon != nullptr);
+    CHECK_EQ(icon->frame, std::string("gui/gas.png"));
+
+    GasHudState gas;
+    gas.active = true;
+    gas.moving = false;
+    gas.secondsLeft = 90.0f;
+    hud.setGasState(gas);
+    CHECK(icon->visible);
+    CHECK_EQ(icon->frame, std::string("gui/gas.png"));
+
+    gas.moving = true;
+    hud.setGasState(gas);
+    CHECK_EQ(icon->frame, std::string("gui/danger.png"));
+    Game game;
+    hud.update(0.5f, game, true);
+    CHECK(icon->alpha < 1.0f);
+
+    gas.active = false;
+    hud.setGasState(gas);
+    CHECK(!icon->visible);
+}

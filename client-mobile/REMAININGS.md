@@ -23,7 +23,8 @@ shot/reload casing parity (shell offset/scale/forward/reverse and revolver
 reload casings). The fifth adds live-HUD gear level badges/tap-to-drop, squad
 group-colour dots + downed pulse, the cyan group-colour fix, and in-place
 Settings re-localization. The sixth adds role promoted/dead kill-feed lines.
-**204 host tests pass, 0 fail.**
+The seventh adds the gas/danger HUD icon with its moving-gas pulse. **205 host
+tests pass, 0 fail.**
 
 ---
 
@@ -91,7 +92,7 @@ Settings re-localization. The sixth adds role promoted/dead kill-feed lines.
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; Java menu builds modes/regions from site_info (enabled/teamMode/l10n) and requires the fetch before Play (P1.7); mode/region icons remain P2 |
 | `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste, config `webBaseUrl`), `survev://` + `https://…/#CODE` + `?u=&jt=` links, kick/mode/region/auto-fill, in-room rename, room-prop persistence, team match returns to the room |
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack; source badges and the per-item lore modal remain P2 |
-| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, weapon/ammo, alive/kills, kill feed (incl. role lines), kill leader, gas timer, death/result + spectate overlay, inventory v2 strip, interaction prompt/touch target, toasts, squad group-colour dots + downed pulse are live; post-match per-team stats detail is reduced (P1.4/P2) |
+| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, weapon/ammo, alive/kills, kill feed (incl. role lines), kill leader, gas timer + gas/danger icon, death/result + spectate overlay, inventory v2 strip, interaction prompt/touch target, toasts, squad group-colour dots + downed pulse are live; post-match per-team stats detail is reduced (P1.4/P2) |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | 🔶 partial: barn exists but is constructed with a **null** sprite barn; `MapSprite` z-order/pulse not applied (P2) |
@@ -596,13 +597,18 @@ Done in the sixth P2 pass (2026-10-26):
   instead of the raw role id.
 - Host test: `role_killfeed_lines`.
 
+Done in the seventh P2 pass (2026-10-26):
+- Gas HUD icon: `gui/gas.png` while waiting, `gui/danger.png` while the red zone
+  moves, with the 2 s danger pulse (GUI PNGs load through the adapter's texture
+  fallback; no atlas entry needed).
+- Host test: `hud_gas_icon_state`.
+
 Remaining:
 - **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
   alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
   implemented; `MapSprite` z-order only affects the dead `FguiHud` path (the
   live HUD uses `MapView`/`EmoteManager` ping layers).
-- **HUD/menus:** gas icon (GUI texture plumbing; the countdown already turns
-  red while moving), menu splash/background/clientTheme, mode icons, news
+- **HUD/menus:** menu splash/background/clientTheme, mode icons, news
   images/badges, social/streamer blocks, menu character preview
   (`opponentDisplay.ts`), live in-game leaderboard bridge.
 - **Audio:** music channel volume quirk (web routes music through `soundVolume`),
@@ -669,7 +675,7 @@ Remaining:
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (204 tests, 0 failures expected)
+# host tests (205 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -964,3 +970,6 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   appended with `Game::addKillFeedText`; custom entries render via
   `KillFeedEntry.custom/text/color` (do not force them through `KillMsg`).
   Role defs are generated from `roleDefs.ts` + `en.json` names.
+- `Hud::_gasIcon` uses `createSprite("gui/gas.png")` / `"gui/danger.png"`:
+  `AxSprite::setFrame` falls back to `setTexture` for non-atlas names, so GUI
+  PNGs work without atlas entries. Keep the 20 px scale and 2 s pulse.

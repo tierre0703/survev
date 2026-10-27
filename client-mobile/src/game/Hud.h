@@ -227,6 +227,7 @@ public:
     const MapView& minimap() const { return _miniMap; }
     const MapView& bigMap() const { return _bigMap; }
     const pix::Text* gasText() const { return _gasText; }
+    const pix::Sprite* gasIcon() const { return _gasIcon; }
     const pix::Text* gameOverTitleText() const { return _overTitle; }
     const pix::Text* gameOverRankText() const { return _overRank; }
     const pix::Text* gameOverStatsText() const { return _overStats; }
@@ -316,8 +317,11 @@ private:
 
     // Gas countdown (ui.ts #ui-gas-timer) and the result screen.
     pix::Text* _gasText = nullptr;
+    // #ui-gas-icon: gas.svg normally, danger.svg while the gas is moving.
+    pix::Sprite* _gasIcon = nullptr;
     GasHudState _gas;
     std::string _lastGasText;
+    float _gasPulseTicker = 0.0f;
 
     pix::Graphics* _overBackdrop = nullptr;
     pix::Graphics* _overPanel = nullptr;
