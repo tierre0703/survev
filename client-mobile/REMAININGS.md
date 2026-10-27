@@ -25,9 +25,8 @@ group-colour dots + downed pulse, the cyan group-colour fix, and in-place
 Settings re-localization. The sixth adds role promoted/dead kill-feed lines.
 The seventh adds the gas/danger HUD icon with its moving-gas pulse. The eighth
 adds the clientTheme menu splash background. The ninth adds the rasterized
-quick-play mode icons. The tenth adds the news GUI icon and unread badge. The
-eleventh adds the social links + featured YouTuber row. **205 host tests pass,
-0 fail.**
+quick-play mode icons. The tenth adds the news GUI icon and unread badge.
+**205 host tests pass, 0 fail.**
 
 ---
 
@@ -633,13 +632,6 @@ Done in the tenth P2 pass (2026-10-26):
 - APK rebuilt/installed on `emulator-5554`; menu launched, site_info loaded,
   no drawable/crash errors.
 
-Done in the eleventh P2 pass (2026-10-26):
-- Added the web social row (Discord / Wiki / Ko-fi) and the site_info
-  `youtube` featured-creator button (hidden when the site has none); all open
-  through an `ACTION_VIEW` intent with the menu status line as an error fallback.
-- APK rebuilt/installed on `emulator-5554`; menu launched without crash (the
-  local site_info exposes no YouTube block, so that button stays hidden).
-
 Remaining:
 - **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
   alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
@@ -665,6 +657,9 @@ Remaining:
 - `proxy.ts`, `sdk/*` (ads/SpellSync), `debug/*` tools/editors, `stats/*` pages,
   desktop fullscreen/history/hash behaviour and iOS/iPhoneX layout are out of
   scope.
+- Web social/creator columns (Discord/Wiki/Ko-fi row, featured YouTuber/streamer
+  blocks) are intentionally omitted from the native menu; there is no social UI
+  requirement for the Android client.
 - Touch-only controls (no local rotation on mobile, on-screen pads instead of
   mouse) are intended; BT keyboard/mouse support is still tracked in P1.6.
 
@@ -1024,8 +1019,3 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   newer than config `lastNewsTimestamp` (UTC date parse). Expanding the panel
   writes `System.currentTimeMillis()` through `SurvBridge.setConfigValue` and
   re-renders the badge.
-- Menu social links open via `MenuFragment.openUrl` (`Intent.ACTION_VIEW`) with
-  the status line as the error fallback: Discord `https://discord.gg/75RAK3p3K2`,
-  Wiki `https://survev.wiki.gg/`, Ko-fi `https://ko-fi.com/survev`. The featured
-  YouTuber comes from `site_info.youtube {name, link}` and stays hidden when
-  absent.
