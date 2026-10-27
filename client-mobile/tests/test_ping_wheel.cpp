@@ -827,6 +827,33 @@ TEST(hud_squad_health_bars) {
     CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(2))->text, std::string("Down"));
     CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(3))->text, std::string("DC"));
 
+    // ui.ts updateHealthBar colours: 100 grey, 50 pink, dead no fill, downed
+    // (0 health) the 1px danger fill.
+    const auto fillColor = [&hud](int idx, uint32_t& color, float& alpha) {
+        const auto* g = static_cast<const pix::NullGraphics*>(hud.squadHealthFill(idx));
+        if (!g) return false;
+        for (const auto& cmd : g->commands) {
+            if (cmd.kind == pix::DrawCommand::BeginFill) {
+                color = cmd.color;
+                alpha = cmd.alpha;
+                return true;
+            }
+        }
+        return false;
+    };
+    uint32_t color = 0;
+    float alpha = 0.0f;
+    CHECK(fillColor(0, color, alpha));
+    CHECK_EQ(color, 0xb3b3b3u); // 100 health -> grey
+    CHECK_NEAR(alpha, 1.0f, 1e-4f);
+    CHECK(!fillColor(1, color, alpha)); // dead -> no fill
+    CHECK(fillColor(2, color, alpha));
+    CHECK_EQ(color, 0x000000u); // downed at 0 health -> danger pulse (black at t=0)
+    CHECK_NEAR(alpha, 0.8f, 1e-4f);
+    CHECK(fillColor(3, color, alpha));
+    CHECK_EQ(color, 0xff7777u); // 50 health -> darkpink/lightpink interpolation
+    CHECK_NEAR(alpha, 1.0f, 1e-4f);
+
     // Solo / hidden HUD: rows disappear.
     hud.setSquadState({});
     CHECK(!n0->visible);

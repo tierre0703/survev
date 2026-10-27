@@ -1896,13 +1896,38 @@ TEST(obstacle_door_interp_and_casing) {
 // ---------------------------------------------------------------------------
 // In-game HUD (game/Hud.h): the plain-pix HUD built on the game root.
 TEST(hud_health_color_steps) {
-    // ui2.ts healthColourSteps: 100 white, 75 pink, 25 red, 0 pure red.
-    CHECK_EQ(Hud::healthColor(100.0f, false), 0xffffffu);
-    CHECK_EQ(Hud::healthColor(75.0f, false), 0xff9e9eu);
-    // 25 pots between the pink (75) and medium-red (25) steps: exact red.\n    CHECK_EQ(Hud::healthColor(25.0f, false), 0xff0000u);\n    CHECK_EQ(Hud::healthColor(50.0f, false), 0xff7f7fu);
+    // ui2.ts healthColourSteps (strict `>` walk, delerp interpolation):
+    // 100 grey, 75..99 white, 25..74 the pink ramp, <=24 pure red.
+    CHECK_EQ(Hud::healthColor(100.0f, false), 0xb3b3b3u);
+    // The web's double lerp floors 254.999.. to 254 at these exact points.
+    CHECK_EQ(Hud::healthColor(99.0f, false), 0xfefefeu);
+    CHECK_EQ(Hud::healthColor(75.0f, false), 0xffffffu);
+    CHECK_EQ(Hud::healthColor(74.0f, false), 0xff9c9cu);
+    CHECK_EQ(Hud::healthColor(50.0f, false), 0xff7878u);
+    CHECK_EQ(Hud::healthColor(25.0f, false), 0xff5252u);
+    CHECK_EQ(Hud::healthColor(24.0f, false), 0xfe0000u);
     CHECK_EQ(Hud::healthColor(0.0f, false), 0xff0000u);
     // Downed players use the flat red step.
     CHECK_EQ(Hud::healthColor(50.0f, true), 0xff0000u);
+
+    // CSS `ui-bar-danger` pulse: black at 0, red at 1, grey-ish halfway.
+    CHECK_EQ(Hud::healthDangerColor(0.0f), 0x000000u);
+    CHECK_EQ(Hud::healthDangerColor(1.0f), 0xff0000u);
+    CHECK_EQ(Hud::healthDangerColor(0.5f), 0x800000u); // rgba(128,0,0)
+    CHECK_EQ(Hud::healthDangerColor(-1.0f), 0x000000u);
+    CHECK_EQ(Hud::healthDangerColor(2.0f), 0xff0000u);
+
+    // ui.ts updateHealthBar squad palette: 100 grey, 75..99 white, below 75 the
+    // darkpink -> lightpink interpolation, downed red, dead grey.
+    CHECK_EQ(Hud::squadHealthColor(100.0f, false, false), 0xb3b3b3u);
+    CHECK_EQ(Hud::squadHealthColor(90.0f, false, false), 0xffffffu);
+    CHECK_EQ(Hud::squadHealthColor(75.0f, false, false), 0xffffffu);
+    // Interpolate(45, 112, 45, 50) = floor(45 + 67/45*50) = 119 = 0x77.
+    CHECK_EQ(Hud::squadHealthColor(50.0f, false, false), 0xff7777u);
+    CHECK_EQ(Hud::squadHealthColor(50.0f, false, true), 0xff0000u);
+    CHECK_EQ(Hud::squadHealthColor(0.0f, true, false), 0x444444u);
+    // <= 25 is the pulsing danger colour (the caller supplies the phase).
+    CHECK_EQ(Hud::squadHealthColor(25.0f, false, false), 0x000000u);
 }
 
 TEST(hud_builds_health_bar_at_bottom_centre) {

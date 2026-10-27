@@ -32,7 +32,43 @@ const HealthStep kHealthSteps[] = {
 const float kBoostBreakpoints[4] = {1.0f, 1.0f, 1.5f, 0.5f};
 constexpr float kBoostBreakpointsTotal = 4.0f;
 const uint32_t kBoostColors[4] = {0xff901a, 0xff751a, 0xff6616, 0xff5600};
+
+// ui.ts updateHealthBar palette (the squad bars; different from the ui2.ts main
+// bar steps above): grey at 100, white at 75..99, darkpink -> lightpink below
+// 75, and the CSS `ui-bar-danger` pulse at 25 or less.
+constexpr uint32_t kSquadHealthGrey = 0xb3b3b3; // rgb(179,179,179)
+constexpr uint32_t kSquadHealthWhite = 0xffffff;
+constexpr uint32_t kSquadHealthRed = 0xff0000;
 } // namespace
+
+uint32_t Hud::squadHealthColor(float health, bool dead, bool downed) {
+    if (dead) {
+        return 0x444444;
+    }
+    if (health > 25.0f) {
+        if (downed) {
+            return kSquadHealthRed;
+        }
+        if (std::fabs(health - 100.0f) < 0.2f) {
+            return kSquadHealthGrey;
+        }
+        if (std::fabs(health - 75.0f) < 0.2f || health >= 75.0f) {
+            return kSquadHealthWhite;
+        }
+        // ui.ts Interpolate(darkpink(255,45,45), lightpink(255,112,112), 45, health).
+        const int g = static_cast<int>(std::floor(45.0f + ((112.0f - 45.0f) / 45.0f) * health));
+        const uint32_t channel = static_cast<uint32_t>(std::clamp(g, 0, 255));
+        return (255u << 16) | (channel << 8) | channel;
+    }
+    return 0x000000;
+}
+
+// CSS `@keyframes pulse` (black 0.8 -> red 0.8 -> black 0.8 over 1 s): `mix`
+// is 0 at black and 1 at red.
+uint32_t Hud::healthDangerColor(float mix) {
+    const float t = std::clamp(mix, 0.0f, 1.0f);
+    return static_cast<uint32_t>(std::lround(255.0f * t)) << 16;
+}
 
 uint32_t Hud::healthColor(float health, bool downed) {
     if (downed) {
@@ -40,20 +76,24 @@ uint32_t Hud::healthColor(float health, bool downed) {
     }
     const int n = static_cast<int>(sizeof(kHealthSteps) / sizeof(kHealthSteps[0]));
     const int h = static_cast<int>(std::ceil(health));
-    // ui2.ts walks the steps from the top: `m_healthColourSteps` starts at the
-    // 75% entry (white), then 75 pink, 25 red, 0 red.
+    // ui2.ts walks the steps with a strict `>` on the ceiled health; equal
+    // bounds collapse to the upper step (math.delerp's clamp(NaN) = 1).
     int end = 0;
-    while (end < n - 1 && kHealthSteps[end].health >= h) {
+    while (end < n - 1 && kHealthSteps[end].health > h) {
         ++end;
     }
-    const int first = end > 0 ? end - 1 : 0;
+    const int first = std::max(end - 1, 0);
     const auto& a = kHealthSteps[first];
     const auto& b = kHealthSteps[end];
-    const float t = b.health > a.health
-        ? std::clamp((health - a.health) / (b.health - a.health), 0.0f, 1.0f)
-        : 0.0f;
+    const double value = static_cast<double>(health);
+    const double t = b.health != a.health
+        ? std::clamp((value - a.health) / (static_cast<double>(b.health) - a.health), 0.0, 1.0)
+        : 1.0;
     const auto mix = [t](uint8_t x, uint8_t y) {
-        return static_cast<uint8_t>(static_cast<float>(x) + (static_cast<float>(y) - x) * t + 0.5f);
+        // math.lerp(t, a, b) = a * (1 - t) + b * t, then Math.floor (double
+        // precision, like the web).
+        return static_cast<uint8_t>(
+            std::floor(static_cast<double>(x) * (1.0 - t) + static_cast<double>(y) * t));
     };
     return (static_cast<uint32_t>(mix(a.r, b.r)) << 16) |
            (static_cast<uint32_t>(mix(a.g, b.g)) << 8) |
@@ -1251,11 +1291,15 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
             row.colorDot->setAlpha(1.0f);
             row.colorDot->setVisible(_visible);
         }
-        const uint32_t color = m.dead ? 0x444444 : (m.downed ? 0xffaa00 : 0x4caf50);
-        const float fillWidth = 120.0f * static_cast<float>(health) / 100.0f;
+        // ui.ts updateHealthBar: grey/white/pink palette; the <=25 pulse is
+        // advanced per frame in update().
+        const uint32_t color = squadHealthColor(m.health, m.dead, m.downed);
+        const float fillWidth = m.dead
+            ? 0.0f
+            : std::max(1.0f, 120.0f * std::clamp(m.health, 0.0f, 100.0f) / 100.0f);
         row.barFill->clear();
         if (fillWidth > 0.0f) {
-            row.barFill->beginFill(color, 1.0f);
+            row.barFill->beginFill(color, m.health <= 25.0f && !m.dead ? 0.8f : 1.0f);
             row.barFill->drawRect(0.0f, 0.0f, fillWidth, 8.0f);
             row.barFill->endFill();
         }
@@ -1994,16 +2038,22 @@ void Hud::update(float dt, const Game& game, bool visible) {
         _perksInitialized = true;
     }
 
-    // --- Health: fill width = health%, colour from the ui2.ts steps ---
+    // --- Health: fill width = health%, colour from the ui2.ts steps; at 25 or
+    // less the CSS `ui-bar-danger` pulse (black <-> red, 1 s) overrides it.
     const bool downed = snap.health < 0.0f;
     const float health = downed ? 0.0f : std::clamp(snap.health, 0.0f, 100.0f);
-    if (health != _lastHealth || downed) {
+    const bool healthDanger = health > 0.0f && health <= 25.0f;
+    const float healthDangerMix =
+        0.5f - 0.5f * std::cos(2.0f * 3.14159265358979f * _squadPulseTicker);
+    if (health != _lastHealth || downed || healthDanger) {
         _lastHealth = health;
         const float fraction = health / 100.0f;
-        const uint32_t color = healthColor(health, downed);
+        const uint32_t color = healthDanger ? healthDangerColor(healthDangerMix)
+                                            : healthColor(health, downed);
+        const float alpha = healthDanger ? 0.8f : 1.0f;
         _healthFill->clear();
         if (fraction > 0.0f) {
-            _healthFill->beginFill(color, 1.0f);
+            _healthFill->beginFill(color, alpha);
             _healthFill->drawRect(0.0f, 0.0f, kHealthBarWidth * fraction, kHealthBarHeight);
             _healthFill->endFill();
         }
@@ -2224,6 +2274,8 @@ void Hud::update(float dt, const Game& game, bool visible) {
     _squadPulseTicker += dt;
     const float pulseT = 0.5f - 0.5f * std::cos(3.14159265358979f * _squadPulseTicker);
     const uint32_t pulseColor = static_cast<uint32_t>(0x22 + (0xff - 0x22) * pulseT) << 16;
+    const float squadDangerMix =
+        0.5f - 0.5f * std::cos(2.0f * 3.14159265358979f * _squadPulseTicker);
     for (size_t i = 0; i < _squad.size(); ++i) {
         SquadRow& row = _squad[i];
         if (i < _squadState.size() && _squadState[i].downed) {
@@ -2232,6 +2284,19 @@ void Hud::update(float dt, const Game& game, bool visible) {
             }
             if (row.colorDot) {
                 row.colorDot->setAlpha(0.55f + 0.45f * pulseT);
+            }
+        }
+        // ui.ts `.ui-team-member-health .ui-bar-danger`: a living teammate at
+        // 25 health or less pulses black <-> red (1 s) like the main bar.
+        if (i < _squadState.size()) {
+            const SquadMember& m = _squadState[i];
+            if (!m.dead && m.health <= 25.0f && row.barFill) {
+                const float fillWidth =
+                    std::max(1.0f, 120.0f * std::clamp(m.health, 0.0f, 100.0f) / 100.0f);
+                row.barFill->clear();
+                row.barFill->beginFill(healthDangerColor(squadDangerMix), 0.8f);
+                row.barFill->drawRect(0.0f, 0.0f, fillWidth, 8.0f);
+                row.barFill->endFill();
             }
         }
     }

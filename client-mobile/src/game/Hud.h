@@ -257,6 +257,10 @@ public:
     // Health fraction/colour as the web HUD interpolates them (ui2.ts
     // healthColourSteps); exposed for the host tests.
     static uint32_t healthColor(float health, bool downed);
+    // CSS `ui-bar-danger` pulse (0 = black, 1 = red) and the ui.ts squad-bar
+    // palette; both are pure so the host tests can pin the colours.
+    static uint32_t healthDangerColor(float mix);
+    static uint32_t squadHealthColor(float health, bool dead, bool downed);
 
     // Diagnostics for the host tests (map.ts renderMap / ui.ts createPing).
     const MapView& minimap() const { return _miniMap; }
@@ -277,6 +281,9 @@ public:
     }
     const pix::Graphics* squadColorDot(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].colorDot : nullptr;
+    }
+    const pix::Graphics* squadHealthFill(int idx) const {
+        return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].barFill : nullptr;
     }
     const pix::Sprite* gearIcon(int idx) const {
         return (idx >= 0 && idx < kGearIconCount) ? _gearIcons[static_cast<size_t>(idx)] : nullptr;

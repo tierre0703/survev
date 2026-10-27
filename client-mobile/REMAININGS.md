@@ -36,7 +36,8 @@ native asset-error reports. The twenty-second adds the keybind remap editor and
 the web-compatible bind code. The twenty-third adds the pass reward art and
 level-up pulse plus the profile stats link. The twenty-fourth completes the
 crosshair editor (hex colour + web-range size/stroke sliders, seven stroke
-buckets). **219 host tests pass, 0 fail.**
+buckets). The twenty-fifth fixes the health-bar colour ramp and adds the
+low-health danger pulse. **219 host tests pass, 0 fail.**
 
 ---
 
@@ -928,6 +929,31 @@ Done in the twenty-fourth P2 pass (2026-10-27):
     rendered at the screen centre. The editor was reset to white / size 1.00 /
     stroke 0.00 afterwards.
 
+Done in the twenty-fifth P2 pass (2026-10-27):
+- Health-bar colour parity (`ui2.ts` main bar + `ui.ts` squad bars):
+  - `Hud::healthColor` now walks the `ui2.ts healthColourSteps` exactly (strict
+    `>` on the ceiled health, `math.delerp`, `math.lerp` + `Math.floor` in
+    double). The old walk used `>=` and skipped descending ranges, so 25..74
+    was stuck on the 75-step colour (50 health showed `#ff9e9e` instead of
+    `#ff7878`) and the 100/75 boundaries were wrong (100 is grey `#b3b3b3`,
+    75..99 white).
+  - The main bar adds the CSS `ui-bar-danger` pulse at 25 health or less: the
+    fill alternates black <-> red (`rgba(255,0,0,0.8)`) over a 1 s cycle
+    (`@keyframes pulse`, 0.5 s alternate), instead of a static red.
+  - Squad bars use the `ui.ts updateHealthBar` palette instead of a fixed green:
+    grey at 100, white at 75..99, darkpink -> lightpink interpolation below 75,
+    solid red for downed at >25, no fill when dead, the same <=25 pulse, and the
+    web's 1px minimum width for living members.
+  - Host tests: `hud_health_color_steps` now covers the exact ramp boundaries
+    (100/99/75/74/50/25/24/0), `healthDangerColor` (0/0.5/1 + clamping) and the
+    squad palette; `hud_squad_health_bars` asserts the fill colour/alpha per
+    row (grey 100, pink 50, dead none, downed 1px danger). Also fixed a dead
+    assertion line that had been swallowed by a literal `\n` in a comment.
+    3754 assertions / 219 tests.
+  - Device check (x86_64 emulator): a quick-play match rendered the HUD with the
+    grey full-health bar (the web's `#b3b3b3` 100 step), the health counter at
+    100 and no GL/audio/crash errors.
+
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
   and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
@@ -1060,6 +1086,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - The masked ping layer and the minimap clip must be created **lazily** (`MapView::setPings` / `setCenter`, not HUD build): a ClippingNode created at build time crashed axmol's GL renderer on device
 - The minimap bakes the **static** `MapMsg.objects` (not the live pools, which are empty during `loadMap`); the big map uses the same texture fitted to 640px
 - `Hud` hit tests (`minimapExpandHit`, `bigMapContains/CloseHit`) take design-space coords; widget positions are centred HUD coords
+- Health colours follow the web exactly: the main bar uses `ui2.ts healthColourSteps` (strict `>` walk on the ceiled health, `delerp`/`lerp` in double, so 100 = grey `#b3b3b3`, 75..99 white, 50 = `#ff7878`, 25 = `#ff5252`, <=24 red) and the squad bars use `ui.ts updateHealthBar` (grey 100 / white 75..99 / darkpink->lightpink below 75 / red downed). At <=25 both add the CSS `ui-bar-danger` pulse (black <-> red, 0.8 alpha, 1 s cycle). Do not "simplify" these back to a flat colour or the `>=` walk
 - P0.1 action taps are one-shot edits queued in `game/InputActions` and cleared only after `Game::sendInput` runs (clearing at tap time loses taps that land between the 33 Hz sends)
 - A normal match end is `GameOverMsg` followed by the server's `stop()` close (3000/0): `GameScene::update` must keep the world/result when `Game::gameOver() != nullptr` and skip reconnect/URL fallback/error, and the liveness watchdog skips once `_hasGameOver` is set
 - `PlayerStatsMsg` (team death, teammates alive) is the death-panel source (`Game::localStats`); the final `GameOverMsg.playerStats` entry is used for the result. Do not discard it again (`Game.cpp` used to)

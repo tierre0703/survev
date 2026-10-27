@@ -1532,9 +1532,12 @@ Ported the `ui.ts` team health display (previously only in the unused
   `groupInfo.playerIds`), `groupStatus()` (health/DC) and `allPlayerStatus()`
   (dead/downed).
 - `Hud::setSquadState` draws up to four rows at the top-left: name, a 120px
-  colour-coded bar (grey dead / orange downed / green alive) and a
-  `DC` > `Dead` > `Down` status label. Rows are hidden in solo or while the HUD
-  is hidden, and repaint only when the name/health/status key changes.
+  colour-coded bar and a `DC` > `Dead` > `Down` status label. Rows are hidden in
+  solo or while the HUD is hidden, and repaint only when the
+  name/health/status key changes. The bar uses the exact `ui.ts
+  updateHealthBar` palette (grey 100, white 75..99, darkpink->lightpink below
+  75, red downed, 1px minimum for living members) and the `<=25` black/red
+  danger pulse; see the twenty-fifth P2 pass in `REMAININGS.md`.
 - The layout reuses the HUD's design-space `X/Y` helpers (squad rows are built
   after the static layout pass).
 
@@ -1555,9 +1558,11 @@ Ported the `ui.ts` team health display (previously only in the unused
 
 ### Still open
 
-- See the bars with a real/auto-filled teammate; render the active-player
-  highlight (`SquadMember.active` is populated but not styled yet).
-- Role icons (`local`, `medic`, ...) next to squad names.
+- See the bars with a real/auto-filled teammate (the layout/colours are
+  host-tested; the active-player highlight is not styled because the web's
+  `ui-team-member` has no active class).
+- Role icons next to squad names are not rendered by the web either (its
+  `.ui-team-member-icon` selector is unused), so this is not a port gap.
 
 ---
 
