@@ -16,8 +16,10 @@ package dev.axmol.app;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.text.InputType;
 import android.util.Log;
 import android.util.TypedValue;
@@ -124,6 +126,10 @@ public class ProfileFragment implements AccountManager.Listener {
         mSlugLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         mSlugLabel.setGravity(Gravity.CENTER);
         mSlugLabel.setPadding(0, dp(2), 0, dp(8));
+        // profileUi.ts `.account-stats-link`: opens /stats/?slug=<slug>.
+        mSlugLabel.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openStatsPage(); }
+        });
         panel.addView(mSlugLabel);
 
         mStatus = new TextView(activity);
@@ -263,9 +269,13 @@ public class ProfileFragment implements AccountManager.Listener {
 
         mNameLabel.setText(loggedIn ? p.username : "Not signed in");
         if (loggedIn) {
-            mSlugLabel.setText(p.slug.isEmpty() ? "" : "/stats?slug=" + p.slug);
+            mSlugLabel.setText(p.slug.isEmpty() ? "" : "/stats/?slug=" + p.slug);
+            mSlugLabel.setTextColor(0xFF1E90FF); // web `.account-stats-link`
+            mSlugLabel.setClickable(true);
         } else {
             mSlugLabel.setText("Sign in to sync stats, quests and your loadout.");
+            mSlugLabel.setTextColor(0xFFAAAAAA);
+            mSlugLabel.setClickable(false);
         }
 
         mSignInBtn.setVisibility(loggedIn ? View.GONE : View.VISIBLE);
@@ -284,6 +294,22 @@ public class ProfileFragment implements AccountManager.Listener {
                 mNameBtn.setText("Name change available in "
                         + formatRemaining(p.usernameChangeTime));
             }
+        }
+    }
+
+    /** profileUi.ts `.account-stats-link`: opens /stats/?slug=<slug> on the web. */
+    private void openStatsPage() {
+        AccountManager.Profile p = mAccount.getProfile();
+        if (!p.loggedIn || p.slug.isEmpty()) {
+            return;
+        }
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse(TeamLinks.webBaseUrl() + "/stats/?slug=" + p.slug));
+            mActivity.startActivity(intent);
+        } catch (Exception e) {
+            Log.w(TAG, "No browser for the stats page: " + e.getMessage());
+            setStatus("No browser available.");
         }
     }
 

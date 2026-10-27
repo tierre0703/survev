@@ -16,7 +16,6 @@ package dev.axmol.app;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
@@ -24,7 +23,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.util.Log;
-import android.util.LruCache;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -41,7 +39,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -75,14 +72,7 @@ public class LoadoutFragment {
     };
 
     // Decoded item art (Content/img/loadout/<type>.png) is shared across
-    // refreshes; keep roughly 4 MB of bitmaps.
-    private static final LruCache<String, Bitmap> sBitmapCache =
-            new LruCache<String, Bitmap>(4 * 1024 * 1024) {
-                @Override
-                protected int sizeOf(String key, Bitmap value) {
-                    return value.getByteCount();
-                }
-            };
+    // refreshes by ItemArt's bitmap cache.
 
     private final Activity mActivity;
     private final FrameLayout mRoot;
@@ -660,44 +650,21 @@ public class LoadoutFragment {
     // --- Item art (Content/img/loadout/<type>.png, generated from the web SVGs) ---
 
     private Bitmap loadAssetBitmap(String path) {
-        return loadAssetBitmap(path, 1);
+        return ItemArt.load(mActivity, path);
     }
 
     private Bitmap loadAssetBitmap(String path, int sampleSize) {
-        final int sample = Math.max(1, sampleSize);
-        final String key = path + "@" + sample;
-        Bitmap cached = sBitmapCache.get(key);
-        if (cached != null) return cached;
-        try (InputStream in = mActivity.getAssets().open(path)) {
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inSampleSize = sample;
-            Bitmap bitmap = BitmapFactory.decodeStream(in, null, options);
-            if (bitmap != null) sBitmapCache.put(key, bitmap);
-            return bitmap;
-        } catch (Exception e) {
-            return null;
-        }
+        return ItemArt.load(mActivity, path, sampleSize);
     }
 
     private Bitmap loadItemBitmap(String type) {
-        if (type == null || type.isEmpty()) return null;
-        return loadAssetBitmap("img/loadout/" + type + ".png");
+        return ItemArt.loadItem(mActivity, type);
     }
 
     // Web outfit art is a white silhouette with an SVG multiply filter
     // (helpers.getSvgFilterForTint); the same matrix works on the PNG.
     private void tintImage(ImageView view, int tint) {
-        if (tint == 0xFFFFFF) {
-            view.clearColorFilter();
-            return;
-        }
-        ColorMatrix matrix = new ColorMatrix(new float[] {
-                Color.red(tint) / 255f, 0, 0, 0, 0,
-                0, Color.green(tint) / 255f, 0, 0, 0,
-                0, 0, Color.blue(tint) / 255f, 0, 0,
-                0, 0, 0, 1, 0,
-        });
-        view.setColorFilter(new ColorMatrixColorFilter(matrix));
+        ItemArt.tint(view, tint);
     }
 
     private Drawable scaledDrawable(Bitmap bitmap, int sizeDp) {

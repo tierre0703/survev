@@ -33,7 +33,8 @@ saved preference). The fifteenth adds map-atlas unloading on map change. The
 sixteenth adds the menu character preview (outfit/melee layers, live loadout
 polling, idle bob + right-hand swing). The seventeenth adds NDK crash capture and
 native asset-error reports. The twenty-second adds the keybind remap editor and
-the web-compatible bind code. **219 host tests pass, 0 fail.**
+the web-compatible bind code. The twenty-third adds the pass reward art and
+level-up pulse plus the profile stats link. **219 host tests pass, 0 fail.**
 
 ---
 
@@ -113,8 +114,8 @@ the web-compatible bind code. **219 host tests pass, 0 fail.**
 | Reverb (`setReverbProperties`) | ✅ `ReverbModel` maps cathedral/cave to EAX props; applied to every active handle (web convolver is global) |
 | `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ live `game/Hud` has reserve ammo, bag strip, scopes, interaction prompt, pickup/kill messages and gear level badges + tap-to-drop (P1.4/P2); the dead `ui/FguiHud` is not built |
 | `client/src/emote.ts` (emote/ping system) | ✅ see the emote row above |
-| `client/src/ui/pieTimer.ts` (action progress circle) | 🔶 arc/countdown works; action label (Reloading/Using/Reviving) missing (P2) |
-| `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ✅ `ProfileFragment` + `PassFragment` (real level/XP, next unlock, quest reroll); stats link inert, no unlock image/animations (P2) |
+| `client/src/ui/pieTimer.ts` (action progress circle) | ✅ arc/countdown + `RELOADING`/`USING`/`REVIVING` labels from the active player action (P1.4) |
+| `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ✅ `ProfileFragment` + `PassFragment` (real level/XP, quest reroll); the pass screen shows the next unlock's art (outfit tint), category icon/title and the level-up pulse, and the profile `/stats/?slug=` link opens the web stats page |
 | `client/src/account.ts` | ✅ Java `AccountManager` + `SurvApi` device login/session/profile/username/logout/reset/delete/loadout push, item-status ack/confirm and pass `newItems` profile reload; OAuth/linking intentionally N/A |
 | `client/src/crosshair.ts` (custom crosshair) | 🔶 sprite pipeline good; editor offers 7 colours/3 sizes/3 strokes and no type picker (P1.7) |
 | `client/src/pingTest.ts` (pre-game latency check) | ✅ `net/PingTest` (echo cadence/retry/complete + `bestRegion`/zones, host-tested); the probe list comes from `net/Regions` (`tools/codegen_regions.mjs`, the native `PING_TEST_URLS`), and the Java menu shows the ms and auto-selects the closest region |
@@ -874,6 +875,32 @@ Done in the twenty-second P2 pass (2026-10-27):
     produced `[input] actions=5` while `KEYCODE_R` produced nothing, and the
     gamepad buttons still produced `actions=7` (A) / `actions=5` (X).
 
+Done in the twenty-third P2 pass (2026-10-27):
+- Pass reward art + level-up pulse (`ui/pass.ts setPassUnlockImage` /
+  `animatePassLevelUp`): `PassFragment` now shows the next unlock's generated
+  art tile (`img/loadout/<type>.png`), the outfit tint through the same
+  multiply colour matrix as the customize grid, the loadout category icon
+  (`gui/loadout-<category>.png`) and the localized `loadout-title-<category>`
+  label next to the existing "Next reward" text. When a refresh reports a higher
+  level the art pops in (fade + overshoot scale) and the level label pulses,
+  matching the web's level-up feedback instead of only swapping text.
+  `tools/codegen_pass_defs.mjs` now also emits the unlock items' `ItemDef`
+  metadata (category/tint/display name) from `shared/defs/register.ts`; the
+  output stays deterministic.
+- Item art is shared: the new `ItemArt` helper owns the 4 MB `LruCache` of
+  decoded `Content/img/loadout/<type>.png` bitmaps and the outfit tint matrix,
+  and `LoadoutFragment` delegates to it (no duplicated decode cache).
+- Profile stats link (`ui/profileUi.ts .account-stats-link`): the
+  `/stats/?slug=<slug>` label is now a blue link that opens
+  `<webBaseUrl>/stats/?slug=<slug>` (or `/stats` when signed out is hidden).
+- Device check (x86_64 emulator): the Pass screen rendered the `pass_survivr2`
+  Lv 2 reward ("OUTFIT SKIN" + Rainy Day outfit art + the shirt category icon)
+  with the real XP bar/quests; tapping the profile slug started
+  `ACTION_VIEW https://survev.io/...` (the emulator had no default browser, so
+  the system resolver appeared). Host tests unchanged: 3722 assertions / 219
+  tests, 0 failures. The level-up pulse itself needs an actual level gain (not
+  exercised on-device).
+
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
   and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
@@ -1155,8 +1182,15 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   Both behaviours mirror the web reload + login menu without an OAuth flow.
 - `GeneratedPassData.java` is generated from `shared/defs` by
   `tools/codegen_pass_defs.mjs`; never hand-edit it. Regenerate after any change
-  to `passDefs.ts`/`questDefs.ts` (XP curve, unlock table, quest XP/timed).
+  to `passDefs.ts`/`questDefs.ts` (XP curve, unlock table, quest XP/timed) or
+  to the unlock items' defs (the generated `ItemDef` table carries the loadout
+  category, outfit `lootImg.tint` and display name used by the reward art).
   Display names are l10n keys (`pass_*`, `quest_*`, `game-<item>`), not defs.
+- Decoded loadout art is cached in `ItemArt` (4 MB `LruCache`) and shared by the
+  customize grid and the pass reward art; the outfit tint is the web's
+  multiply `ColorMatrix`, applied only to `category == "outfit"`. Do not decode
+  `img/loadout/**` per screen again (the pass screen used to have no art, and a
+  second cache would double the bitmap memory).
 - Android has **no C++ MenuScene**, so `UiBridge::l10nJson()` owns a standalone
   `Localization` (English + `l10n/<language>.json` via `Files::readText`). Do not
   revert it to `_menu ? ... : "{}"`: every Java label would silently fall back

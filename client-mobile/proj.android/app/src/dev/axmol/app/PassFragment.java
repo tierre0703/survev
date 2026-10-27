@@ -15,6 +15,7 @@ package dev.axmol.app;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
@@ -24,7 +25,9 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -55,6 +58,11 @@ public class PassFragment {
     private final View mXpBarBg;
     private final View mXpBarFill;
     private final TextView mUnlockLabel;
+    private final ImageView mUnlockImage;
+    private final ImageView mUnlockTypeIcon;
+    private final TextView mUnlockTitle;
+    private final LinearLayout mRewardRow;
+    private final FrameLayout mArtBox;
     private final LinearLayout mQuestList;
     private final TextView mStatusText;
 
@@ -62,6 +70,10 @@ public class PassFragment {
     private AccountManager.PassInfo mPass;
     private boolean mOpen = false;
     private boolean mLoading = false;
+    // Level-up pulse bookkeeping (pass.ts animatePassLevelUp): the level and
+    // pass type the reward art currently shows.
+    private int mRenderedLevel = 0;
+    private String mRenderedPassType = "";
 
     private final Runnable mTimerRunnable = new Runnable() {
         @Override
@@ -173,7 +185,45 @@ public class PassFragment {
         mUnlockLabel.setTextColor(0xFFCCCCCC);
         mUnlockLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         mUnlockLabel.setPadding(0, dp(6), 0, dp(6));
-        panel.addView(mUnlockLabel);
+
+        // pass.ts setPassUnlockImage: the next unlock's art + category icon and
+        // title, next to the existing "Next reward" label.
+        LinearLayout rewardRow = new LinearLayout(activity);
+        rewardRow.setOrientation(LinearLayout.HORIZONTAL);
+        rewardRow.setGravity(Gravity.CENTER_VERTICAL);
+        rewardRow.setPadding(0, dp(6), 0, dp(2));
+        mRewardRow = rewardRow;
+
+        FrameLayout artBox = new FrameLayout(activity);
+        artBox.setLayoutParams(new LinearLayout.LayoutParams(dp(84), dp(84)));
+        mArtBox = artBox;
+        mUnlockImage = new ImageView(activity);
+        mUnlockImage.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        artBox.addView(mUnlockImage, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        mUnlockTypeIcon = new ImageView(activity);
+        mUnlockTypeIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        mUnlockTypeIcon.setBackgroundColor(0x66000000);
+        FrameLayout.LayoutParams iconParams = new FrameLayout.LayoutParams(dp(26), dp(26));
+        iconParams.gravity = Gravity.BOTTOM | Gravity.END;
+        artBox.addView(mUnlockTypeIcon, iconParams);
+        rewardRow.addView(artBox);
+
+        LinearLayout rewardText = new LinearLayout(activity);
+        rewardText.setOrientation(LinearLayout.VERTICAL);
+        rewardText.setPadding(dp(10), 0, 0, 0);
+        rewardText.setLayoutParams(new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        mUnlockTitle = new TextView(activity);
+        mUnlockTitle.setTextColor(GOLD);
+        mUnlockTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        mUnlockTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        mUnlockTitle.setSingleLine(true);
+        rewardText.addView(mUnlockTitle);
+        rewardText.addView(mUnlockLabel);
+        rewardRow.addView(rewardText);
+        panel.addView(rewardRow);
 
         // ===== Quests =====
         TextView questHeader = new TextView(activity);
@@ -290,6 +340,12 @@ public class PassFragment {
         mLevelLabel.setText("LEVEL -");
         mXpLabel.setText("-");
         mUnlockLabel.setText("");
+        mUnlockImage.setVisibility(View.GONE);
+        mUnlockTypeIcon.setVisibility(View.GONE);
+        mUnlockTitle.setVisibility(View.GONE);
+        mRewardRow.setVisibility(View.GONE);
+        mRenderedLevel = 0;
+        mRenderedPassType = "";
         setXpRatio(0f);
     }
 
@@ -311,6 +367,11 @@ public class PassFragment {
         mXpLabel.setText(xp + "/" + levelXp + " XP");
         setXpRatio(levelXp > 0 ? Math.min(1f, (float) xp / levelXp) : 0f);
 
+        if (!mPass.type.equals(mRenderedPassType)) {
+            mRenderedPassType = mPass.type;
+            mRenderedLevel = 0;
+        }
+
         String nextItem = GeneratedPassData.nextUnlockItem(mPass.type, level);
         if (level >= maxLevel) {
             mUnlockLabel.setText("Pass complete - max level reached.");
@@ -320,8 +381,68 @@ public class PassFragment {
         } else {
             mUnlockLabel.setText("Next reward level: " + (level + 1));
         }
+        updateUnlockArt(nextItem, level);
 
         renderQuests();
+    }
+
+    /**
+     * pass.ts setPassUnlockImage: show the next unlock's generated art tile
+     * (`img/loadout/<type>.png`, outfit tint via the shared multiply matrix),
+     * its loadout category icon and title. A level increase between renders
+     * plays the web's level-up pulse (the art pops in and the level label
+     * scales).
+     */
+    private void updateUnlockArt(String type, int level) {
+        GeneratedPassData.ItemDef item = type.isEmpty() ? null : GeneratedPassData.item(type);
+        Bitmap art = item != null ? ItemArt.load(mActivity, "img/loadout/" + item.type + ".png", 2) : null;
+        if (art != null) {
+            mArtBox.setVisibility(View.VISIBLE);
+            mUnlockImage.setImageBitmap(art);
+            if ("outfit".equals(item.category)) {
+                ItemArt.tint(mUnlockImage, item.tint);
+            } else {
+                mUnlockImage.clearColorFilter();
+            }
+            mUnlockImage.setVisibility(View.VISIBLE);
+
+            Bitmap icon = ItemArt.load(mActivity, "gui/loadout-" + item.category + ".png", 4);
+            mUnlockTypeIcon.setImageBitmap(icon);
+            mUnlockTypeIcon.setVisibility(icon != null ? View.VISIBLE : View.GONE);
+
+            mUnlockTitle.setText(l10n("loadout-title-" + item.category, item.category).toUpperCase());
+            mUnlockTitle.setVisibility(View.VISIBLE);
+
+            if (mRenderedLevel > 0 && level > mRenderedLevel) {
+                animateUnlockPulse();
+            }
+        } else {
+            // Keep the text label (it still names the next level); only the art
+            // column disappears when the def/PNG is missing.
+            mArtBox.setVisibility(View.GONE);
+            mUnlockImage.setVisibility(View.GONE);
+            mUnlockTypeIcon.setVisibility(View.GONE);
+            mUnlockTitle.setVisibility(View.GONE);
+        }
+        mRenderedLevel = level;
+    }
+
+    private void animateUnlockPulse() {
+        mUnlockImage.setAlpha(0f);
+        mUnlockImage.setScaleX(0.7f);
+        mUnlockImage.setScaleY(0.7f);
+        mUnlockImage.animate().alpha(1f).scaleX(1f).scaleY(1f)
+                .setDuration(420).setInterpolator(new OvershootInterpolator(1.4f)).start();
+
+        mUnlockTypeIcon.setAlpha(0f);
+        mUnlockTypeIcon.animate().alpha(1f).setDuration(420).start();
+
+        mUnlockTitle.setAlpha(0f);
+        mUnlockTitle.animate().alpha(1f).setDuration(420).start();
+
+        mLevelLabel.setScaleX(1.15f);
+        mLevelLabel.setScaleY(1.15f);
+        mLevelLabel.animate().scaleX(1f).scaleY(1f).setDuration(300).start();
     }
 
     private void setXpRatio(float ratio) {
