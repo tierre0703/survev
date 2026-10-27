@@ -23,6 +23,7 @@ package dev.axmol.app;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -31,6 +32,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
@@ -135,6 +137,7 @@ public class MenuFragment {
     private final ImageView mBackground;
     private Drawable mNewsIcon;
     private String mNewsLatestDate = "";
+    private TextView mYoutuberBtn;
 
     public MenuFragment(Activity activity, JavaUiHost host) {
         mActivity = activity;
@@ -389,6 +392,19 @@ public class MenuFragment {
         
         card.addView(mBottomRow, rowParams(dp(34)));
 
+        // ===== Social / featured creator row (web #social-share-block +
+        // #featured-youtuber) =====
+        LinearLayout socialRow = row(activity);
+        mYoutuberBtn = makeSocialButton("\u25B6 YouTube", 0xFFFF0000, 0xFF990000);
+        mYoutuberBtn.setVisibility(View.GONE);
+        addSocialButton(socialRow, "Discord", "https://discord.gg/75RAK3p3K2", 0xFF7289DA, 0xFF46558A);
+        addSocialButton(socialRow, "Wiki", "https://survev.wiki.gg/", 0xFFFF1985, 0xFFCD146D);
+        addSocialButton(socialRow, "Ko-fi", "https://ko-fi.com/survev", 0xFFFF6433, 0xFFBE4926);
+        LinearLayout.LayoutParams ytLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+        ytLp.leftMargin = dp(3);
+        socialRow.addView(mYoutuberBtn, ytLp);
+        card.addView(socialRow, rowParams(dp(30)));
+
         // ===== News Panel =====
         mNewsScrollView = new ScrollView(activity);
         mNewsScrollView.setLayoutParams(new LinearLayout.LayoutParams(
@@ -463,8 +479,36 @@ public class MenuFragment {
         row.addView(right, r);
     }
 
-    private TextView makeButton(String label, final int body, final int shadow, int sp) {
-        TextView btn = new TextView(mActivity);
+    private TextView makeSocialButton(String label, int body, int shadow) {
+        TextView btn = makeButton(label, body, shadow, 11);
+        btn.setPadding(dp(2), 0, dp(2), 0);
+        return btn;
+    }
+
+    private void addSocialButton(LinearLayout row, String label, final String url, int body, int shadow) {
+        TextView btn = makeSocialButton(label, body, shadow);
+        btn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                animatePress(v);
+                openUrl(url);
+            }
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+        if (row.getChildCount() > 0) lp.leftMargin = dp(3);
+        row.addView(btn, lp);
+    }
+
+    private void openUrl(String url) {
+        try {
+            mActivity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+        } catch (Exception e) {
+            Log.w(TAG, "open " + url + ": " + e.getMessage());
+            setStatus(L10n.t("index-error", "Error") + ": " + url);
+        }
+    }
+
+    private TextView makeButton(String label, final int body, final int shadow, int sp) {        TextView btn = new TextView(mActivity);
         btn.setText(label);
         btn.setTextColor(Color.WHITE);
         btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
@@ -706,6 +750,36 @@ public class MenuFragment {
         return asset.isEmpty() ? null : loadAssetDrawable(asset, 22);
     }
 
+    /**
+     * siteInfo.ts #featured-youtuber: site_info.youtube = {name, link}; hidden
+     * when the site does not feature a creator.
+     */
+    private void updateYoutuber(String json) {
+        if (mYoutuberBtn == null) return;
+        try {
+            com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            if (root.has("youtube") && root.get("youtube").isJsonObject()) {
+                com.google.gson.JsonObject yt = root.getAsJsonObject("youtube");
+                String name = yt.has("name") ? yt.get("name").getAsString() : "";
+                final String link = yt.has("link") ? yt.get("link").getAsString() : "";
+                if (!link.isEmpty()) {
+                    mYoutuberBtn.setText("\u25B6 " + (name.isEmpty() ? "YouTube" : name));
+                    mYoutuberBtn.setOnClickListener(new View.OnClickListener() {
+                        @Override public void onClick(View v) {
+                            animatePress(v);
+                            openUrl(link);
+                        }
+                    });
+                    mYoutuberBtn.setVisibility(View.VISIBLE);
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "site_info youtube: " + e.getMessage());
+        }
+        mYoutuberBtn.setVisibility(View.GONE);
+    }
+
     private void fetchSiteInfo() {
         mSiteInfoLoaded = false;
         mPlaySpinner.setVisibility(View.VISIBLE);
@@ -721,6 +795,7 @@ public class MenuFragment {
                 mSiteInfoJson = json;
                 // siteInfo.ts: the menu background follows site_info.clientTheme.
                 loadMenuBackground(Json.peekString(json, "clientTheme"));
+                updateYoutuber(json);
                 mModes = Json.parseModes(json);
                 buildModeButtons();
                 // siteInfo.ts: Join/Create Team only when an enabled team mode exists.
