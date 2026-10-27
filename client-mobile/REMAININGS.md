@@ -714,13 +714,51 @@ Done in the seventeenth P2 pass (2026-10-27):
   (`signal=11`, fault address, PCs), the next launch logged and deleted it,
   and `/api/report_error` received the request.
 
+Done in the eighteenth P2 pass (2026-10-27):
+- Menu preview melee animation (`ui/opponentDisplay.ts`): the Java avatar now
+  holds the selected melee in that melee's `anim.idlePose` (two-handed axe,
+  katana, machete, ... — previously everything rested in the fists pose) and
+  plays the real melee animations instead of a hardcoded fists swing.
+  `tools/codegen_preview_anims.mjs` emits `GeneratedPreviewAnims.java` from
+  `animData.ts` + the melee defs: IdlePoses, each melee's
+  attack/deploy/idle anim lists and the keyframes of every animation those
+  lists reference (bones, easing, mask). `CharacterPreviewView` reimplements the
+  `LoadoutDisplay.update` scheduling (deploy after a melee swap, 50% idle, else
+  attack, `1.5 + random` s delay) and `player.ts` keyframe interpolation
+  (blend from the idle pose, mirror for the single-entry fists attack), and
+  draws the left/right hands as separate bone layers with the melee parented to
+  MeleeR (anchor-centred sprite: `R(worldImg.rot + MeleeR.rot) *
+  (MeleeR.pos + worldImg.pos) * worldImg.scale - MeleeR.pivot`, below or above
+  the hand per `worldImg.renderOnHand`).
+- `tools/build-character-preview.mjs` now emits `body_<outfit>`,
+  `hand_l_<outfit>` and `hand_r_<outfit>` layers (both hands centred on their
+  own canvas so bones can move them; the body layer no longer bakes the left
+  hand) and clears stale layers from older naming schemes. The melee layer is
+  baked anchor-centred (`worldImg.rot` + `scale`, no pivot) like the web's
+  `createSprite()` anchor (0.5,0.5); the earlier pivot bake shifted the weapon
+  by half a sprite.
+- Framing: the view measures the body/melee alpha bounds and fits their union
+  into the view (the web's `getCameraTargetZoom`/`getCameraLoadoutOffset`
+  equivalent for a fixed Java slot), so long melees (katana/naginata) are never
+  clipped.
+- Device check (x86_64 emulator): the `fists` avatar animates (hands/weapon move
+  between frames), and a temporary forced `katana` loadout rendered the blade
+  anchor-centred in the `meleeKatana` idle stance and swung it around the hand
+  with no `CharacterPreview` asset warnings and an empty crash buffer. Host
+  tests: 3509 assertions / 207 tests, 0 failures.
+- Not ported (still P2, and not applicable to the Java avatar): the heal/boost
+  use-item particle emitters, the outfit-pickup/swing audio cues (the Java menu
+  has no sfx bridge) and the web's modal-relative camera framing (the view is
+  laid out by the menu, not by a camera offset). The preview keeps the y-up
+  local frame + static portrait facing of the port (no body rotation).
+
 Remaining:
 - **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
   alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
   implemented; `MapSprite` z-order only affects the dead `FguiHud` path (the
   live HUD uses `MapView`/`EmoteManager` ping layers).
-- **HUD/menus:** menu preview melee-specific animation keyframes, particles and
-  camera framing beyond the generic swing (`opponentDisplay.ts`).
+- **HUD/menus:** menu preview heal/boost particle emitters + preview audio cues
+  beyond the ported melee keyframes (`opponentDisplay.ts`).
 - **Audio:** music channel volume quirk (web routes music through `soundVolume`),
   exact EQ/convolution timbre.
 - **Platform/perf:** device/tablet/perf tiers, keyboard/gamepad bind editor.
@@ -810,11 +848,13 @@ node --experimental-transform-types tools/codegen_render_defs.mjs
 node --experimental-transform-types tools/codegen_sound_defs.mjs
 node --experimental-transform-types tools/codegen_pass_defs.mjs
 node --experimental-transform-types tools/codegen_menu_defs.mjs
+node --experimental-transform-types tools/codegen_preview_anims.mjs
 node tools/gen_reference.mjs
 node tools/build-atlas.mjs --res low
 node tools/build-gui-icons.mjs
 node --experimental-transform-types tools/build-loadout-icons.mjs
 node --experimental-transform-types tools/build-menu-icons.mjs
+node --experimental-transform-types tools/build-character-preview.mjs
 ```
 
 Regenerate the latency-test targets after changing `regions`:
@@ -1109,3 +1149,32 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   `JavaUiHost.showLeaderboard(String)`. Kills come from the latest
   `KillMsg.killerKills`; there is no live damage field, so the modal shows
   rank/name/kills/alive only.
+- `GeneratedPreviewAnims.java` is generated from `animData.ts` + the melee defs
+  by `tools/codegen_preview_anims.mjs`; never hand-edit it (re-run after any
+  change to IdlePoses/Animations or a melee's `anim` lists). Rows are
+  `"pivotX,pivotY,rot,posX,posY"` per bone in animData.ts Bones order, and the
+  `MeleeR` spin belongs in the melee layer, not in the hand.
+- The menu avatar layers are `img/preview/body_<outfit>`,
+  `hand_l_<outfit>`, `hand_r_<outfit>` and `melee_<melee>` (tools/
+  `build-character-preview.mjs`, staged by `sync-content.ps1`). The hand layers
+  are centred on their own canvas so the bone pose can move them; do not bake
+  the left hand into the body layer again. The melee layer is **anchor-centred**
+  (web `createSprite()` sets anchor 0.5,0.5) with `worldImg.rot` + `scale`
+  baked; its worldImg pos/rot/scale come from
+  `GeneratedPreviewAnims.melee(...)`, and Java applies
+  `R(rot) * (MeleeR.pos + worldImg.pos) * scale - MeleeR.pivot`. Do not go back
+  to the old pivot bake (it shifted the weapon by half a sprite and hid long
+  melees).
+- The preview fits the measured body+melee alpha bounds into the view instead of
+  using a fixed zoom (the web's loadout camera framing): keep the melee box
+  union in `updateFraming()` or a katana/naginata gets clipped by the 240 px
+  slot.
+- The preview's local frame is **y-up** like the C++ player root (canvas y =
+  centre - worldY * 4, rotations negated), and the body is drawn in the port's
+  static portrait facing (no web body rotation). Keep positions/rotations in
+  that frame or the hands/melee will mirror.
+- `CharacterPreviewView` idles only through the generated melee anims: deploy
+  after a melee swap, 50% idle / else attack, `1.5 + random` s delay, and the
+  final keyframe ends the animation back into the idle pose (LoadoutDisplay
+  `animIdleTicker` + player.ts `updateAnim`). Do not reintroduce the old
+  hardcoded fists ATTACK_X/ATTACK_Y swing.

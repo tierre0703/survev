@@ -2,15 +2,19 @@
 // layered PNGs the Java main menu can draw without a PIXI/axmol context.
 //
 // The web preview is a live player render (idle pose + melee idle animations).
-// Java only needs the static pose: the outfit body, its hands/backpack in the
-// `fists` idle pose, plus the selected melee art anchored at the right hand.
+// Java gets the pieces of that skeleton it needs to animate:
+//   body      outfit base + backpack (static, drawn in the body frame)
+//   hand_l/r  the two hands, each centred on its own canvas so Java can place
+//             them at the animated animData.ts HandL/HandR bone pose
+//   melee     the selected melee art pivoted on the right hand (MeleeR bone)
 //
 // Web source -> native output:
-//   client/public/img/player/*.svg  -> Content/img/preview/outfit_<type>.png
+//   client/public/img/player/*.svg  -> Content/img/preview/body_<type>.png
 //   client/public/img/loot/*.svg    -> Content/img/preview/melee_<type>.png
 //
 // The canvas is 4x the web's world scale: 1 world unit = 4 px, the character
-// centre is (256, 256), and the melee layer is centred on the right-hand bone.
+// centre is (256, 256), and the melee layer is centred on the melee sprite's
+// PIXI pivot (animData.ts worldImg.pos).
 //
 // Usage:
 //   node --experimental-transform-types tools/build-character-preview.mjs [--out <dir>]
@@ -41,11 +45,14 @@ const publicRoot = path.join(clientDir, "public");
 const canvas = 512;
 const center = canvas / 2;
 const worldScale = 4; // px per world unit
-const handL = { x: 14, y: -12.25 }; // animData.ts IdlePoses.fists
-const handR = { x: 14, y: 12.25 };
 const backpack02 = { offset: 11.5, scale: 0.23 };
 
 fs.mkdirSync(outRoot, { recursive: true });
+// The directory is tool-owned: drop stale layers from older naming schemes so
+// an APK can never package a hand/body layer the view no longer asks for.
+for (const file of fs.readdirSync(outRoot)) {
+    if (file.endsWith(".png")) fs.rmSync(path.join(outRoot, file));
+}
 
 // `player-base-01.img` -> `img/player/player-base-01.svg` (some skins use the
 // loot art instead). The `.img` suffix is the only shared asset convention.
@@ -139,46 +146,32 @@ async function outfitLayer(type, def) {
             base.height / 2,
         ),
     );
+    fs.writeFileSync(path.join(outRoot, `body_${type}.png`), await composeSvg(parts.join("")));
+
+    // One layer per hand, each centred on the canvas so Java can translate it
+    // to the animated HandL/HandR bone offset (animData.ts idle pose + keyframes).
     const hands = typeof skin.handSprite === "string"
         ? { left: skin.handSprite, right: skin.handSprite }
         : (skin.handSprite || {});
-    // The left hand stays in the base layer; the right hand is a separate layer
-    // so Java can play the web preview's melee swing (HandR moves to the attack
-    // pose, dragging the selected melee with it).
-    const leftRel = svgForFrame(hands.left);
-    if (leftRel) {
-        const art = await renderSvg(leftRel);
-        const handArt = await tintPng(art.buf, skin.handTint);
-        parts.push(
-            imageTag(
-                `<image x="0" y="0" width="${art.width}" height="${art.height}" href="${dataUri(handArt)}"/>`,
-                center + handL.x * worldScale,
-                center - handL.y * worldScale,
-                0.175,
-                0,
-                art.width / 2,
-                art.height / 2,
-            ),
-        );
-    }
-    fs.writeFileSync(path.join(outRoot, `outfit_${type}.png`), await composeSvg(parts.join("")));
-
-    const rightRel = svgForFrame(hands.right);
-    if (rightRel) {
-        const art = await renderSvg(rightRel);
+    let handsOk = false;
+    for (const [side, frame] of [["l", hands.left], ["r", hands.right]]) {
+        const rel = svgForFrame(frame);
+        if (!rel) continue;
+        const art = await renderSvg(rel);
         const handArt = await tintPng(art.buf, skin.handTint);
         const layer = imageTag(
             `<image x="0" y="0" width="${art.width}" height="${art.height}" href="${dataUri(handArt)}"/>`,
-            center + handR.x * worldScale,
-            center - handR.y * worldScale,
+            center,
+            center,
             0.175,
             0,
             art.width / 2,
             art.height / 2,
         );
-        fs.writeFileSync(path.join(outRoot, `hand_${type}.png`), await composeSvg(layer));
+        fs.writeFileSync(path.join(outRoot, `hand_${side}_${type}.png`), await composeSvg(layer));
+        handsOk = true;
     }
-    return true;
+    return handsOk;
 }
 
 async function meleeLayer(type, def) {
@@ -187,14 +180,16 @@ async function meleeLayer(type, def) {
     const rel = svgForFrame(img.sprite);
     if (!rel) return false;
     const art = await renderSvg(rel);
-    // The melee canvas is centred on the right hand (14, 12.25). The game
-    // draws the sprite with pivot `-worldImg.pos` (texture pixels) at the bone
-    // origin, so the pivot is scaled by the same 4x raster factor.
-    const px = img.pos ? img.pos.x : 0;
-    const py = img.pos ? img.pos.y : 0;
+    // player.ts renders the melee sprite anchor-centred (`createSprite()` sets
+    // anchor 0.5,0.5) with `pivot = -(bone.pos + worldImg.pos)`; the C++ port
+    // therefore places the sprite *centre* at
+    //   R(rot) * worldImg.pos * worldImg.scale - MeleeR.pivot
+    // relative to the hand. Bake the centre + rotation + scale here (pivot 0),
+    // so Java only applies the MeleeR bone. The worldImg offset itself stays in
+    // GeneratedPreviewAnims (it is rotated with the bone each frame).
     const scale = img.scale ? img.scale.x : 1;
     const inner = `<image x="0" y="0" width="${art.width}" height="${art.height}" href="${dataUri(art.buf)}"/>`;
-    const body = imageTag(inner, center, center, scale, img.rot || 0, -px * worldScale, -py * worldScale);
+    const body = imageTag(inner, center, center, scale, img.rot || 0, 0, 0);
     fs.writeFileSync(path.join(outRoot, `melee_${type}.png`), await composeSvg(body));
     return true;
 }
