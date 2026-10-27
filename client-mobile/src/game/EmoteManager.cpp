@@ -159,7 +159,6 @@ void EmoteManager::addPing(const Emote& msg, bool factionMode, GameWorld& ctx) {
 
     // GameConfig.groupColors: the web tints team indicators by group slot and
     // map events by their pingDef.tint.
-    static const uint32_t kGroupColors[4] = { 0xffff00, 0xff00ff, 0x0000ff, 0xff5400 };
     const uint32_t tint = pingDef->mapEvent
         ? pingDef->tint
         : (indicatorIdx >= 0 && indicatorIdx < 4 ? kGroupColors[indicatorIdx] : 0xffffff);

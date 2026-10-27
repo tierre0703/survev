@@ -98,6 +98,7 @@ public:
         ScopeNext,
         SwapWeapons,
         WeaponSlot,
+        GearSlot,
     };
     struct TapResult {
         TapKind kind = TapKind::None;
@@ -114,6 +115,15 @@ public:
     void setSquadState(const std::vector<SquadMember>& members);
     // ui2.ts gear/perk slots: resolved atlas frames, gear then perks (max 7).
     void setGearState(const std::vector<std::string>& frames);
+    // Full ui2.ts slot state: frame + item type (for tap-to-drop), gear level
+    // (Lvl. N badge) and perk droppable flag.
+    struct GearSlot {
+        std::string frame;
+        std::string type;
+        int level = 0;
+        bool droppable = true;
+    };
+    void setGearSlots(const std::vector<GearSlot>& slots);
     // ui.ts #ui-interaction: nearby item / action text ("" hides it).
     void setInteractionPrompt(const std::string& text);
     // ui.ts announcements (role assigned/dead, rare loot). Visible for seconds.
@@ -226,8 +236,17 @@ public:
     const pix::Text* squadStatusText(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].status : nullptr;
     }
+    const pix::Graphics* squadColorDot(int idx) const {
+        return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].colorDot : nullptr;
+    }
     const pix::Sprite* gearIcon(int idx) const {
         return (idx >= 0 && idx < kGearIconCount) ? _gearIcons[static_cast<size_t>(idx)] : nullptr;
+    }
+    // ui2.ts gear slot metadata (tap-to-drop + level badge) for GameScene/tests.
+    const std::string& gearType(int idx) const;
+    bool gearDroppable(int idx) const;
+    const pix::Text* gearLevelText(int idx) const {
+        return (idx >= 0 && idx < kGearIconCount) ? _gearLevelText[static_cast<size_t>(idx)] : nullptr;
     }
     const pix::Text* reloadButtonText() const { return _reloadText; }
     const pix::Text* interactButtonText() const { return _interactText; }
@@ -345,13 +364,18 @@ private:
         pix::Graphics* barBg = nullptr;
         pix::Graphics* barFill = nullptr;
         pix::Text* status = nullptr;
+        pix::Graphics* colorDot = nullptr;
         std::string key;
     };
     std::array<SquadRow, 4> _squad{};
     std::vector<SquadMember> _squadState;
+    float _squadPulseTicker = 0.0f;
 
     std::array<pix::Sprite*, kGearIconCount> _gearIcons{};
     std::array<std::string, kGearIconCount> _gearFrames{};
+    std::array<pix::Text*, kGearIconCount> _gearLevelText{};
+    std::array<GearSlot, kGearIconCount> _gearSlots{};
+    std::array<Rect, kGearIconCount> _gearRects{};
 
     pix::Container* _weaponBox = nullptr;
     pix::Graphics* _weaponBoxBg = nullptr;

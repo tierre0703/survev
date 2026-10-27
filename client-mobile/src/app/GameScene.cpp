@@ -1449,25 +1449,31 @@ void GameScene::update(float delta) {
         }
         // Gear/perk icons (ui2.ts): helmet, chest, backpack, then perks.
         {
-            std::vector<std::string> frames;
+            std::vector<Hud::GearSlot> slots;
             const ActivePlayerData& apd = _game->activePlayerData();
             const DefProvider* provider = getDefProvider();
-            const auto pushFrame = [&](const std::string& type) {
-                if (type.empty() || frames.size() >= static_cast<size_t>(Hud::kGearIconCount)) {
+            const auto pushSlot = [&](const std::string& type, bool droppable) {
+                if (type.empty() || slots.size() >= static_cast<size_t>(Hud::kGearIconCount)) {
                     return;
                 }
                 const GameObjRenderDef* def = provider ? provider->gameObject(type) : nullptr;
                 if (def && def->hasImg && !def->img.sprite.empty()) {
-                    frames.push_back(def->img.sprite);
+                    Hud::GearSlot slot;
+                    slot.frame = def->img.sprite;
+                    slot.type = type;
+                    slot.level = def->level;
+                    slot.droppable = droppable;
+                    slots.push_back(std::move(slot));
                 }
             };
-            pushFrame(apd.helmet);
-            pushFrame(apd.chest);
-            pushFrame(apd.backpack);
+            // Web excludes the backpack from drop actions.
+            pushSlot(apd.helmet, true);
+            pushSlot(apd.chest, true);
+            pushSlot(apd.backpack, false);
             for (const auto& perk : apd.perks) {
-                pushFrame(perk.type);
+                pushSlot(perk.type, perk.droppable);
             }
-            _hud->setGearState(frames);
+            _hud->setGearSlots(slots);
         }
         const bool deadOrSpectating = _game->isLocalDead() || _game->isSpectating();
         if (deadOrSpectating && _touch) {
@@ -1556,8 +1562,6 @@ void GameScene::update(float delta) {
                 }
             }
             std::sort(groupMembers.begin(), groupMembers.end());
-            static const uint32_t kGroupColors[4] = { 0xffff00, 0xff00ff, 0x0000ff, 0xff5400 };
-            static const uint32_t kTeamColors[2] = { 0xcc0000, 0x007eff };
             const auto groupColor = [&](uint16_t id) -> uint32_t {
                 for (size_t i = 0; i < groupMembers.size() && i < 4; ++i) {
                     if (groupMembers[i] == id) {
@@ -2186,6 +2190,13 @@ void GameScene::finishHudPress(bool longPress) {
             }
             break;
         }
+        case Hud::TapKind::GearSlot:
+            // ui2.ts gear/perk touch action: tapping a droppable helmet/chest/
+            // perk drops it (backpack is not droppable).
+            if (_hud->gearDroppable(slot)) {
+                sendHudDrop(_hud->gearType(slot), 0, true);
+            }
+            break;
         default:
             break;
     }

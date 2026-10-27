@@ -20,7 +20,9 @@ bush rustle/particles, button useImg/offImg + useParticle, once-only obstacle
 destroy debris, and ceiling destroy particles. The third adds per-particle
 HSV color variance and the map's river-shore footstep surface. The fourth adds
 shot/reload casing parity (shell offset/scale/forward/reverse and revolver
-reload casings). **202 host tests pass, 0 fail.**
+reload casings). The fifth adds live-HUD gear level badges/tap-to-drop, squad
+group-colour dots + downed pulse, the cyan group-colour fix, and in-place
+Settings re-localization. **203 host tests pass, 0 fail.**
 
 ---
 
@@ -88,7 +90,7 @@ reload casings). **202 host tests pass, 0 fail.**
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; Java menu builds modes/regions from site_info (enabled/teamMode/l10n) and requires the fetch before Play (P1.7); mode/region icons remain P2 |
 | `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste, config `webBaseUrl`), `survev://` + `https://…/#CODE` + `?u=&jt=` links, kick/mode/region/auto-fill, in-room rename, room-prop persistence, team match returns to the room |
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack; source badges and the per-item lore modal remain P2 |
-| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, weapon/ammo, alive/kills, kill feed, kill leader, gas timer, death/result + spectate overlay, inventory v2 strip, interaction prompt/touch target and toasts are live; post-match per-team stats detail is reduced (P1.4/P2) |
+| `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | 🔶 health/boost, weapon/ammo, alive/kills, kill feed, kill leader, gas timer, death/result + spectate overlay, inventory v2 strip, interaction prompt/touch target, toasts, squad group-colour dots + downed pulse are live; post-match per-team stats detail is reduced (P1.4/P2) |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | 🔶 partial: barn exists but is constructed with a **null** sprite barn; `MapSprite` z-order/pulse not applied (P2) |
@@ -98,7 +100,7 @@ reload casings). **202 host tests pass, 0 fail.**
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ✅ keyed from the defs (`sound.reload/reloadAlt/deploy/use/pickup`); doors/buttons/puzzles/ceiling/plane loops and victory music wired; dry fire is approximate (P2) |
 | UI sounds (ambient lab, pickup pings, notifications, victory) | 🔶 victory music + pickup/door/puzzle/plane cues wired; notification/team-join sounds are web focus-only (not applicable to the Android foreground) |
 | Reverb (`setReverbProperties`) | ✅ `ReverbModel` maps cathedral/cave to EAX props; applied to every active handle (web convolver is global) |
-| `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | 🔶 live `game/Hud` has reserve ammo, bag strip, scopes, interaction prompt and pickup/kill messages (P1.4); the dead `ui/FguiHud` is not built |
+| `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ live `game/Hud` has reserve ammo, bag strip, scopes, interaction prompt, pickup/kill messages and gear level badges + tap-to-drop (P1.4/P2); the dead `ui/FguiHud` is not built |
 | `client/src/emote.ts` (emote/ping system) | ✅ see the emote row above |
 | `client/src/ui/pieTimer.ts` (action progress circle) | 🔶 arc/countdown works; action label (Reloading/Using/Reviving) missing (P2) |
 | `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ✅ `ProfileFragment` + `PassFragment` (real level/XP, next unlock, quest reroll); stats link inert, no unlock image/animations (P2) |
@@ -468,7 +470,8 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         its standalone table with the saved config language. The main menu
         re-renders immediately when Settings closes, and Settings/Help/Pause
         labels are localized when each screen is created (verified en/es incl.
-        cold start; in-place relabel of an already-open Settings screen is P2).
+        cold start) and the Settings modal now rebuilds in place on a language
+        change/Reset (session P2 pass 5).
       - Help content now documents the real touch HUD and the default
         keyboard/mouse binds instead of sprint/pinch/building features the port
         does not have.
@@ -568,17 +571,29 @@ Done in the fourth P2 pass (2026-10-26):
 - Shot casings now use the player position and `renderZOrd + 1` like the web.
 - Host test: `gun_casing_fields_and_reload_shells`.
 
+Done in the fifth P2 pass (2026-10-26):
+- Live HUD gear/perk slots carry `Lvl. N` badges (red 4 / orange 3 / white
+  otherwise) and are tap-to-drop: helmet/chest and droppable perks send
+  `DropItemMsg`, backpack stays non-droppable like the web.
+- Squad bars get the fixed group-colour dot per slot (yellow/magenta/cyan/
+  orange), dead/disconnected names fade to 30%, and the downed row pulses
+  (2 s black -> red, `icon-pulse`).
+- Fixed the shared group colour table: slot 2 is cyan (`0x00ffff`), not blue;
+  `GameConfig.h` now owns `kGroupColors`/`kTeamColors` for HUD, map dots and
+  pings.
+- Settings re-localizes **in place**: changing language (or Reset) rebuilds the
+  open modal and re-syncs config, so every label updates without closing it.
+- Host test: `hud_gear_levels_and_squad_polish`.
+
 Remaining:
 - **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
   alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
   implemented; `MapSprite` z-order only affects the dead `FguiHud` path (the
   live HUD uses `MapView`/`EmoteManager` ping layers).
-- **HUD/menus:** kill-feed role lines, squad bar role/team colours and downed
-  pulse, gas icon/pulse, gear order/levels/tap-to-drop, menu
-  splash/background/clientTheme, mode icons, news images/badges, social/streamer
-  blocks, menu character preview (`opponentDisplay.ts`), live in-game leaderboard
-  bridge, in-place relabel of an already-open settings/loadout screen after a
-  language change.
+- **HUD/menus:** kill-feed role lines, gas icon (GUI texture plumbing; the
+  countdown already turns red while moving), menu splash/background/clientTheme,
+  mode icons, news images/badges, social/streamer blocks, menu character preview
+  (`opponentDisplay.ts`), live in-game leaderboard bridge.
 - **Audio:** music channel volume quirk (web routes music through `soundVolume`),
   exact EQ/convolution timbre.
 - **Platform/perf:** unload map atlases on map change and preload map audio
@@ -643,7 +658,7 @@ Remaining:
 ```powershell
 cd E:\work\survev\client-mobile
 . .\tools\android-env.ps1
-# host tests (202 tests, 0 failures expected)
+# host tests (203 tests, 0 failures expected)
 cmake -S tests -B build-tests -G "Visual Studio 17 2022" -A x64
 cmake --build build-tests --config Release
 .\build-tests\Release\surv_tests.exe
@@ -922,3 +937,14 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   `maxReload` and the resolved casing type. Shot casings use `renderZOrd + 1`;
   `casingOnReload` guns spawn `maxReload` shells once per reload action start,
   never per shot.
+- Group/team colours live in `GameConfig.h` (`kGroupColors` slot 2 is cyan
+  `0x00ffff`); HUD squad dots, map dots and ping indicators all use it. Do not
+  reintroduce the old blue `0x0000ff` local tables.
+- Gear/perk HUD state is `Hud::GearSlot` (frame + type + level + droppable) via
+  `setGearSlots`; `setGearState(frames)` is only the test/back-compat wrapper.
+  Helmet/chest and droppable perks are tap-to-drop (`TapKind::GearSlot` ->
+  `DropItemMsg`), backpack is excluded like ui2.ts. `Lvl. N` badges: red at 4,
+  orange at 3, white otherwise.
+- `SettingsModal` is rebuilt (`rebuildUi()`: clear root -> `buildUi()` ->
+  `syncFromConfig()` -> `applyTouchStyleButtons()`) after a language change or
+  Reset; keep widget fields non-final so the rebuild can reassign them.

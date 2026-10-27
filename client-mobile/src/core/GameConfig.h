@@ -147,6 +147,12 @@ enum FactionTeam : uint8_t {
     FactionTeam_Blue = 2,
 };
 
+// shared/gameConfig.ts GameConfig.groupColors / teamColors. Group index is the
+// sorted teammate slot (yellow, magenta, cyan, orange); faction teams are red
+// and blue.
+constexpr uint32_t kGroupColors[4] = {0xffff00u, 0xff00ffu, 0x0000ffffu, 0xff5400u};
+constexpr uint32_t kTeamColors[2] = {0xcc0000u, 0x007effu};
+
 // Port of the GameConfig.player values used by touch input.
 struct PlayerConfig {
     static constexpr float throwableMaxMouseDist = 18.0f;

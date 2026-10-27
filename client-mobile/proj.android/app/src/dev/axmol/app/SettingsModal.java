@@ -53,22 +53,22 @@ public class SettingsModal {
     private Runnable mOnHidden = null;
 
     // --- widgets ---
-    private final Button mLanguageBtn;
-    private final SeekBar mMasterSlider;
-    private final TextView mMasterLabel;
-    private final SeekBar mSfxSlider;
-    private final TextView mSfxLabel;
-    private final SeekBar mMusicSlider;
-    private final TextView mMusicLabel;
-    private final CheckBox mInterpolation;
-    private final CheckBox mScreenShake;
-    private final CheckBox mAnonNames;
-    private final Button mMoveStyleBtn;
-    private final Button mAimStyleBtn;
-    private final Button mAimLineBtn;
-    private final TextView mStatusText;
-    private final Button mCloseBtn;
-    private final Button mResetBtn;
+    private Button mLanguageBtn;
+    private SeekBar mMasterSlider;
+    private TextView mMasterLabel;
+    private SeekBar mSfxSlider;
+    private TextView mSfxLabel;
+    private SeekBar mMusicSlider;
+    private TextView mMusicLabel;
+    private CheckBox mInterpolation;
+    private CheckBox mScreenShake;
+    private CheckBox mAnonNames;
+    private Button mMoveStyleBtn;
+    private Button mAimStyleBtn;
+    private Button mAimLineBtn;
+    private TextView mStatusText;
+    private Button mCloseBtn;
+    private Button mResetBtn;
 
     // ui::kLocales, fetched from the C++ bridge (localization.ts Locales).
     private List<Json.LocaleEntry> mLocales = new ArrayList<>();
@@ -81,24 +81,31 @@ public class SettingsModal {
         mActivity = activity;
         mRoot = new FrameLayout(activity);
         mRoot.setBackgroundColor(0xCC000000); // dim overlay
+        buildUi();
+    }
 
+    /**
+     * Builds (or rebuilds) the modal views. Called again after a language
+     * change so the already-open Settings screen re-localizes in place.
+     */
+    private void buildUi() {
         // Full-height ScrollView for landscape responsiveness
-        ScrollView outerScroll = new ScrollView(activity);
+        ScrollView outerScroll = new ScrollView(mActivity);
         outerScroll.setLayoutParams(new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         // Main panel: translucent dark block, centered
-        LinearLayout panel = new LinearLayout(activity);
+        LinearLayout panel = new LinearLayout(mActivity);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setGravity(Gravity.CENTER);
         panel.setBackgroundColor(PANEL_BG);
         panel.setPadding(dp(20), dp(14), dp(20), dp(14));
 
         // Title row with reset button
-        LinearLayout titleRow = new LinearLayout(activity);
+        LinearLayout titleRow = new LinearLayout(mActivity);
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         
-        TextView title = new TextView(activity);
+        TextView title = new TextView(mActivity);
         title.setText("\u2699 " + L10n.t("index-settings", "Settings"));
         title.setTextColor(Color.WHITE);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
@@ -114,10 +121,10 @@ public class SettingsModal {
         panel.addView(titleRow);
 
         // -- Scrollable content (web #modal-settings body) --
-        ScrollView scroll = new ScrollView(activity);
+        ScrollView scroll = new ScrollView(mActivity);
         scroll.setLayoutParams(new FrameLayout.LayoutParams(dp(380), dp(520)));
 
-        LinearLayout content = new LinearLayout(activity);
+        LinearLayout content = new LinearLayout(mActivity);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(10), 0, dp(10), 0);
 
@@ -139,6 +146,8 @@ public class SettingsModal {
                 SurvBridge.setLanguage(locale.code);
                 SurvBridge.saveConfig();
                 L10n.invalidate();
+                // Rebuild the open screen with the new locale's labels.
+                rebuildUi();
                 mStatusText.setText("");
             }
         });
@@ -310,7 +319,7 @@ public class SettingsModal {
         panel.addView(scroll);
 
         // === Bottom: status + close ===
-        mStatusText = new TextView(activity);
+        mStatusText = new TextView(mActivity);
         mStatusText.setTextColor(0xFF808080);
         mStatusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         mStatusText.setGravity(Gravity.CENTER);
@@ -524,9 +533,19 @@ public class SettingsModal {
         SurvBridge.setConfigValue("touchAimLine", "true");
 
         SurvBridge.saveConfig();
+        // Reset can change the language too; rebuild so every label matches.
+        rebuildUi();
         mStatusText.setText("Settings reset to defaults");
 
         Log.i(TAG, "Settings reset to defaults");
+    }
+
+    /** Rebuilds the view tree and re-applies the saved config. */
+    private void rebuildUi() {
+        mRoot.removeAllViews();
+        buildUi();
+        syncFromConfig();
+        applyTouchStyleButtons();
     }
 
     public void syncFromConfig() {

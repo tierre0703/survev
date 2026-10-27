@@ -2657,3 +2657,66 @@ TEST(gun_casing_fields_and_reload_shells) {
     p.updateActions(Action_Reload, "m9", world);
     CHECK_EQ(activeParticles(world), afterReload);
 }
+
+// HUD/menu polish: gear level badges + tap-to-drop, squad group-color dots and
+// the downed pulse.
+TEST(hud_gear_levels_and_squad_polish) {
+    pix::NullPixiFactory factory;
+    auto* root = static_cast<pix::NullContainer*>(factory.createContainer());
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.setVisible(true);
+
+    std::vector<Hud::GearSlot> slots;
+    slots.push_back(Hud::GearSlot{"loot-helmet-02.img", "helmet02", 3, true});
+    slots.push_back(Hud::GearSlot{"loot-chest-02.img", "chest02", 4, true});
+    slots.push_back(Hud::GearSlot{"loot-backpack-02.img", "backpack02", 2, false});
+    slots.push_back(Hud::GearSlot{"loot-perk-takedown.img", "takedown", 0, true});
+    hud.setGearSlots(slots);
+
+    CHECK(static_cast<const pix::NullText*>(hud.gearLevelText(0)) != nullptr);
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.gearLevelText(0))->text, std::string("Lvl. 3"));
+    CHECK(static_cast<const pix::NullText*>(hud.gearLevelText(0))->visible);
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.gearLevelText(1))->text, std::string("Lvl. 4"));
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.gearLevelText(2))->text, std::string("Lvl. 2"));
+    // Perks have no level badge.
+    CHECK(!static_cast<const pix::NullText*>(hud.gearLevelText(3))->visible);
+    CHECK_EQ(hud.gearType(0), std::string("helmet02"));
+    CHECK(hud.gearDroppable(0));
+    CHECK(hud.gearDroppable(1));
+    // Web excludes the backpack from drop actions.
+    CHECK(!hud.gearDroppable(2));
+    CHECK(hud.gearDroppable(3));
+
+    // Tap the droppable slots: hitTest maps back through the centred root.
+    const float hitY = 708.0f - 28.0f + 8.0f;
+    Hud::TapResult helmet = hud.hitTest(12.0f + 8.0f, hitY);
+    CHECK(helmet.kind == Hud::TapKind::GearSlot);
+    CHECK_EQ(helmet.slot, 0);
+    Hud::TapResult backpack = hud.hitTest(12.0f + 2.0f * 32.0f + 8.0f, hitY);
+    CHECK(backpack.kind == Hud::TapKind::None);
+    Hud::TapResult perk = hud.hitTest(12.0f + 3.0f * 32.0f + 8.0f, hitY);
+    CHECK(perk.kind == Hud::TapKind::GearSlot);
+    CHECK_EQ(perk.slot, 3);
+
+    std::vector<SquadMember> squad(2);
+    squad[0].name = "Alice";
+    squad[0].health = 60.0f;
+    squad[0].downed = true;
+    squad[1].name = "Bob";
+    squad[1].health = 0.0f;
+    squad[1].dead = true;
+    hud.setSquadState(squad);
+    CHECK(hud.squadColorDot(0) != nullptr);
+    CHECK(static_cast<const pix::NullGraphics*>(hud.squadColorDot(0))->visible);
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(0))->text, std::string("Down"));
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(1))->text, std::string("Dead"));
+    // Dead/disconnected names fade to 30% (ui.ts updateTeam).
+    CHECK_NEAR(static_cast<const pix::NullText*>(hud.squadNameText(1))->alpha, 0.3f, 1e-5f);
+
+    // Downed status pulses (icon-pulse: 2 s black -> red); the dot alpha moves
+    // off 1.0 as the pulse advances.
+    Game game;
+    hud.update(0.5f, game, true);
+    CHECK(static_cast<const pix::NullGraphics*>(hud.squadColorDot(0))->alpha < 1.0f);
+}

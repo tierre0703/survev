@@ -2,6 +2,7 @@
 
 #include "Game.h"
 #include "EmoteManager.h"
+#include "../core/GameConfig.h"
 #include "../net/generatedDefs.inc"
 #include "../render/Defs.h"
 
@@ -151,6 +152,13 @@ Hud::TapResult Hud::hitTest(float designX, float designY) const {
     }
     if (_swapRect.contains(px, py)) {
         return TapResult{TapKind::SwapWeapons, -1};
+    }
+    // ui2.ts gear/perk tiles: tapping a droppable slot sends DropItemMsg
+    // (the web touch listener drops on tap; backpack is not droppable).
+    for (int i = 0; i < kGearIconCount; ++i) {
+        if (gearDroppable(i) && _gearRects[static_cast<size_t>(i)].contains(px, py)) {
+            return TapResult{TapKind::GearSlot, i};
+        }
     }
     for (int i = 0; i < 4; ++i) {
         if (_weaponRect[i].contains(px, py)) {
@@ -666,14 +674,29 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     setBigMapVisible(false);
 
     // Gear/perk slots (ui2.ts ui-armor-*/ui-perk-*): item atlas frames along
-    // the top-left, above the squad bars.
+    // the top-left, above the squad bars. Each slot also carries a small
+    // "Lvl. N" badge (gear only) and a tap-to-drop rect.
     for (int i = 0; i < kGearIconCount; ++i) {
+        const float slotX = 12.0f + static_cast<float>(i) * 32.0f;
         pix::Sprite* icon = _factory->createSprite();
         icon->setAnchor(0.0f, 1.0f);
-        icon->setPosition(X(12.0f + static_cast<float>(i) * 32.0f), Y(vh - 12.0f));
+        icon->setPosition(X(slotX), Y(vh - 12.0f));
         icon->setVisible(false);
         _root->addChild(icon);
         _gearIcons[static_cast<size_t>(i)] = icon;
+
+        pix::Text* level = _factory->createText();
+        level->setFontSize(9.0f);
+        level->setColor(0xffffff, 0x000000, 1.0f, false);
+        level->setAnchor(0.0f, 1.0f);
+        level->setPosition(X(slotX), Y(vh - 40.0f));
+        level->setVisible(false);
+        _root->addChild(level);
+        _gearLevelText[static_cast<size_t>(i)] = level;
+
+        // Root-space hit rect (icons are 26 px atlas art, 32 px pitch).
+        _gearRects[static_cast<size_t>(i)] =
+            Rect{X(slotX), Y(vh - 12.0f) - 28.0f, 30.0f, 30.0f};
     }
 
     // Squad bars (#ui-top-left / FguiHud::buildSquadBars): name, health bar,
@@ -703,6 +726,14 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         row.status->setAnchor(0.0f, 1.0f);
         row.status->setPosition(X(squadX + 124.0f), Y(rowY));
         _root->addChild(row.status);
+        // ui-team-member-color: fixed group color for this squad slot
+        // (GameConfig.groupColors: yellow, magenta, cyan, orange).
+        row.colorDot = _factory->createGraphics();
+        row.colorDot->beginFill(kGroupColors[i], 1.0f);
+        row.colorDot->drawCircle(X(squadX + 150.0f), Y(rowY - 8.0f), 6.0f);
+        row.colorDot->endFill();
+        row.colorDot->setVisible(false);
+        _root->addChild(row.colorDot);
         row.name->setVisible(false);
         row.barBg->setVisible(false);
         row.barFill->setVisible(false);
@@ -813,10 +844,17 @@ void Hud::setVisible(bool visible) {
         if (row.status) {
             row.status->setVisible(showRow);
         }
+        if (row.colorDot) {
+            row.colorDot->setVisible(showRow);
+        }
     }
     for (size_t i = 0; i < _gearIcons.size(); ++i) {
         if (_gearIcons[i]) {
             _gearIcons[i]->setVisible(visible && !_gearFrames[i].empty());
+        }
+        if (_gearLevelText[i]) {
+            _gearLevelText[i]->setVisible(
+                visible && !_gearFrames[i].empty() && _gearSlots[i].level > 0);
         }
     }
     const bool over = visible && (_overShown || _deathShown);
@@ -1007,6 +1045,9 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
             row.barBg->setVisible(false);
             row.barFill->setVisible(false);
             row.status->setVisible(false);
+            if (row.colorDot) {
+                row.colorDot->setVisible(false);
+            }
             row.key.clear();
             continue;
         }
@@ -1028,6 +1069,14 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
         row.key = key;
         row.name->setText(m.name.empty() ? "Player" : m.name);
         row.status->setText(status);
+        // ui.ts: disconnected/dead names fade to 30%; downed status pulses
+        // (the pulse colour itself is advanced in update()).
+        row.name->setAlpha(m.disconnected || m.dead ? 0.3f : 1.0f);
+        row.status->setColor(m.downed ? 0xffaa00 : 0xffd060, 0x000000, 1.0f, false);
+        if (row.colorDot) {
+            row.colorDot->setAlpha(1.0f);
+            row.colorDot->setVisible(_visible);
+        }
         const uint32_t color = m.dead ? 0x444444 : (m.downed ? 0xffaa00 : 0x4caf50);
         const float fillWidth = 120.0f * static_cast<float>(health) / 100.0f;
         row.barFill->clear();
@@ -1041,33 +1090,71 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
         row.barBg->setVisible(showRow);
         row.barFill->setVisible(showRow && fillWidth > 0.0f);
         row.status->setVisible(showRow);
+        if (row.colorDot) {
+            row.colorDot->setVisible(showRow);
+        }
     }
 }
 
 void Hud::setGearState(const std::vector<std::string>& frames) {
+    std::vector<GearSlot> slots;
+    slots.reserve(frames.size());
+    for (const auto& frame : frames) {
+        GearSlot slot;
+        slot.frame = frame;
+        slots.push_back(std::move(slot));
+    }
+    setGearSlots(slots);
+}
+
+void Hud::setGearSlots(const std::vector<GearSlot>& slots) {
     if (!_built) {
         return;
     }
     for (size_t i = 0; i < _gearIcons.size(); ++i) {
-        const std::string frame = i < frames.size() ? frames[i] : std::string();
-        const bool changed = frame != _gearFrames[i];
-        _gearFrames[i] = frame;
+        GearSlot slot = i < slots.size() ? slots[i] : GearSlot{};
+        const bool changed = slot.frame != _gearFrames[i];
+        _gearFrames[i] = slot.frame;
+        _gearSlots[i] = slot;
         pix::Sprite* icon = _gearIcons[i];
+        pix::Text* level = _gearLevelText[i];
+        if (level) {
+            if (slot.level > 0 && !slot.frame.empty()) {
+                level->setText("Lvl. " + std::to_string(slot.level));
+                const uint32_t color =
+                    slot.level >= 4 ? 0xb30000u : (slot.level == 3 ? 0xff9900u : 0xffffffu);
+                level->setColor(color, 0x000000, 1.0f, false);
+                level->setVisible(_visible);
+            } else {
+                level->setVisible(false);
+            }
+        }
         if (!icon) {
             continue;
         }
-        if (frame.empty()) {
+        if (slot.frame.empty()) {
             icon->setVisible(false);
             continue;
         }
         if (changed) {
-            icon->setFrame(frame);
+            icon->setFrame(slot.frame);
             const float source = std::max(icon->sourceWidth(), icon->sourceHeight());
             const float size = source > 0.0f ? 26.0f / source : 1.0f;
             icon->setScale(size, size);
         }
         icon->setVisible(_visible);
     }
+}
+
+const std::string& Hud::gearType(int idx) const {
+    static const std::string empty;
+    return (idx >= 0 && idx < kGearIconCount) ? _gearSlots[static_cast<size_t>(idx)].type : empty;
+}
+
+bool Hud::gearDroppable(int idx) const {
+    return idx >= 0 && idx < kGearIconCount && _gearSlots[static_cast<size_t>(idx)].droppable &&
+        !_gearSlots[static_cast<size_t>(idx)].type.empty() &&
+        !_gearFrames[static_cast<size_t>(idx)].empty();
 }
 
 void Hud::setGasState(const GasHudState& gas) {
@@ -1657,6 +1744,22 @@ void Hud::update(float dt, const Game& game, bool visible) {
                 row->setColor(0xffc896, 0x000000, 1.0f, false);
             }
             row->setVisible(_visible && !_bigMapVisible);
+        }
+    }
+
+    // ui-team-member-status-downed `icon-pulse` (2s black -> red -> black).
+    _squadPulseTicker += dt;
+    const float pulseT = 0.5f - 0.5f * std::cos(3.14159265358979f * _squadPulseTicker);
+    const uint32_t pulseColor = static_cast<uint32_t>(0x22 + (0xff - 0x22) * pulseT) << 16;
+    for (size_t i = 0; i < _squad.size(); ++i) {
+        SquadRow& row = _squad[i];
+        if (i < _squadState.size() && _squadState[i].downed) {
+            if (row.status) {
+                row.status->setColor(pulseColor, 0x000000, 1.0f, false);
+            }
+            if (row.colorDot) {
+                row.colorDot->setAlpha(0.55f + 0.45f * pulseT);
+            }
         }
     }
 }
