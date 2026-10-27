@@ -4,13 +4,13 @@
 // The web client uses the SVG as a CSS cursor: white fill replaced by the
 // configured colour, stroke-width replaced by the configured stroke, and the
 // 64x64 art scaled by `size`. Native draws a screen-space sprite with a tint
-// and scale, so this script bakes the three stroke buckets the Java editor
-// exposes (0/1/2) at 4x resolution.
+// and scale, so this script bakes the stroke slider's 0.0..1.5 range in 0.25
+// steps (7 buckets; the frame index is round(stroke * 4)) at 4x resolution.
 //
 // Usage:
 //   node --experimental-transform-types tools/build-crosshair-icons.mjs [--out <dir>]
 //
-// Output: Content/gui/crosshair/<type>_s<stroke>.png
+// Output: Content/gui/crosshair/<type>_s<strokeBucket>.png (bucket 0..6)
 import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import * as path from "node:path";
@@ -37,7 +37,7 @@ function argValue(name, fallback) {
 }
 const outRoot = path.resolve(argValue("--out", path.join(root, "Content", "gui", "crosshair")));
 const scale = 4; // 64px art -> 256px texture
-const strokes = [0, 1, 2];
+const strokes = [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5];
 
 fs.mkdirSync(outRoot, { recursive: true });
 
@@ -45,9 +45,9 @@ let count = 0;
 for (const [type, def] of Object.entries(CrosshairDefs)) {
     const code = String(def.code || "");
     if (!code) continue;
-    for (const stroke of strokes) {
-        const svg = code.replace(/stroke-width="\.5"/g, `stroke-width="${stroke}"`);
-        const png = path.join(outRoot, `${type}_s${stroke}.png`);
+    for (let bucket = 0; bucket < strokes.length; bucket++) {
+        const svg = code.replace(/stroke-width="\.5"/g, `stroke-width="${strokes[bucket]}"`);
+        const png = path.join(outRoot, `${type}_s${bucket}.png`);
         await sharp(Buffer.from(svg), { density: 72 * scale })
             .resize(64 * scale, 64 * scale, {
                 fit: "contain",

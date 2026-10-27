@@ -34,7 +34,9 @@ sixteenth adds the menu character preview (outfit/melee layers, live loadout
 polling, idle bob + right-hand swing). The seventeenth adds NDK crash capture and
 native asset-error reports. The twenty-second adds the keybind remap editor and
 the web-compatible bind code. The twenty-third adds the pass reward art and
-level-up pulse plus the profile stats link. **219 host tests pass, 0 fail.**
+level-up pulse plus the profile stats link. The twenty-fourth completes the
+crosshair editor (hex colour + web-range size/stroke sliders, seven stroke
+buckets). **219 host tests pass, 0 fail.**
 
 ---
 
@@ -117,7 +119,7 @@ level-up pulse plus the profile stats link. **219 host tests pass, 0 fail.**
 | `client/src/ui/pieTimer.ts` (action progress circle) | ✅ arc/countdown + `RELOADING`/`USING`/`REVIVING` labels from the active player action (P1.4) |
 | `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ✅ `ProfileFragment` + `PassFragment` (real level/XP, quest reroll); the pass screen shows the next unlock's art (outfit tint), category icon/title and the level-up pulse, and the profile `/stats/?slug=` link opens the web stats page |
 | `client/src/account.ts` | ✅ Java `AccountManager` + `SurvApi` device login/session/profile/username/logout/reset/delete/loadout push, item-status ack/confirm and pass `newItems` profile reload; OAuth/linking intentionally N/A |
-| `client/src/crosshair.ts` (custom crosshair) | 🔶 sprite pipeline good; editor offers 7 colours/3 sizes/3 strokes and no type picker (P1.7) |
+| `client/src/crosshair.ts` (custom crosshair) | ✅ sprite pipeline good; the editor has the 30-type picker, 7 colour swatches + the web's hex input, and size (0.25..1.0) / stroke (0..1.5) sliders; the sprite bakes the stroke in 0.25 steps (7 buckets) |
 | `client/src/pingTest.ts` (pre-game latency check) | ✅ `net/PingTest` (echo cadence/retry/complete + `bestRegion`/zones, host-tested); the probe list comes from `net/Regions` (`tools/codegen_regions.mjs`, the native `PING_TEST_URLS`), and the Java menu shows the ms and auto-selects the closest region |
 | `client/src/errorLogs.ts` (client error reporting) | ✅ `net/ErrorLog` (sample/budget/throttle host-tested), Java uncaught-exception reporting in `AppActivity`, NDK signal capture (`NativeCrash.cpp` writes a PC backtrace reported on the next launch) and C++ `mapDefMissing`/`atlasMissing` reports; `debug.surv_debug=1` sends a startup probe, `debug.surv_crash=1` exercises the native handler |
 | `client/src/account.ts` / `proxy.ts` | 🔶 device login/session/profile (see above); `proxy.ts` is web-only |
@@ -901,6 +903,31 @@ Done in the twenty-third P2 pass (2026-10-27):
   tests, 0 failures. The level-up pulse itself needs an actual level gain (not
   exercised on-device).
 
+Done in the twenty-fourth P2 pass (2026-10-27):
+- Crosshair editor parity (`ui/loadoutMenu.ts` #modal-content-right-crosshair):
+  the Java Scope tab now matches the web controls instead of 3 presets.
+  - Colour: the 7 swatches stay as shortcuts, plus the web's `#RRGGBB` text
+    input (`#color-picker-hex`) applied on Done/focus loss; an unknown colour
+    reverts to the current value. The custom colour is written to the nested
+    `crosshair.color` (the C++ validator already accepts hex or a number).
+  - Size: a SeekBar over the web range 0.25..1.0 (step 0.01) instead of
+    Small/Medium/Large (the old 0.7/1.0/1.4 values are clamped into the range
+    when an existing config is loaded).
+  - Stroke: a SeekBar over the web range 0.0..1.5 in 0.25 steps.
+    `tools/build-crosshair-icons.mjs` now bakes seven stroke buckets
+    (`<type>_s0..s6`) and `GameScene` selects `round(stroke * 4)`, so the
+    in-game sprite follows the slider (the old three buckets quantized 1.0/2.0
+    to the same art).
+  - Host test extended (`ui_loadout_crosshair_validation`): the web slider
+    ranges round-trip through `ui::Loadout` (size 0.25 / stroke 1.5 / custom
+    hex). 3727 assertions / 219 tests.
+  - Device check (x86_64 emulator): the Scope editor accepted `#12AB34`, size
+    0.63 and stroke 1.25; after a restart the match logged
+    "[ui] crosshair type=crosshair_default color=12ab34 size=0.63 stroke=1.25
+    frame=gui/crosshair/crosshair_default_s5.png found=1" and the green crosshair
+    rendered at the screen centre. The editor was reset to white / size 1.00 /
+    stroke 0.00 afterwards.
+
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
   and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
@@ -1080,7 +1107,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - Building `soundEmitters` are owned by `Building`: created on `isNew`, stopped in `m_free()` via the cached `audioOwner`, and updated at 10 Hz with `setVolume(..., "sound")`
 - Per-source EQ is an axmol patch: re-vendoring **must** run `tools/vendor-axmol.ps1` (which calls `patch-axmol-audio-filter.ps1`) or `AudioEngine::setFilterProperties` disappears; `audio/AudioFilter.h` maps muffled/club to the EFX low-pass
 - Android has **no C++ MenuScene** (`installUiBridge(nullptr, gameScene)`): bridge config/name/loadout/crosshair writes use the standalone `UserDefaultConfigStorage` Config, and `joinUrls` must set the `Game` join info via `_game->getGame()`; `GameScene::enterWithJoin` must not overwrite it
-- Crosshair sprites come from `Content/gui/crosshair/<type>_s<0|1|2>.png` (`build-crosshair-icons.mjs`, staged by `sync-content.ps1`); the nested `crosshair` config shape wins over stale flat keys
+- Crosshair sprites come from `Content/gui/crosshair/<type>_s<0..6>.png` (`build-crosshair-icons.mjs`, staged by `sync-content.ps1`): seven 0.25 stroke steps over the web slider's 0.0..1.5 range, frame index `round(stroke * 4)`. The Java Scope editor writes the web float ranges (size 0.25..1.0, stroke 0..1.5) and a hex colour; the nested `crosshair` config shape wins over stale flat keys
 - `AudioManager` resolves `filter` like the web (different layer or `forceFilter` → EQ, otherwise `reverb`); the app-only backend trace is enabled with `debug.surv_debug=1` and prints `[audio] play ... filter=...`
 - `SurvevMobile-debug.apk.idsig` is a tracked build artifact refreshed by every
   `build-apk.ps1` run; commit the refreshed file along with the build.

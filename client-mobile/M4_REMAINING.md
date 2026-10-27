@@ -1955,8 +1955,9 @@ partial), which replaced the whole loadout and was ignored by the validator.
 ### 32.3 Crosshair rendering
 
 - `tools/build-crosshair-icons.mjs` rasterizes all 30 `CrosshairDefs` styles
-  into `Content/gui/crosshair/<type>_s<0|1|2>.png` (the three stroke buckets),
-  wired into `tools/sync-content.ps1`.
+  into `Content/gui/crosshair/<type>_s<0..6>.png` (the stroke slider's
+  0.0..1.5 range in 0.25 steps; frame index `round(stroke * 4)`), wired into
+  `tools/sync-content.ps1`.
 - `GameScene` draws the selected style as a screen-space sprite at the viewport
   centre, tinted by `crosshairColor`, scaled from `size` (64px * size *
   screenHeight/720), with the old two-bar `Graphics` fallback when the icon is

@@ -1933,8 +1933,10 @@ void GameScene::update(float delta) {
     // (64 px art: 32 px long, 4 px thick).
     if (_world && _pixiFactory && isStarted() && _game->isPlaying() && _game->hasJoined()) {
         const Game::JoinInfo& join = _game->getJoinInfo();
+        // The web stroke slider is 0.0..1.5; Content/gui/crosshair bakes 0.25
+        // steps (7 buckets), so the frame index is round(stroke * 4).
         const int strokeBucket =
-            std::clamp(static_cast<int>(std::lround(join.crosshairStroke)), 0, 2);
+            std::clamp(static_cast<int>(std::lround(join.crosshairStroke * 4.0f)), 0, 6);
         const std::string frame = "gui/crosshair/" + join.crosshairType + "_s" +
             std::to_string(strokeBucket) + ".png";
         const bool hasFrame = ax::FileUtils::getInstance()->isFileExist(frame);

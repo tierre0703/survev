@@ -260,6 +260,20 @@ TEST(ui_loadout_crosshair_validation) {
     CHECK(crosshair->get("color") != nullptr && crosshair->get("color")->isNumber());
     CHECK_EQ(crosshair->get("size")->asString(), std::string("0.70"));
     CHECK_EQ(crosshair->get("stroke")->asString(), std::string("2.00"));
+
+    // The Java editor now uses the web slider ranges (size 0.25..1.0, stroke
+    // 0..1.5 in 0.25 steps); they must round-trip exactly (the in-game sprite
+    // picks round(stroke * 4) from the seven baked buckets).
+    CHECK(ui::JsonParser::parse(
+        R"({"crosshair":{"type":"crosshair_005","color":"#123456","size":0.25,"stroke":1.5}})",
+        parsed));
+    config.setJson("loadout", parsed);
+    ui::Loadout webRange(&config);
+    const auto webJoin = webRange.joinInfo();
+    CHECK_EQ(webJoin.crosshairType, std::string("crosshair_005"));
+    CHECK_EQ(webJoin.crosshairColor, 0x123456u);
+    CHECK_NEAR(webJoin.crosshairSize, 0.25f, 1e-4f);
+    CHECK_NEAR(webJoin.crosshairStroke, 1.5f, 1e-4f);
 }
 
 TEST(ui_json_parses_values) {

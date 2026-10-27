@@ -22,16 +22,19 @@ import android.graphics.ColorMatrixColorFilter;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.text.InputType;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import com.google.gson.JsonArray;
@@ -94,8 +97,11 @@ public class LoadoutFragment {
     private final LinearLayout mColorPickerRow;
     private final Button[] mColorButtons;
     private String mCrosshairType = "crosshair_default";
-    private final Button mSizeBtn;
-    private final Button mStrokeBtn;
+    private SeekBar mSizeSlider;
+    private SeekBar mStrokeSlider;
+    private TextView mSizeValue;
+    private TextView mStrokeValue;
+    private EditText mColorHex;
 
     // --- state ---
     private String[] mCategories = {"outfit", "melee", "emote", "heal", "boost", "player_icon", "crosshair"};
@@ -109,14 +115,19 @@ public class LoadoutFragment {
     // Real shared/defs items (owned by this account), refreshed on each show.
     private final List<ItemEntry> mItems = new ArrayList<ItemEntry>();
     
-    // Crosshair state
-    private int mCrosshairColorIdx = 0; // default red
-    private int mCrosshairSize = 1;     // 0=small, 1=medium, 2=large
-    private int mCrosshairStroke = 1;   // 0=thin, 1=medium, 2=thick
-    
+    // Crosshair state (web config.ts: color int, size 0.25..1.0, stroke 0..1.5;
+    // the editor exposes the same ranges as the web sliders, and the in-game
+    // sprite bakes 0.25 stroke steps in Content/gui/crosshair).
+    private int mCrosshairColor = 0xFFFFFF; // web default (white)
+    private float mCrosshairSize = 1.0f;
+    private float mCrosshairStroke = 0.0f;
+
+    private static final float CROSSHAIR_SIZE_MIN = 0.25f;
+    private static final float CROSSHAIR_SIZE_MAX = 1.0f;
+    private static final float CROSSHAIR_STROKE_MAX = 1.5f;
+    private static final int CROSSHAIR_STROKE_STEPS = 6; // 0.25 per step
+
     private static final String[] CROSSHAIR_COLORS = {"#FF0000", "#00FF00", "#0000FF", "#00FFFF", "#FF00FF", "#FFFF00", "#FFFFFF"};
-    private static final String[] SIZE_LABELS = {"Small", "Medium", "Large"};
-    private static final String[] STROKE_LABELS = {"Thin", "Medium", "Thick"};
 
     // Callback for when the loadout changes (C++ validator round-trip).
     private OnChangedListener mOnChanged;
@@ -298,7 +309,8 @@ public class LoadoutFragment {
             mColorButtons[i].setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mCrosshairColorIdx = idx;
+                    mCrosshairColor = Color.parseColor(CROSSHAIR_COLORS[idx]);
+                    if (mColorHex != null) mColorHex.setText(crosshairColorHex(mCrosshairColor));
                     updateCrosshairPreview();
                     updateColorSelection();
                     saveCrosshairSettings();
@@ -308,46 +320,73 @@ public class LoadoutFragment {
         }
         mCrosshairEditor.addView(mColorPickerRow);
         
-        // Size button
-        LinearLayout sizeRow = new LinearLayout(activity);
-        sizeRow.setOrientation(LinearLayout.HORIZONTAL);
-        TextView sizeLbl = new TextView(activity);
-        sizeLbl.setText("Size:");
-        sizeLbl.setTextColor(Color.WHITE);
-        sizeLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        sizeRow.addView(sizeLbl);
-        mSizeBtn = makeSmallButton("Medium");
-        mSizeBtn.setOnClickListener(new View.OnClickListener() {
+        // Hex colour input (web #color-picker-hex): any #RRGGBB, applied on
+        // Done/focus loss. The swatches above stay as shortcuts.
+        LinearLayout hexRow = new LinearLayout(activity);
+        hexRow.setOrientation(LinearLayout.HORIZONTAL);
+        hexRow.setGravity(Gravity.CENTER_VERTICAL);
+        hexRow.setPadding(0, dp(4), 0, dp(2));
+        TextView hexLbl = new TextView(activity);
+        hexLbl.setText("Color:");
+        hexLbl.setTextColor(Color.WHITE);
+        hexLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        hexRow.addView(hexLbl);
+        mColorHex = new EditText(activity);
+        mColorHex.setSingleLine(true);
+        mColorHex.setInputType(InputType.TYPE_CLASS_TEXT);
+        mColorHex.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        mColorHex.setTextColor(Color.WHITE);
+        mColorHex.setHint("#RRGGBB");
+        mColorHex.setHintTextColor(0xFF888888);
+        LinearLayout.LayoutParams hexLp = new LinearLayout.LayoutParams(dp(100), dp(40));
+        hexLp.setMargins(dp(6), 0, 0, 0);
+        hexRow.addView(mColorHex, hexLp);
+        mColorHex.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
-            public void onClick(View v) {
-                mCrosshairSize = (mCrosshairSize + 1) % 3;
-                mSizeBtn.setText(SIZE_LABELS[mCrosshairSize]);
-                updateCrosshairPreview();
-                saveCrosshairSettings();
+            public boolean onEditorAction(TextView v, int actionId, android.view.KeyEvent event) {
+                applyHexColor();
+                return true;
             }
         });
-        sizeRow.addView(mSizeBtn);
+        mColorHex.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override public void onFocusChange(View v, boolean hasFocus) {
+                if (!hasFocus) applyHexColor();
+            }
+        });
+        mCrosshairEditor.addView(hexRow);
+
+        // Size slider: web #crosshair-size (0.25..1.0, step 0.01 here).
+        LinearLayout sizeRow = makeSliderRow("Size", 75,
+                Math.round((mCrosshairSize - CROSSHAIR_SIZE_MIN) * 100));
+        mSizeValue = (TextView) sizeRow.getChildAt(1);
+        mSizeValue.setText(String.format("%.2f", mCrosshairSize));
+        mSizeSlider = (SeekBar) sizeRow.getChildAt(2);
+        mSizeSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                mCrosshairSize = CROSSHAIR_SIZE_MIN + progress / 100f;
+                mSizeValue.setText(String.format("%.2f", mCrosshairSize));
+                if (fromUser) updateCrosshairPreview();
+            }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) { saveCrosshairSettings(); }
+        });
         mCrosshairEditor.addView(sizeRow);
-        
-        // Stroke button
-        LinearLayout strokeRow = new LinearLayout(activity);
-        strokeRow.setOrientation(LinearLayout.HORIZONTAL);
-        TextView strokeLbl = new TextView(activity);
-        strokeLbl.setText("Stroke:");
-        strokeLbl.setTextColor(Color.WHITE);
-        strokeLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        strokeRow.addView(strokeLbl);
-        mStrokeBtn = makeSmallButton("Medium");
-        mStrokeBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mCrosshairStroke = (mCrosshairStroke + 1) % 3;
-                mStrokeBtn.setText(STROKE_LABELS[mCrosshairStroke]);
-                updateCrosshairPreview();
-                saveCrosshairSettings();
+
+        // Stroke slider: web #crosshair-stroke (0..1.5); the sprite has 0.25 steps.
+        LinearLayout strokeRow = makeSliderRow("Stroke", CROSSHAIR_STROKE_STEPS,
+                Math.round(mCrosshairStroke * 4.0f));
+        mStrokeValue = (TextView) strokeRow.getChildAt(1);
+        mStrokeValue.setText(String.format("%.2f", mCrosshairStroke));
+        mStrokeSlider = (SeekBar) strokeRow.getChildAt(2);
+        mStrokeSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                mCrosshairStroke = progress / 4.0f;
+                mStrokeValue.setText(String.format("%.2f", mCrosshairStroke));
+                if (fromUser) updateCrosshairPreview();
             }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) { saveCrosshairSettings(); }
         });
-        strokeRow.addView(mStrokeBtn);
         mCrosshairEditor.addView(strokeRow);
         
         panel.addView(mCrosshairEditor);
@@ -534,27 +573,30 @@ public class LoadoutFragment {
                 }
             }
             if (chColor != null) {
-                for (int i = 0; i < CROSSHAIR_COLORS.length; i++) {
-                    if (CROSSHAIR_COLORS[i].equalsIgnoreCase(chColor)) {
-                        mCrosshairColorIdx = i;
-                        break;
-                    }
+                try {
+                    mCrosshairColor = Color.parseColor(chColor);
+                } catch (Exception ignored) {
+                    mCrosshairColor = 0xFFFFFF;
                 }
+            } else {
+                mCrosshairColor = 0xFFFFFF;
             }
-            double[] sizes = {0.7, 1.0, 1.4};
-            double[] strokes = {0.0, 1.0, 2.0};
-            mCrosshairSize = 1;
-            for (int i = 0; i < sizes.length; i++) {
-                if (Math.abs(chSize - sizes[i]) < 0.2) mCrosshairSize = i;
-            }
-            mCrosshairStroke = 1;
-            for (int i = 0; i < strokes.length; i++) {
-                if (Math.abs(chStroke - strokes[i]) < 0.5) mCrosshairStroke = i;
-            }
+            // Clamp old editor values (0.7/1.4 size, 0/1/2 stroke) into the web
+            // slider ranges; saving then stores the web-compatible floats.
+            mCrosshairSize = (float) Math.max(CROSSHAIR_SIZE_MIN,
+                    Math.min(CROSSHAIR_SIZE_MAX, chSize));
+            mCrosshairStroke = (float) Math.max(0.0, Math.min(CROSSHAIR_STROKE_MAX, chStroke));
 
-            mSizeBtn.setText(SIZE_LABELS[mCrosshairSize]);
-            mStrokeBtn.setText(STROKE_LABELS[mCrosshairStroke]);
             if (!selectedType.isEmpty()) mCrosshairType = selectedType;
+            if (mColorHex != null) mColorHex.setText(crosshairColorHex(mCrosshairColor));
+            if (mSizeSlider != null) {
+                mSizeSlider.setProgress(Math.round((mCrosshairSize - CROSSHAIR_SIZE_MIN) * 100));
+                mSizeValue.setText(String.format("%.2f", mCrosshairSize));
+            }
+            if (mStrokeSlider != null) {
+                mStrokeSlider.setProgress(crosshairStrokeBucket(mCrosshairStroke));
+                mStrokeValue.setText(String.format("%.2f", mCrosshairStroke));
+            }
             updateCrosshairPreview();
             updateColorSelection();
         } else if ("emote".equals(cat)) {
@@ -914,41 +956,49 @@ public class LoadoutFragment {
     }
     
     // --- Crosshair helpers ---
-    
+
+    private static int crosshairStrokeBucket(float stroke) {
+        int bucket = Math.round(stroke * 4.0f);
+        return Math.max(0, Math.min(CROSSHAIR_STROKE_STEPS, bucket));
+    }
+
+    private static String crosshairColorHex(int color) {
+        return String.format("#%06X", color & 0xFFFFFF);
+    }
+
     private void updateCrosshairPreview() {
-        // Bake stroke buckets are generated for the in-game sprite; reuse the
-        // same art here so the preview matches the selected stroke.
+        // Stroke buckets are generated for the in-game sprite (0.25 steps); reuse
+        // the same art here so the preview matches the selected stroke.
         Bitmap bitmap = loadAssetBitmap(
-                "gui/crosshair/" + mCrosshairType + "_s" + mCrosshairStroke + ".png", 2);
+                "gui/crosshair/" + mCrosshairType + "_s" + crosshairStrokeBucket(mCrosshairStroke) + ".png", 2);
         if (bitmap == null) {
             bitmap = loadItemBitmap(mCrosshairType);
         }
         mCrosshairPreview.setImageBitmap(bitmap);
-        int color = Color.parseColor(CROSSHAIR_COLORS[mCrosshairColorIdx]);
         if (bitmap != null) {
             ColorMatrix matrix = new ColorMatrix(new float[] {
-                    Color.red(color) / 255f, 0, 0, 0, 0,
-                    0, Color.green(color) / 255f, 0, 0, 0,
-                    0, 0, Color.blue(color) / 255f, 0, 0,
+                    Color.red(mCrosshairColor) / 255f, 0, 0, 0, 0,
+                    0, Color.green(mCrosshairColor) / 255f, 0, 0, 0,
+                    0, 0, Color.blue(mCrosshairColor) / 255f, 0, 0,
                     0, 0, 0, 1, 0,
             });
             mCrosshairPreview.setColorFilter(new ColorMatrixColorFilter(matrix));
         } else {
             mCrosshairPreview.clearColorFilter();
         }
-        float[] sizeMult = {0.7f, 1.0f, 1.4f};
-        float scale = sizeMult[mCrosshairSize];
+        // Web getCrosshairDims: the art is 64px * size (0.25..1.0).
+        float scale = Math.max(0.25f, mCrosshairSize);
         mCrosshairPreview.setScaleX(scale);
         mCrosshairPreview.setScaleY(scale);
     }
-    
+
     private void updateColorSelection() {
         for (int i = 0; i < mColorButtons.length; i++) {
             // Add border effect for selected
             GradientDrawable bg = new GradientDrawable();
             bg.setColor(Color.parseColor(CROSSHAIR_COLORS[i]));
             bg.setCornerRadius(dp(10));
-            if (i == mCrosshairColorIdx) {
+            if (Color.parseColor(CROSSHAIR_COLORS[i]) == mCrosshairColor) {
                 bg.setStroke(dp(3), Color.WHITE);
             } else {
                 bg.setStroke(dp(1), 0xFF666666);
@@ -956,17 +1006,32 @@ public class LoadoutFragment {
             mColorButtons[i].setBackground(bg);
         }
     }
-    
+
+    /** Web #color-picker-hex: applies a typed #RRGGBB colour (invalid input is ignored). */
+    private void applyHexColor() {
+        if (mColorHex == null) return;
+        String text = mColorHex.getText() != null ? mColorHex.getText().toString().trim() : "";
+        if (text.startsWith("#")) text = text.substring(1);
+        if (!text.matches("[0-9a-fA-F]{6}")) {
+            mColorHex.setText(crosshairColorHex(mCrosshairColor));
+            return;
+        }
+        mCrosshairColor = 0xFF000000 | Integer.parseInt(text, 16);
+        mColorHex.setText(crosshairColorHex(mCrosshairColor));
+        mColorHex.clearFocus();
+        updateColorSelection();
+        updateCrosshairPreview();
+        saveCrosshairSettings();
+    }
+
     private void saveCrosshairSettings() {
         // Send only the crosshair object; the C++ bridge merges it into the
-        // current loadout (outfit/emotes/etc. must not be replaced) and maps
-        // the editor's 0..2 indices to the web's float size/stroke.
-        float sizeValues[] = {0.7f, 1.0f, 1.4f};
-        float strokeValues[] = {0.0f, 1.0f, 2.0f};
+        // current loadout (outfit/emotes/etc. must not be replaced). Values are
+        // the web config.ts floats (size 0.25..1.0, stroke 0..1.5).
         StringBuilder json = new StringBuilder();
-        json.append("{\"crosshair\":{\"color\":\"").append(CROSSHAIR_COLORS[mCrosshairColorIdx]).append("\"");
-        json.append(",\"size\":").append(sizeValues[mCrosshairSize]);
-        json.append(",\"stroke\":").append(strokeValues[mCrosshairStroke]);
+        json.append("{\"crosshair\":{\"color\":\"").append(crosshairColorHex(mCrosshairColor)).append("\"");
+        json.append(",\"size\":").append(String.format(java.util.Locale.US, "%.2f", mCrosshairSize));
+        json.append(",\"stroke\":").append(String.format(java.util.Locale.US, "%.2f", mCrosshairStroke));
         json.append("}}");
         SurvBridge.setLoadout(json.toString());
     }
@@ -1216,6 +1281,34 @@ public class LoadoutFragment {
         btn.setPadding(dp(6), dp(2), dp(6), dp(2));
         btn.setSingleLine(true);
         return btn;
+    }
+
+    /** Label | value | SeekBar row (web `.crosshair-slider-container`). */
+    private LinearLayout makeSliderRow(String label, int max, int progress) {
+        LinearLayout row = new LinearLayout(mActivity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(2), 0, dp(2));
+
+        TextView lbl = new TextView(mActivity);
+        lbl.setText(label);
+        lbl.setTextColor(Color.WHITE);
+        lbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        lbl.setLayoutParams(new LinearLayout.LayoutParams(dp(56), ViewGroup.LayoutParams.WRAP_CONTENT));
+        row.addView(lbl);
+
+        TextView value = new TextView(mActivity);
+        value.setTextColor(0xFF83AF50);
+        value.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        value.setLayoutParams(new LinearLayout.LayoutParams(dp(40), ViewGroup.LayoutParams.WRAP_CONTENT));
+        row.addView(value);
+
+        SeekBar slider = new SeekBar(mActivity);
+        slider.setMax(Math.max(1, max));
+        slider.setProgress(Math.max(0, Math.min(max, progress)));
+        slider.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        row.addView(slider);
+        return row;
     }
 
     private int dp(int value) {

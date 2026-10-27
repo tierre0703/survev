@@ -20,7 +20,8 @@ Write-Host 'Rasterizing GUI icons (Content/gui)...'
 if ($LASTEXITCODE -ne 0) { throw "build-gui-icons.mjs failed ($LASTEXITCODE)" }
 
 # Crosshair styles are inline SVG in shared/defs (not public/img); rasterize
-# each style's three stroke buckets for the screen-space crosshair sprite.
+# each style's seven stroke buckets (0.0..1.5 in 0.25 steps) for the
+# screen-space crosshair sprite.
 Write-Host 'Rasterizing crosshair icons (Content/gui/crosshair)...'
 & node --experimental-transform-types (Join-Path $PSScriptRoot 'build-crosshair-icons.mjs')
 if ($LASTEXITCODE -ne 0) { throw "build-crosshair-icons.mjs failed ($LASTEXITCODE)" }
