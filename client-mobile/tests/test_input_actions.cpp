@@ -7,6 +7,7 @@
 #include "../src/game/Hud.h"
 #include "../src/game/InputActions.h"
 #include "../src/net/generatedDefs.inc"
+#include "../src/render/GeneratedDefs.h"
 #include "../src/render/NullPixi.h"
 
 #include <algorithm>
@@ -481,4 +482,79 @@ TEST(hud_local_kill_feed_and_toast) {
     auto* toast = static_cast<const pix::NullText*>(hud.pickupMessageText());
     CHECK(toast != nullptr);
     CHECK(toast->text.find("YOU KILLED") != std::string::npos);
+}
+
+TEST(hud_perk_role_menu_selects_and_confirms) {
+    installGeneratedDefs();
+    const DefProvider* defs = getDefProvider();
+    const MapRenderDef* cobalt = defs->mapRender("cobalt");
+    CHECK(cobalt != nullptr);
+    CHECK(cobalt->perkMode);
+    CHECK_EQ(cobalt->perkModeRoles.size(), static_cast<size_t>(6));
+    CHECK_EQ(cobalt->perkModeRoles[0], std::string("scout"));
+    const RoleRenderDef* healer = defs->role("healer");
+    CHECK(healer != nullptr);
+    CHECK_EQ(healer->guiImg, std::string("gui/role-healer.png"));
+    CHECK_EQ(healer->perks.size(), static_cast<size_t>(2));
+    CHECK_EQ(healer->perks[0], std::string("field_medic"));
+    CHECK_EQ(healer->perkNames[0], std::string("Combat Medic"));
+    CHECK(healer->hasColor);
+
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.setVisible(true);
+
+    // ui.ts setRoleMenuOptions: the saved config role wins when it is in the
+    // map's list, otherwise roles[0] ("scout") is displayed.
+    hud.setRoleMenuOptions("healer", cobalt->perkModeRoles);
+    CHECK_EQ(hud.roleMenuOptionCount(), 6);
+    CHECK_EQ(hud.roleMenuDisplayed(), std::string("healer"));
+    hud.setRoleMenuActive(true);
+    CHECK(hud.roleMenuActive());
+
+    auto* name = static_cast<const pix::NullText*>(hud.roleNameText());
+    CHECK(name != nullptr);
+    CHECK_EQ(name->text, std::string("Medic"));
+    auto* perk0 = static_cast<const pix::NullText*>(hud.rolePerkNameText(0));
+    CHECK(perk0 != nullptr);
+    CHECK_EQ(perk0->text, std::string("Combat Medic"));
+    auto* footer = static_cast<const pix::NullText*>(hud.roleFooterText());
+    CHECK(footer != nullptr);
+    CHECK_EQ(footer->text, std::string("ENTER GAME (20)"));
+
+    // Class options are 160x160 at 20 px margins, centred in the header; the
+    // panel is 0.8x at 1280x720 (web min(1, w/1200, h/900)).
+    int option = -1;
+    CHECK(hud.roleMenuActionAt(280.0f, 588.0f, option) == Hud::RoleTap::Option);
+    CHECK_EQ(option, 0);
+    hud.selectRoleOption(option);
+    CHECK_EQ(hud.roleMenuDisplayed(), std::string("scout"));
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.roleNameText())->text, std::string("Scout"));
+
+    // The 20 s timer (ui.ts roleMenuTicker) auto-confirms the displayed class.
+    hud.tickRoleMenu(19.2f);
+    CHECK_EQ(static_cast<const pix::NullText*>(hud.roleFooterText())->text,
+             std::string("ENTER GAME (1)"));
+    hud.tickRoleMenu(1.0f);
+    CHECK(!hud.roleMenuActive());
+    std::string selected;
+    CHECK(hud.consumeRoleSelection(selected));
+    CHECK_EQ(selected, std::string("scout"));
+    CHECK(!hud.consumeRoleSelection(selected));
+
+    // Confirm button (rw*0.12..rw*0.48, footer y) sends the displayed class.
+    hud.setRoleMenuOptions("tank", cobalt->perkModeRoles);
+    hud.setRoleMenuActive(true);
+    CHECK_EQ(hud.roleMenuDisplayed(), std::string("tank"));
+    CHECK(hud.roleMenuActionAt(928.0f, 100.0f, option) == Hud::RoleTap::Confirm);
+    hud.confirmRoleSelection();
+    CHECK(!hud.roleMenuActive());
+    CHECK(hud.consumeRoleSelection(selected));
+    CHECK_EQ(selected, std::string("tank"));
+
+    // While the picker is up the gameplay action bar is modal.
+    hud.setRoleMenuActive(true);
+    CHECK(hud.hitTest(900.0f, 90.0f).kind == Hud::TapKind::None);
 }

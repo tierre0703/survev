@@ -243,6 +243,8 @@ private:
     std::unique_ptr<audio::AxmolAudioBackend> _audioBackend;
     std::unique_ptr<audio::AudioManager> _audio;
     std::unique_ptr<audio::Ambiance> _ambiance;
+    // ui.ts roleMenuInst: ambient_lab_01 while the perk-mode class picker is up.
+    int _roleMenuSound = -1;
     // The pad sprites outlive resetWorld(): they are created once against
     // _gameRoot and merely re-positioned by Touch each frame.
     std::unique_ptr<Touch> _touch;

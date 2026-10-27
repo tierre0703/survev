@@ -50,8 +50,12 @@ import android.view.Gravity;
 import android.util.TypedValue;
 import android.graphics.Color;
 
+import java.io.File;
+import java.io.FileInputStream;
+
 public class AppActivity extends AxmolActivity {
     private static final String TAG = "AppActivity";
+    private static final String NATIVE_CRASH_FILE = "native-crash.txt";
 
     static {
         // DNT remove, some android simulator require explicit load shared libraries, otherwise will crash
@@ -75,6 +79,10 @@ public class AppActivity extends AxmolActivity {
         super.setEnableVirtualButton(false);
         installCrashReporter();
         super.onCreate(savedInstanceState);
+        // Read the previous run's native report before installing the handler
+        // (the diagnostic crash hook faults during install).
+        reportPreviousNativeCrash();
+        installNativeCrashHandler();
         // Workaround in https://stackoverflow.com/questions/16283079/re-launch-of-activity-on-home-button-but-only-the-first-time/16447508
         if (!isTaskRoot()) {
             // Android launched another instance of the root activity into an existing task
@@ -185,6 +193,46 @@ public class AppActivity extends AxmolActivity {
                 }
             }
         });
+    }
+
+    private File nativeCrashFile() {
+        return new File(getFilesDir(), NATIVE_CRASH_FILE);
+    }
+
+    /** NDK faults bypass ART; NativeCrash.cpp writes this file for the next run. */
+    private void installNativeCrashHandler() {
+        try {
+            SurvBridge.installNativeCrashHandler(nativeCrashFile().getAbsolutePath());
+        } catch (Throwable t) {
+            Log.w(TAG, "native crash handler: " + t);
+        }
+    }
+
+    private void reportPreviousNativeCrash() {
+        final File file = nativeCrashFile();
+        if (!file.exists()) return;
+        String text = "";
+        try (FileInputStream in = new FileInputStream(file)) {
+            byte[] buffer = new byte[16384];
+            int read = in.read(buffer);
+            if (read > 0) {
+                text = new String(buffer, 0, read, "UTF-8");
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "read native crash: " + e.getMessage());
+        }
+        // Delete before reporting so a failed upload never re-sends forever.
+        file.delete();
+        if (text.isEmpty()) return;
+        Log.i(TAG, "native crash report: " + text.length() + " bytes");
+        final String data = "{\"message\":\"native crash\",\"stacktrace\":\""
+                + SurvApi.escapeJson(text) + "\",\"thread\":\"native\"}";
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                SurvApi.reportError(SurvApi.apiBaseUrl(), "nativeCrash", data);
+            }
+        }, "surv-native-crash").start();
     }
 
     private void reportCrash(Thread thread, Throwable error) {

@@ -36,6 +36,11 @@ Write-Host 'Rasterizing menu mode icons (Content/img/menu)...'
 & node --experimental-transform-types (Join-Path $PSScriptRoot 'build-menu-icons.mjs')
 if ($LASTEXITCODE -ne 0) { throw "build-menu-icons.mjs failed ($LASTEXITCODE)" }
 
+# Menu character preview layers (ui/opponentDisplay.ts) for the Java menu.
+Write-Host 'Rasterizing character preview layers (Content/img/preview)...'
+& node --experimental-transform-types (Join-Path $PSScriptRoot 'build-character-preview.mjs')
+if ($LASTEXITCODE -ne 0) { throw "build-character-preview.mjs failed ($LASTEXITCODE)" }
+
 # The web client ships Roboto Condensed as woff2, which axmol cannot load; keep
 # a TTF copy under Content/fonts (requires Python + fontTools/brotli).
 if (Test-Path (Join-Path $source 'fonts\roboto-condensed-latin-400-normal.woff2')) {

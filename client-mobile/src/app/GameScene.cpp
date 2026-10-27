@@ -36,13 +36,17 @@
 #include <android/keycodes.h>
 #endif
 
+#include "renderer/TextureCache.h"
+
 #include <set>
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <map>
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 USING_NS_AX;
 
@@ -53,26 +57,76 @@ namespace svui = ::ui;
 // tools/build-atlas.mjs writes Content/atlas/<atlas>/{*.plist,index.txt}; the
 // plist frame keys are the web client's `*.img` names, so AxSprite::setFrame()
 // resolves them directly. Loading is deferred until the map arrives because the
-// map def lists its atlases.
+// map def lists its atlases. Like resources.ts loadMapAssets, atlases that are
+// not in the new map's list are dropped so the next match does not inherit the
+// previous map's sheets.
+static std::map<std::string, std::vector<std::string>> s_loadedAtlasSheets;
+
+static void unloadAtlasesNotIn(const std::set<std::string>& keep) {
+    if (s_loadedAtlasSheets.empty()) {
+        return;
+    }
+    auto* cache = ax::SpriteFrameCache::getInstance();
+    for (auto it = s_loadedAtlasSheets.begin(); it != s_loadedAtlasSheets.end();) {
+        if (keep.count(it->first)) {
+            ++it;
+            continue;
+        }
+        for (const auto& sheet : it->second) {
+            cache->removeSpriteFramesFromFile(sheet);
+        }
+        AXLOGI("Unloaded atlas {}", it->first);
+        it = s_loadedAtlasSheets.erase(it);
+    }
+    // Frames are gone; drop any sheet texture no live sprite references any
+    // more (resources.ts unloadAtlas destroys the base textures).
+    if (auto* director = ax::Director::getInstance()) {
+        if (auto* textures = director->getTextureCache()) {
+            textures->removeUnusedTextures();
+        }
+    }
+}
+
 static void loadAtlasesForMap(const std::string& mapName) {
     const DefProvider* provider = getDefProvider();
     const MapRenderDef* mapDef = provider ? provider->mapRender(mapName) : nullptr;
     if (!mapDef) {
+        static std::set<std::string> reported;
+        if (reported.insert(mapName).second) {
+            uiBridge()->reportError("mapDefMissing",
+                                    "{\"map\":\"" + mapName + "\"}");
+        }
         return;
     }
-    static std::set<std::string> loaded;
+    std::set<std::string> needed;
+    for (const auto& atlas : mapDef->atlases) {
+        if (!atlas.empty()) {
+            needed.insert(atlas);
+        }
+    }
+    // Unload first (like the web) so shared/loadout sheets stay resident and
+    // only the previous map's own sheets are released.
+    unloadAtlasesNotIn(needed);
+
     auto* cache = ax::SpriteFrameCache::getInstance();
     auto* fileUtils = ax::FileUtils::getInstance();
     for (const auto& atlas : mapDef->atlases) {
-        if (atlas.empty() || loaded.count(atlas)) {
+        if (atlas.empty() || s_loadedAtlasSheets.count(atlas)) {
             continue;
         }
         const std::string index = "atlas/" + atlas + "/index.txt";
         const std::string list = fileUtils->getStringFromFile(index);
         if (list.empty()) {
             AXLOGW("Atlas index missing ({}); run tools/build-atlas.mjs", index);
+            static std::set<std::string> reported;
+            if (reported.insert(atlas).second) {
+                uiBridge()->reportError(
+                    "atlasMissing",
+                    "{\"map\":\"" + mapName + "\",\"atlas\":\"" + atlas + "\"}");
+            }
             continue;
         }
+        std::vector<std::string> sheets;
         std::istringstream stream(list);
         std::string line;
         while (std::getline(stream, line)) {
@@ -83,8 +137,9 @@ static void loadAtlasesForMap(const std::string& mapName) {
                 continue;
             }
             cache->addSpriteFramesWithFile(line);
+            sheets.push_back(line);
         }
-        loaded.insert(atlas);
+        s_loadedAtlasSheets[atlas] = std::move(sheets);
         AXLOGI("Loaded atlas {}", atlas);
     }
 }
@@ -425,6 +480,24 @@ bool GameScene::init() {
                 _hud->setMapLabels(msg.places);
             }
         }
+        // game.ts MapMsg: on a perk map, show the class picker until the local
+        // player has a role; otherwise close it (ui.ts setRoleMenuOptions).
+        if (_hud && _game) {
+            const DefProvider* provider = getDefProvider();
+            const MapRenderDef* mapDef = provider ? provider->mapRender(msg.mapName) : nullptr;
+            if (mapDef && mapDef->perkMode && _game->activePlayerData().role.empty()) {
+                _hud->setRoleMenuOptions(uiHost()->configString("perkModeRole"),
+                                         mapDef->perkModeRoles);
+                _hud->setRoleMenuActive(true);
+                if (_audio && _roleMenuSound < 0) {
+                    audio::PlaySoundOptions opts;
+                    opts.channel = "ambient";
+                    _roleMenuSound = _audio->playSound("ambient_lab_01", opts);
+                }
+            } else {
+                _hud->setRoleMenuActive(false);
+            }
+        }
     });
     _game->setUpdateCallback([this](const UpdateMsg& msg) {
         // A Map/Update arriving while no world exists (the world is built in
@@ -642,6 +715,12 @@ void GameScene::resetWorld() {
     _hudPress = HudPress{};
     _pendingInputs.clear();
     _pingTargetValid = false;
+    if (_roleMenuSound >= 0) {
+        if (_audio) {
+            _audio->stopSound(_roleMenuSound);
+        }
+        _roleMenuSound = -1;
+    }
     _hud.reset();
     _world.reset();
     _worldRoot = nullptr;
@@ -888,7 +967,14 @@ void GameScene::leaveGame() {
     // main.ts un-hides the menu on quit; the HUD is hidden until the match is
     // playing again (FguiHud::update gates on isPlaying()).
     if (_hud) {
+        _hud->resetRoleMenu();
         _hud->setVisible(false);
+    }
+    if (_roleMenuSound >= 0) {
+        if (_audio) {
+            _audio->stopSound(_roleMenuSound);
+        }
+        _roleMenuSound = -1;
     }
     if (_crosshairSprite) {
         _crosshairSprite->setVisible(false);
@@ -1339,6 +1425,12 @@ void GameScene::update(float delta) {
                 _game->addKillFeedText(line.text, line.color);
             }
 
+            // game.ts: a perk-mode assignment for the local player closes the
+            // class picker (the selection already went out).
+            if (_hud && ann.assigned && ann.playerId == _game->getLocalPlayerId() &&
+                _hud->roleMenuActive()) {
+                _hud->setRoleMenuActive(false);
+            }
             // kill_leader has its own top-centre HUD line; announcing it here
             // would duplicate/spam every leader change.
             if (_hud && ann.role != "kill_leader" &&
@@ -1554,6 +1646,26 @@ void GameScene::update(float delta) {
         }
         _hud->update(delta, *_game,
                      _inGame && _notifiedStarted && (_game->isPlaying() || _game->gameOver() != nullptr));
+        // game.ts:697-705: the picker's confirmed/timed-out class goes out on
+        // the next frame and is remembered for the next perk match.
+        if (_game->isPlaying()) {
+            std::string role;
+            if (_hud->consumeRoleSelection(role) && !role.empty()) {
+                PerkModeRoleSelectMsg select;
+                select.role = role;
+                _game->sendMessage(MsgType_PerkModeRoleSelect, select, 128);
+                uiHost()->setConfigValue("perkModeRole", role);
+                AXLOGI("Perk role selected: {}", role);
+            }
+        }
+        // ui.ts roleMenuInst: the ambient track plays only while the picker is
+        // up (the web does not loop it, the 20 s countdown fits the clip).
+        if (_roleMenuSound >= 0 && (!_hud->roleMenuActive() || _game->gameOver() != nullptr)) {
+            if (_audio) {
+                _audio->stopSound(_roleMenuSound);
+            }
+            _roleMenuSound = -1;
+        }
         // ui.ts createPing / mapSprite.ts: minimap ping sprites over the baked
         // map texture (EmoteManager owns their lifetimes).
         if (_world) {
@@ -1685,7 +1797,9 @@ void GameScene::update(float delta) {
         const bool deadOrSpectating = _game->isLocalDead() || _game->isSpectating();
         _emoteWheel->setLoadout(_game->emotes());
         _emoteWheel->setTeamMode(_game->teamMode() == 1);
-        _emoteWheel->setHudVisible(playing && !deadOrSpectating);
+        // The class picker's wrapper covers the web HUD (z-index 11), so the
+        // emote/ping buttons hide behind it too.
+        _emoteWheel->setHudVisible(playing && !deadOrSpectating && !_hud->roleMenuActive());
         _emoteWheel->update(delta);
     }
     // Team-ping wheel: same visibility, sharing the emote throttle (the web
@@ -1708,7 +1822,7 @@ void GameScene::update(float delta) {
         }
         _pingWheel->setTeamMode(_game->teamMode() == 1);
         _pingWheel->setAmmoType(ammoType);
-        _pingWheel->setHudVisible(playing && !deadOrSpectating);
+        _pingWheel->setHudVisible(playing && !deadOrSpectating && !_hud->roleMenuActive());
         _pingWheel->setGreyed(_emoteWheel && !_emoteWheel->canSend());
         _pingWheel->update(delta);
         if (!_pingWheel->visible()) {
@@ -2024,6 +2138,25 @@ void GameScene::onTouchBegan(float x, float y, int id) {
         if (_hud->overlayShown()) {
             return;
         }
+    }
+    // Perk-mode class picker: #ui-role-menu-wrapper covers the viewport, so
+    // every touch is modal; options select, the footer confirms.
+    if (_hud && _hud->roleMenuActive()) {
+        const Vec2 design = screenToDesign(x, y);
+        int option = -1;
+        switch (_hud->roleMenuActionAt(design.x, design.y, option)) {
+            case Hud::RoleTap::Option:
+                if (option >= 0) {
+                    _hud->selectRoleOption(option);
+                }
+                break;
+            case Hud::RoleTap::Confirm:
+                _hud->confirmRoleSelection();
+                break;
+            case Hud::RoleTap::None:
+                break;
+        }
+        return;
     }
     // Big map: swallow the touch; tapping outside (or the close button) closes.
     if (_hud && _hud->bigMapVisible()) {

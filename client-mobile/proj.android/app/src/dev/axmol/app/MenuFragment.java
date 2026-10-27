@@ -133,6 +133,7 @@ public class MenuFragment {
     private final LinearLayout mRegionDropdown;
     private final FrameLayout mRegionRowContainer;
     private final ImageView mBackground;
+    private final CharacterPreviewView mPreview;
     private Drawable mNewsIcon;
     private String mNewsLatestDate = "";
 
@@ -156,6 +157,16 @@ public class MenuFragment {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         mRoot.addView(scrim);
         loadMenuBackground("main");
+
+        // ui/opponentDisplay.ts: the player avatar sits behind the menu card on
+        // the right. Added before the card so a narrow screen lets the card
+        // paint over any overlap.
+        mPreview = new CharacterPreviewView(activity);
+        FrameLayout.LayoutParams previewLp = new FrameLayout.LayoutParams(dp(160), dp(160));
+        previewLp.gravity = Gravity.RIGHT | Gravity.CENTER_VERTICAL;
+        previewLp.rightMargin = dp(12);
+        mPreview.setLayoutParams(previewLp);
+        mRoot.addView(mPreview);
 
         // Full-height ScrollView for landscape responsiveness
         ScrollView scrollView = new ScrollView(activity);
@@ -1139,6 +1150,13 @@ public class MenuFragment {
         if (account != null) {
             updateAccountButton(account.getProfile());
         }
+        refreshCharacterPreview();
+    }
+
+    /** ui/opponentDisplay.ts: re-read the saved outfit/melee for the avatar. */
+    private void refreshCharacterPreview() {
+        String loadout = SurvBridge.getLoadoutJson();
+        mPreview.setLoadout(Json.peekString(loadout, "outfit"), Json.peekString(loadout, "melee"));
     }
 
     /** Re-applies the l10n table to the always-visible menu chrome. */

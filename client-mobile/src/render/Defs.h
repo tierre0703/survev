@@ -357,6 +357,14 @@ struct RoleRenderDef {
     bool killFeedDead = false;
     bool hasKillFeedColor = false;
     uint32_t killFeedColor = 0; // roleDef.killFeed.color (#rrggbb)
+    // ui.ts setRoleMenuInfo / setRoleMenuOptions: class-picker art, border
+    // colour and the perk list (English display names from en.json). The web
+    // SVG guiImg is rewritten to the rasterized `gui/<name>.png` asset.
+    std::string guiImg;
+    bool hasColor = false;
+    uint32_t color = 0;
+    std::vector<std::string> perks;
+    std::vector<std::string> perkNames;
 };
 
 struct BiomeColors {
@@ -393,6 +401,8 @@ struct MapRenderDef {
     std::string ambienceWind;
     std::string ambienceRiver;
     std::string ambienceWaves;
+    // gameMode.perkModeRoles (ui.ts setRoleMenuOptions on perk maps).
+    std::vector<std::string> perkModeRoles;
     // biome.airdrop (plane.ts / airdrop.ts sprite + sound selection).
     std::string airdropPlaneImg = "map-plane-01.img";
     std::string airdropPlaneSound = "plane_01";

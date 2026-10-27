@@ -132,6 +132,17 @@ public:
     virtual bool togglePause() { return false; }
     // Java: live in-game leaderboard snapshot (Game::leaderboardJson).
     virtual void leaderboard(const std::string& json) { (void)json; }
+    // Config access for in-game state that the web persists (game.ts
+    // `perkModeRole`): the C++ menu/bridge owns the blob, so the scene reads
+    // and writes through the host instead of keeping a second Config.
+    virtual std::string configString(const std::string& key) {
+        (void)key;
+        return {};
+    }
+    virtual void setConfigValue(const std::string& key, const std::string& value) {
+        (void)key;
+        (void)value;
+    }
 };
 
 // No-op host: used by the host tests and by any build without Java.

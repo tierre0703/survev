@@ -123,7 +123,8 @@ const std::string& Hud::weaponType(int slot) const {
 }
 
 Hud::TapResult Hud::hitTest(float designX, float designY) const {
-    if (!_built || !_visible || _overShown || _deathShown || _spectating || _bigMapVisible) {
+    if (!_built || !_visible || _overShown || _deathShown || _spectating || _bigMapVisible ||
+        _roleMenuActive) {
         return TapResult{};
     }
     // Rects are stored in the centred HUD container.
@@ -765,6 +766,123 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         row.status->setVisible(false);
     }
 
+    // --- Perk-mode class picker (#ui-role-menu-wrapper, ui.ts) ---
+    // The web panel is 1200x770 px and scales by min(1, w/1200, h/900); the
+    // HUD design rect is 1280x720, so the native panel is 0.8x (960x616).
+    _roleScale = std::min(1.0f, std::min(vw / kRoleMenuWidth, vh / 900.0f));
+    _roleBackdrop = _factory->createGraphics();
+    _roleBackdrop->beginFill(0x000000, 0.75f);
+    _roleBackdrop->drawRect(-vw * 0.5f, -vh * 0.5f, vw, vh);
+    _roleBackdrop->endFill();
+    _roleBackdrop->setLocalZOrder(939);
+    _roleBackdrop->setVisible(false);
+    _root->addChild(_roleBackdrop);
+
+    _rolePanel = _factory->createContainer();
+    _rolePanel->setPosition(0.0f, 0.0f);
+    _rolePanel->setScale(_roleScale, _roleScale);
+    _rolePanel->setLocalZOrder(940);
+    _rolePanel->setVisible(false);
+    _root->addChild(_rolePanel);
+
+    const float rw = kRoleMenuWidth;
+    const float rh = kRoleMenuHeight;
+    _rolePanelBg = _factory->createGraphics();
+    _rolePanelBg->beginFill(0x7692b0, 0.75f);
+    _rolePanelBg->drawRect(-rw * 0.5f, -rh * 0.5f, rw, rh);
+    _rolePanelBg->endFill();
+    _rolePanel->addChild(_rolePanelBg);
+
+    _roleHeaderBg = _factory->createGraphics();
+    _roleHeaderBg->beginFill(0x000000, 0.6f);
+    _roleHeaderBg->drawRect(-rw * 0.5f, rh * 0.5f - 200.0f, rw, 200.0f);
+    _roleHeaderBg->endFill();
+    _rolePanel->addChild(_roleHeaderBg);
+
+    _roleFooterBg = _factory->createGraphics();
+    _roleFooterBg->beginFill(0x000000, 0.6f);
+    _roleFooterBg->drawRect(-rw * 0.5f, -rh * 0.5f, rw, 120.0f);
+    _roleFooterBg->endFill();
+    _rolePanel->addChild(_roleFooterBg);
+
+    for (int i = 0; i < kRoleOptionMax; ++i) {
+        pix::Sprite* option = _factory->createSprite();
+        option->setAnchor(0.5f, 0.5f);
+        option->setVisible(false);
+        _rolePanel->addChild(option);
+        _roleOptionSprites[static_cast<size_t>(i)] = option;
+    }
+
+    // Left column: class name + guiImg art (240 px, web .ui-role-body-image).
+    _roleName = _factory->createText();
+    _roleName->setFontSize(80.0f);
+    _roleName->setColor(0xffffff, 0x000000, 3.0f, true);
+    _roleName->setAnchor(0.5f, 0.5f);
+    _roleName->setPosition(-rw * 0.3f, 120.0f);
+    _rolePanel->addChild(_roleName);
+    _roleImage = _factory->createSprite();
+    _roleImage->setAnchor(0.5f, 0.5f);
+    _roleImage->setPosition(-rw * 0.3f, -90.0f);
+    _roleImage->setVisible(false);
+    _rolePanel->addChild(_roleImage);
+
+    // Right column: perk ring + loot icon + name (web .ui-role-body-perk).
+    for (int i = 0; i < kRolePerkMax; ++i) {
+        pix::Sprite* ring = _factory->createSprite("loot-circle-outer-03.img");
+        ring->setAnchor(0.5f, 0.5f);
+        ring->setVisible(false);
+        _rolePanel->addChild(ring);
+        _rolePerkRing[static_cast<size_t>(i)] = ring;
+        pix::Sprite* icon = _factory->createSprite();
+        icon->setAnchor(0.5f, 0.5f);
+        icon->setVisible(false);
+        _rolePanel->addChild(icon);
+        _rolePerkIcon[static_cast<size_t>(i)] = icon;
+        pix::Text* name = _factory->createText();
+        name->setFontSize(56.0f);
+        name->setColor(0xffffff, 0x000000, 3.0f, true);
+        name->setAnchor(0.0f, 0.5f);
+        name->setVisible(false);
+        _rolePanel->addChild(name);
+        _rolePerkName[static_cast<size_t>(i)] = name;
+    }
+
+    _roleDesc = _factory->createText();
+    _roleDesc->setText("SELECT A CLASS");
+    _roleDesc->setFontSize(64.0f);
+    _roleDesc->setColor(0xffffff, 0x000000, 3.0f, true);
+    _roleDesc->setAnchor(0.5f, 0.5f);
+    _roleDesc->setPosition(-rw * 0.2f, -rh * 0.5f + 60.0f);
+    _rolePanel->addChild(_roleDesc);
+
+    _roleConfirmBg = _factory->createGraphics();
+    _roleConfirmBg->beginFill(0x000000, 0.75f);
+    _roleConfirmBg->drawRect(rw * 0.12f, -rh * 0.5f + 24.0f, rw * 0.36f, 72.0f);
+    _roleConfirmBg->endFill();
+    _rolePanel->addChild(_roleConfirmBg);
+    // #ui-role-footer-enter: "ENTER GAME (20)"; the same element is the
+    // confirm button and the countdown label (ui.ts roleMenuFooterEnterElem).
+    _roleFooter = _factory->createText();
+    _roleFooter->setFontSize(40.0f);
+    _roleFooter->setColor(0x00ff00, 0x000000, 3.0f, true);
+    _roleFooter->setAnchor(0.5f, 0.5f);
+    _roleFooter->setPosition(rw * 0.3f, -rh * 0.5f + 60.0f);
+    _rolePanel->addChild(_roleFooter);
+
+    // Hit rects are design-space (the panel container is scaled around the
+    // design centre). The confirm button is static; option rects follow the
+    // map's class count in applyRoleSelection().
+    {
+        const float cx = _design.x * 0.5f;
+        const float cy = _design.y * 0.5f;
+        _roleConfirmRect = Rect{
+            cx + rw * 0.12f * _roleScale,
+            cy + (-rh * 0.5f + 24.0f) * _roleScale,
+            rw * 0.36f * _roleScale,
+            72.0f * _roleScale,
+        };
+    }
+
     _built = true;
     setVisible(false);
 }
@@ -967,6 +1085,21 @@ void Hud::setVisible(bool visible) {
     // shows after joining, before the match starts.
     if (_waitingText) {
         _waitingText->setVisible(_waiting && !_overShown && !_deathShown);
+    }
+    // Perk-mode class picker (#ui-role-menu-wrapper): the backdrop + panel are
+    // shown only while the picker is active; option art follows the class list.
+    const bool role = visible && _roleMenuActive;
+    if (_roleBackdrop) {
+        _roleBackdrop->setVisible(role);
+    }
+    if (_rolePanel) {
+        _rolePanel->setVisible(role);
+    }
+    for (int i = 0; i < kRoleOptionMax; ++i) {
+        if (_roleOptionSprites[static_cast<size_t>(i)]) {
+            _roleOptionSprites[static_cast<size_t>(i)]->setVisible(
+                role && i < static_cast<int>(_roleOptionsState.size()));
+        }
     }
     // Item pills own their visibility (empty inventory hides them); this also
     // runs after the big-map/result state changes so they never linger.
@@ -1422,6 +1555,230 @@ void Hud::displayPickupMessage(const std::string& text) {
     }
 }
 
+void Hud::setRoleMenuOptions(const std::string& preferred, const std::vector<std::string>& roles) {
+    _roleOptionsState.clear();
+    for (const auto& role : roles) {
+        if (role.empty()) {
+            continue;
+        }
+        if (static_cast<int>(_roleOptionsState.size()) >= kRoleOptionMax) {
+            break;
+        }
+        _roleOptionsState.push_back(role);
+    }
+    _roleSelectedPending.clear();
+    int selected = 0;
+    if (!preferred.empty()) {
+        const auto it = std::find(_roleOptionsState.begin(), _roleOptionsState.end(), preferred);
+        if (it != _roleOptionsState.end()) {
+            selected = static_cast<int>(it - _roleOptionsState.begin());
+        }
+    }
+    if (!_roleOptionsState.empty()) {
+        selectRole(selected);
+    }
+}
+
+void Hud::setRoleMenuActive(bool active) {
+    _roleMenuActive = active && !_roleOptionsState.empty();
+    if (_roleMenuActive) {
+        _roleTicker = kRoleSelectDuration;
+        _lastRoleFooter.clear();
+        tickRoleMenu(0.0f);
+    } else {
+        _lastRoleFooter.clear();
+        _roleTicker = 0.0f;
+    }
+    if (_built) {
+        setVisible(_visible);
+    }
+}
+
+void Hud::resetRoleMenu() {
+    _roleMenuActive = false;
+    _roleOptionsState.clear();
+    _roleDisplayed.clear();
+    _roleSelectedPending.clear();
+    _roleTicker = 0.0f;
+    _lastRoleFooter.clear();
+    if (_built) {
+        setVisible(_visible);
+    }
+}
+
+void Hud::tickRoleMenu(float dt) {
+    if (!_roleMenuActive) {
+        return;
+    }
+    _roleTicker = std::max(0.0f, _roleTicker - dt);
+    // ui.ts: `${translate("game-enter-game")} (${Math.ceil(ticker)})`.
+    const std::string text =
+        "ENTER GAME (" + std::to_string(static_cast<int>(std::ceil(_roleTicker))) + ")";
+    if (text != _lastRoleFooter) {
+        _lastRoleFooter = text;
+        if (_roleFooter) {
+            _roleFooter->setText(text);
+        }
+    }
+    if (_roleTicker <= 0.0f) {
+        _roleSelectedPending = _roleDisplayed;
+        setRoleMenuActive(false);
+    }
+}
+
+void Hud::confirmRoleSelection() {
+    if (!_roleMenuActive) {
+        return;
+    }
+    _roleSelectedPending = _roleDisplayed;
+    setRoleMenuActive(false);
+}
+
+bool Hud::consumeRoleSelection(std::string& role) {
+    if (_roleSelectedPending.empty()) {
+        return false;
+    }
+    role = std::move(_roleSelectedPending);
+    _roleSelectedPending.clear();
+    return true;
+}
+
+Hud::RoleTap Hud::roleMenuActionAt(float designX, float designY, int& option) const {
+    option = -1;
+    if (!_built || !_roleMenuActive) {
+        return RoleTap::None;
+    }
+    for (size_t i = 0; i < _roleOptionRects.size(); ++i) {
+        if (static_cast<int>(i) >= static_cast<int>(_roleOptionsState.size())) {
+            break;
+        }
+        if (_roleOptionRects[i].contains(designX, designY)) {
+            option = static_cast<int>(i);
+            return RoleTap::Option;
+        }
+    }
+    if (_roleConfirmRect.contains(designX, designY)) {
+        return RoleTap::Confirm;
+    }
+    // The web wrapper covers the viewport (pointer-events: all): a tap outside
+    // the panel is swallowed rather than reaching the pads.
+    return RoleTap::None;
+}
+
+void Hud::selectRole(int index) {
+    if (index < 0 || index >= static_cast<int>(_roleOptionsState.size())) {
+        return;
+    }
+    const std::string& role = _roleOptionsState[static_cast<size_t>(index)];
+    _roleDisplayed = role;
+    const DefProvider* defs = getDefProvider();
+    const RoleRenderDef* def = defs ? defs->role(role) : nullptr;
+
+    const auto fitSprite = [](pix::Sprite* sprite, float target) {
+        if (!sprite) {
+            return;
+        }
+        const float source = std::max(sprite->sourceWidth(), sprite->sourceHeight());
+        if (source > 0.0f) {
+            const float scale = target / source;
+            sprite->setScale(scale, scale);
+        }
+    };
+
+    // Header class options: selected art is 164 px, the rest 132 px at 50%
+    // opacity (ui.ts setRoleMenuInfo).
+    const float rw = kRoleMenuWidth;
+    const float total = static_cast<float>(_roleOptionsState.size()) * 160.0f +
+        static_cast<float>(static_cast<int>(_roleOptionsState.size()) - 1) * 20.0f;
+    const float cx = _design.x * 0.5f;
+    const float cy = _design.y * 0.5f;
+    for (int i = 0; i < kRoleOptionMax; ++i) {
+        pix::Sprite* sprite = _roleOptionSprites[static_cast<size_t>(i)];
+        if (!sprite) {
+            continue;
+        }
+        if (i >= static_cast<int>(_roleOptionsState.size())) {
+            sprite->setVisible(false);
+            _roleOptionRects[static_cast<size_t>(i)] = Rect{};
+            continue;
+        }
+        const std::string& type = _roleOptionsState[static_cast<size_t>(i)];
+        const RoleRenderDef* optionDef = defs ? defs->role(type) : nullptr;
+        sprite->setFrame(optionDef ? optionDef->guiImg : std::string());
+        const bool selected = i == index;
+        const float localX = -total * 0.5f + 80.0f + static_cast<float>(i) * 180.0f;
+        const float localY = kRoleMenuHeight * 0.5f - 100.0f;
+        sprite->setPosition(localX, localY);
+        fitSprite(sprite, selected ? 164.0f : 132.0f);
+        sprite->setAlpha(selected ? 1.0f : 0.5f);
+        sprite->setVisible(_roleMenuActive);
+        _roleOptionRects[static_cast<size_t>(i)] = Rect{
+            cx + (localX - 80.0f) * _roleScale,
+            cy + (localY - 80.0f) * _roleScale,
+            160.0f * _roleScale,
+            160.0f * _roleScale,
+        };
+    }
+
+    if (_roleName) {
+        _roleName->setText(def && !def->name.empty() ? def->name : role);
+    }
+    if (_roleImage) {
+        const std::string art = def ? def->guiImg : std::string();
+        _roleImage->setFrame(art);
+        fitSprite(_roleImage, 240.0f);
+        _roleImage->setVisible(!art.empty());
+    }
+    // Border colour: roleDef.color, else the web default #191919.
+    if (_rolePanelBg) {
+        const float rh = kRoleMenuHeight;
+        _rolePanelBg->clear();
+        _rolePanelBg->beginFill(0x7692b0, 0.75f);
+        _rolePanelBg->drawRect(-rw * 0.5f, -rh * 0.5f, rw, rh);
+        _rolePanelBg->endFill();
+        _rolePanelBg->lineStyle(8.0f, def && def->hasColor ? def->color : 0x191919, 1.0f);
+        _rolePanelBg->drawRect(-rw * 0.5f, -rh * 0.5f, rw, rh);
+    }
+
+    const int perkCount = def
+        ? std::min(kRolePerkMax, static_cast<int>(def->perks.size()))
+        : 0;
+    const float spacing = perkCount <= 1
+        ? 144.0f
+        : std::min(144.0f, 400.0f / static_cast<float>(perkCount - 1));
+    const float firstY = -40.0f + spacing * static_cast<float>(perkCount - 1) * 0.5f;
+    for (int i = 0; i < kRolePerkMax; ++i) {
+        pix::Sprite* ring = _rolePerkRing[static_cast<size_t>(i)];
+        pix::Sprite* icon = _rolePerkIcon[static_cast<size_t>(i)];
+        pix::Text* name = _rolePerkName[static_cast<size_t>(i)];
+        if (!ring || !icon || !name) {
+            continue;
+        }
+        if (i >= perkCount) {
+            ring->setVisible(false);
+            icon->setVisible(false);
+            name->setVisible(false);
+            continue;
+        }
+        const std::string& perk = def->perks[static_cast<size_t>(i)];
+        const GameObjRenderDef* perkDef = defs ? defs->gameObject(perk) : nullptr;
+        const std::string frame = perkDef ? perkDef->img.sprite : std::string();
+        const float y = firstY - spacing * static_cast<float>(i);
+        ring->setPosition(-80.0f, y);
+        fitSprite(ring, 96.0f);
+        ring->setVisible(true);
+        icon->setPosition(-80.0f, y);
+        icon->setFrame(frame);
+        fitSprite(icon, 64.0f);
+        icon->setVisible(!frame.empty());
+        name->setPosition(-18.0f, y);
+        name->setText(def->perkNames.size() > static_cast<size_t>(i)
+                ? def->perkNames[static_cast<size_t>(i)]
+                : perk);
+        name->setVisible(true);
+    }
+}
+
 void Hud::updateActionButtons() {
     if (!_built) {
         return;
@@ -1527,6 +1884,11 @@ void Hud::update(float dt, const Game& game, bool visible) {
     // setSpectating). GameOverMsg latches until the next match resets the HUD.
     const GameOverMsg* over = game.gameOver();
     if (over) {
+        // The result panel outranks the class picker; never leave the picker
+        // covering the final screen.
+        if (_roleMenuActive) {
+            setRoleMenuActive(false);
+        }
         if (!_overShown) {
             showGameOver(*over, game.teamIdForPlayer(game.getLocalPlayerId()),
                          game.getLocalPlayerId(), &game);
@@ -1597,6 +1959,10 @@ void Hud::update(float dt, const Game& game, bool visible) {
     if (!visible) {
         return;
     }
+
+    // Perk-mode class picker countdown (ui.ts roleMenuTicker): only runs once
+    // the match is actually on screen, so a slow join cannot eat the 20 s.
+    tickRoleMenu(dt);
 
     const GameStateSnapshot snap = game.snapshot();
     const ActivePlayerData& apd = game.activePlayerData();

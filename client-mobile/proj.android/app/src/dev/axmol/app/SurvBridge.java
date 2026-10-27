@@ -100,6 +100,9 @@ public final class SurvBridge {
      */
     public static native void reportError(String loc, String dataJson);
 
+    /** Installs the NDK signal handler; writes a report file on native faults. */
+    public static native void installNativeCrashHandler(String path);
+
     // --- read-only queries, answered synchronously from a C++ snapshot ------
 
     /** The whole config blob ({"playerName": ..., "loadout": {...}, ...}). */

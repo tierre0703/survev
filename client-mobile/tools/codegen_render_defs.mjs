@@ -496,6 +496,12 @@ for (const [name, def] of Object.entries(MapDefs)) {
     const amb = def?.biome?.ambience || {};
     const atlasArr = `kMapAtlases_${mapRenderEntries.length}`;
     mapAtlasArrays += `static const char* const ${atlasArr}[] = {${atlases.map(str).join(",")}};\n`;
+    // gameMode.perkModeRoles: ui.ts setRoleMenuOptions' class list (perk maps).
+    const perkRoles = (gm.perkModeRoles || []).filter(Boolean);
+    const rolesArr = `kMapRoles_${mapRenderEntries.length}`;
+    if (perkRoles.length > 0) {
+        mapAtlasArrays += `static const char* const ${rolesArr}[] = {${perkRoles.map(str).join(",")}};\n`;
+    }
     mapRenderEntries += `    {${str(name)},${n(c.background, 0x2b2b2b)},${
         n(
             c.beach,
@@ -527,7 +533,7 @@ for (const [name, def] of Object.entries(MapDefs)) {
         )
     },${str(def?.biome?.airdrop?.airdropImg || "map-chute-01.img")},${
         surfaceTypeCode(def?.biome?.sound?.riverShore || "sand")
-    }},\n`;
+    },${perkRoles.length > 0 ? rolesArr : "nullptr"},${perkRoles.length}},\n`;
 }
 
 // Game object render defs (loot images and separate player skin/held images).
@@ -790,6 +796,7 @@ function sampleColor(color) {
         // pick a fresh color per particle instead of a codegen-time average.
         const origRandom = util.random;
         const origHsv = util.hsvToRgb;
+        const origMathRandom = Math.random;
         const samples = [];
         let recorded = null;
         util.hsvToRgb = (h, s, v) => {
@@ -799,6 +806,9 @@ function sampleColor(color) {
         try {
             for (const t of [0, 1]) {
                 recorded = null;
+                // Some closures branch on Math.random (e.g. particles.ts
+                // xp_common); pin it too so regeneration stays deterministic.
+                Math.random = () => t;
                 util.random = (a, b) => a + (b - a) * t;
                 color();
                 if (recorded) samples.push(recorded);
@@ -806,6 +816,7 @@ function sampleColor(color) {
         } finally {
             util.random = origRandom;
             util.hsvToRgb = origHsv;
+            Math.random = origMathRandom;
         }
         if (samples.length === 2) {
             const [lo, hi] = samples;
@@ -937,17 +948,42 @@ const hexColor = (value) => {
     return m ? parseInt(m[1], 16) : 0;
 };
 let roleEntries = "";
+let roleArrays = "";
+let roleIndex = 0;
 for (const type of Object.keys(RoleDefs)) {
     const d = RoleDefs[type] || {};
     const icon = d.mapIcon || {};
     const sound = d.sound || {};
     const kf = d.killFeed || {};
     const name = roleName(`game-${type}`, type);
+    // ui.ts setRoleMenuInfo: class art + border colour + the perk list. The web
+    // guiImg is an SVG (`img/gui/role-healer.svg`); the native GUI build
+    // rasterizes it to `Content/gui/role-healer.png` (tools/build-gui-icons).
+    const guiImg = d.guiImg ? d.guiImg.replace(/^img\//, "").replace(/\.svg$/, ".png") : "";
+    // A few roles (last_man) pick perks with weightedRandom closures; pin
+    // Math.random so the generated table is deterministic.
+    const origMathRandom = Math.random;
+    Math.random = () => 0;
+    const perkTypes = (d.perks || []).map((p) => String(typeof p === "function" ? p() : p));
+    Math.random = origMathRandom;
+    let perksPtr = "nullptr";
+    let perkNamesPtr = "nullptr";
+    if (perkTypes.length > 0) {
+        perksPtr = `kRolePerks_${roleIndex}`;
+        perkNamesPtr = `kRolePerkNames_${roleIndex}`;
+        roleArrays += `static const char* const ${perksPtr}[] = {${perkTypes.map(str).join(",")}};\n`;
+        roleArrays += `static const char* const ${perkNamesPtr}[] = {${
+            perkTypes.map((p) => str(roleName(`game-${p}`, p))).join(",")
+        }};\n`;
+    }
     roleEntries += `    {${str(type)},${str(icon.alive || "")},${str(icon.dead || "")},${str(sound.assign || "")},${
         str(sound.dead || "")
     },${str(name)},${str(roleName("game-red-leader", "Red Commander"))},${
         str(roleName("game-blue-leader", "Blue Commander"))
-    },${kf.assign ? 1 : 0},${kf.dead ? 1 : 0},${kf.color ? 1 : 0},${n(hexColor(kf.color), 0)}},\n`;
+    },${kf.assign ? 1 : 0},${kf.dead ? 1 : 0},${kf.color ? 1 : 0},${n(hexColor(kf.color), 0)},${str(guiImg)},${
+        d.color !== undefined ? 1 : 0
+    },${n(d.color, 0)},${perksPtr},${perkTypes.length},${perkNamesPtr}},\n`;
+    roleIndex++;
 }
 
 // GameConfig plane tuning + bullet tracer colours (plane.ts / flare.ts / shot.ts).
@@ -1116,6 +1152,7 @@ struct RawMapRender {
     const char* ambMusic; const char* ambWind; const char* ambRiver; const char* ambWaves;
     const char* airdropPlaneImg; const char* airdropPlaneSound; const char* airdropChuteImg;
     int riverShoreSurface;
+    const char* const* perkModeRoles; int perkModeRoleCount;
 };
 struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura;
     int hasAttack; float attackOffX, attackOffY, attackRad; int cleave;
@@ -1167,6 +1204,8 @@ struct RawRole {
     const char* soundAssign; const char* soundDead;
     const char* name; const char* nameRed; const char* nameBlue;
     int killFeedAssign, killFeedDead, hasKillFeedColor; unsigned killFeedColor;
+    const char* guiImg; int hasColor; unsigned color;
+    const char* const* perks; int perkCount; const char* const* perkNames;
 };
 
 static PlaneDef toPlane(const RawPlane& r) {
@@ -1267,7 +1306,7 @@ static const RawEmote kEmotes[] = {
 ${emoteEntries}};
 static const RawPing kPings[] = {
 ${pingEntries}};
-static const RawRole kRoles[] = {
+${roleArrays}static const RawRole kRoles[] = {
 ${roleEntries}};
 static const RawGameObj kGameObjs[] = {
 ${gameEntries}};
@@ -1469,6 +1508,9 @@ public:
             d.airdropPlaneSound = r.airdropPlaneSound ? r.airdropPlaneSound : "plane_01";
             d.airdropChuteImg = r.airdropChuteImg ? r.airdropChuteImg : "map-chute-01.img";
             d.riverShoreSurface = static_cast<SurfaceTypeDef>(r.riverShoreSurface);
+            for (int i = 0; i < r.perkModeRoleCount; i++) {
+                d.perkModeRoles.push_back(r.perkModeRoles[i] ? r.perkModeRoles[i] : "");
+            }
             _mapRenders[r.name] = d;
         }
         for (const auto& r : kGameObjs) {
@@ -1620,6 +1662,13 @@ ${
             d.killFeedDead = r.killFeedDead != 0;
             d.hasKillFeedColor = r.hasKillFeedColor != 0;
             d.killFeedColor = r.killFeedColor;
+            d.guiImg = r.guiImg ? r.guiImg : "";
+            d.hasColor = r.hasColor != 0;
+            d.color = r.color;
+            for (int i = 0; i < r.perkCount; i++) {
+                d.perks.push_back(r.perks[i] ? r.perks[i] : "");
+                d.perkNames.push_back(r.perkNames[i] ? r.perkNames[i] : "");
+            }
             _roles[r.type] = std::move(d);
         }
         _loadoutItems.reserve(sizeof(kLoadoutItems) / sizeof(kLoadoutItems[0]));

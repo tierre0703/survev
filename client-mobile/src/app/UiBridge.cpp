@@ -20,6 +20,7 @@
 
 #include "GameScene.h"
 #include "MenuScene.h"
+#include "NativeCrash.h"
 #include "UiHost.h"
 #include "../audio/AudioManager.h"
 #include "../net/Api.h"
@@ -559,6 +560,13 @@ public:
     void leaderboard(const std::string& json) override {
         ax::JniHelper::callStaticVoidMethod(kBridgeClass, "onNativeLeaderboard", json);
     }
+    std::string configString(const std::string& key) override {
+        return androidBridge().config().getString(key, "");
+    }
+    void setConfigValue(const std::string& key, const std::string& value) override {
+        androidBridge().config().setString(key, value);
+        androidBridge().config().save();
+    }
 
 private:
     void notify(const char* method) {
@@ -717,6 +725,11 @@ JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_saveConfig(JNIEnv*, jclass)
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_reportError(JNIEnv* env, jclass, jstring loc,
                                                                 jstring data) {
     surv::uiBridge()->reportError(surv::fromJstring(env, loc), surv::fromJstring(env, data));
+}
+
+JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_installNativeCrashHandler(JNIEnv* env, jclass,
+                                                                              jstring path) {
+    surv::installNativeCrashHandler(surv::fromJstring(env, path));
 }
 
 } // extern "C"

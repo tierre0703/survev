@@ -68,6 +68,7 @@ struct RawMapRender {
     const char* ambMusic; const char* ambWind; const char* ambRiver; const char* ambWaves;
     const char* airdropPlaneImg; const char* airdropPlaneSound; const char* airdropChuteImg;
     int riverShoreSurface;
+    const char* const* perkModeRoles; int perkModeRoleCount;
 };
 struct RawGameObj { const char* type; const char* category; RawImg img; int hasImg; const char* emitter; const char* auraSprite; unsigned auraTint; int hasAura;
     int hasAttack; float attackOffX, attackOffY, attackRad; int cleave;
@@ -119,6 +120,8 @@ struct RawRole {
     const char* soundAssign; const char* soundDead;
     const char* name; const char* nameRed; const char* nameBlue;
     int killFeedAssign, killFeedDead, hasKillFeedColor; unsigned killFeedColor;
+    const char* guiImg; int hasColor; unsigned color;
+    const char* const* perks; int perkCount; const char* const* perkNames;
 };
 
 static PlaneDef toPlane(const RawPlane& r) {
@@ -4061,8 +4064,8 @@ static const char* const kParticleImgs_28647[] = {"part-blossom-01.img","part-bl
 static const char* const kParticleImgs_28852[] = {"part-takedown-01.img"};
 static const char* const kParticleImgs_29059[] = {"part-note-01.img"};
 static const char* const kParticleImgs_29267[] = {"part-boost-basic.img"};
-static const char* const kParticleImgs_29476[] = {"part-boost-basic.img"};
-static const char* const kParticleImgs_29689[] = {"part-boost-basic.img"};
+static const char* const kParticleImgs_29479[] = {"part-boost-basic.img"};
+static const char* const kParticleImgs_29695[] = {"part-boost-basic.img"};
 static const RawPlane kPlanes[] = {
     {0,48,150,2.5,0.25,92,0},
     {0,350,120,18,18,48,1.25},
@@ -5247,48 +5250,49 @@ static const RawMapObj kMapObjs[] = {
     {"loot_tier_helmet_forest",{"",1,1,16777215,0,0,0,0},0,{1,0,0,0,0},0,0,0,0,0,0,0,0,"","","",0,2,"",0,0,1,16777215,1,0.5,0.5,0,0,0,"","","","","","","","","","","","","","",0,0,0,0,0,0,1,1,1,0,16777215,0,1,0,0,0,0,0,1,1,1,0,0,0,0,1,0,0,1,{0,0,0,3,0},1,nullptr,0,nullptr,0,nullptr,0,nullptr,0,0,nullptr,0,nullptr,0,5.5,2.75,0,12,"",nullptr,0,nullptr,0,nullptr,0,0,"","","",1,10,0,0,1,nullptr,0,"","","","",0},
 };
 static const char* const kMapAtlases_0[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_250[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_528[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_789[] = {"loadout","shared","desert"};
-static const char* const kMapAtlases_1045[] = {"loadout","shared","faction"};
-static const char* const kMapAtlases_1297[] = {"loadout","shared","faction","potato"};
-static const char* const kMapAtlases_1567[] = {"loadout","shared","halloween"};
-static const char* const kMapAtlases_1846[] = {"loadout","shared","main","potato"};
-static const char* const kMapAtlases_2115[] = {"loadout","shared","main","potato"};
-static const char* const kMapAtlases_2396[] = {"loadout","shared","snow"};
-static const char* const kMapAtlases_2666[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_2932[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_3206[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_3486[] = {"loadout","shared","woods"};
-static const char* const kMapAtlases_3768[] = {"loadout","shared","savannah"};
-static const char* const kMapAtlases_4026[] = {"loadout","shared","cobalt"};
-static const char* const kMapAtlases_4275[] = {"loadout","shared","turkey"};
-static const char* const kMapAtlases_4531[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_4787[] = {"loadout","shared","main","beach"};
-static const char* const kMapAtlases_5043[] = {"loadout","shared","main"};
-static const char* const kMapAtlases_5303[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_260[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_548[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_819[] = {"loadout","shared","desert"};
+static const char* const kMapAtlases_1085[] = {"loadout","shared","faction"};
+static const char* const kMapAtlases_1347[] = {"loadout","shared","faction","potato"};
+static const char* const kMapAtlases_1627[] = {"loadout","shared","halloween"};
+static const char* const kMapAtlases_1916[] = {"loadout","shared","main","potato"};
+static const char* const kMapAtlases_2195[] = {"loadout","shared","main","potato"};
+static const char* const kMapAtlases_2486[] = {"loadout","shared","snow"};
+static const char* const kMapAtlases_2766[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_3042[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_3326[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_3616[] = {"loadout","shared","woods"};
+static const char* const kMapAtlases_3908[] = {"loadout","shared","savannah"};
+static const char* const kMapAtlases_4176[] = {"loadout","shared","cobalt"};
+static const char* const kMapRoles_4176[] = {"scout","sniper","healer","demo","assault","tank"};
+static const char* const kMapAtlases_4442[] = {"loadout","shared","turkey"};
+static const char* const kMapAtlases_4708[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_4974[] = {"loadout","shared","main","beach"};
+static const char* const kMapAtlases_5240[] = {"loadout","shared","main"};
+static const char* const kMapAtlases_5510[] = {"loadout","shared","main"};
 static const RawMapRender kMapRenders[] = {
-    {"main",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_0,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"main_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_250,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",6},
-    {"main_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_528,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"desert",6976835,13206586,14657367,11689508,9083726,13756037,9530919,4370618,11792639,4001027,0,0,0,0,1,"",kMapAtlases_789,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"faction",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,0,0,0,1,"",kMapAtlases_1045,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"faction_potato",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,1,0,0,1,"falling_pvt",kMapAtlases_1297,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"halloween",1507328,6570254,2171908,3939077,2621440,1048833,3939077,2621440,1048833,1181697,0,0,0,0,0.3,"falling_leaf_halloween",kMapAtlases_1567,3,"menu_music_02","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"potato",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,1,0,0,1,"falling_potato",kMapAtlases_1846,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"potato_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,1,0,0,1,"falling_leaf_potato",kMapAtlases_2115,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_fast",kMapAtlases_2396,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01x.img","plane_02","map-chute-01x.img",1},
-    {"woods",2118510,15709019,9339690,7812619,3310251,11792639,7812619,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf",kMapAtlases_2666,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"woods_snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_slow",kMapAtlases_2932,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"woods_spring",2118510,15709019,4351497,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_3206,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",6},
-    {"woods_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_summer",kMapAtlases_3486,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"savannah",1858399,13332786,11841582,11689508,4301994,9892086,11689508,4301994,9892086,4001027,0,0,0,0,1,"",kMapAtlases_3768,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"cobalt",134680,6834230,5069416,4472122,13681,11792639,4472122,13681,11792639,1772803,0,0,1,0,1,"",kMapAtlases_4026,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"turkey",4672842,13408091,10521391,12409889,7371638,8292740,12409889,7371638,8292740,1772803,0,0,0,1,1,"",kMapAtlases_4275,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"birthday",2118510,7444036,8433481,9461284,8433481,11792639,9461284,8433481,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4531,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"beach",2118510,16771002,8104037,10711321,4370618,11792639,10711321,4370618,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4787,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"test_normal",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_5043,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
-    {"test_faction",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,1,0,0,0,1,"",kMapAtlases_5303,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1},
+    {"main",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_0,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"main_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_260,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",6,nullptr,0},
+    {"main_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_548,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"desert",6976835,13206586,14657367,11689508,9083726,13756037,9530919,4370618,11792639,4001027,0,0,0,0,1,"",kMapAtlases_819,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"faction",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,0,0,0,1,"",kMapAtlases_1085,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"faction_potato",333348,9328178,5136680,6632211,465718,11792639,6632211,465718,11792639,1772803,1,1,0,0,1,"falling_pvt",kMapAtlases_1347,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"halloween",1507328,6570254,2171908,3939077,2621440,1048833,3939077,2621440,1048833,1181697,0,0,0,0,0.3,"falling_leaf_halloween",kMapAtlases_1627,3,"menu_music_02","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"potato",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,1,0,0,1,"falling_potato",kMapAtlases_1916,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"potato_spring",2118510,16035400,6066442,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,1,0,0,1,"falling_leaf_potato",kMapAtlases_2195,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_fast",kMapAtlases_2486,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01x.img","plane_02","map-chute-01x.img",1,nullptr,0},
+    {"woods",2118510,15709019,9339690,7812619,3310251,11792639,7812619,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf",kMapAtlases_2766,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"woods_snow",603705,13480795,12434877,9461284,806225,11792639,9461284,806225,11792639,1772803,0,0,0,0,1,"falling_snow_slow",kMapAtlases_3042,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"woods_spring",2118510,15709019,4351497,9079434,3310251,11792639,9079434,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_spring",kMapAtlases_3326,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",6,nullptr,0},
+    {"woods_summer",2118510,14458408,6460706,10711321,3310251,11792639,10711321,3310251,11792639,1772803,0,0,0,0,1,"falling_leaf_summer",kMapAtlases_3616,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"savannah",1858399,13332786,11841582,11689508,4301994,9892086,11689508,4301994,9892086,4001027,0,0,0,0,1,"",kMapAtlases_3908,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"cobalt",134680,6834230,5069416,4472122,13681,11792639,4472122,13681,11792639,1772803,0,0,1,0,1,"",kMapAtlases_4176,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,kMapRoles_4176,6},
+    {"turkey",4672842,13408091,10521391,12409889,7371638,8292740,12409889,7371638,8292740,1772803,0,0,0,1,1,"",kMapAtlases_4442,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"birthday",2118510,7444036,8433481,9461284,8433481,11792639,9461284,8433481,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4708,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"beach",2118510,16771002,8104037,10711321,4370618,11792639,10711321,4370618,11792639,1772803,0,0,0,0,1,"",kMapAtlases_4974,4,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"test_normal",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,0,0,0,0,1,"",kMapAtlases_5240,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
+    {"test_faction",2118510,13480795,8433481,9461284,3310251,11792639,9461284,3310251,11792639,1772803,1,0,0,0,1,"",kMapAtlases_5510,3,"menu_music_01","ambient_wind_01","ambient_stream_01","ambient_waves_01","map-plane-01.img","plane_01","map-chute-01.img",1,nullptr,0},
 };
 static const RawEmote kEmotes[] = {
     {"emote_medical","emote-medical-healthkit.img","emote_01","ui","",1,0},
@@ -5410,26 +5414,60 @@ static const RawPing kPings[] = {
     {"ping_woodsking","player-king-woods.img","ping-map-woods-king.img","helmet03_forest_pickup_01","",1,4,10,0,1,1244928},
     {"ping_unlock","ping-team-unlock.img","ping-map-unlock.img","ping_unlock_01","",1,4,10,0,1,55551},
 };
+static const char* const kRolePerks_0[] = {"leadership"};
+static const char* const kRolePerkNames_0[] = {"Leadership"};
+static const char* const kRolePerks_1[] = {"assume_leadership","firepower"};
+static const char* const kRolePerkNames_1[] = {"Assume Leadership","Firepower"};
+static const char* const kRolePerks_2[] = {"firepower"};
+static const char* const kRolePerkNames_2[] = {"Firepower"};
+static const char* const kRolePerks_3[] = {"aoe_heal","self_revive"};
+static const char* const kRolePerkNames_3[] = {"Mass Medicate","Revivify"};
+static const char* const kRolePerks_4[] = {"targeting"};
+static const char* const kRolePerkNames_4[] = {"High-Value Targets"};
+static const char* const kRolePerks_5[] = {"small_arms"};
+static const char* const kRolePerkNames_5[] = {"Small Arms"};
+static const char* const kRolePerks_6[] = {"flak_jacket"};
+static const char* const kRolePerkNames_6[] = {"Flak Jacket"};
+static const char* const kRolePerks_7[] = {"inspiration","final_bugle"};
+static const char* const kRolePerkNames_7[] = {"Inspiration","Last Breath"};
+static const char* const kRolePerks_8[] = {"steelskin","ap_rounds","takedown","windwalk"};
+static const char* const kRolePerkNames_8[] = {"Cast Ironskin","AP Rounds","Takedown","Windwalk"};
+static const char* const kRolePerks_9[] = {"gotw","windwalk"};
+static const char* const kRolePerkNames_9[] = {"Gift of the Woods","Windwalk"};
+static const char* const kRolePerks_11[] = {"hunted"};
+static const char* const kRolePerkNames_11[] = {"The Hunted"};
+static const char* const kRolePerks_12[] = {"field_medic","combat_stims"};
+static const char* const kRolePerkNames_12[] = {"Combat Medic","Combat Stimulants"};
+static const char* const kRolePerks_13[] = {"steelskin","endless_ammo"};
+static const char* const kRolePerkNames_13[] = {"Cast Ironskin","Endless Ammo"};
+static const char* const kRolePerks_14[] = {"chambered","takedown"};
+static const char* const kRolePerkNames_14[] = {"One in the Chamber","Takedown"};
+static const char* const kRolePerks_15[] = {"small_arms","tree_climbing"};
+static const char* const kRolePerkNames_15[] = {"Small Arms","One With Nature"};
+static const char* const kRolePerks_16[] = {"amped_explosives","flak_jacket"};
+static const char* const kRolePerkNames_16[] = {"Hyperfragmentation","Flak Jacket"};
+static const char* const kRolePerks_17[] = {"firepower","bonus_assault"};
+static const char* const kRolePerkNames_17[] = {"Firepower","Hollow-Points"};
 static const RawRole kRoles[] = {
-    {"leader","player-star.img","skull-leader.img","leader_assigned_01","leader_dead_01","Commander","Red Commander","Blue Commander",1,1,0,0},
-    {"captain","player-captain.img","","captain_assigned_01","","Captain","Red Commander","Blue Commander",1,0,0,0},
-    {"lieutenant","","","lt_assigned_01","","Lieutenant","Red Commander","Blue Commander",1,0,0,0},
-    {"medic","player-medic.img","skull-leader.img","medic_assigned_01","","Medic","Red Commander","Blue Commander",1,0,0,0},
-    {"marksman","","","marksman_assigned_01","","Marksman","Red Commander","Blue Commander",1,0,0,0},
-    {"recon","","","recon_assigned_01","","Recon","Red Commander","Blue Commander",1,0,0,0},
-    {"grenadier","","","grenadier_assigned_01","","Grenadier","Red Commander","Blue Commander",1,0,0,0},
-    {"bugler","","","bugler_assigned_01","","Bugler","Red Commander","Blue Commander",1,0,0,0},
-    {"last_man","player-last-man.img","","last_man_assigned_01","","Lone Survivr","Red Commander","Blue Commander",1,0,0,0},
-    {"woods_king","","","","leader_dead_01","The Woods King","Red Commander","Blue Commander",0,1,1,1244928},
-    {"kill_leader","","","leader_assigned_01","leader_dead_01","Kill Leader","Red Commander","Blue Commander",1,1,1,16745472},
-    {"the_hunted","","","leader_assigned_01","leader_dead_01","The Hunted","Red Commander","Blue Commander",1,1,1,16745472},
-    {"healer","","","spawn_01","","Medic","Red Commander","Blue Commander",0,0,0,0},
-    {"tank","","","spawn_01","","Tank","Red Commander","Blue Commander",0,0,0,0},
-    {"sniper","","","spawn_01","","Sniper","Red Commander","Blue Commander",0,0,0,0},
-    {"scout","","","spawn_01","","Scout","Red Commander","Blue Commander",0,0,0,0},
-    {"demo","","","spawn_01","","Demo","Red Commander","Blue Commander",0,0,0,0},
-    {"assault","","","spawn_01","","Assault","Red Commander","Blue Commander",0,0,0,0},
-    {"classless","","","spawn_01","","classless","Red Commander","Blue Commander",0,0,0,0},
+    {"leader","player-star.img","skull-leader.img","leader_assigned_01","leader_dead_01","Commander","Red Commander","Blue Commander",1,1,0,0,"",0,0,kRolePerks_0,1,kRolePerkNames_0},
+    {"captain","player-captain.img","","captain_assigned_01","","Captain","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_1,2,kRolePerkNames_1},
+    {"lieutenant","","","lt_assigned_01","","Lieutenant","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_2,1,kRolePerkNames_2},
+    {"medic","player-medic.img","skull-leader.img","medic_assigned_01","","Medic","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_3,2,kRolePerkNames_3},
+    {"marksman","","","marksman_assigned_01","","Marksman","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_4,1,kRolePerkNames_4},
+    {"recon","","","recon_assigned_01","","Recon","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_5,1,kRolePerkNames_5},
+    {"grenadier","","","grenadier_assigned_01","","Grenadier","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_6,1,kRolePerkNames_6},
+    {"bugler","","","bugler_assigned_01","","Bugler","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_7,2,kRolePerkNames_7},
+    {"last_man","player-last-man.img","","last_man_assigned_01","","Lone Survivr","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_8,4,kRolePerkNames_8},
+    {"woods_king","","","","leader_dead_01","The Woods King","Red Commander","Blue Commander",0,1,1,1244928,"",0,0,kRolePerks_9,2,kRolePerkNames_9},
+    {"kill_leader","","","leader_assigned_01","leader_dead_01","Kill Leader","Red Commander","Blue Commander",1,1,1,16745472,"",0,0,nullptr,0,nullptr},
+    {"the_hunted","","","leader_assigned_01","leader_dead_01","The Hunted","Red Commander","Blue Commander",1,1,1,16745472,"",0,0,kRolePerks_11,1,kRolePerkNames_11},
+    {"healer","","","spawn_01","","Medic","Red Commander","Blue Commander",0,0,0,0,"gui/role-healer.png",1,11468975,kRolePerks_12,2,kRolePerkNames_12},
+    {"tank","","","spawn_01","","Tank","Red Commander","Blue Commander",0,0,0,0,"gui/role-tank.png",1,13862400,kRolePerks_13,2,kRolePerkNames_13},
+    {"sniper","","","spawn_01","","Sniper","Red Commander","Blue Commander",0,0,0,0,"gui/role-sniper.png",1,30696,kRolePerks_14,2,kRolePerkNames_14},
+    {"scout","","","spawn_01","","Scout","Red Commander","Blue Commander",0,0,0,0,"gui/role-scout.png",1,6725632,kRolePerks_15,2,kRolePerkNames_15},
+    {"demo","","","spawn_01","","Demo","Red Commander","Blue Commander",0,0,0,0,"gui/role-demo.png",1,6750976,kRolePerks_16,2,kRolePerkNames_16},
+    {"assault","","","spawn_01","","Assault","Red Commander","Blue Commander",0,0,0,0,"gui/role-assault.png",1,16772119,kRolePerks_17,2,kRolePerkNames_17},
+    {"classless","","","spawn_01","","classless","Red Commander","Blue Commander",0,0,0,0,"",0,0,nullptr,0,nullptr},
 };
 static const RawGameObj kGameObjs[] = {
     {"bullet_mp5","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0,0,0,0,0,0,"","",0,"",0.0f,"",16777215,0,16777215,"","","","","","",0,0.8,0,0,"",0,0,0,1,16777215,20,0,1,0,0,1,"",0,1,1,0.375,0,0,0},
@@ -6553,9 +6591,9 @@ static const RawParticle kParticles[] = {
     {"leafStim",kParticleImgs_28647,4,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0.37,0.37,1,1,0.95,1},
     {"takedownStim",kParticleImgs_28852,1,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,13107200,0,0,0,0,1,1,1,1},
     {"inspireStim",kParticleImgs_29059,1,20,{4,5,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,0,1,0.13,0.13,1,1,0.98,1},
-    {"xp_common",kParticleImgs_29267,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.16,0.16,1,1,0.95,1},
-    {"xp_rare",kParticleImgs_29476,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.05,0.06,0.94,0.95,0.85,1},
-    {"xp_mythic",kParticleImgs_29689,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0,0,0.96,0.96,0.91,0.94},
+    {"xp_common",kParticleImgs_29267,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.16,0.12,1,0.97,0.95,1},
+    {"xp_rare",kParticleImgs_29479,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.06,0.05,0.95,0.94,0.95,0.88},
+    {"xp_mythic",kParticleImgs_29695,1,20,{0.75,1,0},{0,0,1},{0.7853981633974483,1.5707963267948966,0},{0.12,0.14,0},{0.06,0.08,0},{0,1,0},0,0,1,0,{0.7,1,0},0,0,1,0,1,{0,0.05,0},1,0,1,1,0.03,0,0.95,0.96,0.92,0.94},
 };
 static const RawEmitter kEmitters[] = {
     {"smoke_barrel","explosionSmoke",{0.2,0.3,0},0,{2,3,0},0.3141592653589793,1,{0,6.283185307179586,0},3.402823466e+38,0,{0,0,1},0,0,0},
@@ -6789,6 +6827,9 @@ public:
             d.airdropPlaneSound = r.airdropPlaneSound ? r.airdropPlaneSound : "plane_01";
             d.airdropChuteImg = r.airdropChuteImg ? r.airdropChuteImg : "map-chute-01.img";
             d.riverShoreSurface = static_cast<SurfaceTypeDef>(r.riverShoreSurface);
+            for (int i = 0; i < r.perkModeRoleCount; i++) {
+                d.perkModeRoles.push_back(r.perkModeRoles[i] ? r.perkModeRoles[i] : "");
+            }
             _mapRenders[r.name] = d;
         }
         for (const auto& r : kGameObjs) {
@@ -13727,6 +13768,13 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
             d.killFeedDead = r.killFeedDead != 0;
             d.hasKillFeedColor = r.hasKillFeedColor != 0;
             d.killFeedColor = r.killFeedColor;
+            d.guiImg = r.guiImg ? r.guiImg : "";
+            d.hasColor = r.hasColor != 0;
+            d.color = r.color;
+            for (int i = 0; i < r.perkCount; i++) {
+                d.perks.push_back(r.perks[i] ? r.perks[i] : "");
+                d.perkNames.push_back(r.perkNames[i] ? r.perkNames[i] : "");
+            }
             _roles[r.type] = std::move(d);
         }
         _loadoutItems.reserve(sizeof(kLoadoutItems) / sizeof(kLoadoutItems[0]));

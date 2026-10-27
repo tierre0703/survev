@@ -135,6 +135,38 @@ public:
     // ui.ts #ui-waiting-text: shown after join until the match starts.
     void setWaitingForPlayers(bool waiting);
 
+    // --- Perk-mode class picker (ui.ts setRoleMenuOptions / setRoleMenuActive) --
+    // Shown on a perk map until the local player picks a class (or the 20 s
+    // timer runs out). `preferred` is config `perkModeRole`; the web picks
+    // roles[0] when it is not in the map's list.
+    static constexpr int kRoleOptionMax = 8;
+    static constexpr int kRolePerkMax = 4;
+    static constexpr float kRoleMenuWidth = 1200.0f;
+    static constexpr float kRoleMenuHeight = 770.0f; // 200 header + 450 body + 120 footer
+    static constexpr float kRoleSelectDuration = 20.0f;
+    void setRoleMenuOptions(const std::string& preferred, const std::vector<std::string>& roles);
+    void setRoleMenuActive(bool active);
+    bool roleMenuActive() const { return _roleMenuActive; }
+    // Clears the picker state for a new match (the web rebuilds it on MapMsg).
+    void resetRoleMenu();
+    // ui.ts roleMenuTicker + footer countdown, split out for the host tests.
+    void tickRoleMenu(float dt);
+    enum class RoleTap {
+        None,
+        Option,
+        Confirm,
+    };
+    // `option` receives the clicked class index for RoleTap::Option.
+    RoleTap roleMenuActionAt(float designX, float designY, int& option) const;
+    // ui.ts .ui-role-option click / #ui-role-footer-enter click.
+    void selectRoleOption(int index) { selectRole(index); }
+    void confirmRoleSelection();
+    // The confirmed/timed-out class, consumed once by GameScene to send
+    // PerkModeRoleSelectMsg (game.ts:697-705).
+    bool consumeRoleSelection(std::string& role);
+    const std::string& roleMenuDisplayed() const { return _roleDisplayed; }
+    int roleMenuOptionCount() const { return static_cast<int>(_roleOptionsState.size()); }
+
     // ui.ts displayStats: result screen (victory/defeat, rank, team kills and
     // the local player's kills/damage/time). Called with GameOverMsg data.
     void showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t localPlayerId,
@@ -271,6 +303,12 @@ public:
     const pix::Text* aliveText() const { return _aliveText; }
     const pix::Text* waitingText() const { return _waitingText; }
     const pix::Text* pickupMessageText() const { return _pickupText; }
+    const pix::Text* roleNameText() const { return _roleName; }
+    const pix::Text* roleFooterText() const { return _roleFooter; }
+    const pix::Text* roleConfirmText() const { return _roleFooter; }
+    const pix::Text* rolePerkNameText(int idx) const {
+        return (idx >= 0 && idx < kRolePerkMax) ? _rolePerkName[static_cast<size_t>(idx)] : nullptr;
+    }
     const pix::Text* killFeedRowText(int idx) const {
         return (idx >= 0 && idx < 6) ? _killFeedRows[static_cast<size_t>(idx)] : nullptr;
     }
@@ -290,6 +328,8 @@ private:
 
     // Repaints the P0.1 action controls from the state update() sampled.
     void updateActionButtons();
+    // ui.ts setRoleMenuInfo: repaints the class picker for one option.
+    void selectRole(int index);
 
     pix::Factory* _factory = nullptr;
     pix::Container* _root = nullptr;
@@ -431,6 +471,32 @@ private:
     pix::Text* _announcementText = nullptr;
     pix::Text* _waitingText = nullptr;
     bool _waiting = false;
+
+    // Perk-mode class picker (ui.ts #ui-role-menu-wrapper / #ui-role-menu).
+    pix::Container* _rolePanel = nullptr;
+    pix::Graphics* _roleBackdrop = nullptr;
+    pix::Graphics* _rolePanelBg = nullptr;
+    pix::Graphics* _roleHeaderBg = nullptr;
+    pix::Graphics* _roleFooterBg = nullptr;
+    pix::Graphics* _roleConfirmBg = nullptr;
+    pix::Text* _roleName = nullptr;
+    pix::Text* _roleDesc = nullptr;
+    pix::Text* _roleFooter = nullptr;
+    pix::Sprite* _roleImage = nullptr;
+    pix::Sprite* _roleOptionSprites[kRoleOptionMax] = {};
+    std::array<pix::Sprite*, kRolePerkMax> _rolePerkRing{};
+    std::array<pix::Sprite*, kRolePerkMax> _rolePerkIcon{};
+    std::array<pix::Text*, kRolePerkMax> _rolePerkName{};
+    std::vector<std::string> _roleOptionsState;
+    std::string _roleDisplayed;
+    std::string _roleSelectedPending;
+    bool _roleMenuActive = false;
+    float _roleTicker = 0.0f;
+    float _roleScale = 1.0f;
+    // Hit rects in design space (the panel itself is scaled by _roleScale).
+    std::array<Rect, kRoleOptionMax> _roleOptionRects{};
+    Rect _roleConfirmRect;
+    std::string _lastRoleFooter;
     float _announcementTicker = 0.0f;
     bool _factionMode = false;
     std::array<pix::Graphics*, 3> _teamArrows{};
