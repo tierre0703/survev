@@ -255,7 +255,7 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _overBackdrop->setVisible(false);
     _root->addChild(_overBackdrop);
     const float panelW = 460.0f;
-    const float panelH = 230.0f;
+    const float panelH = 300.0f;
     _overPanel = _factory->createGraphics();
     _overPanel->beginFill(0x101010, 0.85f);
     _overPanel->drawRect(-panelW * 0.5f, -panelH * 0.5f, panelW, panelH);
@@ -289,6 +289,19 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _overStats->setLocalZOrder(952);
     _overStats->setVisible(false);
     _root->addChild(_overStats);
+
+    // ui.ts showStats: per-player kills/damage cards (compact list here).
+    for (int i = 0; i < kOverStatRows; ++i) {
+        pix::Text* row = _factory->createText();
+        row->setFontSize(13.0f);
+        row->setColor(0xffffff, 0x000000, 1.0f, false);
+        row->setAnchor(0.5f, 1.0f);
+        row->setPosition(0.0f, panelH * 0.5f - 145.0f - static_cast<float>(i) * 18.0f);
+        row->setLocalZOrder(952);
+        row->setVisible(false);
+        _root->addChild(row);
+        _overStatRow[static_cast<size_t>(i)] = row;
+    }
 
     // P0.4 overlay buttons: the final result has LEAVE; the team-death panel has
     // SPECTATE + LEAVE. Positions are panel-local (the panel is centred).
@@ -888,6 +901,11 @@ void Hud::setVisible(bool visible) {
     if (_overStats) {
         _overStats->setVisible(over);
     }
+    for (size_t i = 0; i < _overStatRow.size(); ++i) {
+        if (_overStatRow[i]) {
+            _overStatRow[i]->setVisible(visible && _overShown && _overStatRowHas[i]);
+        }
+    }
     if (_overSpectateBg) {
         _overSpectateBg->setVisible(visible && _deathShown && !_overShown);
     }
@@ -1206,7 +1224,8 @@ std::string Hud::formatTime(uint16_t seconds) {
     return out;
 }
 
-void Hud::showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t localPlayerId) {
+void Hud::showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t localPlayerId,
+                       const Game* game) {
     if (!_built) {
         return;
     }
@@ -1229,6 +1248,41 @@ void Hud::showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t lo
         text += "\nSurvived: " + formatTime(local->timeAlive);
     }
     _overStats->setText(text);
+
+    // ui.ts showStats: one row per teammate (name, kills, damage), local row green.
+    std::vector<const PlayerStatsMsg*> rows;
+    rows.reserve(over.playerStats.size());
+    for (const auto& stats : over.playerStats) {
+        rows.push_back(&stats);
+    }
+    std::sort(rows.begin(), rows.end(), [](const PlayerStatsMsg* a, const PlayerStatsMsg* b) {
+        if (a->kills != b->kills) return a->kills > b->kills;
+        return a->damageDealt > b->damageDealt;
+    });
+    for (int i = 0; i < kOverStatRows; ++i) {
+        pix::Text* row = _overStatRow[static_cast<size_t>(i)];
+        if (!row) continue;
+        if (i >= static_cast<int>(rows.size())) {
+            _overStatRowHas[static_cast<size_t>(i)] = false;
+            row->setVisible(false);
+            continue;
+        }
+        const PlayerStatsMsg* stats = rows[static_cast<size_t>(i)];
+        const std::string name = game ? game->displayName(stats->playerId)
+                                      : "Player " + std::to_string(stats->playerId);
+        row->setText(name + "   " + std::to_string(stats->kills) + " K   " +
+                     std::to_string(stats->damageDealt) + " DMG");
+        uint32_t color = 0xffffff;
+        if (stats->playerId == localPlayerId) {
+            color = 0x8fff6a;
+        } else if (game) {
+            const uint8_t team = game->playerTeamId(stats->playerId);
+            if (team >= 1 && team <= 2) color = kTeamColors[team - 1];
+        }
+        row->setColor(color, 0x000000, 1.0f, false);
+        _overStatRowHas[static_cast<size_t>(i)] = true;
+        row->setVisible(true);
+    }
 
     _overShown = true;
     _deathShown = false;
@@ -1261,6 +1315,10 @@ void Hud::showDeathPanel(const PlayerStatsMsg& stats) {
     if (_overStats) {
         _overStats->setText(text);
     }
+    for (auto* row : _overStatRow) {
+        if (row) row->setVisible(false);
+    }
+    _overStatRowHas = {};
     if (_overLeaveText) _overLeaveText->setText("LEAVE GAME");
     _bigMapVisible = false;
     setVisible(_visible);
@@ -1471,7 +1529,7 @@ void Hud::update(float dt, const Game& game, bool visible) {
     if (over) {
         if (!_overShown) {
             showGameOver(*over, game.teamIdForPlayer(game.getLocalPlayerId()),
-                         game.getLocalPlayerId());
+                         game.getLocalPlayerId(), &game);
         }
         _deathShown = false;
         _spectating = false;

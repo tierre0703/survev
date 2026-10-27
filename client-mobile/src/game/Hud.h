@@ -137,7 +137,8 @@ public:
 
     // ui.ts displayStats: result screen (victory/defeat, rank, team kills and
     // the local player's kills/damage/time). Called with GameOverMsg data.
-    void showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t localPlayerId);
+    void showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t localPlayerId,
+                      const Game* game = nullptr);
     bool gameOverShown() const { return _overShown; }
     static std::string formatTime(uint16_t seconds);
 
@@ -231,6 +232,9 @@ public:
     const pix::Text* gameOverTitleText() const { return _overTitle; }
     const pix::Text* gameOverRankText() const { return _overRank; }
     const pix::Text* gameOverStatsText() const { return _overStats; }
+    const pix::Text* gameOverStatRow(int idx) const {
+        return (idx >= 0 && idx < kOverStatRows) ? _overStatRow[static_cast<size_t>(idx)] : nullptr;
+    }
     const pix::Text* squadNameText(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].name : nullptr;
     }
@@ -328,6 +332,10 @@ private:
     pix::Text* _overTitle = nullptr;
     pix::Text* _overRank = nullptr;
     pix::Text* _overStats = nullptr;
+    // ui.ts showStats player cards, reduced to one text row per teammate.
+    static constexpr int kOverStatRows = 4;
+    std::array<pix::Text*, kOverStatRows> _overStatRow{};
+    std::array<bool, kOverStatRows> _overStatRowHas{};
     pix::Graphics* _overSpectateBg = nullptr;
     pix::Text* _overSpectateText = nullptr;
     pix::Graphics* _overLeaveBg = nullptr;

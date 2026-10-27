@@ -621,6 +621,15 @@ TEST(hud_gas_timer_and_result_overlay) {
     CHECK(stats->text.find("Kills: 4") != std::string::npos);
     CHECK(stats->text.find("Damage: 321") != std::string::npos);
     CHECK(stats->text.find("Survived: 1:35") != std::string::npos);
+    auto* statRow0 = static_cast<const pix::NullText*>(hud.gameOverStatRow(0));
+    auto* statRow1 = static_cast<const pix::NullText*>(hud.gameOverStatRow(1));
+    CHECK(statRow0 != nullptr && statRow1 != nullptr);
+    CHECK(statRow0->text.find("Player 42") != std::string::npos);
+    CHECK(statRow0->text.find("4 K") != std::string::npos);
+    CHECK(statRow0->text.find("321 DMG") != std::string::npos);
+    CHECK(statRow0->visible);
+    CHECK(statRow1->text.find("2 K") != std::string::npos);
+    CHECK(!static_cast<const pix::NullText*>(hud.gameOverStatRow(2))->visible);
 
     over.winningTeamId = 1;
     hud.showGameOver(over, 1, 42);
