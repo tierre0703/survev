@@ -165,6 +165,7 @@ node --experimental-transform-types tools/codegen_menu_defs.mjs    # -> proj.and
 node tools/gen_reference.mjs                                        # tests/ReferenceData.h fixtures
 node tools/build-atlas.mjs --res low                                # sprite atlases -> Content/atlas
 node --experimental-transform-types tools/build-loadout-icons.mjs   # loadout item art -> Content/img/loadout
+node --experimental-transform-types tools/build-menu-icons.mjs      # mode icons -> Content/img/menu
 ```
 
 `Content/` is gitignored; run `build-atlas.mjs` before packaging an APK. Generated

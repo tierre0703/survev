@@ -52,4 +52,9 @@ final class GeneratedMenuData {
         String[] row = entry(mapName);
         return row != null ? row[2] : "";
     }
+
+    /** Rasterized menu icon (tools/build-menu-icons.mjs); "" when the map has none. */
+    static String modeIcon(String mapName) {
+        return modeIconSource(mapName).isEmpty() ? "" : "img/menu/" + mapName + ".png";
+    }
 }

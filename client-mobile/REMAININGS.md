@@ -24,7 +24,8 @@ reload casings). The fifth adds live-HUD gear level badges/tap-to-drop, squad
 group-colour dots + downed pulse, the cyan group-colour fix, and in-place
 Settings re-localization. The sixth adds role promoted/dead kill-feed lines.
 The seventh adds the gas/danger HUD icon with its moving-gas pulse. The eighth
-adds the clientTheme menu splash background. **205 host tests pass, 0 fail.**
+adds the clientTheme menu splash background. The ninth adds the rasterized
+quick-play mode icons. **205 host tests pass, 0 fail.**
 
 ---
 
@@ -612,13 +613,23 @@ Done in the eighth P2 pass (2026-10-26):
 - Build/install: x86_64 APK built and installed on `emulator-5554`; launched to
   the menu with site_info loaded and no crash log.
 
+Done in the ninth P2 pass (2026-10-26):
+- Quick-play mode icons: `tools/build-menu-icons.mjs` rasterizes
+  `MapDef.desc.icon` (15 maps: faction, halloween, potato, snow, desert, woods,
+  beach, birthday, ...) to `Content/img/menu/<map>.png`; `MenuFragment` attaches
+  the icon as a left compound drawable on each mode button.
+- Verified the APK packages all `assets/img/menu/*.png`; the local site_info
+  only exposes `main` modes (no icon), so themed icons need a dev server/site
+  with themed modes for a visual check.
+- Host tests still pass (Java/assets change only).
+
 Remaining:
 - **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
   alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
   implemented; `MapSprite` z-order only affects the dead `FguiHud` path (the
   live HUD uses `MapView`/`EmoteManager` ping layers).
-- **HUD/menus:** mode icons, news images/badges, social/streamer blocks, menu
-  character preview (`opponentDisplay.ts`), live in-game leaderboard bridge.
+- **HUD/menus:** news images/badges, social/streamer blocks, menu character
+  preview (`opponentDisplay.ts`), live in-game leaderboard bridge.
 - **Audio:** music channel volume quirk (web routes music through `soundVolume`),
   exact EQ/convolution timbre.
 - **Platform/perf:** unload map atlases on map change and preload map audio
@@ -711,6 +722,7 @@ node tools/gen_reference.mjs
 node tools/build-atlas.mjs --res low
 node tools/build-gui-icons.mjs
 node --experimental-transform-types tools/build-loadout-icons.mjs
+node --experimental-transform-types tools/build-menu-icons.mjs
 ```
 
 Regenerate the latency-test targets after changing `regions`:
@@ -986,3 +998,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   `tools/codegen_menu_defs.mjs` (never hand-edit): the Java menu looks up
   `site_info.clientTheme` for the splash background and the map's mode icon.
   Android decodes the packaged `.webp` splash directly under the 30% SCRIM.
+- Mode-button art comes from `MapDef.desc.icon`:
+  `tools/build-menu-icons.mjs` rasterizes it to `Content/img/menu/<map>.png`
+  (run by `sync-content.ps1`), and `MenuFragment` attaches it as a left compound
+  drawable when `GeneratedMenuData.modeIcon()` is non-empty.

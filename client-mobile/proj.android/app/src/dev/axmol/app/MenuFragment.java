@@ -27,6 +27,8 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.os.Handler;
@@ -635,6 +637,26 @@ public class MenuFragment {
         }
     }
 
+    /**
+     * siteInfo.ts mode buttons: MapDef.desc.icon (rasterized to
+     * Content/img/menu/<mapName>.png by tools/build-menu-icons.mjs).
+     */
+    private Drawable loadModeIcon(String mapName) {
+        String asset = GeneratedMenuData.modeIcon(mapName);
+        if (asset.isEmpty()) return null;
+        try (InputStream in = mActivity.getAssets().open(asset)) {
+            Bitmap bitmap = BitmapFactory.decodeStream(in);
+            if (bitmap == null) return null;
+            BitmapDrawable drawable = new BitmapDrawable(mActivity.getResources(), bitmap);
+            int px = dp(22);
+            drawable.setBounds(0, 0, px, px);
+            return drawable;
+        } catch (Exception e) {
+            Log.w(TAG, "mode icon " + asset + ": " + e.getMessage());
+            return null;
+        }
+    }
+
     private void fetchSiteInfo() {
         mSiteInfoLoaded = false;
         mPlaySpinner.setVisibility(View.VISIBLE);
@@ -724,6 +746,12 @@ public class MenuFragment {
                             ? "Play " + Character.toUpperCase(buttonText.charAt(0)) + buttonText.substring(1)
                             : "Play");
             TextView btn = makeButton(label, GREEN, GREEN_SHADOW, i == 0 ? 18 : 16);
+            // siteInfo.ts: map button art (custom mode icon) when the map has one.
+            Drawable modeIcon = loadModeIcon(mode.mapName);
+            if (modeIcon != null) {
+                btn.setCompoundDrawables(modeIcon, null, null, null);
+                btn.setCompoundDrawablePadding(dp(6));
+            }
             btn.setEnabled(mode.enabled);
             btn.setAlpha(mode.enabled ? 1.0f : 0.45f);
             btn.setOnClickListener(new View.OnClickListener() {
