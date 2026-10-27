@@ -223,6 +223,65 @@ TEST(audio_master_volume_scales_live_instances) {
 }
 
 // ---------------------------------------------------------------------------
+// The Java UI's one-shot cues (SurvBridge.playSound) resolve their volume from
+// the channel's type: only the "music" channel follows musicVolume; UI/avatar
+// cues ("ui"/"sfx") and — the web's quirk — map/ambient music on the "ambient"
+// channel follow soundVolume. Lock it so a refactor cannot silently route the
+// avatar/UI cues through the music slider.
+TEST(audio_ui_cues_follow_the_channel_type_volume) {
+    audio::installGeneratedSoundDefs();
+    RecordingBackend backend;
+    audio::AudioManager manager(&backend);
+    manager.preloadSounds();
+    // Startup config replaces CreateJS's default 0.5 global volume.
+    manager.setMasterVolume(1.0f);
+    manager.setMusicVolume(1.0f);
+    manager.setSoundVolume(0.0f);
+
+    audio::PlaySoundOptions music;
+    music.channel = "music";
+    const audio::SoundHandle menu = manager.playSound("menu_music_01", music);
+    CHECK(menu != audio::kInvalidSound);
+    // baseVolume 0.5 * music channel 1 * menu_music_01 volume 1.
+    CHECK_NEAR(backend.getVolume(menu), 0.5f, 1e-4f);
+
+    // Changing soundVolume leaves the music channel alone.
+    manager.setSoundVolume(0.5f);
+    CHECK_NEAR(backend.getVolume(menu), 0.5f, 1e-4f);
+
+    // Map/ambient music is on the ambient channel (typed "sound"), so it
+    // follows soundVolume: base 0.5 * soundVolume 0.5.
+    audio::PlaySoundOptions ambient;
+    ambient.channel = "ambient";
+    ambient.loop = true;
+    const audio::SoundHandle club = manager.playSound("club_music_01", ambient);
+    CHECK(club != audio::kInvalidSound);
+    CHECK_NEAR(backend.getVolume(club), 0.25f, 1e-4f);
+
+    // Outfit pickup (menu avatar): ui channel 0.75 * base 0.5 * soundVolume 0.5.
+    audio::PlaySoundOptions ui;
+    ui.channel = "ui";
+    const audio::SoundHandle pickup = manager.playSound("clothes_pickup_01", ui);
+    CHECK(pickup != audio::kInvalidSound);
+    CHECK_NEAR(backend.getVolume(pickup), 0.5f * 0.75f * 0.5f, 1e-4f);
+
+    // Melee swing (avatar attack effect): sfx channel 1 * base 0.5 * 0.5.
+    audio::PlaySoundOptions swing;
+    swing.channel = "sfx";
+    const audio::SoundHandle hit = manager.playSound("punch_swing_01", swing);
+    CHECK(hit != audio::kInvalidSound);
+    CHECK_NEAR(backend.getVolume(hit), 0.25f, 1e-4f);
+
+    // musicVolume 0 mutes the music channel without touching UI cues.
+    manager.setMusicVolume(0.0f);
+    const audio::SoundHandle muted = manager.playSound("menu_music_01", music);
+    CHECK(muted != audio::kInvalidSound);
+    CHECK_NEAR(backend.getVolume(muted), 0.0f, 1e-5f);
+    const audio::SoundHandle stillAudible = manager.playSound("clothes_pickup_01", ui);
+    CHECK_NEAR(backend.getVolume(stillAudible), 0.5f * 0.75f * 0.5f, 1e-4f);
+}
+
+// ---------------------------------------------------------------------------
 TEST(audio_stop_all_retains_ambient_voices) {
     audio::installGeneratedSoundDefs();
     RecordingBackend backend;

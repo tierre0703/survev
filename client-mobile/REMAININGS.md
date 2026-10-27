@@ -88,7 +88,7 @@ native asset-error reports. **207 host tests pass, 0 fail.**
 | `client/src/objects/flare.ts` → `objects/Barns.*` | 🔶 additive blend is a no-op (P2) |
 | `client/src/objects/structure.ts` → `objects/Structure.*` | ✅ bounds/masks/stairs/map icons + `interiorSound` ambience tracks |
 | `client/src/objects/particles.ts` → `objects/Barns.*` (ParticleBarn + Emitter) | ✅ near line-for-line; per-particle HSV color variance from the TS colour closures |
-| `client/src/audioManager.ts` → `audio/AudioManager.*` | ✅ startup volumes/mute, master folded into live type volumes, maxInstances/coalesce/delay/detune, ambient retention and stopAll semantics |
+| `client/src/audioManager.ts` → `audio/AudioManager.*` | ✅ startup volumes/mute, master folded into live type volumes, maxInstances/coalesce/delay/detune, ambient retention and stopAll semantics; Java UI cues reach the mixer through `UiBridge::playSound` (`SurvBridge.playSound`) |
 | `client/src/soundDefs.ts` → `audio/GeneratedSoundDefs.cpp` (codegen) | ✅ generated |
 | `client/src/ambiance.ts` → `audio/Ambiance.*` | ✅ in-game tracks + menu music (GameScene ticks it while the Java menu is up), retained across match end, completed-track restart |
 | `client/lib/createJS.ts` → `audio/AxmolAudioBackend.h` | ✅ channel semantics enforced in AudioManager; per-source pitch (detune), mute-safe new loops, EAX reverb |
@@ -105,7 +105,7 @@ native asset-error reports. **207 host tests pass, 0 fail.**
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | 🔶 partial: barn exists but is constructed with a **null** sprite barn; `MapSprite` z-order/pulse not applied (P2) |
 | `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | `game/HardwareInput.h` + `game/InputSync.h` | 🔶 default bind set ported (WASD/arrows, R/F/X, 1–4, wheel, Q/E/T, 7–0, M/G, Escape) with mouse aim/left-click fire/wheel, touch handoff and change-gated InputMsg sends (1 s keepalive); no bind-remap editor/CRC or controller mapping (not required for Android) |
-| `client/src/ui/opponentDisplay.ts` (menu character preview / opponent display) | 🔶 static preview: `tools/build-character-preview.mjs` bakes the `fists` idle pose + selected melee into `Content/img/preview/*`, the Java menu polls the saved outfit/melee and draws them with an idle bob and a generic fists-keyframe swing (right hand + melee move together); melee-specific animation frames, particles and camera framing are P2 |
+| `client/src/ui/opponentDisplay.ts` (menu character preview / opponent display) | 🔶 animated preview: `CharacterPreviewView` draws the outfit's body/hands and the selected melee on the animData.ts skeleton (`GeneratedPreviewAnims`: idle pose + melee deploy/idle/attack keyframes), framed to fit the art, and plays the outfit pickup + melee anim sounds through `SurvBridge.playSound`; heal/boost particle emitters are N/A while the preview has no heal/boost tab |
 | `client/src/resources.ts` (per-map load/unload, audio preload, MAX_TEXTURE_SIZE) | 🔶 map atlases load/unload on map change like `loadMapAssets`; audio is preloaded globally at startup (no per-map preload needed), `MAX_TEXTURE_SIZE` tiers remain P2 |
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ✅ keyed from the defs (`sound.reload/reloadAlt/deploy/use/pickup`); doors/buttons/puzzles/ceiling/plane loops and victory music wired; dry fire is approximate (P2) |
 | UI sounds (ambient lab, pickup pings, notifications, victory) | 🔶 victory music + pickup/door/puzzle/plane cues wired; notification/team-join sounds are web focus-only (not applicable to the Android foreground) |
@@ -747,20 +747,46 @@ Done in the eighteenth P2 pass (2026-10-27):
   with no `CharacterPreview` asset warnings and an empty crash buffer. Host
   tests: 3509 assertions / 207 tests, 0 failures.
 - Not ported (still P2, and not applicable to the Java avatar): the heal/boost
-  use-item particle emitters, the outfit-pickup/swing audio cues (the Java menu
-  has no sfx bridge) and the web's modal-relative camera framing (the view is
-  laid out by the menu, not by a camera offset). The preview keeps the y-up
-  local frame + static portrait facing of the port (no body rotation).
+  use-item particle emitters and the web's modal-relative camera framing (the
+  view is laid out by the menu, not by a camera offset). The preview keeps the
+  y-up local frame + static portrait facing of the port (no body rotation).
+
+Done in the nineteenth P2 pass (2026-10-27):
+- Java UI -> C++ one-shot sound bridge: `SurvBridge.playSound(name, channel)` ->
+  `UiBridge::playSound` -> `AndroidUiBridge` (queued onto the GL thread like the
+  other scene/audio mutations) -> `AudioManager::playSound`. Unknown keys and
+  channels are dropped natively and the user's mute/volume settings still apply,
+  so Java never has to know whether audio is available; the seam is recorded by
+  `MemoryUiBridge` for host tests. This is the first UI-sound path in the native
+  client (M6 listed UI sounds as unported because the Java screens had no way to
+  reach the mixer).
+- Menu avatar cues (`ui/opponentDisplay.ts`): the outfit change plays the new
+  outfit's `sound.pickup` on the `ui` channel, and the animData.ts
+  `animPlaySound` effects (melee `swing`/`deploy`/`idle`, fired in the same
+  `(prevTicker, ticker]` window as player.ts) resolve through the item's sound
+  table and play on `sfx`. `GeneratedPreviewAnims` gained a per-item SOUNDS
+  table and per-anim sound effects; `renderOnHand`-style melee rows supply the
+  sound keys.
+- Host tests: `bridge_ui_host_roundtrip` records the sound name/channel, and
+  `audio_ui_cues_follow_the_channel_type_volume` locks the channel-type mixer
+  semantics the cues rely on (only the `music` channel follows `musicVolume`;
+  `ui`/`sfx` and the web's ambient/map-music quirk follow `soundVolume`).
+- Device check (x86_64 emulator, `debug.surv_debug=1`): the menu avatar's melee
+  anims logged `[audio] play punch_swing_01sfx` (fists swing) with the expected
+  volume, no crash/warning output; host tests 3526 assertions / 208 tests.
 
 Remaining:
 - **Rendering:** body-easing edge cases. `plane.ts` (sprite/rotation/elevate/
   alpha/sound) and `AirstrikeZone` (MapView strike circles) are already
   implemented; `MapSprite` z-order only affects the dead `FguiHud` path (the
   live HUD uses `MapView`/`EmoteManager` ping layers).
-- **HUD/menus:** menu preview heal/boost particle emitters + preview audio cues
-  beyond the ported melee keyframes (`opponentDisplay.ts`).
-- **Audio:** music channel volume quirk (web routes music through `soundVolume`),
-  exact EQ/convolution timbre.
+- **HUD/menus:** menu preview heal/boost particle emitters (`opponentDisplay.ts`;
+  the Java avatar has no heal/boost view, so this only matters if the preview
+  gains those tabs).
+- **Audio:** exact EQ/convolution timbre (the web biquad chains are approximated
+  by an OpenAL low-pass); the web's channel-type volume quirk (ambient/map music
+  follows `soundVolume`) is reproduced and locked by
+  `audio_ui_cues_follow_the_channel_type_volume`.
 - **Platform/perf:** device/tablet/perf tiers, keyboard/gamepad bind editor.
 - **Release:** real upload keystore/Play upload, physical mid-range 60 fps soak,
   final UI polish from device testing.
@@ -1178,3 +1204,16 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   final keyframe ends the animation back into the idle pose (LoadoutDisplay
   `animIdleTicker` + player.ts `updateAnim`). Do not reintroduce the old
   hardcoded fists ATTACK_X/ATTACK_Y swing.
+- Java UI sounds go through `SurvBridge.playSound(name, channel)` ->
+  `UiBridge::playSound` -> `AndroidUiBridge` (queued with `runOnGameThread`) ->
+  `AudioManager::playSound`; do not call the audio backend or a JNI mixer
+  directly from Java, and do not add a Java volume mapping (mute/volumes are
+  applied natively, unknown keys/channels are dropped).
+- Channel-type volume semantics are the web's: only the `music` channel follows
+  `musicVolume`; `ui`/`sfx`/`ambient` follow `soundVolume` (the web quirk that
+  in-game map music on the `ambient` channel uses the sound slider).
+  `audio_ui_cues_follow_the_channel_type_volume` locks it.
+- The avatar's anim sounds come from `GeneratedPreviewAnims` (`animEffects` +
+  the per-item `SOUNDS` table), fired in the player.ts `(prevTicker, ticker]`
+  window; the outfit pickup fires on `ui` when the outfit changes (never on the
+  first load, like `opponentDisplay.ts` skipEffects).

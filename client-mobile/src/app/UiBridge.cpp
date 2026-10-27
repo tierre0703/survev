@@ -270,6 +270,20 @@ public:
 
     int protocolVersion() override { return surv::defs::kProtocolVersion; }
 
+    void playSound(const std::string& name, const std::string& channel) override {
+        // One-shot UI/avatar cue from the Java screens. The mixer is owned by
+        // the GL thread, and playSound() already drops unknown keys/channels and
+        // honours mute/volumes, so this is a plain fire-and-forget queue.
+        if (name.empty()) return;
+        runOnGameThread([this, name, channel] {
+            audio::AudioManager* audio = _game ? _game->audioManager() : nullptr;
+            if (!audio) return;
+            audio::PlaySoundOptions options;
+            options.channel = channel.empty() ? "ui" : channel;
+            audio->playSound(name, options);
+        });
+    }
+
     void setConfigValue(const std::string& key, const std::string& value) override {
         // Java sends every value as a string; keep the JSON type so the C++ side
         // can read it with getFloat/getBool (e.g. renderScale, sensitivities).
@@ -657,6 +671,13 @@ JNIEXPORT jboolean JNICALL Java_dev_axmol_app_SurvBridge_setLoadout(JNIEnv* env,
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setAudio(JNIEnv* env, jclass, jstring key,
                                                              jfloat value) {
     surv::uiBridge()->setAudio(surv::fromJstring(env, key), static_cast<float>(value));
+}
+
+// One-shot cue from the Java UI (menu avatar, buttons): Queued onto the GL
+// thread inside the bridge; unknown keys/channels and mute are handled there.
+JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_playSound(JNIEnv* env, jclass, jstring name,
+                                                              jstring channel) {
+    surv::uiBridge()->playSound(surv::fromJstring(env, name), surv::fromJstring(env, channel));
 }
 
 JNIEXPORT void JNICALL Java_dev_axmol_app_SurvBridge_setLanguage(JNIEnv* env, jclass, jstring locale) {

@@ -64,7 +64,10 @@ node --experimental-transform-types tools/codegen_sound_defs.mjs
 - ✅ **Bullet whiz** group (close bullets from other players, `BulletBarn::update`)
 - ✅ **Shot sounds** (weapon shoot with splinter/AP/high-velocity detune variants, `ShotBarn::update`)
 - ✅ **Reverb/filters**: `AudioManager::update()` computes cathedral reverb volume from `activeLayer`/`underground`; `AxmolAudioBackend::update()` creates a silent reverb carrier and calls `ax::AudioEngine::setReverbProperties` with EAX parameters.
-- **UI sounds** (ambient lab, pickup pings, notifications) are not wired — no UI system in the C++ port yet (the Java UI screens handle this).
+- **UI sounds** (ambient lab, pickup pings, notifications) are not wired — no UI
+  system in the C++ port yet. Java can now play one-shot cues through
+  `SurvBridge.playSound` (see the 2026-10-27 update below); the classic UI
+  buttons are still silent.
 - Volume/persisted settings UI (config) is M7 and lives in Java.
 
 ## Structure interior ambience (2026-10-23)
@@ -129,3 +132,24 @@ parameters) and UI sounds (the Java UI owns those screens).
   `notification_join_01` (web team screen only when unfocused). Exact EQ timbre
   remains P2.
 - Host tests: 181 tests / 2,794 assertions, 0 failures.
+
+## Update 2026-10-27 (Java UI cues)
+
+The Java screens had no way to reach the mixer, so the menu avatar played
+silently. `SurvBridge.playSound(name, channel)` (JNI) ->
+`UiBridge::playSound` -> `AndroidUiBridge` (queued onto the GL thread) ->
+`AudioManager::playSound(name, {channel})` now plays one-shot cues from Java;
+unknown sound keys/channels, mute and the volume tiers are all handled in the
+native mixer. `MemoryUiBridge` records calls for the host tests.
+
+Ported cues (`ui/opponentDisplay.ts`): the outfit change plays the new outfit's
+`sound.pickup` on `ui`, and the selected melee's animData.ts `animPlaySound`
+effects (`swing`/`deploy`/`idle`, resolved through the item's sound table) play
+on `sfx` inside the player.ts effect window. `GeneratedPreviewAnims` carries the
+per-item `SOUNDS` table and the per-anim effects.
+
+`audio_ui_cues_follow_the_channel_type_volume` locks the channel-type volumes:
+only the `music` channel follows `musicVolume`; `ui`/`sfx` and the web's
+`ambient` (map music) quirk follow `soundVolume`. Device check with
+`debug.surv_debug=1`: `[audio] play punch_swing_01sfx vol=0.500` and
+`[audio] play clothes_pickup_01ui vol=0.375` with master 1 / sound 1.

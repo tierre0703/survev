@@ -100,6 +100,15 @@ TEST(bridge_slots_have_safe_defaults) {    setUiBridge(nullptr);
     CHECK_EQ(bridge.setAudioCalls, 1);
     CHECK_EQ(bridge.audioKeys[0], std::string("music"));
     CHECK_NEAR(bridge.audioValue, 0.25f, 1e-6f);
+    // Java UI cues (menu avatar swing/equip): name + channel reach the bridge
+    // unchanged; the Android bridge queues them onto the GL thread.
+    bridge.playSound("punch_swing_01", "sfx");
+    bridge.playSound("clothes_pickup_01", "ui");
+    CHECK_EQ(bridge.playSoundCalls, 2);
+    CHECK_EQ(bridge.soundNames[0], std::string("punch_swing_01"));
+    CHECK_EQ(bridge.soundChannels[0], std::string("sfx"));
+    CHECK_EQ(bridge.soundNames[1], std::string("clothes_pickup_01"));
+    CHECK_EQ(bridge.soundChannels[1], std::string("ui"));
     setUiBridge(nullptr);
 }
 

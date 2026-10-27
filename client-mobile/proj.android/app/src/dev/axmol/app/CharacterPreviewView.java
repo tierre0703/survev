@@ -26,6 +26,11 @@
  * the melee sprite is a child of the HandR bone: anchor-centred, offset by
  * (MeleeR.pos + worldImg.pos) * worldImg.scale and rotated by
  * worldImg.rot + MeleeR.rot (the layer bakes worldImg.rot + scale).
+ *
+ * Sound cues match opponentDisplay.ts: the outfit's `sound.pickup` on the ui
+ * channel when the outfit changes, and the animData.ts `animPlaySound` effects
+ * (melee swing/deploy/idle) resolved through the item's sound table. Both go
+ * through `SurvBridge.playSound`, the Java -> C++ one-shot cue bridge.
  * A slow vertical bob keeps the avatar alive between animations.
  ****************************************************************************/
 package dev.axmol.app;
@@ -74,9 +79,16 @@ public class CharacterPreviewView extends View {
         final Bone[] bones = new Bone[BONE_COUNT];
     }
 
+    /** animData.ts animPlaySound effect: time + the item's sound key. */
+    private static final class Effect {
+        float time;
+        String key;
+    }
+
     // Parsed GeneratedPreviewAnims rows, shared by every preview instance.
     private static final Map<String, Bone[]> sPoses = new HashMap<>();
     private static final Map<String, List<Keyframe>> sAnims = new HashMap<>();
+    private static final Map<String, List<Effect>> sAnimEffects = new HashMap<>();
 
     private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Random mRandom = new Random();
@@ -119,6 +131,7 @@ public class CharacterPreviewView extends View {
 
     private String mAnimName = "";
     private List<Keyframe> mAnimFrames;
+    private List<Effect> mAnimEffects;
     private boolean mAnimMirror = false;
     private float mAnimTicker = 0.0f;
     /** opponentDisplay.ts animIdleTicker: seconds until the next idle anim. */
@@ -143,6 +156,7 @@ public class CharacterPreviewView extends View {
         String nextMelee = melee == null || melee.isEmpty() ? "fists" : melee;
         if (nextOutfit.equals(mOutfitType) && nextMelee.equals(mMeleeType)) return;
         boolean changed = !nextMelee.equals(mMeleeType);
+        boolean outfitChanged = !nextOutfit.equals(mOutfitType);
         boolean wasReady = mLoadoutReady;
         mOutfitType = nextOutfit;
         mMeleeType = nextMelee;
@@ -161,6 +175,10 @@ public class CharacterPreviewView extends View {
         mMeleeBox = mMelee != null ? alphaBounds(mMelee) : null;
         applyMeleeDef();
         updateFraming();
+        if (wasReady && outfitChanged) {
+            // opponentDisplay.ts: play the new outfit's pickup cue on "ui".
+            playSound(GeneratedPreviewAnims.sound(mOutfitType, "pickup"), "ui");
+        }
         if (wasReady && changed) {
             // opponentDisplay.ts setLoadout: a melee swap restarts the display
             // and forces the deploy animation.
@@ -289,6 +307,30 @@ public class CharacterPreviewView extends View {
         return frames;
     }
 
+    /** animData.ts animPlaySound effects: "time,soundKey" rows. */
+    private static List<Effect> animEffects(String name) {
+        List<Effect> effects = sAnimEffects.get(name);
+        if (effects != null) return effects;
+        effects = new ArrayList<>();
+        String row = GeneratedPreviewAnims.animEffects(name);
+        if (row != null && !row.isEmpty()) {
+            for (String part : row.split(";", -1)) {
+                String[] v = part.split(",", -1);
+                if (v.length < 2) continue;
+                try {
+                    Effect effect = new Effect();
+                    effect.time = Float.parseFloat(v[0]);
+                    effect.key = v[1];
+                    effects.add(effect);
+                } catch (NumberFormatException e) {
+                    Log.w(TAG, "bad anim effect in " + name);
+                }
+            }
+        }
+        sAnimEffects.put(name, effects);
+        return effects;
+    }
+
     /** shared/utils/math.ts easings (PoseEasing order in src/render/Defs.h). */
     private static float ease(int kind, float t) {
         switch (kind) {
@@ -346,9 +388,25 @@ public class CharacterPreviewView extends View {
         if (frames.isEmpty()) return;
         mAnimName = name;
         mAnimFrames = frames;
+        mAnimEffects = animEffects(name);
         mAnimTicker = 0.0f;
         // player.ts selectAnim: only the single-entry "fists" attack mirrors.
         mAnimMirror = "fists".equals(name) && choices.length == 1 && mRandom.nextFloat() < 0.5f;
+    }
+
+    /**
+     * player.ts animPlaySound: the effect names a key on the active melee's
+     * `sound` table. The web plays it on "sfx" at the player position; the menu
+     * avatar has no world or camera, so it goes out non-positionally.
+     */
+    private void playAnimSound(String key) {
+        playSound(GeneratedPreviewAnims.sound(mMeleeType, key), "sfx");
+    }
+
+    /** UI cue helper: unknown sounds are ignored, mute/volumes apply natively. */
+    private static void playSound(String name, String channel) {
+        if (name == null || name.isEmpty()) return;
+        SurvBridge.playSound(name, channel);
     }
 
     /**
@@ -361,6 +419,7 @@ public class CharacterPreviewView extends View {
             if (mIdleTicker < 0.0f) playNextAnim();
         }
         if (!mAnimName.isEmpty()) {
+            float prevTicker = mAnimTicker;
             mAnimTicker += dt;
             List<Keyframe> frames = mAnimFrames;
             int n = frames.size();
@@ -371,10 +430,22 @@ public class CharacterPreviewView extends View {
                 bIdx++;
             }
             if (aIdx < 0) aIdx = 0;
-            if (bIdx == n - 1 && mAnimTicker >= frames.get(n - 1).time) {
+            boolean finished = bIdx == n - 1 && mAnimTicker >= frames.get(n - 1).time;
+            // player.ts: fire the animation sounds whose time falls in
+            // (prevTicker, ticker]; the final frame also processes the end.
+            if (mAnimEffects != null && !mAnimEffects.isEmpty()) {
+                float effectTicker = mAnimTicker + (finished ? 1.0f : 0.0f);
+                for (Effect effect : mAnimEffects) {
+                    if (effect.time >= prevTicker && effect.time < effectTicker) {
+                        playAnimSound(effect.key);
+                    }
+                }
+            }
+            if (finished) {
                 // web: the final frame ends the anim (game: Anim.None -> idle).
                 mAnimName = "";
                 mAnimFrames = null;
+                mAnimEffects = null;
             } else {
                 Keyframe fa = frames.get(aIdx);
                 Keyframe fb = frames.get(bIdx);

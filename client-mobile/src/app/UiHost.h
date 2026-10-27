@@ -109,6 +109,16 @@ public:
         (void)loc;
         (void)dataJson;
     }
+
+    // One-shot UI sound from the Java screens (menu avatar cues, button clicks).
+    // `name` is a soundDefs.ts sound key, `channel` one of the soundDefs channel
+    // names ("ui", "sfx", ...). Unknown keys/channels are silently dropped, and
+    // the user's mute/volume settings still apply, so Java never needs to know
+    // whether audio is available.
+    virtual void playSound(const std::string& name, const std::string& channel) {
+        (void)name;
+        (void)channel;
+    }
 };
 
 // The C++ side of the bridge: the app installs one host at startup and the
@@ -236,16 +246,23 @@ public:
     void pauseGame() override { ++pauseCalls; }
     void resumeGame() override { ++resumeCalls; }
     void saveConfig() override { ++saveConfigCalls; }
+    void playSound(const std::string& soundName, const std::string& soundChannel) override {
+        soundNames.push_back(soundName);
+        soundChannels.push_back(soundChannel);
+        ++playSoundCalls;
+    }
     std::string newsJson() override { return news; }
 
     std::string playerName, region, language, news = "[]";
     std::string loadoutJsonText, joinToken;
     std::vector<std::string> joinedUrls, audioKeys;
+    std::vector<std::string> soundNames, soundChannels;
     float audioValue = 0.0f;
     int lastTeamMode = 0;
     int setPlayerNameCalls = 0, setRegionCalls = 0, setLoadoutCalls = 0, setAudioCalls = 0;
     int setLanguageCalls = 0, quickStartCalls = 0, joinCalls = 0, cancelCalls = 0;
     int quitCalls = 0, pauseCalls = 0, resumeCalls = 0, saveConfigCalls = 0;
+    int playSoundCalls = 0;
 
 private:
     std::string _config = "{}", _l10n = "{}";

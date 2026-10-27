@@ -82,6 +82,13 @@ public final class SurvBridge {
     /** key is one of "master", "sound", "music", "mute". */
     public static native void setAudio(String key, float value);
 
+    /**
+     * One-shot UI cue (menu avatar swing/equip, buttons): `name` is a
+     * soundDefs.ts sound key and `channel` a sound channel ("ui", "sfx").
+     * Unknown keys and the user's mute/volume settings are handled natively.
+     */
+    public static native void playSound(String name, String channel);
+
     public static native void setLanguage(String locale);
 
     /** Engine stats overlay (fps/draw calls); persisted as `showFps`. */
