@@ -414,12 +414,15 @@ TEST(ui_localization_lookup) {
     // Missing keys fall back to English.
     CHECK_EQ(loc.translate("game-fists"), std::string("Fists"));
 
-    CHECK_EQ(loc.localeCount(), 18);
-    CHECK_EQ(loc.localeName("de"), std::string("Deutsch"));
-    CHECK_EQ(loc.detectLocale("zh-cn"), std::string("zh-cn"));
-    CHECK_EQ(loc.detectLocale("pt-BR"), std::string("pt"));
+    // The native client ships only English, French and Japanese.
+    CHECK_EQ(loc.localeCount(), 3);
+    CHECK_EQ(loc.localeName("fr"), std::string("Français"));
+    CHECK_EQ(loc.localeName("jp"), std::string("日本語"));
+    CHECK_EQ(loc.localeName("es"), std::string("es"));
     CHECK_EQ(loc.detectLocale("fr-CA"), std::string("fr"));
-    CHECK_EQ(loc.detectLocale("ru"), std::string("ru"));
+    CHECK_EQ(loc.detectLocale("ja-JP"), std::string("jp"));
+    CHECK_EQ(loc.detectLocale("zh-cn"), std::string("en"));
+    CHECK_EQ(loc.detectLocale("pt-BR"), std::string("en"));
     CHECK_EQ(loc.detectLocale("xx"), std::string("en"));
 }
 

@@ -158,6 +158,21 @@ public:
         }
     }
 
+    // Restricts the persisted language to the shipped list (en/fr/jp). A
+    // language from an older build is corrected to English and saved, so the
+    // Settings dropdown and the l10n table always agree.
+    std::string normalizeLanguage() {
+        const std::string saved = config().getString("language", "en");
+        for (int i = 0; i < uikit::kLocaleCount; ++i) {
+            if (saved == uikit::kLocales[i].code) {
+                return saved;
+            }
+        }
+        config().setString("language", "en");
+        config().save();
+        return "en";
+    }
+
     // Android has no C++ MenuScene (AppDelegate passes nullptr), but the Java
     // menu still needs the same persisted config (name/region/loadout/crosshair/
     // volumes). Keep a standalone Config over the UserDefault storage in that
@@ -385,11 +400,11 @@ public:
         ensureStandaloneLocalization();
         // The config may have been loaded after the first l10n request; keep the
         // standalone table on the persisted language instead of caching English.
-        _standaloneLocalization->setLocale(config().getString("language", "en"));
+        _standaloneLocalization->setLocale(normalizeLanguage());
         return uikit::l10nTableToJson(_standaloneLocalization->flattened());
     }
 
-    std::string language() override { return config().getString("language", "en"); }
+    std::string language() override { return normalizeLanguage(); }
 
     std::string loadoutJson() override {
         uikit::Loadout loadout(&config());
@@ -654,7 +669,7 @@ private:
         _standaloneLocalization->setLoader([](const std::string& locale) {
             return uikit::Files::readText("l10n/" + locale + ".json");
         });
-        _standaloneLocalization->setLocale(config().getString("language", "en"));
+        _standaloneLocalization->setLocale(normalizeLanguage());
     }
 
     MenuScene* _menu = nullptr;

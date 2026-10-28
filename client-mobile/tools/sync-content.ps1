@@ -12,6 +12,11 @@ if ($LASTEXITCODE -ge 8) { throw "robocopy failed ($LASTEXITCODE)" }
 # English is imported by the web bundle, not stored under public/l10n.
 New-Item -ItemType Directory -Force -Path (Join-Path $dst 'l10n') | Out-Null
 Copy-Item (Join-Path $root '..\client\src\en.json') (Join-Path $dst 'l10n\en.json') -Force
+# The native client ships only English/French/Japanese (ui::kLocales); prune the
+# other web locales so a stale file from an earlier sync is never packaged.
+Get-ChildItem (Join-Path $dst 'l10n') -Filter *.json -File |
+    Where-Object { $_.BaseName -notin @('en', 'fr', 'jp') } |
+    Remove-Item -Force
 
 # Rasterize the web client's SVG GUI art (public/img/gui/*.svg) so axmol can
 # draw the same buttons/icons (Content/gui/<name>.png).

@@ -6,24 +6,9 @@
 namespace ui {
 
 const LocaleInfo kLocales[] = {
-    {"da", "Dansk"},
-    {"de", "Deutsch"},
     {"en", "English"},
-    {"es", "Español"},
     {"fr", "Français"},
-    {"it", "Italiano"},
-    {"nl", "Nederlands"},
-    {"pl", "Polski"},
-    {"pt", "Português"},
-    {"ru", "Русский"},
-    {"sv", "Svenska"},
-    {"vn", "Tiếng Việt"},
-    {"tr", "Türkçe"},
     {"jp", "日本語"},
-    {"ko", "한국어"},
-    {"th", "ภาษาไทย"},
-    {"zh-cn", "中文简体"},
-    {"zh-tw", "中文繁體"},
 };
 const int kLocaleCount = static_cast<int>(sizeof(kLocales) / sizeof(kLocales[0]));
 
@@ -166,17 +151,17 @@ std::string Localization::detectLocale(const std::string& languageTag) const {
     std::string tag = languageTag;
     std::transform(tag.begin(), tag.end(), tag.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    // Prefer full codes first (zh-cn/zh-tw) before the 2-letter wildcards.
+    // Prefer the shipped codes first (en/fr/jp), then their BCP-47 aliases.
     for (int i = 0; i < kLocaleCount; i++) {
         if (tag.find(kLocales[i].code) != std::string::npos) {
             return kLocales[i].code;
         }
     }
-    static const char* wildcards[] = { "pt", "de", "es", "fr", "ru", "en" };
-    for (const char* w : wildcards) {
-        if (tag.find(w) != std::string::npos) {
-            return w;
-        }
+    if (tag.rfind("ja", 0) == 0) {
+        return "jp"; // BCP-47 uses "ja"; the web locale file is "jp".
+    }
+    if (tag.rfind("fr", 0) == 0) {
+        return "fr";
     }
     return "en";
 }

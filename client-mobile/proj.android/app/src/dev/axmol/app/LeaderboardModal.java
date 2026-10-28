@@ -47,6 +47,9 @@ public class LeaderboardModal {
     }
 
     private final LinearLayout mList;
+    private final TextView mTitle;
+    private final TextView mNameH;
+    private final TextView mKillsH;
     private Button mCloseBtn;
     private int mActivePlayerId = -1;
 
@@ -72,7 +75,7 @@ public class LeaderboardModal {
         headerRow.setGravity(Gravity.CENTER);
 
         TextView title = new TextView(activity);
-        title.setText("Leaderboard");
+        mTitle = title;
         title.setTextColor(GOLD);
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
         title.setGravity(Gravity.CENTER);
@@ -87,13 +90,13 @@ public class LeaderboardModal {
         colHeader.setPadding(dp(4), dp(4), dp(4), dp(4));
 
         TextView rankH = makeColHeader("#", 30);
-        TextView nameH = makeColHeader("Player", 220);
-        TextView killsH = makeColHeader("Kills", 60);
+        mNameH = makeColHeader("", 190);
+        mKillsH = makeColHeader("", 90);
         TextView statusH = makeColHeader("H", 40);
 
         colHeader.addView(rankH);
-        colHeader.addView(nameH);
-        colHeader.addView(killsH);
+        colHeader.addView(mNameH);
+        colHeader.addView(mKillsH);
         colHeader.addView(statusH);
         panel.addView(colHeader);
 
@@ -116,12 +119,23 @@ public class LeaderboardModal {
         outerScroll.addView(panel);
 
         mRoot.addView(outerScroll);
+        applyLocalizedStrings();
+    }
+
+    /** Re-applies the title/column headers for the saved locale. */
+    private void applyLocalizedStrings() {
+        mTitle.setText(L10n.t("index-leaderboards", "Leaderboards"));
+        mNameH.setText(L10n.t("index-player", "Player"));
+        mKillsH.setText(L10n.t("game-kills", "Kills"));
     }
 
     public View root() { return mRoot; }
 
     public void show() {
         mOpen = true;
+        // The modal is built once at app start; re-localize if the language
+        // changed in Settings since then.
+        applyLocalizedStrings();
         mRoot.setVisibility(View.VISIBLE);
     }
 
@@ -150,7 +164,7 @@ public class LeaderboardModal {
                     com.google.gson.JsonObject p = players.get(i).getAsJsonObject();
                     Entry e = new Entry();
                     e.playerId = p.has("playerId") ? p.get("playerId").getAsInt() : 0;
-                    e.name = p.has("name") ? p.get("name").getAsString() : "Player";
+                    e.name = p.has("name") ? p.get("name").getAsString() : L10n.t("index-player", "Player");
                     e.team = p.has("teamId") ? p.get("teamId").getAsInt() : 0;
                     e.kills = p.has("kills") ? p.get("kills").getAsInt() : 0;
                     e.isAlive = !(p.has("dead") && p.get("dead").getAsBoolean());
@@ -168,7 +182,7 @@ public class LeaderboardModal {
         mList.removeAllViews();
         if (entries == null || entries.isEmpty()) {
             TextView empty = new TextView(mActivity);
-            empty.setText("No data");
+            empty.setText(L10n.t("leaderboard-empty", "No data"));
             empty.setTextColor(0xFF808080);
             empty.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             mList.addView(empty);
@@ -189,8 +203,8 @@ public class LeaderboardModal {
             row.setBackgroundColor(bgColor);
 
             TextView rankTv = makeCell(String.valueOf(i + 1), 30, textColor, 14);
-            TextView nameTv = makeCell(e.name, 220, textColor, 14);
-            TextView killsTv = makeCell(String.valueOf(e.kills), 60, textColor, 14);
+            TextView nameTv = makeCell(e.name, 190, textColor, 14);
+            TextView killsTv = makeCell(String.valueOf(e.kills), 90, textColor, 14);
             TextView statusTv = makeCell(e.isAlive ? "A" : "D", 40, e.isAlive ? 0xFF83AF50 : 0xFFFF7878, 12);
 
             row.addView(rankTv);
