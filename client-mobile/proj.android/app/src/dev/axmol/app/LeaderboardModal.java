@@ -107,7 +107,7 @@ public class LeaderboardModal {
         panel.addView(scroll);
 
         // Close button
-        mCloseBtn = makeCloseButton("Close");
+        mCloseBtn = makeCloseButton(L10n.t("index-close", "Close"));
         mCloseBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { hide(); }
         });

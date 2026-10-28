@@ -138,6 +138,8 @@ public class LoadoutFragment {
     private String[] mCategories = {"outfit", "melee", "emote", "heal", "boost", "player_icon", "crosshair"};
     private static final int EMOTE_SLOT_COUNT = 6;
     private static final String[] EMOTE_SLOT_LABELS = {"Top", "Right", "Bottom", "Left", "Win", "Death"};
+    // l10n suffix per EmoteSlot (Top/Right/Bottom/Left/Win/Death).
+    private static final String[] EMOTE_SLOT_KEYS = {"top", "right", "bottom", "left", "win", "death"};
     private int mSelectedCat = 0;
     private int mPage = 0;
     private int mEmoteSlot = 0;
@@ -267,7 +269,7 @@ public class LoadoutFragment {
 
         // New-item confirmation banner (web modal-item-confirm reduced to the
         // touch screen): appears while account items have status < Confirmed.
-        mNewItemBtn = makeSmallButton("New items unlocked - tap to confirm");
+        mNewItemBtn = makeSmallButton(L10n.t("loadout-new-items", "New items unlocked - tap to confirm"));
         mNewItemBtn.setBackgroundColor(GOLD);
         mNewItemBtn.setTextColor(Color.BLACK);
         mNewItemBtn.setVisibility(View.GONE);
@@ -286,7 +288,11 @@ public class LoadoutFragment {
         mEmoteSlotRow.setGravity(Gravity.CENTER);
         for (int i = 0; i < EMOTE_SLOT_COUNT; i++) {
             final int slot = i;
-            Button slotBtn = makeSmallButton(EMOTE_SLOT_LABELS[i]);
+            Button slotBtn = makeSmallButton(emoteSlotLabel(i));
+            // Six equal-width slots: the localized labels (e.g. "Izquierda",
+            // "Esquerda") need a smaller face than the generic small button.
+            slotBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+            slotBtn.setPadding(dp(1), dp(2), dp(1), dp(2));
             LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
                     0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             slp.setMargins(dp(1), 0, dp(1), 0);
@@ -701,6 +707,11 @@ public class LoadoutFragment {
         if (mStrokeLabel != null) mStrokeLabel.setText(L10n.t("loadout-stroked", "Stroke"));
         if (mHexLabel != null) mHexLabel.setText("#");
         mCloseBtn.setText(L10n.t("index-back", "Back") + " \u2715");
+        for (int i = 0; i < mEmoteSlotButtons.length; i++) {
+            if (mEmoteSlotButtons[i] != null) {
+                mEmoteSlotButtons[i].setText(emoteSlotLabel(i));
+            }
+        }
         for (int i = 0; i < mCatButtons.length && i < mCategories.length; i++) {
             if (mCatButtons[i] != null) mCatButtons[i].setContentDescription(categoryTitle(i));
         }
@@ -710,6 +721,12 @@ public class LoadoutFragment {
     private String categoryTitle(int catIdx) {
         String key = "loadout-title-" + mCategories[catIdx];
         return L10n.t(key, catLabel(mCategories[catIdx])).toUpperCase(java.util.Locale.ROOT);
+    }
+
+    /** Emote slot label (Top/Right/Bottom/Left/Win/Death), localized. */
+    private String emoteSlotLabel(int slot) {
+        if (slot < 0 || slot >= EMOTE_SLOT_KEYS.length) return "";
+        return L10n.t("loadout-emote-" + EMOTE_SLOT_KEYS[slot], EMOTE_SLOT_LABELS[slot]);
     }
 
     /** Web #modal-customize-sort option labels (no invented "Sort:" prefix). */
@@ -742,7 +759,10 @@ public class LoadoutFragment {
             names.append(entry != null ? entry.displayName : info.type);
         }
         if (!pending.isEmpty()) {
-            mNewItemBtn.setText("New: " + names + " - tap to confirm");
+            mNewItemBtn.setText(String.format(
+                    java.util.Locale.ROOT,
+                    L10n.t("loadout-new-item", "New: %s - tap to confirm"),
+                    names.toString()));
             mNewItemBtn.setVisibility(View.VISIBLE);
         } else {
             mNewItemBtn.setVisibility(View.GONE);

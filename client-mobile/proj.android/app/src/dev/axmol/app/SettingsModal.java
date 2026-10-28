@@ -115,7 +115,7 @@ public class SettingsModal {
         title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         titleRow.addView(title);
 
-        mResetBtn = makeSmallButton("Reset");
+        mResetBtn = makeSmallButton(L10n.t("settings-reset", "Reset"));
         mResetBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { resetToDefaults(); }
         });
@@ -131,7 +131,7 @@ public class SettingsModal {
         content.setPadding(dp(10), 0, dp(10), 0);
 
         // === Language (web: language select dropdown) ===
-        addSectionHeader(content, "Language");
+        addSectionHeader(content, L10n.t("settings-language", "Language"));
         mLocales = Json.parseLocales(SurvBridge.getLocalesJson());
         if (mLocales.isEmpty()) {
             Json.LocaleEntry en = new Json.LocaleEntry();
@@ -157,7 +157,7 @@ public class SettingsModal {
         addGap(content, dp(6));
 
         // === Audio section with real sliders ===
-        addSectionHeader(content, "\uD83C\uDFB5 Audio");
+        addSectionHeader(content, "\uD83C\uDFB5 " + L10n.t("settings-audio", "Audio"));
 
         // Master Volume slider
         LinearLayout masterRow = makeSliderRow(L10n.t("index-master-volume", "Master Volume"), 100);
@@ -219,7 +219,7 @@ public class SettingsModal {
         // `highResTex` has no native equivalent: the C++ client ships only the
         // low-res atlases and quality is controlled by the GFX surface tier in
         // the pause dialog (RenderScale), so the control is absent.
-        addSectionHeader(content, "\uD83D\uDCF8 Graphics");
+        addSectionHeader(content, "\uD83D\uDCF8 " + L10n.t("settings-graphics", "Graphics"));
 
         mInterpolation = makeCheckbox(L10n.t("index-client-side-interp", "Client side interpolation"), true);
         mInterpolation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -242,9 +242,9 @@ public class SettingsModal {
         addGap(content, dp(6));
 
         // === Controls section ===
-        addSectionHeader(content, "\u270B Controls");
+        addSectionHeader(content, "\u270B " + L10n.t("index-controls", "Controls"));
 
-        mMoveStyleBtn = makeToggleButton("Move Style: Anywhere");
+        mMoveStyleBtn = makeToggleButton("");
         mMoveStyleBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 mMoveLocked = !mMoveLocked;
@@ -255,7 +255,7 @@ public class SettingsModal {
         });
         content.addView(mMoveStyleBtn);
 
-        mAimStyleBtn = makeToggleButton("Aim Style: Anywhere");
+        mAimStyleBtn = makeToggleButton("");
         mAimStyleBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 mAimLocked = !mAimLocked;
@@ -266,7 +266,7 @@ public class SettingsModal {
         });
         content.addView(mAimStyleBtn);
 
-        mAimLineBtn = makeToggleButton("Aim Line: On");
+        mAimLineBtn = makeToggleButton("");
         mAimLineBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 mAimLine = !mAimLine;
@@ -290,7 +290,7 @@ public class SettingsModal {
         addGap(content, dp(6));
 
         // === Game section ===
-        addSectionHeader(content, "\uD83C\uDFAE Game");
+        addSectionHeader(content, "\uD83C\uDFAE " + L10n.t("settings-game", "Game"));
 
         mAnonNames = makeCheckbox(L10n.t("index-anon-player-names", "Anonymize player names"), false);
         mAnonNames.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -337,7 +337,7 @@ public class SettingsModal {
         mStatusText.setGravity(Gravity.CENTER);
         panel.addView(mStatusText);
 
-        mCloseBtn = makeGreenButton("Close \u2715");
+        mCloseBtn = makeGreenButton(L10n.t("index-close", "Close") + " \u2715");
         mCloseBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { hide(); }
         });
@@ -346,6 +346,9 @@ public class SettingsModal {
         outerScroll.addView(panel);
 
         mRoot.addView(outerScroll);
+        // The three style toggles are built with empty labels and filled from
+        // the saved state + locale here (syncFromConfig re-applies them).
+        applyTouchStyleButtons();
     }
 
     private void addSectionHeader(LinearLayout parent, String text) {
@@ -498,9 +501,15 @@ public class SettingsModal {
     public void setOnOpenBinds(Runnable onOpenBinds) { mOnOpenBinds = onOpenBinds; }
 
     private void applyTouchStyleButtons() {
-        mMoveStyleBtn.setText(mMoveLocked ? "Move Style: Locked" : "Move Style: Anywhere");
-        mAimStyleBtn.setText(mAimLocked ? "Aim Style: Locked" : "Aim Style: Anywhere");
-        mAimLineBtn.setText(mAimLine ? "Aim Line: On" : "Aim Line: Off");
+        mMoveStyleBtn.setText(mMoveLocked
+                ? L10n.t("settings-move-locked", "Move Style: Locked")
+                : L10n.t("settings-move-anywhere", "Move Style: Anywhere"));
+        mAimStyleBtn.setText(mAimLocked
+                ? L10n.t("settings-aim-locked", "Aim Style: Locked")
+                : L10n.t("settings-aim-anywhere", "Aim Style: Anywhere"));
+        mAimLineBtn.setText(mAimLine
+                ? L10n.t("settings-aim-line-on", "Aim Line: On")
+                : L10n.t("settings-aim-line-off", "Aim Line: Off"));
     }
 
     /** Reset all settings to default values */
@@ -550,7 +559,7 @@ public class SettingsModal {
         SurvBridge.saveConfig();
         // Reset can change the language too; rebuild so every label matches.
         rebuildUi();
-        mStatusText.setText("Settings reset to defaults");
+        mStatusText.setText(L10n.t("settings-reset-done", "Settings reset to defaults"));
 
         Log.i(TAG, "Settings reset to defaults");
     }
