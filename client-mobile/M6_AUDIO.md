@@ -1,7 +1,8 @@
 # M6 — Audio (implementation notes)
 
 Port of the web client's audio stack onto `ax::AudioEngine`. Verified on the
-x86_64 emulator (OpenAL/OpenSL initialize, game connects, no crash).
+x86_64 emulator (OpenAL/OpenSL initialize, game connects, no crash); the EQ
+timbre and reverb nuance were also verified on real hardware (2026-10-28).
 
 ## What was added
 
@@ -115,9 +116,9 @@ as the fallback for streams/unsupported formats.
   loop=..`; `AudioCache ... EQ bands=.. buffer=..` confirms the filtered buffer.
   The debug match-start self-test plays `emote_01` muffled and club.
 
-Still not ported: human timbre listening verification (the chain/coefficients
-and buffer path are host-/device-verified) and UI sounds (the Java UI owns those
-screens).
+**Verified (2026-10-28, real hardware):** the muffled/club timbre and the
+reverb nuance were listened to on a physical device and accepted. UI sounds
+remain owned by the Java screens.
 
 ## Update 2026-10-25 (P0.7/P1.5)
 
@@ -140,8 +141,8 @@ screens).
   fail/complete + ceiling destroy, plane engine loop, and victory music
   (`GameOverMsg` + 1.3 s delay).
 - Not applicable on Android: `notification_start_01` (tab focus) and
-  `notification_join_01` (web team screen only when unfocused). The EQ timbre is
-  now the exact 10-band PCM cascade (pass 37); only human listening remains.
+  `notification_join_01` (web team screen only when unfocused). The EQ timbre
+  and reverb nuance are verified on real hardware (2026-10-28).
 - Host tests: 181 tests / 2,794 assertions, 0 failures.
 
 ## Update 2026-10-27 (Java UI cues)

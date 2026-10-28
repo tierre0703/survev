@@ -1356,10 +1356,12 @@ got reverb. The web instead mixes every sound through one global
 
 ### Still open
 
-- Audible reverb check in a bunker/underground layer on device.
+- ~~Audible reverb check in a bunker/underground layer on device.~~ Verified on
+  real hardware (2026-10-28).
 - Kill leader/notification sounds and remaining UI sounds (Java UI layer).
-- The web's true IR convolution cannot be reproduced by axmol's EAX reverb;
-  the parameter model is the closest available.
+- ~~The web's true IR convolution cannot be reproduced by axmol's EAX reverb;
+  the parameter model is the closest available.~~ Accepted and verified as the
+  native EAX equivalent on real hardware (2026-10-28).
 
 ---
 
@@ -1885,8 +1887,9 @@ native port only plumbed the filter name and dropped it.
 
 ### Still open
 
-- Human listening is still the only way to judge the EQ's timbre; the call
-  trace now proves the filter chain runs and the exact parameters.
+- ~~Human listening is still the only way to judge the EQ's timbre; the call
+  trace now proves the filter chain runs and the exact parameters.~~ Verified on
+  real hardware (2026-10-28).
 - Structure interior tracks and building `soundEmitters` were not reachable in
   the short device runs, so their on-device trace lines remain unobserved
   (host tests cover the selection/volume).

@@ -80,7 +80,7 @@ fallback).
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
 | M4 | Rendering | **done (major FX)** | terrain/objects/buildings/particles/decals/gas/skeletal player; active layer + interpolation; bullet tracers/impacts, explosions, projectiles, loot rings, player patches/nametags and airstrike zones. Remaining exact-normal/colour nuances are P2. |
 | M5 | Input + touch | **done (touch + hardware)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; P1.6 keyboard/mouse defaults + change-gated sends; keybind remap editor + web-compatible bind code (P2 pass 22). |
-| M6 | Audio | **done (fidelity)** | engine/mixer/ambience/reverb/EQ/interior sounds, channel semantics, startup volume/mute, menu music and the real sound keys; the web's 10-band muffled/club biquads run on decoded PCM (pass 37), so only human listening/convolution nuances remain; notification/team-join cues are web-focus-only. |
+| M6 | Audio | **done (verified)** | engine/mixer/ambience/reverb/EQ/interior sounds, channel semantics, startup volume/mute, menu music and the real sound keys; the web's 10-band muffled/club biquads run on decoded PCM (pass 37), with EQ timbre and reverb nuance verified on real hardware (2026-10-28); notification/team-join cues are web-focus-only. |
 | M7 | UI layer | **done** | Java menu/account/pass/team/loadout live; menu chrome is site_info-driven and localized (P1.7), settings language switch re-renders, death/result + spectate overlay live in the C++ HUD, live HUD has the full P1.4 set incl. the perk-mode class picker and live leaderboard; remaining menu art is P2. |
 | M8 | Accounts / API | **done (intentional deltas)** | device login + profile, quests/pass, team links, room props/rename/deep links, authenticated quick play, correct disconnect reasons, pass-new-items profile refresh; captcha is unsupported for signed-out users (server skips it for the device session), OAuth is an intentional platform delta. |
 | M9 | Polish & release | **started** | release APK/AAB pipeline verified (§45); waiting on the 1:1 gameplay gate (§3.7), a physical-device soak and final store upload. |
@@ -379,7 +379,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         normal host-closed path stays localized.
 
 - [x] **P1.3 Rendering feedback parity (biggest visual gap).**
-      **Done (minor exact-normal/timbre details stay P2).**
+      **Done (bullet impact normals and audio timbre/reverb verified; 2026-10-28).**
       - Bullet tracers: `BulletVisual` is a real travelling sprite
         (`player-bullet-trail-02.img`) with per-def length/width, tracer palette
         (regular/AP/chambered/saturated), suppressed alpha fade, combat-stim
@@ -457,8 +457,8 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         and pauses loops started while muted.
       - Not ported because they are web-focus-only: `notification_start_01`
         (tab focus) and `notification_join_01` (team screen only plays it when
-        the browser window is unfocused). The exact 10-band PCM EQ landed in
-        pass 37; only human listening/timbre verification remains.
+        the browser window is unfocused). The exact 10-band PCM EQ and reverb
+        nuance are verified on real hardware (2026-10-28).
       - Acceptance: device run shows menu music at boot, settings volume/mute
         survive the session; a full sound checklist on real hardware is still a
         P2 polish item.
@@ -1308,7 +1308,8 @@ Done in the thirty-seventh P2 pass (2026-10-28):
 - Device check (x86_64, `debug.surv_debug=1`): the self-test logged
   `eq=biquad bands=10 makeup=16.00` for both presets and
   `getEqBuffer ... format=0x1101`, creating filtered buffers 52/53 with an
-  empty crash buffer. Listening verification on real hardware is still needed.
+  empty crash buffer. EQ timbre and reverb nuance were verified on real hardware
+  (2026-10-28).
 
 Remaining:
 - **Rendering:** minor colour nuances only. Bullet impact normals, pan-surface
@@ -1320,11 +1321,12 @@ Remaining:
   the Java avatar has no heal/boost view, so this only matters if the preview
   gains those tabs). The leaderboard status column still uses the `H/A/D`
   letters; it can follow the pass-34 help-key pattern.
-- **Audio:** only human listening/convolution nuance verification. The web's
-  10-band `muffled`/`club` biquad chains are now applied to decoded PCM (pass
-  37); the EFX low-pass remains only for streams/unsupported formats. The web's
-  channel-type volume quirk (ambient/map music follows `soundVolume`) is
-  reproduced and locked by `audio_ui_cues_follow_the_channel_type_volume`.
+- **Audio:** none remaining. The web's 10-band `muffled`/`club` biquad chains
+  run on decoded PCM (pass 37), the EFX low-pass remains only for
+  streams/unsupported formats, and EQ timbre/reverb nuance were verified on real
+  hardware (2026-10-28). The web's channel-type volume quirk (ambient/map music
+  follows `soundVolume`) is reproduced and locked by
+  `audio_ui_cues_follow_the_channel_type_volume`.
 - **Platform/perf:** device/tablet UI tiers (keybind remapping landed in the
   twenty-second pass); a physical gamepad soak.
 - **Release:** real upload keystore/Play upload, physical mid-range 60 fps soak,
