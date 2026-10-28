@@ -3,6 +3,7 @@
 // axmol.
 #include "TestFramework.h"
 #include "../src/game/TouchInput.h"
+#include "../src/ui/Device.h"
 
 using namespace surv;
 using namespace surv_test;
@@ -155,6 +156,26 @@ TEST(touch_pad_gfx_locked_scales_and_positions) {
     t.m_update(move, aim);
     CHECK_EQ(move.visible, false);
     CHECK_EQ(aim.visible, false);
+}
+
+// touch.ts resize(): tablets shift the portrait pad offsets inward (x * 1.25)
+// — the landscape offsets are unchanged (`x * 1` there).
+TEST(touch_pad_tablet_portrait_offsets) {
+    ui::Device& device = ui::Device::get();
+    device.tablet = true;
+
+    Touch portrait(480.0f, 800.0f, false);
+    CHECK_NEAR(portrait.leftLockedPadCenter.x, 96.0f * 1.25f, 1e-4f);
+    CHECK_NEAR(portrait.rightLockedPadCenter.x, 480.0f - 96.0f * 1.25f, 1e-4f);
+
+    Touch landscape(kWidth, kHeight, true);
+    CHECK_NEAR(landscape.leftLockedPadCenter.x, 126.0f, 1e-4f);
+    CHECK_NEAR(landscape.rightLockedPadCenter.x, 674.0f, 1e-4f);
+
+    // Non-tablet portrait keeps the web defaults (existing tests rely on it).
+    device.tablet = false;
+    Touch phone(480.0f, 800.0f, false);
+    CHECK_NEAR(phone.leftLockedPadCenter.x, 96.0f, 1e-4f);
 }
 
 // touch.ts `padOffsetScale`: the locked offsets (and the pad radius) scale with

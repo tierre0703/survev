@@ -437,6 +437,56 @@ TEST(ui_device_layout) {
     CHECK(device.isLandscape);
 }
 
+// device.ts `tablet` for the native app: classified from the physical screen
+// (diagonal >= 7"); calls without a DPI keep the previous classification (the
+// desktop menu scene passes design units, not a classification input).
+TEST(ui_device_tablet_classification) {
+    ui::Device& device = ui::Device::get();
+    device.tablet = false;
+    device.dpi = 160;
+
+    // 1920x1080 at 320 dpi: 6" x 3.37" — under the 7" cut-off.
+    device.resize(1920.0f, 1080.0f, 2.0f, 320);
+    CHECK(!device.tablet);
+    CHECK_EQ(device.dpi, 320);
+    CHECK_NEAR(device.pixelRatio, 2.0f, 1e-5f);
+
+    // 2400x1600 at 256 dpi: ~10.1" diagonal tablet.
+    device.resize(2400.0f, 1600.0f, 1.0f, 256);
+    CHECK(device.tablet);
+
+    // A call without a physical DPI does not re-classify (keeps `tablet`).
+    device.resize(1920.0f, 1080.0f, 2.0f, 0);
+    CHECK(device.tablet);
+
+    device.tablet = false;
+    device.dpi = 160;
+}
+
+// resources.ts selectTextureRes(): phones are always low; the smallScreen
+// cap and a weak GPU force low even on tablets; only a capable tablet with
+// the web's highResTex option loads the high tier.
+TEST(ui_device_texture_res) {
+    ui::Device& device = ui::Device::get();
+    const auto high = ui::Device::TextureRes::High;
+    const auto low = ui::Device::TextureRes::Low;
+
+    device.tablet = false;
+    // Any phone: low regardless of config.
+    CHECK_EQ(device.selectTextureRes(true, 4096, 1080.0f, 1920.0f, 2.0f), low);
+
+    device.tablet = true;
+    // Small screen (720x1280 DPR-scaled): low even with the option.
+    CHECK_EQ(device.selectTextureRes(true, 4096, 360.0f, 640.0f, 2.0f), low);
+    // A capable tablet with the option loads high.
+    CHECK_EQ(device.selectTextureRes(true, 4096, 1200.0f, 1920.0f, 2.0f), high);
+    // Without the option or on a weak GPU: low.
+    CHECK_EQ(device.selectTextureRes(false, 4096, 1200.0f, 1920.0f, 2.0f), low);
+    CHECK_EQ(device.selectTextureRes(true, 2048, 1200.0f, 1920.0f, 2.0f), low);
+
+    device.tablet = false;
+}
+
 // ---------------------------------------------------------------------------
 TEST(ui_ws_url_parsing) {
     WebSocketEndpoint ep;

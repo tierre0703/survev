@@ -383,6 +383,36 @@ bool GameScene::init() {
     const ax::Size visible = ax::Director::getInstance()->getVisibleSize();
     const bool isLandscape = visible.width >= visible.height;
 
+    // device.ts on a native app: there is no user agent, so `tablet` is
+    // classified from the physical screen (GLView frame pixels + DPI); the web
+    // reads it from the browser device database. One call is enough for a
+    // landscape-locked Android app (there is no mid-session re-classify).
+    {
+        auto* glView = ax::Director::getInstance()->getGLView();
+        const ax::Size frame = glView ? glView->getFrameSize() : visible;
+        const int dpi = ax::Device::getDPI();
+        svui::Device::get().resize(static_cast<float>(frame.width),
+                                   static_cast<float>(frame.height),
+                                   ax::Device::getPixelRatio(), dpi);
+        const svui::Device& device = svui::Device::get();
+        AXLOGI("[device] {} dpi={} ratio={} screen={}x{} landscape={}",
+               device.tablet ? "tablet" : "phone", device.dpi, device.pixelRatio, frame.width,
+               frame.height, device.isLandscape ? 1 : 0);
+        // resources.ts selectTextureRes: log which spritesheet tier the web
+        // client would choose (the native pipeline ships only low-res sheets;
+        // `highResTex` is the EGL GFX tier here, REMAININGS §3.5).
+        const auto tier = device.selectTextureRes(
+            false, static_cast<unsigned int>(
+                       ax::Configuration::getInstance()->getMaxTextureSize()),
+            static_cast<float>(frame.width) / device.pixelRatio,
+            static_cast<float>(frame.height) / device.pixelRatio, device.pixelRatio);
+        AXLOGI("[device] textureRes={} maxTextureSize={}",
+               tier == svui::Device::TextureRes::High ? "high" : "low",
+               ax::Configuration::getInstance()->getMaxTextureSize());
+        // touch.ts resize() reads device.tablet for the pad offsets; Touch is
+        // created below.
+    }
+
     // S2: create the FairyGUI root for gameplay HUD overlay.
     s_fguiRoot = fairygui::GRoot::create(this, 500);
     if (!s_fguiRoot) {
@@ -1944,7 +1974,20 @@ void GameScene::update(float delta) {
             _pieTimer->start(label, apd.actionTime, apd.actionDuration);
         }
         if (_pieTimer->isActive()) {
-            _pieTimer->update(delta, _world ? _world->camera() : Camera(), false, 0.0f);
+            // ui.ts resize(): the small layout locks screenScaleFactor 0.5626
+            // (Android is always the small layout — device.uiLayout == Sm);
+            // the large layout follows the viewport.
+            const Camera& camera = _world ? _world->camera() : Camera();
+            const svui::Device& device = svui::Device::get();
+            float screenScaleFactor = 0.5626f;
+            if (device.uiLayout != svui::Device::Sm) {
+                screenScaleFactor =
+                    surv::math::min(1.0f, surv::math::clamp(camera.m_screenWidth / 1280.0f, 0.75f, 1.0f) *
+                            surv::math::clamp(camera.m_screenHeight / 1024.0f, 0.75f, 1.0f));
+            }
+            _pieTimer->resize(device.uiLayout == svui::Device::Sm, device.tablet,
+                              device.isLandscape, screenScaleFactor);
+            _pieTimer->update(delta, camera);
             // Stop when action completes.
             if (apd.actionDuration > 0.0f && apd.actionTime >= apd.actionDuration) {
                 _pieTimer->stop();

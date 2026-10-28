@@ -5,6 +5,7 @@
 // interface so it can be driven by axmol (or a test harness).
 #include "../core/MathUtil.h"
 #include "../core/Vec2.h"
+#include "Device.h"
 
 #include <cmath>
 
@@ -114,7 +115,10 @@ public:
         _screenWidth = screenWidth;
         _screenHeight = screenHeight;
         _landscape = isLandscape;
-        const float offX = (isLandscape ? 126.0f : 96.0f) * padOffsetScale;
+        // touch.ts resize(): tablets shift the portrait pad offsets inward
+        // (x * 1.25); the landscape offsets are unchanged (`* 1`).
+        const float offX = (isLandscape ? 126.0f : 96.0f * (::ui::Device::get().tablet ? 1.25f : 1.0f)) *
+            padOffsetScale;
         const float offY = (isLandscape ? 100.0f : 160.0f) * padOffsetScale;
         leftLockedPadCenter = Vec2(offX, screenHeight - offY);
         rightLockedPadCenter = Vec2(screenWidth - offX, screenHeight - offY);

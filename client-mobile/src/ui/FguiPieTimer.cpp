@@ -88,7 +88,19 @@ void PieTimer::setVisible(bool visible) {
     if (_arc) _arc->setVisible(visible);
 }
 
-void PieTimer::update(float dt, const Camera& camera, bool mobile, float mobileOffset) {
+void PieTimer::resize(bool smallLayout, bool tablet, bool landscape, float screenScaleFactor) {
+    _smallLayout = smallLayout;
+    _tablet = tablet;
+    _landscape = landscape;
+    _screenScaleFactor = screenScaleFactor;
+    // pieTimer.ts resize(): phones (Sm layout) draw the timer at half scale;
+    // a tablet keeps full size. The mobile offset is not tablet-gated.
+    _halfScale = (_smallLayout && !_tablet) ? 0.5f : 1.0f;
+    _mobileOffset =
+        _smallLayout ? (landscape ? 25.0f : 100.0f) : 0.0f;
+}
+
+void PieTimer::update(float dt, const Camera& camera) {
     if (!_active || !_container || !_arc) {
         if (_container) _container->setVisible(false);
         return;
@@ -125,10 +137,15 @@ void PieTimer::update(float dt, const Camera& camera, bool mobile, float mobileO
     // Label.
     _labelText->setText(_label.empty() ? "" : _label);
 
-    // Position at screen top-center.
+    // Position at screen top-center (pieTimer.ts):
+    // x = screen centre; y = (m_screenHeight / 3) * screenScaleFactor + the
+    // small-layout mobile offset.
     const float x = camera.m_screenWidth * 0.5f;
-    const float y = (camera.m_screenHeight / 3.0f) + mobileOffset;
+    const float y = (camera.m_screenHeight / 3.0f) * _screenScaleFactor + _mobileOffset;
     _container->setPosition(x, y);
+    // The web scales the whole container; FGUI needs both axes.
+    _container->setScaleX(_halfScale);
+    _container->setScaleY(_halfScale);
 
     _container->setVisible(true);
     _arc->setVisible(true);

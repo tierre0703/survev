@@ -69,8 +69,10 @@ muffled/club biquad cascade on decoded PCM (low-pass only as a streaming
 fallback). The thirty-eighth localizes the in-game leaderboard's `H/A/D` status column
 through `fr` keys (`État`/`V`/`M`). The thirty-ninth limits the shipped
 languages to **English/French only** (Japanese is pruned; a saved `jp`
-language normalizes to English).
-**230 host tests pass, 0 fail.**
+language normalizes to English). The fortieth detects tablets from the
+physical screen (the `device.ts` tablet tier), applies the web's tablet
+touch-pad/pie-timer layout, and ports the `resources.ts` texture-res rule.
+**233 host tests pass, 0 fail.**
 
 ---
 
@@ -132,7 +134,8 @@ language normalizes to English).
 | `client/lib/createJS.ts` → `audio/AxmolAudioBackend.h` | ✅ channel semantics enforced in AudioManager; per-source pitch (detune), mute-safe new loops, EAX reverb |
 | `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | ✅ pads/aim-line good; config move/aim style + aim line applied live and persisted; gameplay actions from `game/InputActions` + `game/Hud` |
 | `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | ✅ schema + settings screens write real values; runtime listeners applied at startup/on change (highResTex maps to the GFX tier, local rotation is desktop-only) |
-| `client/src/device.ts` → `ui/Device.*` | 🔶 simplified (no tablet/pixelRatio/MAX_TEXTURE_SIZE tiers) |
+| `client/src/device.ts` → `ui/Device.*` | ✅ the app classifies `tablet` from the physical screen (diagonal >= 7", the isMobile cut-off; a native app has no user agent) and mirrors `onResize()`/`pixelRatio` (dpi/160); `uiLayout` follows the web rule and is always `Sm` on Android like the web's Android pages |
+| `client/src/resources.ts` (per-map load/unload, audio preload, MAX_TEXTURE_SIZE) | 🔶 map atlases load/unload on map change like `loadMapAssets`; the `selectTextureRes` rule is ported (`Device::selectTextureRes`, host-tested and logged as `[device] textureRes=...`) but the pipeline ships only the `--res low` sheets, so the tier decision currently always resolves to the low sheets on device (accepted: `highResTex` is the EGL GFX tier, §3.5) |
 | `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*`, Java `L10n.java` | ✅ C++ table good; Java menu/settings/pause/help labels read the flattened table (session P1.7); the native language list is **en/fr only** (`ui::kLocales`, `sync-content.ps1` prunes the other web locales, stale saved languages — including the dropped `jp` — normalize to English). The loadout editor chrome (panel title, `loadout-title-*` category names, sort, crosshair Size/Stroked, Back, alert dots) is localized (pass 30); settings section headers, touch style/aim line toggles, `Close`, the new-item banner and the six emote slot labels use the pass-32 keys; the pause dialog and leaderboard chrome are localized in pass 33; the How-to-Play body is localized in pass 34 (rebuilt on open after a language change); the team room screen is localized in pass 35. Only the leaderboard `H/A/D` status letters and server-provided names stay as-is |
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | ✅ join/reconnect, quickplay auth/captcha message, reason-string mapping and error dialogs (match-over latch done) |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; Java menu builds modes/regions from site_info (enabled/teamMode/l10n) and requires the fetch before Play (P1.7); mode/region icons remain P2 |
@@ -144,7 +147,7 @@ language normalizes to English).
 | `client/src/objects/mapIndicator.ts` / `mapSprite.ts` | ✅ indicators: `MapIndicatorBarn` (data) + `Hud::updateMapIndicators` and `MapView::setIndicators` draw the def sprite/tint/pulse ring at the world position on both map views (equipped markers sort over the dots); `mapSprite.ts` itself is unused by the live HUD (dots/pings/indicators are `MapView` sprites) |
 | `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | `game/InputBinds.h` + `game/HardwareInput.h` + `game/InputSync.h` | ✅ full `BindDefs` table (36 `Input` actions), web-compatible `binds` code (LSB-first stream + CRC-16) and the Java Key Binds screen (capture/clear/restore/share/import); keys, mouse buttons/wheel and the unbound-arrow fallback resolve through the table. Android gamepads (native-only) map sticks/triggers/buttons onto the same state with fixed actions. |
 | `client/src/ui/opponentDisplay.ts` (menu character preview / opponent display) | 🔶 animated preview: `CharacterPreviewView` draws the outfit's body/hands and the selected melee on the animData.ts skeleton (`GeneratedPreviewAnims`: idle pose + melee deploy/idle/attack keyframes), framed to fit the art, and plays the outfit pickup + melee anim sounds through `SurvBridge.playSound`; heal/boost particle emitters are N/A while the preview has no heal/boost tab |
-| `client/src/resources.ts` (per-map load/unload, audio preload, MAX_TEXTURE_SIZE) | 🔶 map atlases load/unload on map change like `loadMapAssets`; audio is preloaded globally at startup (no per-map preload needed), `MAX_TEXTURE_SIZE` tiers remain P2 |
+| `client/src/resources.ts` (per-map load/unload, audio preload, MAX_TEXTURE_SIZE) | 🔶 map atlases load/unload on map change like `loadMapAssets`; audio is preloaded globally at startup (no per-map preload needed); the `MAX_TEXTURE_SIZE`/`selectTextureRes` rule is ported into `ui::Device` (host-tested, see the `device.ts` row) but the pipeline still ships only low-res sheets |
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ✅ keyed from the defs (`sound.reload/reloadAlt/deploy/use/pickup/empty`); doors/buttons/puzzles/ceiling/plane loops and victory music wired; dry fire is the exact web gate (local, not spectating, clip + reserve empty, firePressed or held-auto, no action, wheel closed, `!ammoInfinite`) |
 | UI sounds (ambient lab, pickup pings, notifications, victory) | 🔶 victory music + pickup/door/puzzle/plane cues wired; notification/team-join sounds are web focus-only (not applicable to the Android foreground) |
 | Reverb (`setReverbProperties`) | ✅ `ReverbModel` maps cathedral/cave to EAX props; applied to every active handle (web convolver is global) |
@@ -1334,6 +1337,43 @@ Done in the thirty-ninth P2 pass (2026-10-28):
   English → Français → English. Host test `ui_localization_lookup` pins the
   2-locale list and the `ja-JP` → `en` fallback.
 
+Done in the fortieth P2 pass (2026-10-28):
+- Device/tablet tiers (`device.ts` + `resources.ts`), the last module-code 🔶:
+  - `ui::Device` classifies `tablet` from the **physical screen**: a native
+    app has no user agent (and Android tablets already collapsed their UAs), so
+    the web's tablet detection becomes a >= 7" physical diagonal
+    (`classifyTablet(widthPx, heightPx, dpi)`; `ax::Device::getDPI()` /
+    `getPixelRatio()` = dpi/160 like `window.devicePixelRatio`). Only a call
+    with a real DPI re-classifies, so the desktop `MenuScene` (design units)
+    keeps its value. `resize()` still mirrors `device.onResize()` exactly
+    (`isLandscape`, `uiLayout` with the mobile/850/900+3-DPR rule - Android is
+    `Sm` like every web Android page).
+  - `GameScene::init` runs the one-shot detection from the GLView frame size
+    and logs `[device] phone|tablet dpi=.. ratio=.. screen=..x..` and
+    `[device] textureRes=.. maxTextureSize=..` (the ported
+    `resources.ts selectTextureRes`: phones are always low, the <1366/<768
+    smallScreen cap and `MAX_TEXTURE_SIZE < 4096` force low, otherwise the
+    `highResTex` config would pick high). The atlas pipeline still ships only
+    `--res low` sheets, so the tier resolves to the low sheets on device
+    (accepted adaptation, §3.5).
+  - `Touch::resize` ports touch.ts's tablet pad tweak: the locked **portrait**
+    pad offsets move inward by x * 1.25 (landscape is `x * 1`).
+  - `PieTimer` ports `pieTimer.ts resize()` properly: on the small layout the
+    timer draws at half scale unless `tablet`, positions at
+    `(screenHeight/3) * screenScaleFactor + mobileOffset` (25 landscape /
+    100 portrait, `ui.ts screenScaleFactor`: 0.5626 locked for `Sm`, the
+    viewport clamp for `Lg`). Previously the app rendered it full-size with no
+    offset (the desktop branch) because the caller passed `mobile=false, 0`.
+  - Host tests: `ui_device_tablet_classification` (7" cut-off, dpi/ratio,
+    no-DPI calls keep the flag), `ui_device_texture_res` (the web rule) and
+    `touch_pad_tablet_portrait_offsets`. 3909 assertions / 233 tests, 0
+    failures.
+  - Device check (x86_64 emulator + bundle server): the join rendered
+    normally with `[device] phone dpi=240 ratio=1.5 screen=960x540
+    landscape=1` / `textureRes=low maxTextureSize=16384` and an empty crash
+    log. A physical tablet run remains to see the >= 7" branch (portrait pads
+    and the unshrunk pie timer).
+
 Remaining:
 - **Rendering:** minor colour nuances only. Bullet impact normals, pan-surface
   blocking, steelskin sparks and turkey feathers are ported (pass 36);
@@ -1349,8 +1389,9 @@ Remaining:
   hardware (2026-10-28). The web's channel-type volume quirk (ambient/map music
   follows `soundVolume`) is reproduced and locked by
   `audio_ui_cues_follow_the_channel_type_volume`.
-- **Platform/perf:** device/tablet UI tiers (keybind remapping landed in the
-  twenty-second pass); a physical gamepad soak.
+- **Platform/perf:** a physical gamepad soak (the device/tablet UI tiers are
+  ported in the fortieth pass: tablet detection, touch.pad offsets, pie-timer
+  layout, the `resources.ts` texture-res rule).
 - **Release:** real upload keystore/Play upload, physical mid-range 60 fps soak,
   final UI polish from device testing.
 
@@ -1529,6 +1570,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - Android has **no C++ MenuScene** (`installUiBridge(nullptr, gameScene)`): bridge config/name/loadout/crosshair writes use the standalone `UserDefaultConfigStorage` Config, and `joinUrls` must set the `Game` join info via `_game->getGame()`; `GameScene::enterWithJoin` must not overwrite it
 - Crosshair sprites come from `Content/gui/crosshair/<type>_s<0..6>.png` (`build-crosshair-icons.mjs`, staged by `sync-content.ps1`): seven 0.25 stroke steps over the web slider's 0.0..1.5 range, frame index `round(stroke * 4)`. The Java Scope editor writes the web float ranges (size 0.25..1.0, stroke 0..1.5) and a hex colour; the nested `crosshair` config shape wins over stale flat keys
 - `AudioManager` resolves `filter` like the web (different layer or `forceFilter` → EQ, otherwise `reverb`); the app-only backend trace is enabled with `debug.surv_debug=1` and prints `[audio] play ... filter=...`
+- `ui::Device::resize` classifies `tablet` only when the caller passes a real `dpi` (> 0): the desktop `MenuScene` calls it with design units, so the flag must not be recomputed there (the app's GL-view call in `GameScene::init` is the classifier). Host tests pin the 7" cut-off and the pull-forward of the flag across no-DPI calls
 - `SurvevMobile-debug.apk.idsig` is a tracked build artifact refreshed by every
   `build-apk.ps1` run; commit the refreshed file along with the build.
 - Emote/ping wheel frames are re-applied by `refreshFrames()` after the map

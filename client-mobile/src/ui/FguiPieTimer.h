@@ -35,8 +35,14 @@ public:
     // Hide the timer.
     void stop();
 
+    // pieTimer.ts resize(): re-derives the web layout state — on the small
+    // layout the timer is drawn at half scale (unless `tablet`) and drops
+    // `mobileOffset` (touch.mobileOffsetLandscape/Portrait) below the
+    // (screenHeight / 3) * screenScaleFactor anchor.
+    void resize(bool smallLayout, bool tablet, bool landscape, float screenScaleFactor);
+
     // Per-frame update. `camera` provides screen dimensions for positioning.
-    void update(float dt, const Camera& camera, bool mobile, float mobileOffset);
+    void update(float dt, const Camera& camera);
 
     bool isActive() const { return _active; }
 
@@ -59,6 +65,14 @@ private:
     std::string _label;
     float _elapsed = 0.0f;
     float _duration = 1.0f;
+
+    // Web pieTimer.ts layout state (see resize()).
+    bool _smallLayout = true;
+    bool _tablet = false;
+    bool _landscape = true;
+    float _screenScaleFactor = 1.0f;
+    float _halfScale = 1.0f;   // container.scale.set(0.5) on phones
+    float _mobileOffset = 0.0f;
 };
 
 } // namespace surv
