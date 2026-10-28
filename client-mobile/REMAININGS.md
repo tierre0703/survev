@@ -56,7 +56,9 @@ six emote slot labels) through 21 new keys in `en.json` + every
 `client/public/l10n` file. The thirty-third localizes the in-game pause dialog
 and leaderboard chrome and limits the native language list to
 **English/French/Japanese** (`en`/`fr`/`jp`); the other web locales are pruned
-from the APK and a stale saved language is normalized to English.
+from the APK and a stale saved language is normalized to English. The
+thirty-fourth localizes the How-to-Play body (34 keys) and rebuilds the modal on
+open when the language changed.
 **227 host tests pass, 0 fail.**
 
 ---
@@ -120,7 +122,7 @@ from the APK and a stale saved language is normalized to English.
 | `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | ✅ pads/aim-line good; config move/aim style + aim line applied live and persisted; gameplay actions from `game/InputActions` + `game/Hud` |
 | `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | ✅ schema + settings screens write real values; runtime listeners applied at startup/on change (highResTex maps to the GFX tier, local rotation is desktop-only) |
 | `client/src/device.ts` → `ui/Device.*` | 🔶 simplified (no tablet/pixelRatio/MAX_TEXTURE_SIZE tiers) |
-| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*`, Java `L10n.java` | ✅ C++ table good; Java menu/settings/pause/help labels read the flattened table (session P1.7); the native language list is **en/fr/jp only** (`ui::kLocales`, `sync-content.ps1` prunes the other web locales, stale saved languages normalize to English). The loadout editor chrome (panel title, `loadout-title-*` category names, sort, crosshair Size/Stroked, Back, alert dots) is localized (pass 30); settings section headers, touch style/aim line toggles, `Close`, the new-item banner and the six emote slot labels use the pass-32 keys; the pause dialog and leaderboard chrome are localized in pass 33. The help body remains native-only English |
+| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*`, Java `L10n.java` | ✅ C++ table good; Java menu/settings/pause/help labels read the flattened table (session P1.7); the native language list is **en/fr/jp only** (`ui::kLocales`, `sync-content.ps1` prunes the other web locales, stale saved languages normalize to English). The loadout editor chrome (panel title, `loadout-title-*` category names, sort, crosshair Size/Stroked, Back, alert dots) is localized (pass 30); settings section headers, touch style/aim line toggles, `Close`, the new-item banner and the six emote slot labels use the pass-32 keys; the pause dialog and leaderboard chrome are localized in pass 33; the How-to-Play body is localized in pass 34 (rebuilt on open after a language change). Only the leaderboard `H/A/D` status letters and server-provided names stay as-is |
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | ✅ join/reconnect, quickplay auth/captcha message, reason-string mapping and error dialogs (match-over latch done) |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; Java menu builds modes/regions from site_info (enabled/teamMode/l10n) and requires the fetch before Play (P1.7); mode/region icons remain P2 |
 | `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste, config `webBaseUrl`), `survev://` + `https://…/#CODE` + `?u=&jt=` links, kick/mode/region/auto-fill, in-room rename, room-prop persistence, team match returns to the room |
@@ -1221,6 +1223,20 @@ Done in the thirty-third P2 pass (2026-10-28):
 - Still native-only English: the How-to-Play body (and a few pause/leaderboard
   status letters such as `H/A/D`).
 
+Done in the thirty-fourth P2 pass (2026-10-28):
+- How-to-Play localization (`HelpModal.java`): the touch-control section (9
+  glyph rows), the keyboard/mouse section's native suffixes (`W, A, S, D /
+  arrows`, `R / F Pickup`, `V / M or G = large map`) and the five tips
+  (Cover/Weapons/Team/Red zone/Loot) plus `Got it!` are now 34 l10n keys in
+  `en`/`fr`/`jp`. The modal is built once at startup, so `buildUi()` now runs
+  from `show()` again whenever `SurvBridge.getLanguage()` changed, re-localizing
+  the whole body in place.
+- Host tests unchanged (Java/l10n data only): 3857 assertions / 227 tests.
+- Device check (x86_64 emulator): `How to Play` renders the English rows; after
+  switching Settings to Français and reopening, the same modal shows
+  `Comment jouer/Tactile/Joystick gauche/Invite RAMASSER/UTILISER / RECHARGER/
+  SOIN / BOOST/LUNETTE / ÉCHANGE/Cartes d'arme/...`; `logcat -b crash` empty.
+
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
   and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
@@ -1228,9 +1244,8 @@ Remaining:
   `MapView`), so its z-order path is dead code rather than a gap.
 - **HUD/menus:** menu preview heal/boost particle emitters (`opponentDisplay.ts`;
   the Java avatar has no heal/boost view, so this only matters if the preview
-  gains those tabs). The How-to-Play body is still native-only English and the
-  leaderboard status column uses the `H/A/D` letters; they can follow the
-  pass-33 key pattern.
+  gains those tabs). The leaderboard status column still uses the `H/A/D`
+  letters; it can follow the pass-34 help-key pattern.
 - **Audio:** exact EQ/convolution timbre (the web biquad chains are approximated
   by an OpenAL low-pass); the web's channel-type volume quirk (ambient/map music
   follows `soundVolume`) is reproduced and locked by
@@ -1543,6 +1558,9 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   up. `show()` re-applies the localized strings and scrolls to 0
 - `pause-gfx` stays the short `GFX` label (the button is a half-width toggle);
   only the tier name is translated, otherwise `GFX: Complète` is clipped
+- `HelpModal` is built once at startup; `show()` must rebuild when
+  `SurvBridge.getLanguage()` changed (the body is a tree of localized labels,
+  not cheap per-label re-localization). Help keys are `help-*` in en/fr/jp
 - Pass XP/level come from `/api/user/get_pass`; `tryRefreshQuests` must be true
   when opening the screen so the server rerolls expired slots. Reroll
   eligibility mirrors the web: `(!rerolled && !complete) || expired`; the

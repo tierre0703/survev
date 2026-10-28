@@ -39,14 +39,23 @@ public class HelpModal {
 
     private final Activity mActivity;
     private final FrameLayout mRoot;
-    private final Button mCloseBtn;
+    private Button mCloseBtn;
     private boolean mOpen = false;
+    private String mBuiltLocale = "";
 
     public HelpModal(Activity activity) {
         mActivity = activity;
 
         mRoot = new FrameLayout(activity);
         mRoot.setBackgroundColor(0xCC000000);
+        buildUi();
+    }
+
+    /** Builds the modal views; re-run on show() after a language change. */
+    private void buildUi() {
+        mRoot.removeAllViews();
+        mBuiltLocale = SurvBridge.getLanguage();
+        final Activity activity = mActivity;
 
         // Full-height ScrollView for landscape responsiveness
         ScrollView outerScroll = new ScrollView(activity);
@@ -78,29 +87,47 @@ public class HelpModal {
         content.setPadding(dp(10), dp(8), dp(10), dp(8));
 
         // === Touch controls (native HUD) ===
-        addSectionHeader(content, "\uD83D\uDCF1 Touch", 0xFF4CAF50);
-        addControlRow(content, "\uD83D\uDD79", "Left pad", "Drag to move");
-        addControlRow(content, "\uD83C\uDFAF", "Right pad", "Drag to aim; release past the edge to fire");
-        addControlRow(content, "\u270B", "PICK UP prompt", "Tap the prompt (or USE) to loot");
-        addControlRow(content, "\uD83D\uDD27", "USE / RELOAD", "Action pills above the pads");
-        addControlRow(content, "\uD83D\uDC8A", "HEAL / BOOST", "Quick-use the best item in the bag");
-        addControlRow(content, "\uD83D\uDD0D", "SCOPE / SWAP", "Cycle scopes or switch gun slots");
-        addControlRow(content, "\uD83D\uDD2B", "Weapon cards", "Tap to equip; hold to drop");
-        addControlRow(content, "\uD83D\uDCAC", "Emote / ping", "Right-side wheel buttons");
-        addControlRow(content, "\uD83D\uDDFA", "Minimap", "Tap to open the big map");
+        addSectionHeader(content, "\uD83D\uDCF1 " + L10n.t("help-touch", "Touch"), 0xFF4CAF50);
+        addControlRow(content, "\uD83D\uDD79",
+                L10n.t("help-left-pad", "Left pad"),
+                L10n.t("help-left-pad-desc", "Drag to move"));
+        addControlRow(content, "\uD83C\uDFAF",
+                L10n.t("help-right-pad", "Right pad"),
+                L10n.t("help-right-pad-desc", "Drag to aim; release past the edge to fire"));
+        addControlRow(content, "\u270B",
+                L10n.t("help-pickup-prompt", "PICK UP prompt"),
+                L10n.t("help-pickup-desc", "Tap the prompt (or USE) to loot"));
+        addControlRow(content, "\uD83D\uDD27",
+                L10n.t("help-use-reload", "USE / RELOAD"),
+                L10n.t("help-use-reload-desc", "Action pills above the pads"));
+        addControlRow(content, "\uD83D\uDC8A",
+                L10n.t("help-heal-boost", "HEAL / BOOST"),
+                L10n.t("help-heal-boost-desc", "Quick-use the best item in the bag"));
+        addControlRow(content, "\uD83D\uDD0D",
+                L10n.t("help-scope-swap", "SCOPE / SWAP"),
+                L10n.t("help-scope-swap-desc", "Cycle scopes or switch gun slots"));
+        addControlRow(content, "\uD83D\uDD2B",
+                L10n.t("help-weapon-cards", "Weapon cards"),
+                L10n.t("help-weapon-cards-desc", "Tap to equip; hold to drop"));
+        addControlRow(content, "\uD83D\uDCAC",
+                L10n.t("help-emote-ping", "Emote / ping"),
+                L10n.t("help-emote-ping-desc", "Right-side wheel buttons"));
+        addControlRow(content, "\uD83D\uDDFA",
+                L10n.t("help-minimap", "Minimap"),
+                L10n.t("help-minimap-desc", "Tap to open the big map"));
 
         addGap(content, dp(8));
 
         // === Keyboard / mouse (BT keyboard or desktop/emulator) ===
         addSectionHeader(content, "\u2328 " + L10n.t("index-controls", "Controls"), 0xFF2196F3);
         addControlRow(content, "\uD83D\uDEAA", L10n.t("index-movement", "Movement"),
-                L10n.t("index-movement-ctrl", "W, A, S, D") + " / arrows");
+                L10n.t("help-movement-keys", "W, A, S, D / arrows"));
         addControlRow(content, "\uD83C\uDFAF", L10n.t("index-aim", "Aim"),
                 L10n.t("index-aim-ctrl", "Mouse"));
         addControlRow(content, "\uD83D\uDD1E", L10n.t("index-shoot", "Shoot"),
                 L10n.t("index-shoot-ctrl", "Left-Click"));
         addControlRow(content, "\uD83D\uDD27", L10n.t("index-reload", "Reload"),
-                L10n.t("index-reload-ctrl", "R") + " / F " + L10n.t("index-pickup", "Pickup"));
+                L10n.t("help-reload-keys", "R / F Pickup"));
         addControlRow(content, "\uD83D\uDD00", L10n.t("index-change-weapons", "Change Weapons"),
                 L10n.t("index-change-weapons-ctrl", "1 through 4 or Scroll Wheel"));
         addControlRow(content, "\uD83D\uDD04", L10n.t("index-swap-weapon-slots", "Switch Gun Slots"),
@@ -108,7 +135,7 @@ public class HelpModal {
         addControlRow(content, "\uD83D\uDEE1", L10n.t("index-stow-weapons", "Stow Weapons"),
                 L10n.t("index-stow-weapons-ctrl", "E"));
         addControlRow(content, "\uD83D\uDDFA", L10n.t("index-toggle-minimap", "Toggle Minimap"),
-                L10n.t("index-toggle-minimap-ctrl", "V") + " / M or G = large map");
+                L10n.t("help-map-keys", "V / M or G = large map"));
 
         // Separator
         View sep = new View(activity);
@@ -117,24 +144,29 @@ public class HelpModal {
         content.addView(sep);
 
         // === Tips (actual game behaviour) ===
-        addSectionHeader(content, "\uD83D\uDCA1 Tips", GOLD);
-        addTip(content, "\uD83C\uDFD7\uFE0F Cover",
-                "Trees, rocks, walls and buildings block bullets. Fight from behind cover and peek only to shoot.");
-        addTip(content, "\uD83D\uDD2B Weapons",
-                "Shotguns dominate close range, snipers long range, SMGs up close. Reload behind cover.");
-        addTip(content, "\uD83D\uDC65 Team",
-                "Stick together and revive downed teammates. Share ammo and healing items.");
-        addTip(content, "\u2604\uFE0F Red zone",
-                "The gas shrinks over time. Stay inside the safe zone; move early instead of sprinting at the end.");
-        addTip(content, "\uD83C\uDF92 Loot",
-                "Walk near an item and tap the PICK UP prompt. Better armour and a backpack win fights.");
+        addSectionHeader(content, "\uD83D\uDCA1 " + L10n.t("help-tips", "Tips"), GOLD);
+        addTip(content, "\uD83C\uDFD7\uFE0F " + L10n.t("help-tip-cover", "Cover"),
+                L10n.t("help-tip-cover-text",
+                        "Trees, rocks, walls and buildings block bullets. Fight from behind cover and peek only to shoot."));
+        addTip(content, "\uD83D\uDD2B " + L10n.t("help-tip-weapons", "Weapons"),
+                L10n.t("help-tip-weapons-text",
+                        "Shotguns dominate close range, snipers long range, SMGs up close. Reload behind cover."));
+        addTip(content, "\uD83D\uDC65 " + L10n.t("help-tip-team", "Team"),
+                L10n.t("help-tip-team-text",
+                        "Stick together and revive downed teammates. Share ammo and healing items."));
+        addTip(content, "\u2604\uFE0F " + L10n.t("help-tip-zone", "Red zone"),
+                L10n.t("help-tip-zone-text",
+                        "The gas shrinks over time. Stay inside the safe zone; move early instead of sprinting at the end."));
+        addTip(content, "\uD83C\uDF92 " + L10n.t("help-tip-loot", "Loot"),
+                L10n.t("help-tip-loot-text",
+                        "Walk near an item and tap the PICK UP prompt. Better armour and a backpack win fights."));
 
         scroll.addView(content);
         panel.addView(scroll);
 
         // Close button
         mCloseBtn = new Button(activity);
-        mCloseBtn.setText("Got it! \u2713");
+        mCloseBtn.setText(L10n.t("help-got-it", "Got it!") + " \u2713");
         mCloseBtn.setBackgroundColor(GREEN);
         mCloseBtn.setShadowLayer(dp(2), 0, dp(2), GREEN_SHADOW);
         mCloseBtn.setLayoutParams(new ViewGroup.LayoutParams(
@@ -247,6 +279,11 @@ public class HelpModal {
     public void show() {
         if (mOpen) return;
         mOpen = true;
+        // The modal is built once at startup; rebuild when the language changed.
+        String locale = SurvBridge.getLanguage();
+        if (locale != null && !locale.equals(mBuiltLocale)) {
+            buildUi();
+        }
         mRoot.setVisibility(View.VISIBLE);
     }
 
