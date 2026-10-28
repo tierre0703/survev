@@ -56,7 +56,8 @@ six emote slot labels) through 21 new keys in `en.json` + every
 `client/public/l10n` file. The thirty-third localizes the in-game pause dialog
 and leaderboard chrome and limits the native language list to
 **English/French/Japanese** (`en`/`fr`/`jp`); the other web locales are pruned
-from the APK and a stale saved language is normalized to English. The
+from the APK and a stale saved language is normalized to English. (The
+thirty-ninth pass later relaxed this to **English/French only**.) The
 thirty-fourth localizes the How-to-Play body (34 keys) and rebuilds the modal on
 open when the language changed. The thirty-fifth localizes the team room screen
 (invite code/copy/share, roster, region/mode/auto-fill, play/leave, rename and
@@ -65,7 +66,10 @@ ports bullet impact normals, worn/equipped pan surface blocking, steelskin and
 turkey-mode hit FX, and the web's single-particle hit spray. The thirty-seventh
 replaces the EFX low-pass approximation with the web's exact 10-band
 muffled/club biquad cascade on decoded PCM (low-pass only as a streaming
-fallback).
+fallback). The thirty-eighth localizes the in-game leaderboard's `H/A/D` status column
+through `fr` keys (`État`/`V`/`M`). The thirty-ninth limits the shipped
+languages to **English/French only** (Japanese is pruned; a saved `jp`
+language normalizes to English).
 **230 host tests pass, 0 fail.**
 
 ---
@@ -129,10 +133,10 @@ fallback).
 | `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | ✅ pads/aim-line good; config move/aim style + aim line applied live and persisted; gameplay actions from `game/InputActions` + `game/Hud` |
 | `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | ✅ schema + settings screens write real values; runtime listeners applied at startup/on change (highResTex maps to the GFX tier, local rotation is desktop-only) |
 | `client/src/device.ts` → `ui/Device.*` | 🔶 simplified (no tablet/pixelRatio/MAX_TEXTURE_SIZE tiers) |
-| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*`, Java `L10n.java` | ✅ C++ table good; Java menu/settings/pause/help labels read the flattened table (session P1.7); the native language list is **en/fr/jp only** (`ui::kLocales`, `sync-content.ps1` prunes the other web locales, stale saved languages normalize to English). The loadout editor chrome (panel title, `loadout-title-*` category names, sort, crosshair Size/Stroked, Back, alert dots) is localized (pass 30); settings section headers, touch style/aim line toggles, `Close`, the new-item banner and the six emote slot labels use the pass-32 keys; the pause dialog and leaderboard chrome are localized in pass 33; the How-to-Play body is localized in pass 34 (rebuilt on open after a language change); the team room screen is localized in pass 35. Only the leaderboard `H/A/D` status letters and server-provided names stay as-is |
+| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*`, Java `L10n.java` | ✅ C++ table good; Java menu/settings/pause/help labels read the flattened table (session P1.7); the native language list is **en/fr only** (`ui::kLocales`, `sync-content.ps1` prunes the other web locales, stale saved languages — including the dropped `jp` — normalize to English). The loadout editor chrome (panel title, `loadout-title-*` category names, sort, crosshair Size/Stroked, Back, alert dots) is localized (pass 30); settings section headers, touch style/aim line toggles, `Close`, the new-item banner and the six emote slot labels use the pass-32 keys; the pause dialog and leaderboard chrome are localized in pass 33; the How-to-Play body is localized in pass 34 (rebuilt on open after a language change); the team room screen is localized in pass 35. Only the leaderboard `H/A/D` status letters and server-provided names stay as-is |
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | ✅ join/reconnect, quickplay auth/captcha message, reason-string mapping and error dialogs (match-over latch done) |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; Java menu builds modes/regions from site_info (enabled/teamMode/l10n) and requires the fetch before Play (P1.7); mode/region icons remain P2 |
-| `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste, config `webBaseUrl`), `survev://` + `https://…/#CODE` + `?u=&jt=` links, kick/mode/region/auto-fill, in-room rename, room-prop persistence, team match returns to the room; the room chrome/status/toasts are localized en/fr/jp (pass 35) |
+| `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste, config `webBaseUrl`), `survev://` + `https://…/#CODE` + `?u=&jt=` links, kick/mode/region/auto-fill, in-room rename, room-prop persistence, team match returns to the room; the room chrome/status/toasts are localized en/fr (pass 35) |
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | ✅ real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack, the header/footer detail panel (localized rarity, `Acquired:` source resolved through the source def name like `getItemSourceName`, lore or the emote `Category:` line) and the per-tab NEW alert dots |
 | `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | ✅ health/boost, weapon/ammo, alive/kills, kill feed (incl. role lines), kill leader, gas timer + gas/danger icon, death/result + spectate overlay, post-match teammate stats, inventory v2 strip, interaction prompt/touch target, toasts, squad group-colour dots + downed pulse, and the perk-mode class picker are live |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
@@ -331,7 +335,7 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
       - Volumes are folded into ambience/music updates (`AudioManager::setVolume`
         now includes master) and existing loops are rescaled on a master change.
       - Language list comes from `SurvBridge.getLocalesJson()` (`ui::kLocales`:
-        en/fr/jp only, with native display names); `Reset` returns to English.
+        en/fr only, with native display names); `Reset` returns to English.
       - Removed the dead controls: highResTex (= the GFX surface tier, P2 asset
         pipeline), local rotation (desktop mouse only) and the invented HUD scale.
       - Acceptance: toggles/volumes/styles persist across reopening the screen
@@ -1311,6 +1315,25 @@ Done in the thirty-seventh P2 pass (2026-10-28):
   empty crash buffer. EQ timbre and reverb nuance were verified on real hardware
   (2026-10-28).
 
+Done in the thirty-eighth P2 pass (2026-10-28):
+- Leaderboard status letters (`LeaderboardModal.java`): the `H` header and the
+  `A`/`D` cells are localized through three new native-only keys
+  (`leaderboard-status`, `leaderboard-alive`, `leaderboard-dead`) in
+  `client/src/en.json` + `fr.json`/`jp.json`. French shows `État`/`V`/`M`
+  (vivant/mort); the header and Close label re-apply in `show()` like the
+  pass-34 pattern and row cells already rebuild per data update. Device-verified
+  in French (green `V` cell under `État`, `Éliminations` header, `Classements`
+  title).
+
+Done in the thirty-ninth P2 pass (2026-10-28):
+- **Shipped languages limited to English/French** (user request): `ui::kLocales`
+  drops `jp`/`日本語`, `detectLocale("ja*")` now resolves to `en`, and
+  `AndroidUiBridge::normalizeLanguage()` rewrites a saved `jp` language to
+  `en` (both were automatic via the table/rules). `sync-content.ps1` prunes
+  `jp.json` from `Content/l10n` as well. The language button now cycles
+  English → Français → English. Host test `ui_localization_lookup` pins the
+  2-locale list and the `ja-JP` → `en` fallback.
+
 Remaining:
 - **Rendering:** minor colour nuances only. Bullet impact normals, pan-surface
   blocking, steelskin sparks and turkey feathers are ported (pass 36);
@@ -1319,8 +1342,7 @@ Remaining:
   `MapView`), so its z-order path is dead code rather than a gap.
 - **HUD/menus:** menu preview heal/boost particle emitters (`opponentDisplay.ts`;
   the Java avatar has no heal/boost view, so this only matters if the preview
-  gains those tabs). The leaderboard status column still uses the `H/A/D`
-  letters; it can follow the pass-34 help-key pattern.
+  gains those tabs).
 - **Audio:** none remaining. The web's 10-band `muffled`/`club` biquad chains
   run on decoded PCM (pass 37), the EFX low-pass remains only for
   streams/unsupported formats, and EQ timbre/reverb nuance were verified on real
@@ -1622,13 +1644,14 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   to English keys. `setLanguage` updates that table before notifying Java.
 - The pass-32/33 native chrome keys (`settings-*`, `pause-*`,
   `loadout-emote-*`, `index-close`, `loadout-new-*`, `leaderboard-empty`) live
-  in `client/src/en.json` **and** the staged `en`/`fr`/`jp` locale files;
-  `sync-content.ps1` stages those three and prunes the rest, so a key added only
+  in `client/src/en.json` **and** the staged `en`/`fr` locale files;
+  `sync-content.ps1` stages those two and prunes the rest, so a key added only
   to `en.json` shows up in English for every shipped language
-- The native client ships **only en/fr/jp** (`ui::kLocales`); do not re-add the
+- The native client ships **only en/fr** (`ui::kLocales`); do not re-add the
   other web locale codes without adding the staged JSON + pause/settings keys.
-  `AndroidUiBridge::normalizeLanguage()` rewrites an unsupported saved code to
-  `en`, and `sync-content.ps1` prunes non-en/fr/jp locale JSONs from `Content/`
+  `AndroidUiBridge::normalizeLanguage()` rewrites an unsupported saved code
+  (including the dropped `jp`) to `en`, and `sync-content.ps1` prunes
+  non-en/fr locale JSONs from `Content/`
 - `GamePauseDialog`'s card must stay top-aligned in its ScrollView
   (`Gravity.CENTER_HORIZONTAL`, not `CENTER`); a vertically centred card taller
   than the viewport hides the PAUSED title/volume rows and cannot be scrolled
@@ -1637,7 +1660,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   only the tier name is translated, otherwise `GFX: Complète` is clipped
 - `HelpModal` is built once at startup; `show()` must rebuild when
   `SurvBridge.getLanguage()` changed (the body is a tree of localized labels,
-  not cheap per-label re-localization). Help keys are `help-*` in en/fr/jp
+  not cheap per-label re-localization). Help keys are `help-*` in en/fr
 - `TeamFragment` re-applies every label in `render()` (title/invite/roster/
   props/play/leave) so a language change in Settings is picked up on the next
   room update; keep new team strings in `team-*` keys. The team panel must stay

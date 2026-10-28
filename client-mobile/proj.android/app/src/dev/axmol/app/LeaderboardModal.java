@@ -50,6 +50,7 @@ public class LeaderboardModal {
     private final TextView mTitle;
     private final TextView mNameH;
     private final TextView mKillsH;
+    private final TextView mStatusH;
     private Button mCloseBtn;
     private int mActivePlayerId = -1;
 
@@ -92,12 +93,12 @@ public class LeaderboardModal {
         TextView rankH = makeColHeader("#", 30);
         mNameH = makeColHeader("", 190);
         mKillsH = makeColHeader("", 90);
-        TextView statusH = makeColHeader("H", 40);
+        mStatusH = makeColHeader("", 40);
 
         colHeader.addView(rankH);
         colHeader.addView(mNameH);
         colHeader.addView(mKillsH);
-        colHeader.addView(statusH);
+        colHeader.addView(mStatusH);
         panel.addView(colHeader);
 
         // Player list (scrollable)
@@ -127,6 +128,9 @@ public class LeaderboardModal {
         mTitle.setText(L10n.t("index-leaderboards", "Leaderboards"));
         mNameH.setText(L10n.t("index-player", "Player"));
         mKillsH.setText(L10n.t("game-kills", "Kills"));
+        // Status column: H (health/status) header with A(live)/D(ead) cells.
+        mStatusH.setText(L10n.t("leaderboard-status", "H"));
+        mCloseBtn.setText(L10n.t("index-close", "Close"));
     }
 
     public View root() { return mRoot; }
@@ -205,7 +209,9 @@ public class LeaderboardModal {
             TextView rankTv = makeCell(String.valueOf(i + 1), 30, textColor, 14);
             TextView nameTv = makeCell(e.name, 190, textColor, 14);
             TextView killsTv = makeCell(String.valueOf(e.kills), 90, textColor, 14);
-            TextView statusTv = makeCell(e.isAlive ? "A" : "D", 40, e.isAlive ? 0xFF83AF50 : 0xFFFF7878, 12);
+            TextView statusTv = makeCell(
+                    L10n.t(e.isAlive ? "leaderboard-alive" : "leaderboard-dead", e.isAlive ? "A" : "D"),
+                    40, e.isAlive ? 0xFF83AF50 : 0xFFFF7878, 12);
 
             row.addView(rankTv);
             row.addView(nameTv);

@@ -158,7 +158,7 @@ public:
         }
     }
 
-    // Restricts the persisted language to the shipped list (en/fr/jp). A
+    // Restricts the persisted language to the shipped list (en/fr). A
     // language from an older build is corrected to English and saved, so the
     // Settings dropdown and the l10n table always agree.
     std::string normalizeLanguage() {

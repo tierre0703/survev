@@ -8,7 +8,6 @@ namespace ui {
 const LocaleInfo kLocales[] = {
     {"en", "English"},
     {"fr", "Français"},
-    {"jp", "日本語"},
 };
 const int kLocaleCount = static_cast<int>(sizeof(kLocales) / sizeof(kLocales[0]));
 
@@ -151,14 +150,11 @@ std::string Localization::detectLocale(const std::string& languageTag) const {
     std::string tag = languageTag;
     std::transform(tag.begin(), tag.end(), tag.begin(),
                    [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    // Prefer the shipped codes first (en/fr/jp), then their BCP-47 aliases.
+    // Prefer the shipped codes first (en/fr), then their BCP-47 aliases.
     for (int i = 0; i < kLocaleCount; i++) {
         if (tag.find(kLocales[i].code) != std::string::npos) {
             return kLocales[i].code;
         }
-    }
-    if (tag.rfind("ja", 0) == 0) {
-        return "jp"; // BCP-47 uses "ja"; the web locale file is "jp".
     }
     if (tag.rfind("fr", 0) == 0) {
         return "fr";

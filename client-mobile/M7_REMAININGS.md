@@ -158,7 +158,7 @@ $sym = Join-Path $env:ANDROID_NDK_HOME 'toolchains\llvm\prebuilt\windows-x86_64\
 | `Json.h` | Minimal JSON reader (`JsonValue` tree + `JsonParser::parse`), `\u`/surrogate → UTF-8. No axmol. |
 | `Files.{h,cpp}` | axmol `FileUtils` wrapper: `readText/readBytes/readJson/exists/resolveRelative/fullPath`, plus `registerFonts`/`fontFace` for the bundled TTF faces. |
 | `Config.{h,cpp}` | Port of `client/src/config.ts`. `ConfigStorage` + `MemoryConfigStorage` + `UserDefaultConfigStorage` (SharedPreferences); typed getters/setters, `save()`, listeners; web defaults; `defaultLoadout()`. |
-| `Localization.{h,cpp}` | Port of `client/src/ui/localization.ts`. Native subset `en`/`fr`/`jp` (`ui::kLocales`), `registerEnglish`, `setLoader`, `setLocale`, `translate`, `localeName`, `detectLocale`. |
+| `Localization.{h,cpp}` | Port of `client/src/ui/localization.ts`. Native subset `en`/`fr` (`ui::kLocales`), `registerEnglish`, `setLoader`, `setLocale`, `translate`, `localeName`, `detectLocale`. |
 | `Device.{h,cpp}` | Port of the parts of `client/src/device.ts` the UI needs. |
 | `Ui.{h,cpp}` | Widget toolkit (`§5`): `kit::fromCssY`, `Panel`, `Button` (web colours + PNG icons), `TextField`, `Slider`, `Modal`, `makeLabel`/`fontPath`, `uiRoot`, `layoutUiRoot`, `swallowTouches`. |
 | `News.{h,cpp}` | Bundled news entries for the menu's news box. |
@@ -244,7 +244,7 @@ killfeed. Still needed:
 ### T5. Menu polish
 
 - **Language select** is a cycle button over the three shipped native locales
-  (`en`/`fr`/`jp`); the web client uses a `<select>` with 18.
+  (`en`/`fr`); the web client uses a `<select>` with 18.
 - **Social/ad columns**: the web `#left-column` (Discord/Wiki/Ko-fi + ads) and
   the featured-streamer block are intentionally omitted (no sites backend).
 - **Persist the paging/category** of the loadout modal between opens (web keeps
