@@ -626,7 +626,7 @@ for (const type of gameTypes) {
         str(def.sound?.shootTeam?.[FactionTeam.Blue])
     },${str(def.sound?.cycle)},${str(def.sound?.pull)},${f(def.sound?.fallOff, 0)},${def.ignoreDetune ? 1 : 0},${
         def.fireMode === "single" ? 1 : 0
-    },${f(def.pullDelay, 0)},${def.pullDelay !== undefined ? 1 : 0}},\n`;
+    },${f(def.pullDelay, 0)},${def.pullDelay !== undefined ? 1 : 0},${def.explodeOnImpact ? 1 : 0}},\n`;
     if (
         !def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack"
         && !def.frozenSprites
@@ -1201,7 +1201,7 @@ struct RawGameObj { const char* type; const char* category; RawImg img; int hasI
     const char* soundShootTeamRed; const char* soundShootTeamBlue;
     const char* cycleSound; const char* pullSound;
     float soundFallOff; int ignoreDetune; int fireModeSingle;
-    float pullDelay; int hasPullDelay; };
+    float pullDelay; int hasPullDelay; int explodeOnImpact; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -1617,6 +1617,7 @@ public:
             d.fireModeSingle = r.fireModeSingle != 0;
             d.pullDelay = r.pullDelay;
             d.hasPullDelay = r.hasPullDelay != 0;
+            d.explodeOnImpact = r.explodeOnImpact != 0;
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}

@@ -43,7 +43,9 @@ loadout detail panel (localized rarity, `Acquired:` source resolved through the
 source def name, lore or emote `Category:` line) and the per-tab NEW alert dots.
 The twenty-eighth adds the def-driven shot fire cues (faction/last/alt sound
 variants, fallOff/ignoreDetune, pullDelay shells and the cycle/pull rechamber).
-**225 host tests pass, 0 fail.**
+The twenty-ninth adds the thrown-projectile impact cues (wall hit FX/sound once
+per obstacle and the ground-surface landing group).
+**226 host tests pass, 0 fail.**
 
 ---
 
@@ -92,7 +94,7 @@ variants, fallOff/ignoreDetune, pullDelay shells and the cycle/pull rechamber).
 | `client/src/objects/loot.ts` → `objects/Barns.*` | ✅ rarity border/outer ring, inner-art scale/rotation/mirror, tint |
 | `client/src/objects/decal.ts` → `objects/Barns.*` | ✅ |
 | `client/src/objects/deadBody.ts` → `objects/Barns.*` | ✅ (interpolation P0.3) |
-| `client/src/objects/projectile.ts` → `objects/Barns.*` | ✅ spin/drag, throwable trail, water alpha, stairs z-order, always-on-top bomb; collision bounce sounds remain P2 |
+| `client/src/objects/projectile.ts` → `objects/Barns.*` | ✅ spin/drag, net-velocity throwable trail, water alpha/ripples, stairs z-order, always-on-top bomb, and the wall/ground impact cues (deepest overlapping obstacle, once per obstacle, velocity gate 7.5, surface `frag_grass`/`frag_sand`/`frag_water` or `footstep_*` fallback, suppressed for `explodeOnImpact` throwables) |
 | `client/src/objects/smoke.ts` → `objects/Barns.*` | ✅ |
 | `client/src/objects/airdrop.ts` → `objects/Barns.*` | ✅ retained fall-loop handle, chute/crash FX, ripples |
 | `client/src/objects/plane.ts` → `objects/Barns.*` | ✅ plane engine loop and airstrike zones instantiated |
@@ -1050,6 +1052,37 @@ Done in the twenty-eighth P2 pass (2026-10-28):
   with the ambient/music mixer running and an empty crash buffer; the
   shot-specific cues are host-tested (the spawn loadout had no gun to fire
   with).
+
+Done in the twenty-ninth P2 pass (2026-10-28):
+- Thrown-projectile impact cues (`projectile.ts` m_update), the last named gap
+  on the ProjectileBarn row:
+  - **Net-velocity fix**: `Projectile` now carries `posOld` (the previous
+    UpdateMsg position) and the per-projectile `vel = (pos - posOld) / dt`,
+    exactly like the web. The old code derived the throw speed from a per-frame
+    `lastPos` delta, which is zero on every frame without a net tick (so the
+    trail alpha/scale was mostly invisible). Wall-impact and trail now share the
+    web's speed.
+  - **Obstacle scan**: the deepest overlapping same-layer obstacle is split into
+    a wall hit (`height > posZ`) or ground hit, with the web's tie-break
+    (`pen` and `height`). Uses `Collider::createCircle(pos, rad)` with
+    `rad = itemDef.rad * 0.5` and `colliderIntersectCircleRes`.
+  - **Wall cue**: once per obstacle id, when the throw speed is above 7.5, the
+    obstacle's `hitParticle` + `sound.bullet` hit group play through the shared
+    `playBulletHitFx` (particles + `hits` channel, muffled, layer-aware), with
+    the impact normal from the reversed velocity. `explodeOnImpact` throwables
+    (snowball/bomb_iron) still latch the obstacle id but skip the FX, matching
+    `playHitSfx = !itemDef.explodeOnImpact`.
+  - **Ground landing**: when `velZ` flips to >= 0 after a fall, the surface
+    group plays once (`grounded` latch): `frag_grass`/`frag_sand`/`frag_water`
+    on `hits`, or the web's `footstep_<surface>` fallback on `sfx`; a ground
+    obstacle instead plays its `sound.bullet` group once.
+  - Codegen emits `explodeOnImpact` for throwables.
+- Host tests: `projectile_impact_cues` (rad, wall FX + audio + one-shot latch,
+  `explodeOnImpact` suppression, grass/sand/water vs `sfx` fallback on landing,
+  grounded latch). 3838 assertions / 226 tests.
+- Device check (x86_64 emulator): APK installs, joins a quick-play match and
+  renders normally with an empty crash buffer (no throwable in the spawn
+  inventory, so the cues are host-tested).
 
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`

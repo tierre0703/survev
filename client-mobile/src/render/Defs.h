@@ -549,6 +549,9 @@ struct GameObjRenderDef {
     bool fireModeSingle = false;
     float pullDelay = 0.0f;
     bool hasPullDelay = false;
+    // throwableDefs.explodeOnImpact: projectile.ts only plays the wall/ground
+    // impact cues for non-impact grenades (frags go straight to the explosion).
+    bool explodeOnImpact = false;
 
     // Map indicator (item/role minimap marker) fields.
     std::string mapIndicatorSprite;

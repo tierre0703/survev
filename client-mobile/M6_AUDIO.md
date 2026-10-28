@@ -65,6 +65,9 @@ node --experimental-transform-types tools/codegen_sound_defs.mjs
   precedence, `fallOff`/`ignoreDetune`, splinter/AP/high-velocity detune layers
   and the local single-fire cycle/pull rechamber cue, `ShotBarn::update`)
 - ✅ **Bullet whiz** group (close bullets from other players, `BulletBarn::update`)
+- ✅ **Thrown-projectile impacts** (wall `sound.bullet` hit group + particles once
+  per obstacle, and the `frag_grass`/`frag_sand`/`frag_water` or
+  `footstep_*` landing group on first ground contact, `ProjectileBarn::update`)
 - ✅ **Reverb/filters**: `AudioManager::update()` computes cathedral reverb volume from `activeLayer`/`underground`; `AxmolAudioBackend::update()` creates a silent reverb carrier and calls `ax::AudioEngine::setReverbProperties` with EAX parameters.
 - **UI sounds** (ambient lab, pickup pings, notifications) are not wired — no UI
   system in the C++ port yet. Java can now play one-shot cues through

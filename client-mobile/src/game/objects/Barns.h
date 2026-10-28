@@ -346,13 +346,20 @@ class Projectile : public AbstractObject {
 public:
     std::string type;
     Vec2 pos;
+    // Net position of the previous UpdateMsg tick (projectile.ts posOld): the
+    // wall-impact speed and the throwable trail use this delta, not a per-frame
+    // one.
+    Vec2 posOld;
     Vec2 dir;
     Vec2 lastPos;
+    // projectile.ts: the collision radius is itemDef.rad * 0.5.
+    float rad = 1.0f;
     // projectile.ts visualPosOld/posInterpTicker (render lags net updates).
     Vec2 visualPosOld;
     float posInterpTicker = 0.0f;
     float posZ = 0.0f;
     float posZOld = 0.0f;
+    float velZ = 0.0f;
     int layer = 0;
     int ori = 0;
     float imgScale = 1.0f;
@@ -360,6 +367,7 @@ public:
     float rotVel = 0.0f;
     float rotDrag = 1.0f;
     bool inWater = false;
+    bool grounded = false;
     bool alwaysRenderOntop = false;
     bool playHitSfx = true;
     uint16_t lastSoundObjId = 0;

@@ -325,6 +325,105 @@ TEST(projectile_spin_and_trail) {
     CHECK_NEAR(pTrail->rotation, -3.14159265358979f / 4.0f, 1e-4f);
 }
 
+// P2: projectile.ts wall/ground impact cues (thrown grenades hitting a crate or
+// landing on the map surface) come from the obstacle def's bullet group and the
+// ground-surface group, once per obstacle/landing.
+TEST(projectile_impact_cues) {
+    installGeneratedDefs();
+    audio::installGeneratedSoundDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    ShotAudioBackend backend;
+    audio::AudioManager manager(&backend);
+    manager.preloadSounds();
+    world.setAudio(&manager, nullptr);
+    world.loadMap(basicMap());
+    world.camera().m_screenWidth = 800.0f;
+    world.camera().m_screenHeight = 600.0f;
+
+    const DefProvider* provider = getDefProvider();
+    const MapObjectDef* crateDef = provider ? provider->mapObject("crate_01") : nullptr;
+    CHECK(crateDef != nullptr);
+    Obstacle* crate = world.map().obstaclePool.m_alloc();
+    crate->__id = 11;
+    crate->type = "crate_01";
+    crate->active = true;
+    crate->dead = false;
+    crate->layer = 0;
+    crate->height = 1.0f;
+    crate->collider = createAabbExtents(Vec2(256.0f, 256.0f), Vec2(2.25f, 2.25f));
+    crate->hitParticle = crateDef ? crateDef->hitParticle : "";
+
+    // Thrown into the crate: 60 units/s (posOld 6 units behind over 0.1 s).
+    Projectile* p = world.projectileBarn().projectilePool.m_alloc();
+    ObjectData data;
+    data.type = "frag";
+    data.pos = Vec2(254.0f, 256.0f);
+    data.dir = Vec2(1.0f, 0.0f);
+    data.layer = 0;
+    data.posZ = 0.5f;
+    p->m_updateData(data, true, true, world);
+    CHECK_NEAR(p->rad, 0.5f, 1e-5f); // itemDef.rad (1) * 0.5
+    CHECK(p->playHitSfx);            // frag.explodeOnImpact is false
+    p->posOld = Vec2(248.0f, 256.0f);
+    manager.cameraPos = Vec2(254.0f, 256.0f);
+    const size_t wallPlaysBefore = backend.played.size();
+    world.projectileBarn().update(0.1f, world);
+    CHECK_EQ(p->lastSoundObjId, 11);
+    CHECK(backend.played.size() > wallPlaysBefore);
+    CHECK(!world.particleBarn().particles.empty()); // bullet.ts playHitFx particles
+
+    // The same crate does not replay the cue on every frame.
+    const size_t afterWall = backend.played.size();
+    world.projectileBarn().update(0.1f, world);
+    CHECK_EQ(backend.played.size(), afterWall);
+
+    // projectiles that explode on impact (snowball) do not play the wall cue,
+    // but the obstacle id is still latched like the web.
+    Projectile* snowball = world.projectileBarn().projectilePool.m_alloc();
+    data.type = "snowball";
+    data.pos = Vec2(254.0f, 256.0f);
+    snowball->m_updateData(data, true, true, world);
+    CHECK(!snowball->playHitSfx);
+    snowball->posOld = Vec2(248.0f, 256.0f);
+    const size_t beforeSnowball = backend.played.size();
+    world.projectileBarn().update(0.1f, world);
+    CHECK_EQ(snowball->lastSoundObjId, 11);
+    CHECK_EQ(backend.played.size(), beforeSnowball);
+
+    // Landing: posZ stays 0 after a fall, so velZ flips to >= 0 and the
+    // surface group plays once (grass/sand/water -> *frag_** on `hits`,
+    // everything else -> footstep_* on `sfx`).
+    const Vec2 landPos(200.0f, 200.0f);
+    const Map::GroundSurface landSurface = world.map().getGroundSurface(landPos, 0);
+    Projectile* g = world.projectileBarn().projectilePool.m_alloc();
+    data.type = "frag";
+    data.pos = landPos;
+    data.posZ = 0.0f;
+    g->m_updateData(data, true, true, world);
+    g->posZ = 0.0f;
+    g->posZOld = 0.0f;
+    g->velZ = -2.0f; // falling on the previous tick
+    manager.cameraPos = landPos;
+    const size_t beforeLanding = backend.played.size();
+    world.projectileBarn().update(0.1f, world);
+    CHECK(g->grounded);
+    CHECK(backend.played.size() > beforeLanding);
+    if (backend.played.size() > beforeLanding) {
+        const std::string& id = backend.played.back();
+        const bool mapped = landSurface.type == Map::SurfaceType::Grass
+            || landSurface.type == Map::SurfaceType::Sand
+            || landSurface.type == Map::SurfaceType::Water;
+        const std::string suffix = mapped ? "hits" : "sfx";
+        CHECK(id.size() >= suffix.size()
+              && id.compare(id.size() - suffix.size(), suffix.size(), suffix) == 0);
+    }
+    // The landing cue is once per throw (grounded latches).
+    const size_t afterLanding = backend.played.size();
+    world.projectileBarn().update(0.1f, world);
+    CHECK_EQ(backend.played.size(), afterLanding);
+}
+
 // ---------------------------------------------------------------------------
 // Airdrop: parachute fall + landed flag; the crate is a real object type.
 // ---------------------------------------------------------------------------

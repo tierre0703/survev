@@ -1439,12 +1439,16 @@ DeadBody* DeadBodyBarn::getDeadBodyById(uint16_t playerId) {
 void Projectile::m_init() {
     posZ = 0.0f;
     posZOld = 0.0f;
+    velZ = 0.0f;
+    posOld = Vec2();
     visualPosOld = Vec2();
     posInterpTicker = 0.0f;
     rot = 0.0f;
     rotVel = 0.0f;
     rotDrag = 1.0f;
+    rad = 1.0f;
     inWater = false;
+    grounded = false;
     alwaysRenderOntop = false;
     playHitSfx = true;
     lastSoundObjId = 0;
@@ -1468,6 +1472,8 @@ void Projectile::m_updateData(const ObjectData& data, bool fullUpdate, bool isNe
         posInterpTicker = 0.0f;
     }
     posZOld = isNew ? data.posZ : posZ;
+    // projectile.ts sets posOld before copying the new net position.
+    posOld = isNew ? data.pos : pos;
     pos = data.pos;
     posZ = data.posZ;
     dir = data.dir;
@@ -1494,6 +1500,8 @@ void Projectile::m_updateData(const ObjectData& data, bool fullUpdate, bool isNe
         sprite->setFrame(def->img.sprite);
         sprite->setTint(def->img.tint);
     }
+    // projectile.ts: use a smaller visual radius for collision effects.
+    rad = def ? def->projectileRad * 0.5f : 1.0f;
     if (isNew) {
         rot = 0.0f;
         rotVel = def ? def->spinVel : 0.0f;
@@ -1502,8 +1510,12 @@ void Projectile::m_updateData(const ObjectData& data, bool fullUpdate, bool isNe
         }
         rotDrag = (def ? def->spinDrag : 1.0f) * rnd(1.0f, 2.0f);
         inWater = false;
+        grounded = false;
+        velZ = 0.0f;
         alwaysRenderOntop = def && def->alwaysRenderOntop;
-        playHitSfx = true;
+        // projectile.ts: impact cues are skipped for grenades that explode on
+        // contact (they never reach the wall/ground sound path).
+        playHitSfx = !(def && def->explodeOnImpact);
         lastSoundObjId = 0;
         isVisible = true;
         if (type == "bomb_iron") {
@@ -1519,6 +1531,12 @@ void Projectile::m_updateData(const ObjectData& data, bool fullUpdate, bool isNe
     }
 }
 
+// bullet.ts playHitFx() is shared with the projectile wall-impact cue; defined
+// with the BulletBarn below.
+static void playBulletHitFx(GameWorld& ctx, const std::string& particle,
+                            const std::string& sound, const Vec2& pos, const Vec2& dir,
+                            int layer);
+
 void ProjectileBarn::update(float dt, GameWorld& ctx) {
     const Player* activePlayer = ctx.activePlayer();
     const float ppu = ctx.camera().m_ppu;
@@ -1531,6 +1549,57 @@ void ProjectileBarn::update(float dt, GameWorld& ctx) {
         p->rot += p->rotVel * dt;
         p->rotVel *= 1.0f / (1.0f + dt * p->rotDrag);
 
+        // projectile.ts: net velocity between UpdateMsg ticks (pos - posOld).
+        // Both the wall-impact gate and the throwable trail use this speed.
+        const Vec2 vel = dt > 0.0f ? v2Div(v2Sub(p->pos, p->posOld), dt) : Vec2();
+        const float speed = v2Length(vel);
+
+        // projectile.ts: the deepest overlapping obstacle decides the wall vs
+        // ground impact (height above posZ = wall, below = ground).
+        Obstacle* wallObj = nullptr;
+        float wallPen = 0.0f;
+        Obstacle* groundObj = nullptr;
+        float groundPen = 0.0f;
+        {
+            const Collider projCollider = Collider::createCircle(p->pos, p->rad);
+            for (Obstacle* o : ctx.map().obstaclePool.m_getPool()) {
+                if (!o->active || o->dead) continue;
+                // util.sameLayer(o.layer, p.layer).
+                if ((o->layer & 1) != (p->layer & 1) && !((o->layer & 2) && (p->layer & 2))) {
+                    continue;
+                }
+                Vec2 pushDir;
+                float pen = 0.0f;
+                if (!colliderIntersectCircleRes(o->collider, p->pos, p->rad, &pushDir, &pen)) {
+                    continue;
+                }
+                if (o->height > p->posZ) {
+                    if (pen > wallPen && (!wallObj || wallObj->height <= o->height)) {
+                        wallObj = o;
+                        wallPen = pen;
+                    }
+                } else if (pen > groundPen && (!groundObj || groundObj->height <= o->height)) {
+                    groundObj = o;
+                    groundPen = pen;
+                }
+            }
+        }
+
+        // Wall impact: once per obstacle, when the throw is fast enough.
+        // (projectile.ts also checks !p.isNew, which is never assigned on the
+        // web object, so it is effectively true.)
+        if (wallObj && wallObj->__id != p->lastSoundObjId && speed > 7.5f) {
+            p->lastSoundObjId = wallObj->__id;
+            if (p->playHitSfx) {
+                const Vec2 dir = v2Mul(v2NormalizeSafe(vel, Vec2(1.0f, 0.0f)), -1.0f);
+                const DefProvider* provider = getDefProvider();
+                const MapObjectDef* wallDef = provider ? provider->mapObject(wallObj->type) : nullptr;
+                playBulletHitFx(ctx, wallObj->hitParticle,
+                                wallDef ? wallDef->bulletSound : std::string(), p->pos, dir,
+                                p->layer);
+            }
+        }
+
         const Map::GroundSurface surface = ctx.map().getGroundSurface(p->pos, p->layer);
         if (p->posZ <= 0.01f) {
             if (!p->inWater && surface.type == Map::SurfaceType::Water) {
@@ -1539,13 +1608,56 @@ void ProjectileBarn::update(float dt, GameWorld& ctx) {
             }
             p->inWater = surface.type == Map::SurfaceType::Water;
         }
+
+        // Ground landing: the first tick after a fall stops (velZ flips to
+        // >= 0) plays the surface/obstacle impact group once.
+        const float velZOld = p->velZ;
+        p->velZ = dt > 0.0f ? (p->posZ - p->posZOld) / dt : 0.0f;
+        if (!p->grounded && p->velZ >= 0.0f && velZOld < 0.0f) {
+            std::string group;
+            const char* channel = "hits";
+            if (groundObj) {
+                if (p->lastSoundObjId != groundObj->__id) {
+                    p->lastSoundObjId = groundObj->__id;
+                    const DefProvider* provider = getDefProvider();
+                    const MapObjectDef* groundDef =
+                        provider ? provider->mapObject(groundObj->type) : nullptr;
+                    if (groundDef) {
+                        group = groundDef->bulletSound;
+                    }
+                }
+            } else {
+                p->grounded = true;
+                if (surface.type == Map::SurfaceType::Grass) {
+                    group = "frag_grass";
+                } else if (surface.type == Map::SurfaceType::Sand) {
+                    group = "frag_sand";
+                } else if (surface.type == Map::SurfaceType::Water) {
+                    group = "frag_water";
+                } else {
+                    // projectile.ts: fall back to the footstep group.
+                    group = std::string("footstep_") + surfaceTypeName(surface.type);
+                    channel = "sfx";
+                }
+            }
+            if (!group.empty() && p->playHitSfx && ctx.audio()) {
+                audio::PlaySoundOptions opts;
+                opts.channel = channel;
+                opts.hasSoundPos = true;
+                opts.soundPos = p->pos;
+                opts.hasLayer = true;
+                opts.layer = p->layer;
+                opts.filter = "muffled";
+                ctx.audio()->playGroup(group, opts);
+            }
+        }
         // projectile.ts: this.sprite.rotation = p.rot (same PIXI numeric).
         p->sprite->setRotation(p->rot);
         p->sprite->setAlpha(p->inWater ? 0.3f : 1.0f);
 
-        // projectile.ts trail: length/alpha scale with throw speed and height.
+        // projectile.ts trail: length/alpha scale with the net throw speed and
+        // height.
         if (def && def->hasTrail && p->trail) {
-            const float speed = dt > 0.0f ? v2Length(v2Sub(p->pos, p->lastPos)) / dt : 0.0f;
             const float trailT =
                 math::remap(speed, def->throwSpeed * 0.25f, def->throwSpeed, 0.0f, 1.0f) *
                 math::remap(p->posZ, 0.1f, maxHeight * 0.5f, 0.0f, 1.0f);
