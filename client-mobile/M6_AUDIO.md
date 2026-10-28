@@ -59,7 +59,9 @@ node --experimental-transform-types tools/codegen_sound_defs.mjs
   - ✅ **Pickup sound** (via GameScene `onPickupSound` callback)
   - ✅ **Bush enter/exit** (`bush_enter_01` + leaf particles on transition)
   - ✅ **Door error** (`door_error_01` on locked/one-way door contact)
-  - ✅ **Dry fire** (`empty_fire_01` when firing an empty gun)
+  - ✅ **Dry fire** (`player.ts` m_update: the def's `sound.empty` when clip +
+    reserve are both empty, local-only, press/held-auto gate, wheel blocker;
+    exact since 2026-10-28)
 - ✅ **Explosion sounds** (per-type grass/water surface selection in `GameWorld::applyUpdate`)
 - ✅ **Shot sounds** (def-driven `sound.shoot` with the faction/last/alt
   precedence, `fallOff`/`ignoreDetune`, splinter/AP/high-velocity detune layers

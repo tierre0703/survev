@@ -552,6 +552,10 @@ struct GameObjRenderDef {
     // throwableDefs.explodeOnImpact: projectile.ts only plays the wall/ground
     // impact cues for non-impact grenades (frags go straight to the explosion).
     bool explodeOnImpact = false;
+    // gunDefs.sound.empty / ammoInfinite: player.ts dry-fire cue when both the
+    // clip and the reserve ammo are empty.
+    std::string soundEmpty;
+    bool ammoInfinite = false;
 
     // Map indicator (item/role minimap marker) fields.
     std::string mapIndicatorSprite;

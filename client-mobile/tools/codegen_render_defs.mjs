@@ -594,9 +594,9 @@ for (const type of gameTypes) {
     // projectile.ts: throwable trail + spin/physics.
     const trailDef = def.trail || null;
     const throwPhysics = def.throwPhysics || {};
-    if (def.unlocks || def.ammoType) {
+    if (def.unlocks || def.ammoType || def.ammo) {
         playerEntries += `        _gameObjs.at(${str(type)}).unlocks={${(def.unlocks || []).map(str).join(",")}};
-        _gameObjs.at(${str(type)}).ammoType=${str(def.ammoType || "")};\n`;
+        _gameObjs.at(${str(type)}).ammoType=${str(def.ammo || def.ammoType || "")};\n`;
     }
     gameEntries += `    {${str(type)},${str(def.type || "")},${imgInit(img)},${img?.sprite ? 1 : 0},${
         str(def.emitter || "")
@@ -626,7 +626,9 @@ for (const type of gameTypes) {
         str(def.sound?.shootTeam?.[FactionTeam.Blue])
     },${str(def.sound?.cycle)},${str(def.sound?.pull)},${f(def.sound?.fallOff, 0)},${def.ignoreDetune ? 1 : 0},${
         def.fireMode === "single" ? 1 : 0
-    },${f(def.pullDelay, 0)},${def.pullDelay !== undefined ? 1 : 0},${def.explodeOnImpact ? 1 : 0}},\n`;
+    },${f(def.pullDelay, 0)},${def.pullDelay !== undefined ? 1 : 0},${def.explodeOnImpact ? 1 : 0},${
+        str(def.sound?.empty)
+    },${def.ammoInfinite ? 1 : 0}},\n`;
     if (
         !def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack"
         && !def.frozenSprites
@@ -1201,7 +1203,8 @@ struct RawGameObj { const char* type; const char* category; RawImg img; int hasI
     const char* soundShootTeamRed; const char* soundShootTeamBlue;
     const char* cycleSound; const char* pullSound;
     float soundFallOff; int ignoreDetune; int fireModeSingle;
-    float pullDelay; int hasPullDelay; int explodeOnImpact; };
+    float pullDelay; int hasPullDelay; int explodeOnImpact;
+    const char* soundEmpty; int ammoInfinite; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -1618,6 +1621,8 @@ public:
             d.pullDelay = r.pullDelay;
             d.hasPullDelay = r.hasPullDelay != 0;
             d.explodeOnImpact = r.explodeOnImpact != 0;
+            d.soundEmpty = r.soundEmpty ? r.soundEmpty : "";
+            d.ammoInfinite = r.ammoInfinite != 0;
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}

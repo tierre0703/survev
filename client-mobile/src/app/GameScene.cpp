@@ -545,12 +545,24 @@ bool GameScene::init() {
             _world->applyUpdate(msg);
             // shot.ts cycle/pull: the local gun's clip ammo from the active
             // player snapshot (the native client has no predicted clip).
+            // player.ts dry fire also needs the equipped gun's reserve ammo
+            // (inventory count for its ammo type), so publish both here.
             const ActivePlayerData& apd = _game->activePlayerData();
             int ammo = -1;
+            int reserve = -1;
             if (apd.curWeapIdx >= 0 && apd.curWeapIdx < static_cast<int>(apd.weapons.size())) {
-                ammo = apd.weapons[static_cast<size_t>(apd.curWeapIdx)].ammo;
+                const auto& weap = apd.weapons[static_cast<size_t>(apd.curWeapIdx)];
+                ammo = weap.ammo;
+                const DefProvider* provider = getDefProvider();
+                const GameObjRenderDef* def = (!weap.type.empty() && provider)
+                    ? provider->gameObject(weap.type)
+                    : nullptr;
+                if (def && !def->ammoType.empty()) {
+                    reserve = Hud::bagCount(apd.inventory, def->ammoType.c_str());
+                }
             }
-            _world->setLocalAmmo(ammo);
+            _world->setLocalAmmo(ammo, reserve);
+            _world->setLocalPlayerId(_game->getLocalPlayerId());
         }
     });
 
@@ -2012,6 +2024,10 @@ void GameScene::update(float delta) {
     if (_game->isPlaying() && _game->getActivePlayerId() != 0
         && !_game->isSpectating() && !_game->isLocalDead()) {
         updateInput(delta);
+    } else if (_world) {
+        // No local gameplay input while dead/spectating: a held fire state must
+        // not keep the dry-fire latch alive into the next life.
+        _world->setLocalInput(false, false, true);
     }
     // P1.6 hardware keys that change local UI (map, spectate cycling). Kept
     // outside updateInput() so they also work while dead/spectating, and the
@@ -2041,6 +2057,9 @@ void GameScene::updateInput(float dt) {
     if (_game->isPaused()) {
         _hw.reset();
         _inputSync.reset();
+        if (_world) {
+            _world->setLocalInput(false, false, true);
+        }
         return;
     }
     const ax::Size size = getContentSize();
@@ -2108,6 +2127,16 @@ void GameScene::updateInput(float dt) {
 
     // Merge the queued one-shot actions (reload/interact/equip/use-item).
     _pendingInputs.applyTo(msg);
+
+    // player.ts dry fire: publish the post-bind fire intent (shootStart is the
+    // latched tap so a press that lands between world updates is not lost) and
+    // the emote/ping wheel input blocker. The world consumes this on its next
+    // update, exactly like inputBinds being polled by player.ts.
+    if (_world) {
+        const bool preventInput = (_emoteWheel && _emoteWheel->visible())
+            || (_pingWheel && _pingWheel->visible());
+        _world->setLocalInput(msg.shootHold, msg.shootStart, preventInput);
+    }
 
     // Send when the data changed or after the 1 s keepalive (game.ts:731-771),
     // not unconditionally at the net-sync rate, so idle upstream traffic matches

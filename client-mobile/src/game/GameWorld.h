@@ -171,8 +171,34 @@ public:
 
     // Active player's current clip ammo (UpdateMsg ActivePlayerData.weapons);
     // shot.ts picks the gun's cycle vs pull sound from it. -1 = unknown.
-    void setLocalAmmo(int ammo) { _localAmmo = ammo; }
+    // `reserve` is the equipped gun's inventory ammo count (player.ts dry fire
+    // needs both to be 0); -1 = unknown.
+    void setLocalAmmo(int ammo, int reserve = -1) {
+        _localAmmo = ammo;
+        _localReserveAmmo = reserve;
+    }
     int localAmmo() const { return _localAmmo; }
+    int localReserveAmmo() const { return _localReserveAmmo; }
+
+    // player.ts m_update: the local input state the dry-fire cue needs. The
+    // scene owns the input devices, so it publishes the resolved fire intent
+    // (post-bind-table) plus the emote/ping wheel blocker once per frame.
+    void setLocalInput(bool fireHeld, bool firePressed, bool preventInput) {
+        _localFireHeld = fireHeld;
+        _localFirePressed = firePressed;
+        _localPreventInput = preventInput;
+    }
+    bool localFireHeld() const { return _localFireHeld; }
+    bool localFirePressed() const { return _localFirePressed; }
+    bool localPreventInput() const { return _localPreventInput; }
+
+    // JoinedMsg.playerId: distinguishes the local player from the spectate
+    // target (`activePlayer`), which player.ts does for the dry-fire cue.
+    void setLocalPlayerId(uint16_t id) { _localPlayerId = id; }
+    uint16_t localPlayerId() const { return _localPlayerId; }
+    bool spectating() const {
+        return _localPlayerId != 0 && _activePlayerId != 0 && _activePlayerId != _localPlayerId;
+    }
 
     // M5/touch.ts: aim-line visibility (device.touch && touchingAim && touchAimLine)
     // is owned by the scene, which owns the Touch state.
@@ -230,6 +256,12 @@ public:
     bool _mobile = true;
     // ActivePlayerData.weapons[curWeapIdx].ammo (shot.ts cycle/pull cue).
     int _localAmmo = -1;
+    int _localReserveAmmo = -1;
+    // player.ts dry-fire cue state (scene-published, one frame behind).
+    bool _localFireHeld = false;
+    bool _localFirePressed = false;
+    bool _localPreventInput = false;
+    uint16_t _localPlayerId = 0;
     // Node GameWorld::attachTo() filled; holds the camera-transformed content
     // container (terrain + layers + gas overlay).
     pix::Node* _root = nullptr;

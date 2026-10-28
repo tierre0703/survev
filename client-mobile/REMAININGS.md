@@ -10,7 +10,7 @@ This file is a **summary/index**; the detailed work orders live in:
   other screen = Android Java, one JNI bridge (`SurvBridge`). Read §5 (move
   matrix) and §7 (migration steps S1–S7) before touching UI code.
 
-Latest recorded state: **2026-10-27 (P1.8 + P2 passes)** — team matches
+Latest recorded state: **2026-10-28 (P1.8 + P2 passes)** — team matches
 return to their room, room props persist, in-room rename and invite/join links
 work, and the pass reloads the profile for new items. The P2 pass adds
 real additive blending, the V minimap toggle, shell casings, newest/item-source/
@@ -46,8 +46,11 @@ variants, fallOff/ignoreDetune, pullDelay shells and the cycle/pull rechamber).
 The twenty-ninth adds the thrown-projectile impact cues (wall hit FX/sound once
 per obstacle and the ground-surface landing group). The thirtieth localizes the
 loadout editor chrome through the flattened table (title, category names, sort,
-crosshair labels, Back) and makes the category tabs icon-only like the web.
-**226 host tests pass, 0 fail.**
+crosshair labels, Back) and makes the category tabs icon-only like the web. The
+thirty-first makes the player dry-fire cue exact (local-only one-shot from the
+gun def's `sound.empty`, gated on clip + reserve ammo) and fixes the generated
+`ammoType` so the HUD reserve and the ammo ping follow the equipped gun.
+**227 host tests pass, 0 fail.**
 
 ---
 
@@ -122,7 +125,7 @@ crosshair labels, Back) and makes the category tabs icon-only like the web.
 | `client/src/input.ts`/`inputBinds.ts` (mouse/keyboard/binds) | `game/InputBinds.h` + `game/HardwareInput.h` + `game/InputSync.h` | ✅ full `BindDefs` table (36 `Input` actions), web-compatible `binds` code (LSB-first stream + CRC-16) and the Java Key Binds screen (capture/clear/restore/share/import); keys, mouse buttons/wheel and the unbound-arrow fallback resolve through the table. Android gamepads (native-only) map sticks/triggers/buttons onto the same state with fixed actions. |
 | `client/src/ui/opponentDisplay.ts` (menu character preview / opponent display) | 🔶 animated preview: `CharacterPreviewView` draws the outfit's body/hands and the selected melee on the animData.ts skeleton (`GeneratedPreviewAnims`: idle pose + melee deploy/idle/attack keyframes), framed to fit the art, and plays the outfit pickup + melee anim sounds through `SurvBridge.playSound`; heal/boost particle emitters are N/A while the preview has no heal/boost tab |
 | `client/src/resources.ts` (per-map load/unload, audio preload, MAX_TEXTURE_SIZE) | 🔶 map atlases load/unload on map change like `loadMapAssets`; audio is preloaded globally at startup (no per-map preload needed), `MAX_TEXTURE_SIZE` tiers remain P2 |
-| Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ✅ keyed from the defs (`sound.reload/reloadAlt/deploy/use/pickup`); doors/buttons/puzzles/ceiling/plane loops and victory music wired; dry fire is approximate (P2) |
+| Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ✅ keyed from the defs (`sound.reload/reloadAlt/deploy/use/pickup/empty`); doors/buttons/puzzles/ceiling/plane loops and victory music wired; dry fire is the exact web gate (local, not spectating, clip + reserve empty, firePressed or held-auto, no action, wheel closed, `!ammoInfinite`) |
 | UI sounds (ambient lab, pickup pings, notifications, victory) | 🔶 victory music + pickup/door/puzzle/plane cues wired; notification/team-join sounds are web focus-only (not applicable to the Android foreground) |
 | Reverb (`setReverbProperties`) | ✅ `ReverbModel` maps cathedral/cave to EAX props; applied to every active handle (web convolver is global) |
 | `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ live `game/Hud` has reserve ammo, bag strip, scopes, interaction prompt, pickup/kill messages and gear level badges + tap-to-drop (P1.4/P2); the dead `ui/FguiHud` is not built |
@@ -1111,6 +1114,41 @@ Done in the thirtieth P2 pass (2026-10-28):
   `logcat -b crash` empty. Java-only change, so the 3838 assertions / 226 host
   tests are unchanged.
 
+Done in the thirty-first P2 pass (2026-10-28):
+- Player dry fire (`player.ts` m_update ~1218), the last approximate item on the
+  Player action-sounds row:
+  - **Exact gate**: `playedDryFire` now fires only for the local player (never
+    while spectating), when the equipped item is a gun, the trigger was pressed
+    this frame or is held on an auto gun, no action is running, the emote/ping
+    wheel is closed (`preventInput`), and the gun is not `ammoInfinite`. The cue
+    needs **both** the clip (`ActivePlayerData.weapons[curWeapIdx].ammo`) and the
+    reserve inventory count for the gun's ammo type to be 0, and it plays the
+    def's `sound.empty` (`empty_fire_01`/`_02`) on the default `activePlayer`
+    channel like the web. Releasing the trigger re-arms it; a held trigger does
+    not retrigger.
+  - **Input plumbing**: `GameScene::updateInput` publishes the post-bind
+    `shootStart`/`shootHold` intent (after the `_shootStartPending` latch, so a
+    sub-frame tap is not lost) plus the wheel blocker through
+    `GameWorld::setLocalInput`; paused/dead/spectating frames clear it. The world
+    consumes it on the next update, mirroring `inputBinds` polling.
+  - **Local vs spectate target**: `GameWorld::setLocalPlayerId(JoinedMsg.playerId)`
+    (fed from the UpdateMsg callback) distinguishes the local player from
+    `activePlayer`, so a spectated teammate's empty gun never clicks locally.
+  - **`ammoType` fix**: codegen emitted `GameObjRenderDef.ammoType` only for defs
+    that already had an `ammoType` field (none do), so it was empty for every
+    gun. It now falls back to `GunDef.ammo`, which fixes the HUD's `clip/reserve`
+    counter and the ammo-specific team-ping emote (`9mm` -> `emote_ammo9mm`).
+  - Codegen also emits `soundEmpty` and `ammoInfinite`.
+- Host tests: `gun_fire_cue_defs` now pins `soundEmpty`, `ammoInfinite` and the
+  ammo type (`ak47` -> `762mm`, `m9_cursed` -> `9mm_cursed`), and the new
+  `player_dry_fire_cue` covers press/held/release re-arming, clip/reserve
+  suppression, auto vs single fire, the wheel blocker, `ammoInfinite`,
+  non-gun items and the spectate guard. 3855 assertions / 227 tests.
+- Device check (x86_64 emulator + bundle server): APK installs, launches to the
+  menu and joins a quick-play match with the HUD/atlases intact; `logcat -b
+  crash` stays empty. The spawn loadout has no gun, so the cue itself is
+  host-tested.
+
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
   and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
@@ -1285,6 +1323,15 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - Pause/background must not stop audio; leaving a match keeps ambient/music loops (`stopAll(true)`), and `GameScene` ticks `AudioManager` + `Ambiance` every frame so the Java menu keeps its music
 - `AxmolAudioBackend::isPlaying` treats PAUSED as alive (mute uses pauseAll) and pauses handles started while muted; otherwise a muted menu loop would play after `resumeAll`
 - Sound keys come from the generated defs (`GameObjRenderDef.soundReload/ReloadAlt/Deploy/Use/Pickup`, obstacle door/button/explode, building puzzle/ceiling); do not reintroduce `<weapon>_01`/`<item>_pickup_01` guesses
+- Dry fire is the web's gate: local only (`localPlayerId` == the player, never
+  while `spectating()`), gun equipped, `firePressed || (fireHeld &&
+  !fireModeSingle)`, `Action_None`, wheel closed, `!ammoInfinite`, and clip +
+  reserve both 0. The scene publishes the intent via `GameWorld::setLocalInput`
+  (post-latch `shootStart`) and the ammo via `setLocalAmmo(clip, reserve)`; do
+  not fall back to "any fire press while active" again
+- `GameObjRenderDef.ammoType` is the gun's `GunDef.ammo` inventory key (codegen
+  falls back to `def.ammo`); the HUD reserve counter and the ammo ping emote
+  depend on it, so never emit an empty type for guns
 - Web/PIXI rotations on **world** nodes must be negated for the positive-Y root (obstacle/dead-body/flare/plane/bullet-ping sites already do)
 - Ground surfaces use the full `SurfaceType` enum + `surfaceTypeName` (the web's lowercase string is the `footstep_<type>` group); building floors come from codegen'd `def.floor.surfaces`, not terrain
 - Structure layer `underground` is tri-state: the def may omit it, in which case `i == 1` (structure.ts); do not collapse it to a bool at codegen time

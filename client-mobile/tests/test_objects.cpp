@@ -651,6 +651,17 @@ TEST(gun_fire_cue_defs) {
     if (ak) {
         CHECK(!ak->fireModeSingle);
         CHECK(!ak->hasPullDelay);
+        // player.ts dry fire needs the empty sound, ammoInfinite and the
+        // reserve-ammo inventory key (GunDef.ammo).
+        CHECK_EQ(ak->soundEmpty, std::string("empty_fire_02"));
+        CHECK(!ak->ammoInfinite);
+        CHECK_EQ(ak->ammoType, std::string("762mm"));
+    }
+    const GameObjRenderDef* cursed = provider->gameObject("m9_cursed");
+    CHECK(cursed != nullptr);
+    if (cursed) {
+        CHECK(cursed->ammoInfinite);
+        CHECK_EQ(cursed->ammoType, std::string("9mm_cursed"));
     }
 }
 
@@ -733,6 +744,119 @@ TEST(shot_pull_delay_cycle_and_pull) {
         CHECK(!fx.world.particleBarn().particles.empty());
         CHECK_EQ(fx.backend.played.size(), 1u);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Player: dry fire (player.ts m_update ~1218) is a local-only one-shot cue
+// that fires when the clip and the reserve ammo are both empty.
+// ---------------------------------------------------------------------------
+namespace {
+// A fully built local player (m_updateData creates its sprite tree) for the
+// player.ts m_update cues that need the input/ammo snapshot.
+Player* makeLocalPlayer(GameWorld& world, uint16_t id, const std::string& weapon) {
+    Player* p = world.playerBarn().playerPool.m_alloc();
+    p->__id = id;
+    p->__type = ObjectType_Player;
+    p->active = true;
+    p->layer = 0;
+    p->pos = Vec2(100.0f, 100.0f);
+    p->dir = Vec2(1.0f, 0.0f);
+    p->activeWeapon = weapon;
+    ObjectData data;
+    data.__id = id;
+    data.__type = ObjectType_Player;
+    data.pos = p->pos;
+    data.dir = p->dir;
+    data.layer = 0;
+    data.scale = 1.0f;
+    data.outfit = "outfitBase";
+    data.activeWeapon = weapon;
+    data.actionType = Action_None;
+    p->m_updateData(data, true, true, world);
+    world.setActivePlayer(p);
+    world.setActivePlayerId(id);
+    world.setLocalPlayerId(id);
+    return p;
+}
+} // namespace
+
+TEST(player_dry_fire_cue) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    ShotAudioBackend backend;
+    audio::AudioManager manager{&backend};
+    audio::installGeneratedSoundDefs();
+    manager.preloadSounds();
+    GameWorld world{&factory, false};
+    world.setAudio(&manager, nullptr);
+    world.loadMap(basicMap());
+    Player* p = makeLocalPlayer(world, 7, "m9");
+
+    auto frame = [&](bool held, bool pressed, bool prevent = false) {
+        world.setLocalInput(held, pressed, prevent);
+        p->update(0.016f, world);
+    };
+    const std::string cue = "empty_fire_01activePlayer";
+
+    // Empty clip + empty reserve: one cue per press, even while held.
+    world.setLocalAmmo(0, 0);
+    frame(true, true);
+    CHECK_EQ(countPlayed(backend, cue), 1);
+    frame(true, false);
+    CHECK_EQ(countPlayed(backend, cue), 1);
+    // Releasing the trigger re-arms the cue.
+    frame(false, false);
+    frame(true, true);
+    CHECK_EQ(countPlayed(backend, cue), 2);
+    frame(false, false);
+
+    // A round in the clip or in the reserve suppresses the cue.
+    world.setLocalAmmo(1, 0);
+    frame(true, true);
+    world.setLocalAmmo(0, 30);
+    frame(true, false);
+    CHECK_EQ(countPlayed(backend, cue), 2);
+    frame(false, false);
+
+    // Auto guns also play on a held trigger; single-fire guns do not.
+    p->activeWeapon = "mp5";
+    world.setLocalAmmo(0, 0);
+    frame(true, false);
+    CHECK_EQ(countPlayed(backend, cue), 3);
+    frame(true, false);
+    CHECK_EQ(countPlayed(backend, cue), 3);
+    p->activeWeapon = "m9";
+    frame(false, false);
+    frame(true, false);
+    CHECK_EQ(countPlayed(backend, cue), 3);
+    frame(false, false);
+
+    // The emote/ping wheel blocker suppresses the cue.
+    frame(true, true, true);
+    CHECK_EQ(countPlayed(backend, cue), 3);
+    frame(false, false);
+
+    // ammoInfinite guns never dry-fire.
+    p->activeWeapon = "m9_cursed";
+    frame(true, true);
+    CHECK_EQ(countPlayed(backend, cue), 3);
+    frame(false, false);
+
+    // Not a gun.
+    p->activeWeapon = "fists";
+    frame(true, true);
+    CHECK_EQ(countPlayed(backend, cue), 3);
+    frame(false, false);
+
+    // Spectating another player never dry-fires (isSpectating guard); the
+    // player still has to be the camera target for the branch to be reached.
+    p->activeWeapon = "m9";
+    world.setLocalPlayerId(9);
+    world.setActivePlayerId(7);
+    world.setLocalInput(true, true, false);
+    p->update(0.016f, world);
+    CHECK_EQ(countPlayed(backend, cue), 3);
+    frame(false, false);
 }
 
 // ---------------------------------------------------------------------------

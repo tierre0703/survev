@@ -671,38 +671,31 @@ void Player::update(float dt, Ctx& ctx) {
         // player.ts ~line 1122: Haste ability sound
         // Played once in m_updateData when hasteSeq changes.
 
-        // --- Dry fire sound (player.ts ~line 1218) ---
-        if (isActivePlayer && weapon && weapon->category == "gun") {
-            if (!playedDryFire) {
-                // The C++ Player does not have access to the raw InputMsg
-                // or the weapon ammo/inventory state (the server sends
-                // object data, not input state or clip counts).
-                // The web client checks: fire pressed, itemDef.ammoInfinite
-                // is false, ammoLeft == 0, currentClip == 0, action is
-                // Action.None.  The C++ port lacks clip/ammo tracking in
-                // Player, so we approximate by checking if the weapon def
-                // has a category "gun" and the player is not performing
-                // an action.  This will fire on any fire-press while
-                // empty; it may also fire spuriously when the gun has
-                // ammo but full server-side ammo tracking is absent.
-                // The sound key is "empty_fire_01" / "empty_fire_02"
-                // (from GunDef.sound.empty → e.g. weapon->type derives
-                // the weapon type prefix).
-                const std::string emptySound = "empty_fire_01";
-                audio::PlaySoundOptions emptyOpts;
-                emptyOpts.channel = "sfx";
-                emptyOpts.hasSoundPos = true;
-                emptyOpts.soundPos = pos;
-                emptyOpts.fallOff = 1.0f;
-                emptyOpts.hasLayer = true;
-                emptyOpts.layer = layer;
-                emptyOpts.filter = "muffled";
-                audio->playSound(emptySound, emptyOpts);
-                playedDryFire = true;
+        // --- Dry fire sound (player.ts m_update ~1218) ---
+        // The cue is local-only: never while spectating a teammate and never
+        // while the emote/ping wheel holds the input (`preventInput`). It needs
+        // both the equipped gun's clip and its reserve ammo to be empty.
+        if (isActivePlayer && !ctx.spectating()) {
+            const GameObjRenderDef* gunDef = item(activeWeapon);
+            const bool isGun = gunDef && gunDef->category == "gun";
+            const bool held = ctx.localFireHeld();
+            if (!playedDryFire && isGun
+                && (ctx.localFirePressed() || (held && !gunDef->fireModeSingle))
+                && actionType == Action_None && !ctx.localPreventInput()
+                && !gunDef->ammoInfinite) {
+                const int ammoLeft = ctx.localReserveAmmo();
+                const int currentClip = ctx.localAmmo();
+                if (ammoLeft == 0 && currentClip == 0) {
+                    if (!gunDef->soundEmpty.empty()) {
+                        audio->playSound(gunDef->soundEmpty);
+                    }
+                    playedDryFire = true;
+                }
             }
-        } else {
-            // Not a gun or not active player — reset the flag so it can
-            // fire again next time the player switches to a gun and fires.
+            if (!held) {
+                playedDryFire = false;
+            }
+        } else if (!isActivePlayer) {
             playedDryFire = false;
         }
 
