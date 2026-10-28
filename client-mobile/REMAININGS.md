@@ -58,7 +58,9 @@ and leaderboard chrome and limits the native language list to
 **English/French/Japanese** (`en`/`fr`/`jp`); the other web locales are pruned
 from the APK and a stale saved language is normalized to English. The
 thirty-fourth localizes the How-to-Play body (34 keys) and rebuilds the modal on
-open when the language changed.
+open when the language changed. The thirty-fifth localizes the team room screen
+(invite code/copy/share, roster, region/mode/auto-fill, play/leave, rename and
+status/toast strings) and fixes the team panel's top clipping.
 **227 host tests pass, 0 fail.**
 
 ---
@@ -122,10 +124,10 @@ open when the language changed.
 | `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | ✅ pads/aim-line good; config move/aim style + aim line applied live and persisted; gameplay actions from `game/InputActions` + `game/Hud` |
 | `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | ✅ schema + settings screens write real values; runtime listeners applied at startup/on change (highResTex maps to the GFX tier, local rotation is desktop-only) |
 | `client/src/device.ts` → `ui/Device.*` | 🔶 simplified (no tablet/pixelRatio/MAX_TEXTURE_SIZE tiers) |
-| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*`, Java `L10n.java` | ✅ C++ table good; Java menu/settings/pause/help labels read the flattened table (session P1.7); the native language list is **en/fr/jp only** (`ui::kLocales`, `sync-content.ps1` prunes the other web locales, stale saved languages normalize to English). The loadout editor chrome (panel title, `loadout-title-*` category names, sort, crosshair Size/Stroked, Back, alert dots) is localized (pass 30); settings section headers, touch style/aim line toggles, `Close`, the new-item banner and the six emote slot labels use the pass-32 keys; the pause dialog and leaderboard chrome are localized in pass 33; the How-to-Play body is localized in pass 34 (rebuilt on open after a language change). Only the leaderboard `H/A/D` status letters and server-provided names stay as-is |
+| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*`, Java `L10n.java` | ✅ C++ table good; Java menu/settings/pause/help labels read the flattened table (session P1.7); the native language list is **en/fr/jp only** (`ui::kLocales`, `sync-content.ps1` prunes the other web locales, stale saved languages normalize to English). The loadout editor chrome (panel title, `loadout-title-*` category names, sort, crosshair Size/Stroked, Back, alert dots) is localized (pass 30); settings section headers, touch style/aim line toggles, `Close`, the new-item banner and the six emote slot labels use the pass-32 keys; the pause dialog and leaderboard chrome are localized in pass 33; the How-to-Play body is localized in pass 34 (rebuilt on open after a language change); the team room screen is localized in pass 35. Only the leaderboard `H/A/D` status letters and server-provided names stay as-is |
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | ✅ join/reconnect, quickplay auth/captcha message, reason-string mapping and error dialogs (match-over latch done) |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; Java menu builds modes/regions from site_info (enabled/teamMode/l10n) and requires the fetch before Play (P1.7); mode/region icons remain P2 |
-| `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste, config `webBaseUrl`), `survev://` + `https://…/#CODE` + `?u=&jt=` links, kick/mode/region/auto-fill, in-room rename, room-prop persistence, team match returns to the room |
+| `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste, config `webBaseUrl`), `survev://` + `https://…/#CODE` + `?u=&jt=` links, kick/mode/region/auto-fill, in-room rename, room-prop persistence, team match returns to the room; the room chrome/status/toasts are localized en/fr/jp (pass 35) |
 | `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | ✅ real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack, the header/footer detail panel (localized rarity, `Acquired:` source resolved through the source def name like `getItemSourceName`, lore or the emote `Category:` line) and the per-tab NEW alert dots |
 | `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | ✅ health/boost, weapon/ammo, alive/kills, kill feed (incl. role lines), kill leader, gas timer + gas/danger icon, death/result + spectate overlay, post-match teammate stats, inventory v2 strip, interaction prompt/touch target, toasts, squad group-colour dots + downed pulse, and the perk-mode class picker are live |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
@@ -1237,6 +1239,24 @@ Done in the thirty-fourth P2 pass (2026-10-28):
   `Comment jouer/Tactile/Joystick gauche/Invite RAMASSER/UTILISER / RECHARGER/
   SOIN / BOOST/LUNETTE / ÉCHANGE/Cartes d'arme/...`; `logcat -b crash` empty.
 
+Done in the thirty-fifth P2 pass (2026-10-28):
+- Team room localization (`TeamFragment.java`): the title (Create/Join Team),
+  invite code, Copy/Share, paste hint, roster header/`(You)`/`IN GAME`, Kick,
+  Region/Mode/Auto-fill (Solo/Duo/Squad incl. keys and ON/OFF), Change name,
+  Play/Waiting for leader/Captcha required, Leave Team, creating/joining/finding
+  statuses, invalid server/join/name statuses, and the copy/share toasts and
+  chooser launch text. 24 `team-*` keys were added to en/fr/jp; the l10n helper
+  now uses the cached `L10n` table instead of re-parsing JSON per call.
+- The team panel is top-aligned in its ScrollView (`Gravity.CENTER_HORIZONTAL`);
+  the vertically centred panel had clipped the Create/Join title. Copy/Share
+  widths were raised (88/96dp) so `Partager` fits the invite row in French.
+- Host tests unchanged (Java/l10n data only): 3857 assertions / 227 tests.
+- Device check (x86_64 emulator, bundle team server): Create Team produced a
+  room (`Invite code: …`, `Team Members (1/2)`, `Player (You)`); the French
+  screen shows `Créer équipe / Code d'invitation / Copier / Partager / Membres
+  de l'équipe / Région / Mode / Remplir / Changer de nom / Jouer (1) / Quitter
+  équipe`, with the full title visible. `logcat -b crash` empty.
+
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
   and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
@@ -1561,6 +1581,11 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - `HelpModal` is built once at startup; `show()` must rebuild when
   `SurvBridge.getLanguage()` changed (the body is a tree of localized labels,
   not cheap per-label re-localization). Help keys are `help-*` in en/fr/jp
+- `TeamFragment` re-applies every label in `render()` (title/invite/roster/
+  props/play/leave) so a language change in Settings is picked up on the next
+  room update; keep new team strings in `team-*` keys. The team panel must stay
+  top-aligned (`Gravity.CENTER_HORIZONTAL`) or the Create/Join title is clipped,
+  and the invite Copy/Share buttons need ≥88/96dp for `Partager`
 - Pass XP/level come from `/api/user/get_pass`; `tryRefreshQuests` must be true
   when opening the screen so the server rerolls expired slots. Reroll
   eligibility mirrors the web: `(!rerolled && !complete) || expired`; the

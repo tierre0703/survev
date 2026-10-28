@@ -137,7 +137,9 @@ public class TeamFragment {
         panel.setPadding(dp(16), dp(14), dp(16), dp(14));
         FrameLayout.LayoutParams panelParams = new FrameLayout.LayoutParams(
                 dp(390), ViewGroup.LayoutParams.WRAP_CONTENT);
-        panelParams.gravity = Gravity.CENTER;
+        // Horizontal center only: a vertical CENTER clips the top of a taller
+        // team panel inside the ScrollView (Create Team title became unreachable).
+        panelParams.gravity = Gravity.CENTER_HORIZONTAL;
         panel.setLayoutParams(panelParams);
 
         // ===== Header =====
@@ -171,14 +173,14 @@ public class TeamFragment {
         mCopyBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { copyInviteLink(); }
         });
-        inviteRow.addView(mCopyBtn, new LinearLayout.LayoutParams(dp(72), dp(34)));
+        inviteRow.addView(mCopyBtn, new LinearLayout.LayoutParams(dp(88), dp(34)));
 
         mShareBtn = new Button(activity);
         mShareBtn.setText("\u2797 Share");
         mShareBtn.setBackgroundColor(0xFF4A90D9);
         mShareBtn.setTextColor(Color.WHITE);
         mShareBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        LinearLayout.LayoutParams shareLp = new LinearLayout.LayoutParams(dp(76), dp(34));
+        LinearLayout.LayoutParams shareLp = new LinearLayout.LayoutParams(dp(96), dp(34));
         shareLp.leftMargin = dp(4);
         mShareBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { shareInviteLink(); }
@@ -367,14 +369,14 @@ public class TeamFragment {
 
         show();
         if (create) {
-            mTitleLabel.setText("\uD83D\uDC65 Create Team");
+            mTitleLabel.setText("\uD83D\uDC65 " + l10n("index-create-team", "Create Team"));
             mJoinRow.setVisibility(View.GONE);
             openSocket();
         } else if (mCode.isEmpty()) {
-            mTitleLabel.setText("\uD83D\uDC65 Join Team");
-            setStatus(l10n("index-enter-invite", "Enter an invite link or team code."));
+            mTitleLabel.setText("\uD83D\uDC65 " + l10n("index-join-team", "Join Team"));
+            setStatus(l10n("team-enter-invite", "Enter an invite link or team code."));
         } else {
-            mTitleLabel.setText("\uD83D\uDC65 Join Team");
+            mTitleLabel.setText("\uD83D\uDC65 " + l10n("index-join-team", "Join Team"));
             mJoinRow.setVisibility(View.GONE);
             openSocket();
         }
@@ -439,7 +441,9 @@ public class TeamFragment {
     // --- connection ---------------------------------------------------------
 
     private void openSocket() {
-        setStatus(mCreate ? "Creating team..." : "Joining team...");
+        setStatus(mCreate
+                ? l10n("index-creating-team", "Creating Team") + "..."
+                : l10n("index-joining-team", "Joining Team") + "...");
         if (mCreate && mCode.isEmpty()) {
             mRoomUrl = "";
         }
@@ -480,7 +484,7 @@ public class TeamFragment {
                     }
                 });
         if (!started) {
-            setStatus("Invalid team server URL.");
+            setStatus(l10n("team-invalid-server", "Invalid team server URL."));
         }
     }
 
@@ -578,7 +582,7 @@ public class TeamFragment {
             if (!lastError.isEmpty()) {
                 setStatus(errorText(lastError));
             } else {
-                setStatus(mFindingGame ? "Finding game..." : "");
+                setStatus(mFindingGame ? l10n("team-finding-game", "Finding game...") : "");
             }
         }
 
@@ -612,10 +616,10 @@ public class TeamFragment {
         }
         String token = str(data, "joinToken");
         if (urls.isEmpty() || token.isEmpty()) {
-            setStatus("Invalid join data from team server.");
+            setStatus(l10n("team-invalid-join", "Invalid join data from team server."));
             return;
         }
-        setStatus("Joining game...");
+        setStatus(l10n("team-joining-game", "Joining game..."));
         hideForGame();
         SurvBridge.onJoinUrls(urls.toArray(new String[0]), token);
     }
@@ -623,8 +627,17 @@ public class TeamFragment {
     // --- rendering ----------------------------------------------------------
 
     private void render() {
-        mTitleLabel.setText(mCreate ? "\uD83D\uDC65 Create Team" : "\uD83D\uDC65 Join Team");
-        mCodeLabel.setText(mCode.isEmpty() ? "Invite code: ----" : "Invite code: " + mCode);
+        mTitleLabel.setText("\uD83D\uDC65 " + (mCreate
+                ? l10n("index-create-team", "Create Team")
+                : l10n("index-join-team", "Join Team")));
+        mCodeLabel.setText(l10n("index-invite-code", "Invite code") + ": "
+                + (mCode.isEmpty() ? "----" : mCode));
+        mCopyBtn.setText("\uD83D\uDCCB " + l10n("team-copy", "Copy"));
+        mShareBtn.setText("\u2797 " + l10n("team-share", "Share"));
+        mJoinBtn.setText(l10n("team-join", "Join"));
+        mJoinInput.setHint(l10n("team-paste-hint", "Paste invite link or code"));
+        mChangeNameBtn.setText("\u270F " + l10n("team-change-name", "Change name"));
+        mLeaveBtn.setText(l10n("index-leave-team", "Leave Team") + " \u2716");
         String link = TeamLinks.inviteUrl(mCode);
         mLinkLabel.setText(link);
         boolean hasLink = !link.isEmpty();
@@ -635,23 +648,27 @@ public class TeamFragment {
         }
 
         // Roster
-        mRosterHeader.setText("Team Members (" + mPlayers.size() + "/" + mMaxPlayers + ")");
+        mRosterHeader.setText(l10n("team-members", "Team Members")
+                + " (" + mPlayers.size() + "/" + mMaxPlayers + ")");
         mRosterList.removeAllViews();
         for (int i = 0; i < mPlayers.size(); i++) {
             renderPlayer(mPlayers.get(i));
         }
         if (mPlayers.isEmpty()) {
             TextView hint = new TextView(mActivity);
-            hint.setText(mCreate ? "Waiting for players..." : "Connecting...");
+            hint.setText(mCreate
+                    ? l10n("team-waiting-players", "Waiting for players...")
+                    : l10n("team-connecting", "Connecting..."));
             hint.setTextColor(0xFF777777);
             hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             mRosterList.addView(hint);
         }
 
         // Room props
-        mRegionBtn.setText("Region: " + regionName(mRegion));
-        mModeBtn.setText("Mode: " + modeName(mGameModeIdx));
-        mAutoFillBtn.setText("Auto-fill: " + (mAutoFill ? "ON" : "OFF"));
+        mRegionBtn.setText(l10n("index-region", "Region") + ": " + regionName(mRegion));
+        mModeBtn.setText(l10n("index-mode", "Mode") + ": " + modeName(mGameModeIdx));
+        mAutoFillBtn.setText(l10n("index-auto-fill", "Auto Fill") + ": "
+                + (mAutoFill ? l10n("team-on", "ON") : l10n("team-off", "OFF")));
         boolean leader = isLeader();
         setPropEnabled(mRegionBtn, leader && mJoined);
         setPropEnabled(mModeBtn, leader && mJoined);
@@ -668,14 +685,15 @@ public class TeamFragment {
             boolean captchaBlocks = mCaptchaEnabled && !signedIn;
             boolean canPlay = !mFindingGame && !anyInGame && !captchaBlocks;
             mPlayBtn.setEnabled(canPlay);
-            mPlayBtn.setText(mFindingGame ? "Finding game..."
-                    : "Play (" + mPlayers.size() + ")");
+            mPlayBtn.setText(mFindingGame
+                    ? l10n("team-finding-game", "Finding game...")
+                    : l10n("index-play", "Play") + " (" + mPlayers.size() + ")");
             if (captchaBlocks) {
-                mPlayBtn.setText("Captcha required");
+                mPlayBtn.setText(l10n("team-captcha-required", "Captcha required"));
             }
         } else {
             mPlayBtn.setEnabled(false);
-            mPlayBtn.setText("Waiting for leader");
+            mPlayBtn.setText(l10n("team-waiting-leader", "Waiting for leader"));
         }
     }
 
@@ -699,8 +717,8 @@ public class TeamFragment {
 
         TextView name = new TextView(mActivity);
         name.setText(player.name
-                + (player.playerId == mLocalPlayerId ? " (YOU)" : "")
-                + (player.inGame ? "  IN GAME" : ""));
+                + (player.playerId == mLocalPlayerId ? " (" + l10n("game-You", "You") + ")" : "")
+                + (player.inGame ? "  " + l10n("team-in-game", "IN GAME") : ""));
         name.setTextColor(player.isLeader ? GOLD : Color.WHITE);
         name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         name.setPadding(dp(6), 0, 0, 0);
@@ -710,7 +728,7 @@ public class TeamFragment {
 
         if (isLeader() && player.playerId != mLocalPlayerId) {
             Button kick = new Button(mActivity);
-            kick.setText("Kick");
+            kick.setText(l10n("team-kick", "Kick"));
             kick.setBackgroundColor(0xFF8B3A3A);
             kick.setTextColor(Color.WHITE);
             kick.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
@@ -790,25 +808,28 @@ public class TeamFragment {
     private void copyInviteLink() {
         String link = TeamLinks.inviteUrl(mCode);
         if (link.isEmpty()) {
-            toast("No invite link yet");
+            toast(l10n("team-no-invite", "No invite link yet"));
             return;
         }
         ClipboardManager clipboard = (ClipboardManager) mActivity.getSystemService(
                 Context.CLIPBOARD_SERVICE);
         clipboard.setPrimaryClip(ClipData.newPlainText("team invite link", link));
-        toast("Copied: " + link);
+        toast(String.format(java.util.Locale.ROOT,
+                l10n("team-copied", "Copied: %s"), link));
     }
 
     private void shareInviteLink() {
         String link = TeamLinks.inviteUrl(mCode);
         if (link.isEmpty()) {
-            toast("No invite link yet");
+            toast(l10n("team-no-invite", "No invite link yet"));
             return;
         }
         Intent share = new Intent(Intent.ACTION_SEND);
         share.setType("text/plain");
-        share.putExtra(Intent.EXTRA_TEXT, "Join my Survev squad! " + link);
-        mActivity.startActivity(Intent.createChooser(share, "Share Invite Link"));
+        share.putExtra(Intent.EXTRA_TEXT, String.format(java.util.Locale.ROOT,
+                l10n("team-share-text", "Join my Survev squad! %s"), link));
+        mActivity.startActivity(Intent.createChooser(share,
+                l10n("team-share-chooser", "Share Invite Link")));
     }
 
     private void leave() {
@@ -858,14 +879,14 @@ public class TeamFragment {
         input.setSelection(input.getText().length());
         input.setHint(l10n("index-enter-name", "Enter name"));
         new AlertDialog.Builder(mActivity)
-                .setTitle(l10n("index-change-name", "Change name"))
+                .setTitle(l10n("team-change-name", "Change name"))
                 .setView(input)
                 .setPositiveButton(l10n("index-confirm", "Confirm"),
                         new android.content.DialogInterface.OnClickListener() {
                             @Override public void onClick(android.content.DialogInterface d, int which) {
                                 String name = input.getText().toString().trim();
                                 if (name.isEmpty() || name.length() > 16) {
-                                    setStatus(l10n("index-invalid-name", "Name must be 1-16 characters."));
+                                    setStatus(l10n("team-invalid-name", "Name must be 1-16 characters."));
                                     return;
                                 }
                                 changeName(name);
@@ -1002,16 +1023,16 @@ public class TeamFragment {
         if (text != null && !text.isEmpty()) {
             return text;
         }
-        return region.isEmpty() ? "Local" : region;
+        return region.isEmpty() ? l10n("index-local", "Local") : region;
     }
 
     private String modeName(int modeIdx) {
         int teamMode = modeIdx >= 0 && modeIdx < mSiteTeamModes.size()
                 ? mSiteTeamModes.get(modeIdx)
                 : 4;
-        if (teamMode <= 1) return "Solo";
-        if (teamMode == 2) return "Duo";
-        return "Squad";
+        if (teamMode <= 1) return l10n("index-solo", "Solo");
+        if (teamMode == 2) return l10n("index-duo", "Duo");
+        return l10n("index-squad", "Squad");
     }
 
     private String errorL10nKey(String error) {
@@ -1039,8 +1060,7 @@ public class TeamFragment {
     }
 
     private String l10n(String key, String fallback) {
-        String text = Json.peekString(SurvBridge.getL10nJson(), key);
-        return text != null && !text.isEmpty() ? text : fallback;
+        return L10n.t(key, fallback);
     }
 
     private void show() {
