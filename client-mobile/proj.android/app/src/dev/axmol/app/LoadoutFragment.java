@@ -85,9 +85,6 @@ public class LoadoutFragment {
     private static final int TILE_IMAGE_DP = 64;
     private static final int TILE_MARGIN_DP = 5;
     private static final int ITEM_PAGE_SIZE = 9; // 3 rows x 3 columns
-    // Short labels for categories to fit (the alert dot is appended per tab).
-    private static final String[] CATEGORY_LABELS =
-            {"Skin", "Melee", "Emoji", "Heal", "Boost", "Icon", "Scope"};
     private static final String[] CATEGORY_ICONS = {
             "loadout-outfit", "loadout-melee", "loadout-emote", "loadout-heal",
             "loadout-boost", "loadout-player-icon", "loadout-crosshair",
@@ -100,6 +97,7 @@ public class LoadoutFragment {
     private final FrameLayout mRoot;
     private final LinearLayout mCategoryRow;
     private final LinearLayout mGrid;
+    private final TextView mTitle;
     private final TextView mSelectionLabel;
     // Detail panel: the web modal-customize header (name + rarity) and footer
     // (source + lore) as separate lines.
@@ -131,6 +129,9 @@ public class LoadoutFragment {
     private SeekBar mStrokeSlider;
     private TextView mSizeValue;
     private TextView mStrokeValue;
+    private TextView mSizeLabel;
+    private TextView mStrokeLabel;
+    private TextView mHexLabel;
     private EditText mColorHex;
 
     // --- state ---
@@ -191,15 +192,14 @@ public class LoadoutFragment {
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
         
-        TextView title = new TextView(activity);
-        title.setText("\u2622 Customize");
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
-        title.setGravity(Gravity.CENTER);
-        title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        titleRow.addView(title);
+        mTitle = new TextView(activity);
+        mTitle.setTextColor(Color.WHITE);
+        mTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        mTitle.setGravity(Gravity.CENTER);
+        mTitle.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        titleRow.addView(mTitle);
 
-        mSortBtn = makeSmallButton("Sort: Newest");
+        mSortBtn = makeSmallButton("");
         mSortBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -232,13 +232,15 @@ public class LoadoutFragment {
         mCategoryRow.setGravity(Gravity.CENTER);
         mCategoryRow.setPadding(0, dp(6), 0, dp(6));
         
-        // Short labels for categories to fit
+        // Web #modal-customize-header: the category tabs are icon-only (the
+        // localized `loadout-title-*` name is shown above the grid). Each tab
+        // gets an equal weight so the icons stay tappable.
         for (int i = 0; i < mCategories.length; i++) {
             final int catIdx = i;
-            Button catBtn = makeCatButton(CATEGORY_LABELS[i], i == 0);
+            Button catBtn = makeCatButton("", i == 0);
             mCatButtons[i] = catBtn;
             Drawable catIcon = scaledDrawable(
-                    loadAssetBitmap("gui/" + CATEGORY_ICONS[i] + ".png", 4), 16);
+                    loadAssetBitmap("gui/" + CATEGORY_ICONS[i] + ".png", 4), 20);
             if (catIcon != null) {
                 catBtn.setCompoundDrawablesWithIntrinsicBounds(null, catIcon, null, null);
                 catBtn.setCompoundDrawablePadding(dp(1));
@@ -249,11 +251,13 @@ public class LoadoutFragment {
                     selectCategory(catIdx);
                 }
             });
-            mCategoryRow.addView(catBtn);
+            LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            mCategoryRow.addView(catBtn, clp);
         }
         panel.addView(mCategoryRow);
 
-        // Selection label with rarity color
+        // Localized category title (web #modal-customize-cat-title).
         mSelectionLabel = new TextView(activity);
         mSelectionLabel.setTextColor(GOLD);
         mSelectionLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
@@ -315,13 +319,8 @@ public class LoadoutFragment {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(128));
         mCrosshairEditor.addView(mCrosshairPreview, previewLp);
         
-        // Color picker row
-        TextView colorLbl = new TextView(activity);
-        colorLbl.setText("Color:");
-        colorLbl.setTextColor(Color.WHITE);
-        colorLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        mCrosshairEditor.addView(colorLbl);
-        
+        // Colour swatches (web #color-picker). The web has no text label here:
+        // the hex input below carries the "#" prefix.
         mColorPickerRow = new LinearLayout(activity);
         mColorPickerRow.setOrientation(LinearLayout.HORIZONTAL);
         mColorButtons = new Button[CROSSHAIR_COLORS.length];
@@ -357,10 +356,11 @@ public class LoadoutFragment {
         hexRow.setGravity(Gravity.CENTER_VERTICAL);
         hexRow.setPadding(0, dp(4), 0, dp(2));
         TextView hexLbl = new TextView(activity);
-        hexLbl.setText("Color:");
+        hexLbl.setText("#");
         hexLbl.setTextColor(Color.WHITE);
         hexLbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         hexRow.addView(hexLbl);
+        mHexLabel = hexLbl;
         mColorHex = new EditText(activity);
         mColorHex.setSingleLine(true);
         mColorHex.setInputType(InputType.TYPE_CLASS_TEXT);
@@ -386,8 +386,9 @@ public class LoadoutFragment {
         mCrosshairEditor.addView(hexRow);
 
         // Size slider: web #crosshair-size (0.25..1.0, step 0.01 here).
-        LinearLayout sizeRow = makeSliderRow("Size", 75,
+        LinearLayout sizeRow = makeSliderRow(L10n.t("loadout-size", "Size"), 75,
                 Math.round((mCrosshairSize - CROSSHAIR_SIZE_MIN) * 100));
+        mSizeLabel = (TextView) sizeRow.getChildAt(0);
         mSizeValue = (TextView) sizeRow.getChildAt(1);
         mSizeValue.setText(String.format("%.2f", mCrosshairSize));
         mSizeSlider = (SeekBar) sizeRow.getChildAt(2);
@@ -403,8 +404,9 @@ public class LoadoutFragment {
         mCrosshairEditor.addView(sizeRow);
 
         // Stroke slider: web #crosshair-stroke (0..1.5); the sprite has 0.25 steps.
-        LinearLayout strokeRow = makeSliderRow("Stroke", CROSSHAIR_STROKE_STEPS,
-                Math.round(mCrosshairStroke * 4.0f));
+        LinearLayout strokeRow = makeSliderRow(L10n.t("loadout-stroked", "Stroke"),
+                CROSSHAIR_STROKE_STEPS, Math.round(mCrosshairStroke * 4.0f));
+        mStrokeLabel = (TextView) strokeRow.getChildAt(0);
         mStrokeValue = (TextView) strokeRow.getChildAt(1);
         mStrokeValue.setText(String.format("%.2f", mCrosshairStroke));
         mStrokeSlider = (SeekBar) strokeRow.getChildAt(2);
@@ -531,6 +533,9 @@ public class LoadoutFragment {
         
         // Initialize color selection
         updateColorSelection();
+        // Localized chrome (web l10n keys); re-applied on every refresh so a
+        // language change in Settings is picked up when the screen reopens.
+        updateChromeStrings();
 
         // The profile can land after the screen is first built (device login is
         // asynchronous); refresh the owned list when it arrives.
@@ -589,6 +594,7 @@ public class LoadoutFragment {
     public void refresh() {
         String loadoutJson = SurvBridge.getLoadoutJson();
         JsonObject loadout = parseObject(loadoutJson);
+        updateChromeStrings();
 
         // Determine current selection and available items for this category.
         String cat = mCategories[mSelectedCat];
@@ -679,20 +685,38 @@ public class LoadoutFragment {
             }
         }
 
-        ItemEntry selected = findItem(selectedType);
-        String display = selected != null && !selected.displayName.isEmpty()
-                ? selected.displayName
-                : (selectedType == null || selectedType.isEmpty()
-                        ? ("player_icon".equals(cat) ? "None" : "Stock")
-                        : localizeName(selectedType));
-        int rarityColor = selected != null ? selected.rarityColor : RARITY_STOCK;
-        String prefix = isEmote
-                ? "Emote (" + EMOTE_SLOT_LABELS[mEmoteSlot] + ") "
-                : catLabel(cat) + ": ";
-        mSelectionLabel.setText(prefix + display);
-        mSelectionLabel.setTextColor(rarityColor != RARITY_STOCK ? rarityColor : GOLD);
+        // Web #modal-customize-cat-title: the localized category name above the
+        // grid (the selected item's name lives in the detail header below).
+        mSelectionLabel.setText(categoryTitle(mSelectedCat));
+        mSelectionLabel.setTextColor(GOLD);
 
         refreshGrid(cat, selectedType);
+    }
+
+    /** Re-applies the localized chrome strings (web l10n keys). */
+    private void updateChromeStrings() {
+        mTitle.setText(L10n.t("index-loadout", "Loadout"));
+        mSortBtn.setText(sortLabel());
+        if (mSizeLabel != null) mSizeLabel.setText(L10n.t("loadout-size", "Size"));
+        if (mStrokeLabel != null) mStrokeLabel.setText(L10n.t("loadout-stroked", "Stroke"));
+        if (mHexLabel != null) mHexLabel.setText("#");
+        mCloseBtn.setText(L10n.t("index-back", "Back") + " \u2715");
+        for (int i = 0; i < mCatButtons.length && i < mCategories.length; i++) {
+            if (mCatButtons[i] != null) mCatButtons[i].setContentDescription(categoryTitle(i));
+        }
+    }
+
+    /** Web loadout-title-&lt;loadoutType&gt;, upper-cased like selectCat(). */
+    private String categoryTitle(int catIdx) {
+        String key = "loadout-title-" + mCategories[catIdx];
+        return L10n.t(key, catLabel(mCategories[catIdx])).toUpperCase(java.util.Locale.ROOT);
+    }
+
+    /** Web #modal-customize-sort option labels (no invented "Sort:" prefix). */
+    private String sortLabel() {
+        if (mSortMode == 1) return L10n.t("loadout-alpha", "Alpha");
+        if (mSortMode == 2) return L10n.t("loadout-rarity", "Rarity");
+        return L10n.t("loadout-newest", "Newest");
     }
 
     // --- New-item confirmation (web loadoutMenu onItems/tryBeginConfirming) ---
@@ -761,15 +785,17 @@ public class LoadoutFragment {
                 }
             }
             // The dot keeps the web's alert look but the client's gold accent
-            // (it is the same colour as the tile NEW badge).
-            SpannableString text = new SpannableString(
-                    CATEGORY_LABELS[i] + (hasNew ? " \u25CF" : ""));
+            // (it is the same colour as the tile NEW badge). The tabs are
+            // icon-only, so the dot is the button text.
+            String dot = hasNew ? "\u25CF" : "";
+            SpannableString text = new SpannableString(dot);
             if (hasNew) {
-                int start = CATEGORY_LABELS[i].length() + 1;
-                text.setSpan(new ForegroundColorSpan(GOLD), start, text.length(),
+                text.setSpan(new ForegroundColorSpan(GOLD), 0, dot.length(),
                         Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
             tab.setText(text);
+            tab.setTextSize(TypedValue.COMPLEX_UNIT_SP, 9);
+            tab.setContentDescription(categoryTitle(i) + (hasNew ? " \u25CF" : ""));
         }
     }
 
@@ -1011,8 +1037,7 @@ public class LoadoutFragment {
     
     private void cycleSort() {
         mSortMode = (mSortMode + 1) % 3;
-        String[] labels = {"Sort: Newest", "Sort: A-Z", "Sort: Rarity"};
-        mSortBtn.setText(labels[mSortMode]);
+        mSortBtn.setText(sortLabel());
         refresh();
     }
     
@@ -1381,14 +1406,6 @@ public class LoadoutFragment {
             }
         }
         return items;
-    }
-
-    private String localizeName(String type) {
-        if (type == null || type.isEmpty()) return "Stock";
-        String l10n = SurvBridge.getL10nJson();
-        String localized = Json.peekString(l10n, "game-" + type);
-        if (localized != null && !localized.isEmpty()) return localized;
-        return type.replace('_', ' ');
     }
 
     private String escapeJson(String s) {

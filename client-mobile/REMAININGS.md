@@ -44,7 +44,9 @@ source def name, lore or emote `Category:` line) and the per-tab NEW alert dots.
 The twenty-eighth adds the def-driven shot fire cues (faction/last/alt sound
 variants, fallOff/ignoreDetune, pullDelay shells and the cycle/pull rechamber).
 The twenty-ninth adds the thrown-projectile impact cues (wall hit FX/sound once
-per obstacle and the ground-surface landing group).
+per obstacle and the ground-surface landing group). The thirtieth localizes the
+loadout editor chrome through the flattened table (title, category names, sort,
+crosshair labels, Back) and makes the category tabs icon-only like the web.
 **226 host tests pass, 0 fail.**
 
 ---
@@ -108,7 +110,7 @@ per obstacle and the ground-surface landing group).
 | `client/src/ui/touch.ts` → `ui/Touch.h`, `game/AimLine.h` | ✅ pads/aim-line good; config move/aim style + aim line applied live and persisted; gameplay actions from `game/InputActions` + `game/Hud` |
 | `client/src/config.ts` → `ui/Config.*`, `ui/ConfigStorage.cpp` | ✅ schema + settings screens write real values; runtime listeners applied at startup/on change (highResTex maps to the GFX tier, local rotation is desktop-only) |
 | `client/src/device.ts` → `ui/Device.*` | 🔶 simplified (no tablet/pixelRatio/MAX_TEXTURE_SIZE tiers) |
-| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*`, Java `L10n.java` | ✅ C++ table good; Java menu/settings/pause/help labels read the flattened table (session P1.7), settings language list is `ui::kLocales` (18 codes/names) via the bridge; remaining loadout/item chrome strings are P2 |
+| `client/src/localization.ts` → `ui/Localization.*`, `ui/L10nJson.*`, Java `L10n.java` | ✅ C++ table good; Java menu/settings/pause/help labels read the flattened table (session P1.7), settings language list is `ui::kLocales` (18 codes/names) via the bridge; the loadout editor chrome (panel title, `loadout-title-*` category names, sort, crosshair Size/Stroked, Back, alert dots) is localized too (pass 30). Native-only chrome with no web key (new-item banner, emote slot labels, settings section headers) stays English |
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | ✅ join/reconnect, quickplay auth/captcha message, reason-string mapping and error dialogs (match-over latch done) |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; Java menu builds modes/regions from site_info (enabled/teamMode/l10n) and requires the fetch before Play (P1.7); mode/region icons remain P2 |
 | `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste, config `webBaseUrl`), `survev://` + `https://…/#CODE` + `?u=&jt=` links, kick/mode/region/auto-fill, in-room rename, room-prop persistence, team match returns to the room |
@@ -1084,6 +1086,31 @@ Done in the twenty-ninth P2 pass (2026-10-28):
   renders normally with an empty crash buffer (no throwable in the spawn
   inventory, so the cues are host-tested).
 
+Done in the thirtieth P2 pass (2026-10-28):
+- Loadout editor chrome localization (`client/src/en.json` keys via
+  `ui::Localization`/`L10n`): the last named gap on the localization row.
+  - Panel title uses `index-loadout` ("Loadout"), the line above the grid is
+    the web's `loadout-title-<loadoutType>` (`modal-customize-cat-title`,
+    upper-cased) instead of the invented "Outfit: Basic Outfit" selection line,
+    and the sort control uses `loadout-newest`/`loadout-alpha`/`loadout-rarity`
+    without the hardcoded "Sort:" prefix.
+  - The category tabs are now **icon-only** like the web (equal-weight touch
+    targets, localized `contentDescription` for TalkBack) with the NEW alert dot
+    as the button text; the localized category name above the grid replaces the
+    old short English labels ("Skin/Melee/Emoji/...").
+  - Crosshair editor: `loadout-size` / `loadout-stroked` labels, and the
+    invented "Color:" labels are gone (swatches have no label on the web; the
+    hex field uses the web's `#` prefix).
+  - Close button is `index-back` ("Back"/"Volver") + the ✕ glyph.
+  - `refresh()` re-applies the strings, so changing the language in Settings
+    and reopening the screen shows the new locale.
+- Device check (x86_64 emulator): English shows "Loadout"/"Newest"/"OUTFIT
+  SKIN"/"Size"/"Back ✕"; switching Settings → Español and reopening shows
+  "Equipamiento"/"Adquirido"/"RETÍCULAS"/"Tamaño"/"Volver ✕", the item detail
+  "Básico" + "Adquirido: Estándar", and the (restored) English UI afterwards.
+  `logcat -b crash` empty. Java-only change, so the 3838 assertions / 226 host
+  tests are unchanged.
+
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
   and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
@@ -1091,7 +1118,11 @@ Remaining:
   `MapView`), so its z-order path is dead code rather than a gap.
 - **HUD/menus:** menu preview heal/boost particle emitters (`opponentDisplay.ts`;
   the Java avatar has no heal/boost view, so this only matters if the preview
-  gains those tabs).
+  gains those tabs). Native-only Java chrome that has no web l10n key stays
+  English (loadout new-item banner + emote slot labels, the settings section
+  headers and `Move Style: Anywhere` / `Aim Line: On` / `Close` toggles);
+  translating those needs new keys added to `client/src/en.json` and the locale
+  files.
 - **Audio:** exact EQ/convolution timbre (the web biquad chains are approximated
   by an OpenAL low-pass); the web's channel-type volume quirk (ambient/map music
   follows `soundVolume`) is reproduced and locked by
