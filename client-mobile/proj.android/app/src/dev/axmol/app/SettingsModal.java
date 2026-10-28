@@ -122,10 +122,10 @@ public class SettingsModal {
         titleRow.addView(mResetBtn);
         panel.addView(titleRow);
 
-        // -- Scrollable content (web #modal-settings body) --
-        ScrollView scroll = new ScrollView(mActivity);
-        scroll.setLayoutParams(new FrameLayout.LayoutParams(dp(380), dp(520)));
-
+        // -- Modal body (web #modal-settings body): no nested ScrollView here.
+        // The outer scroll owns the scrolling; a nested inner scroll never
+        // receives vertical flings on a device (the outer consumes them and is
+        // already at its end), which left Key Binds / Game / links unreachable.
         LinearLayout content = new LinearLayout(mActivity);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(10), 0, dp(10), 0);
@@ -327,8 +327,7 @@ public class SettingsModal {
         });
         content.addView(changelogBtn);
 
-        scroll.addView(content);
-        panel.addView(scroll);
+        panel.addView(content);
 
         // === Bottom: status + close ===
         mStatusText = new TextView(mActivity);
@@ -380,14 +379,19 @@ public class SettingsModal {
         lbl.setText(label);
         lbl.setTextColor(Color.WHITE);
         lbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        lbl.setLayoutParams(new LinearLayout.LayoutParams(dp(70), ViewGroup.LayoutParams.WRAP_CONTENT));
+        lbl.setLayoutParams(new LinearLayout.LayoutParams(dp(64), ViewGroup.LayoutParams.WRAP_CONTENT));
         row.addView(lbl);
 
         TextView val = new TextView(mActivity);
         val.setText(defaultValue + "%");
         val.setTextColor(GREEN);
         val.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        val.setLayoutParams(new LinearLayout.LayoutParams(dp(50), ViewGroup.LayoutParams.WRAP_CONTENT));
+        // Margins keep the percentage clear of the label even when the label
+        // text reaches its column edge ("SFX Volume100%" on a device).
+        LinearLayout.LayoutParams valParams = new LinearLayout.LayoutParams(
+                dp(44), ViewGroup.LayoutParams.WRAP_CONTENT);
+        valParams.setMargins(dp(2), 0, dp(4), 0);
+        val.setLayoutParams(valParams);
         row.addView(val);
 
         SeekBar slider = new SeekBar(mActivity);

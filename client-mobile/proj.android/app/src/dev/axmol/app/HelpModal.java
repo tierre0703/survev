@@ -78,10 +78,9 @@ public class HelpModal {
         title.setTypeface(Typeface.DEFAULT_BOLD);
         panel.addView(title);
 
-        // Scrollable content
-        ScrollView scroll = new ScrollView(activity);
-        scroll.setLayoutParams(new FrameLayout.LayoutParams(dp(380), dp(480)));
-
+        // Help body (web help modal): the content goes straight into the
+        // panel; the full-height outer ScrollView does the scrolling. (A nested
+        // inner scroll never flings on device — see SettingsModal.)
         LinearLayout content = new LinearLayout(activity);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(10), dp(8), dp(10), dp(8));
@@ -161,8 +160,7 @@ public class HelpModal {
                 L10n.t("help-tip-loot-text",
                         "Walk near an item and tap the PICK UP prompt. Better armour and a backpack win fights."));
 
-        scroll.addView(content);
-        panel.addView(scroll);
+        panel.addView(content);
 
         // Close button
         mCloseBtn = new Button(activity);

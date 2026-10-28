@@ -281,6 +281,19 @@ public final class SurvBridge {
         });
     }
 
+    /** Android BACK outside a match: close the top menu modal (C++). */
+    static void onNativeHandleBack() {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.handleBackPressed();
+                }
+            }
+        });
+    }
+
     private static void post(Runnable runnable) {
         AppActivity activity = AppActivity.current();
         if (activity == null) {

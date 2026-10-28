@@ -47,8 +47,10 @@ public:
         ++returnCalls;
     }
     void showResult() override { ++resultCalls; }
+    void handleBack() override { ++backCalls; }
 
     int menuCalls = 0, enterGameCalls = 0, returnCalls = 0, resultCalls = 0;
+    int backCalls = 0;
     int lastActivePlayerId = -1;
     std::string lastError;
 };
@@ -70,6 +72,7 @@ TEST(bridge_slots_have_safe_defaults) {    setUiBridge(nullptr);
     uiBridge()->quickStart(1);
     uiBridge()->quitGame();
     uiHost()->enterGame(7);
+    uiHost()->handleBack();
 
     RecordingHost host;
     setUiHost(&host);
@@ -78,12 +81,16 @@ TEST(bridge_slots_have_safe_defaults) {    setUiBridge(nullptr);
     uiHost()->returnToMenu("index-invalid-token");
     uiHost()->showResult();
     uiHost()->showMenu();
+    uiHost()->handleBack();
     CHECK_EQ(host.enterGameCalls, 1);
     CHECK_EQ(host.lastActivePlayerId, 41);
     CHECK_EQ(host.returnCalls, 1);
     CHECK_EQ(host.lastError, std::string("index-invalid-token"));
     CHECK_EQ(host.resultCalls, 1);
     CHECK_EQ(host.menuCalls, 1);
+    // Android BACK reached the engine behind the GL surface: the host closes
+    // the top Java modal (JavaUiHost.handleBackPressed).
+    CHECK_EQ(host.backCalls, 1);
     setUiHost(nullptr);
 
     MemoryUiBridge bridge;

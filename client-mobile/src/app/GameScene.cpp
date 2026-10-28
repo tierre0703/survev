@@ -1215,7 +1215,11 @@ bool GameScene::handleBackPressed() {
         returnToMenu();
         return true;
     }
-    return false;
+    // Menu state (e.g. the Java menu is back up while this scene rests):
+    // close any open Java modal the same way MenuScene does — the GL surface
+    // already returned true for the BACK key, so there is no default action.
+    uiHost()->handleBack();
+    return true;
 }
 
 void GameScene::resumeGame() {

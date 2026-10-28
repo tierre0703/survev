@@ -177,6 +177,11 @@ public:
     // Java: open/close the in-game pause dialog. Returns false when the host has
     // no such UI (desktop), so the caller can fall back to leaving the match.
     virtual bool togglePause() { return false; }
+    // Java: the hardware BACK key reached the engine (axmol's GL surface
+    // consumes it and returns true, so AppActivity.onKeyDown never sees it)
+    // while a Java menu modal may be open: close the top one
+    // (JavaUiHost.handleBackPressed). No-op on hosts without Java screens.
+    virtual void handleBack() {}
     // Java: live in-game leaderboard snapshot (Game::leaderboardJson).
     virtual void leaderboard(const std::string& json) { (void)json; }
     // Config access for in-game state that the web persists (game.ts

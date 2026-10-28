@@ -708,6 +708,7 @@ public:
         notify("onNativeTogglePause");
         return true; // the Java UI owns the pause dialog
     }
+    void handleBack() override { notify("onNativeHandleBack"); }
     void leaderboard(const std::string& json) override {
         ax::JniHelper::callStaticVoidMethod(kBridgeClass, "onNativeLeaderboard", json);
     }

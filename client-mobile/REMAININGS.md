@@ -1392,8 +1392,46 @@ Remaining:
 - **Platform/perf:** a physical gamepad soak (the device/tablet UI tiers are
   ported in the fortieth pass: tablet detection, touch.pad offsets, pie-timer
   layout, the `resources.ts` texture-res rule).
-- **Release:** real upload keystore/Play upload, physical mid-range 60 fps soak,
-  final UI polish from device testing.
+- **Release:** real upload keystore/Play upload and a physical mid-range 60 fps
+  soak. The final polish sweep from the emulator walkthrough is done (pass 41);
+  a further pass alongside the physical-device soak can pick up whatever new
+  findings appear on real hardware.
+
+Done in the forty-first P2 pass (2026-10-28) - final UI polish from the device
+walkthrough (x86_64 emulator, §3.4 tail):
+- **Hardware BACK was dead outside a match** (the axmol GL surface consumes
+  KEYCODE_BACK and returns true, so `AppActivity.onKeyDown` /
+  `JavaUiHost.handleBackPressed()` never ran; this is why the How to Play modal
+  could not be dismissed). The engine back path now forwards: `UiHost`
+  (C++/Java seam) gains `handleBack()` -> `AndroidUiHost` notifies
+  `SurvBridge.onNativeHandleBack` -> `JavaUiHost.handleBackPressed()`;
+  `MenuScene::handleBackPressed` (menu scene) and `GameScene::handleBackPressed`
+  (menu-state fallthrough) call it and consume the key. Host test
+  `bridge_slots_have_safe_defaults` pins the new host call.
+- **Three modals had a nested vertical ScrollView** (full-height outer scroll
+  around a fixed-height inner one: `SettingsModal`, `HelpModal`,
+  `BindEditorModal`). The outer scroll eats every fling and is already at its
+  end, so the inner list never scrolled on device: Settings' Key Binds button,
+  Game section and links were unreachable, and Help's "Got it!" button sat
+  below the fold. The inner ScrollViews are gone - the content is added
+  straight into the panel and the outer scroll owns scrolling, like the web
+  dialog bodies. Device-verified: Settings scrolls top-to-bottom with Key
+  Binds / Game / links reached, BACK closes it.
+- **The `<` back arrow was buried under fragment roots** added to the same
+  container later (full-screen dim), so its clicks never landed - the team
+  screen could not be dismissed with the arrow. `showBackBtn()` now
+  `bringToFront()`s the arrow; device-verified leaving Create Team with it.
+- **Settings slider rows**: the percentage value abutted the label column
+  ("SFX Volume100%"); label 64 dp + a 2/4 dp margin pair keeps a clear gap
+  (long labels wrap like "Master Volume" already did).
+- Walkthrough verified clean on device: every menu surface (name, region
+  dropdown, pass + quests, news toggle, How to Play touch/controls/tips,
+  loadout tabs, account modal with reset/delete/log-out, mute, join/create
+  team with Copy/Share/region/mode/auto-fill), in-game HUD (pads, action
+  pills, emote + ping wheel buttons, big-map tap, pause dialog incl. scroll,
+  quit confirm), game-over panel (victory/rank/stats/leave), the join → match
+  → quit → menu cycle, and the localized surfaces from passes 34/38. Crash
+  buffer stayed empty; FPS 57-59 throughout.
 
 ### 3.5 Intentional platform differences (not TODO)
 

@@ -2276,6 +2276,14 @@ now calls the new `UiHost::togglePause()` -> `SurvBridge.onNativeTogglePause` ->
 button still calls `onQuitGame`. Hosts without the dialog (desktop) fall back to
 leaving the match.
 
+Outside a match the engine path still owns the key and now closes the Java menu
+screens too (pass 41): `MenuScene::handleBackPressed` and `GameScene`'s
+menu-state fallthrough call the new `UiHost::handleBack()` ->
+`SurvBridge.onNativeHandleBack` -> `JavaUiHost.handleBackPressed()`, and
+`showBackBtn()` brings the `<` arrow to the container front (fragments added
+later used to bury it under their full-screen dim roots and swallow its clicks,
+which made the arrow dead over the team screen).
+
 ### 37.5 Verification
 
 - `surv_tests`: **163 tests, 2,599 assertions, 0 failures** - new

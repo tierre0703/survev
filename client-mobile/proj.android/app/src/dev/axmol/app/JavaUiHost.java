@@ -236,7 +236,14 @@ public class JavaUiHost {
 
     // Back arrow button helpers
     private void showBackBtn() {
-        if (mBackBtn != null) mBackBtn.setVisibility(View.VISIBLE);
+        if (mBackBtn != null) {
+            // Fragments are added to the container after this button, so their
+            // full-screen dim roots would sit on top of it and swallow its
+            // clicks (the arrow stayed dead over the team screen). Keep it
+            // frontmost whenever it is visible.
+            mBackBtn.bringToFront();
+            mBackBtn.setVisibility(View.VISIBLE);
+        }
     }
 
     private void hideBackBtn() {

@@ -93,13 +93,11 @@ public class BindEditorModal {
         hint.setPadding(0, 0, 0, dp(4));
         panel.addView(hint);
 
-        // Scrollable bind rows (the panel must fit a landscape phone screen).
-        ScrollView scroll = new ScrollView(mActivity);
-        scroll.setLayoutParams(new LinearLayout.LayoutParams(dp(360), dp(168)));
+        // Bind rows (the panel must fit a landscape phone screen). No nested
+        // ScrollView: the outer scroll owns the scrolling (see SettingsModal).
         mList = new LinearLayout(mActivity);
         mList.setOrientation(LinearLayout.VERTICAL);
-        scroll.addView(mList);
-        panel.addView(scroll);
+        panel.addView(mList);
 
         mStatus = new TextView(mActivity);
         mStatus.setTextColor(0xFFFFD700);

@@ -1,5 +1,6 @@
 #include "MenuScene.h"
 #include "GameScene.h"
+#include "UiHost.h"
 #include "DevConfig.h"
 #include "../net/WebSocketConnection.h"
 #include "../net/WsUrl.h"
@@ -595,9 +596,12 @@ bool MenuScene::handleBackPressed() {
         leaveTeam();
         return true;
     }
-    // Loadout, settings, help, etc. are Java modals — the back key
-    // should close them if open. JavaUiHost handles this on the Java side.
-    return false;
+    // Loadout, settings, help, etc. are Java modals. axmol's GL surface
+    // consumes the BACK key (KEYCODE_BACK returns true) before
+    // AppActivity.onKeyDown runs, so close them from here: the bridge invokes
+    // JavaUiHost.handleBackPressed() on the UI thread.
+    uiHost()->handleBack();
+    return true;
 }
 
 } // namespace surv
