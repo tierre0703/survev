@@ -32,6 +32,34 @@ inline bool audioTraceEnabled() {
     return ax::UserDefault::getInstance()->getStringForKey("surv_debug", "0") == "1";
 }
 
+inline ax::EqChain makeEqChain(const FilterParams& params) {
+    ax::EqChain chain;
+    chain.bandCount = params.bandCount;
+    for (int i = 0; i < params.bandCount && i < 10; ++i) {
+        chain.bands[i].freq = params.bands[i].freq;
+        chain.bands[i].q = params.bands[i].q;
+        chain.bands[i].gainDb = params.bands[i].gainDb;
+        chain.bands[i].type = params.bands[i].type;
+    }
+    chain.makeup = params.makeup;
+    chain.fallbackGain = params.fallbackGain;
+    chain.fallbackGainHF = params.fallbackGainHF;
+    return chain;
+}
+
+// Static chains are the lifetime contract of AudioPlayerSettings::eq.
+inline const ax::EqChain* eqChainFor(const std::string& filter) {
+    static const ax::EqChain muffled = makeEqChain(filterParamsFor("muffled"));
+    static const ax::EqChain club = makeEqChain(filterParamsFor("club"));
+    if (filter == "muffled") {
+        return &muffled;
+    }
+    if (filter == "club") {
+        return &club;
+    }
+    return nullptr;
+}
+
 class AxmolAudioBackend : public AudioBackend {
 public:
     // Current reverb target per name (AudioManager recomputes it every frame).
@@ -62,10 +90,15 @@ public:
             return kInvalidSound;
         }
         const float volume = opts.volume < 0.0f ? 0.0f : (opts.volume > 1.0f ? 1.0f : opts.volume);
+        // createJS muffled/club chains run as a 10-band biquad cascade on the
+        // decoded PCM buffer inside axmol (AudioCache::getEqBuffer); the player
+        // falls back to the old EFX low-pass for streams/unsupported formats.
+        const FilterParams filterParams = filterParamsFor(opts.filter);
         ax::AudioPlayerSettings settings;
         settings.loop = opts.loop;
         settings.volume = volume;
         settings.time = opts.offset;
+        settings.eq = filterParams.enabled ? eqChainFor(opts.filter) : nullptr;
         const int handle = ax::AudioEngine::play2d(it->second, settings);
         if (handle == ax::AudioEngine::INVALID_AUDIO_ID) {
             return kInvalidSound;
@@ -79,17 +112,12 @@ public:
             const float pitch = std::pow(2.0f, opts.detune / 1200.0f);
             ax::AudioEngine::setPitch(handle, pitch < 0.5f ? 0.5f : (pitch > 2.0f ? 2.0f : pitch));
         }
-        // Per-source EQ (createJS muffled/club chains approximated by an EFX
-        // low-pass). The reverb send is handled by applyReverb() below.
-        const FilterParams filterParams = filterParamsFor(opts.filter);
-        if (filterParams.enabled) {
-            ax::AudioEngine::setFilterProperties(handle, true, filterParams.gain,
-                                                 filterParams.gainHF);
-        }
         if (audioTraceEnabled()) {
             if (filterParams.enabled) {
-                AXLOGI("[audio] play {} filter={} eq=lowpass gain={:.2f} gainHF={:.2f} vol={:.3f} loop={}",
-                       id, opts.filter, filterParams.gain, filterParams.gainHF, volume,
+                AXLOGI("[audio] play {} filter={} eq=biquad bands={} makeup={:.2f} "
+                       "fallback=lowpass gain={:.2f} gainHF={:.2f} vol={:.3f} loop={}",
+                       id, opts.filter, filterParams.bandCount, filterParams.makeup,
+                       filterParams.fallbackGain, filterParams.fallbackGainHF, volume,
                        opts.loop ? 1 : 0);
             } else {
                 AXLOGI("[audio] play {} filter={} vol={:.3f} loop={}", id, opts.filter, volume,

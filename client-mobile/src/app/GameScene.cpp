@@ -1389,11 +1389,13 @@ void GameScene::update(float delta) {
             // trace must show an EFX low-pass for muffled/club, so the filter
             // path is verifiable on-device without finding a club/underground.
             if (audio::audioTraceEnabled() && _audio) {
+                AXLOGI("[audio] eq self-test: playing emote_01 muffled/club");
                 audio::PlaySoundOptions eqOpts;
                 eqOpts.channel = "ui";
                 eqOpts.filter = "muffled";
                 eqOpts.forceFilter = true;
-                eqOpts.volumeScale = 0.01f;
+                eqOpts.forceStart = true;
+                eqOpts.volumeScale = 1.0f;
                 _audio->playSound("emote_01", eqOpts);
                 eqOpts.filter = "club";
                 _audio->playSound("emote_01", eqOpts);

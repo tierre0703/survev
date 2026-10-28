@@ -1845,6 +1845,11 @@ then destroyed the `GameWorld` while the GL thread was inside
 
 ### 30.9 Per-source EQ (muffled/club) + automated audio trace
 
+> **Superseded (2026-10-28):** the low-pass approximation below was replaced by
+> the web's exact 10-band biquad cascade on decoded PCM; the low-pass remains
+> only as the streaming fallback. See `REMAININGS.md` pass 37 and
+> `M6_AUDIO.md` "Per-source EQ".
+
 The web client filters sounds through biquad EQ chains (`muffled`, `club`); the
 native port only plumbed the filter name and dropped it.
 

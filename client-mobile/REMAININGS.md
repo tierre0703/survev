@@ -62,7 +62,10 @@ open when the language changed. The thirty-fifth localizes the team room screen
 (invite code/copy/share, roster, region/mode/auto-fill, play/leave, rename and
 status/toast strings) and fixes the team panel's top clipping. The thirty-sixth
 ports bullet impact normals, worn/equipped pan surface blocking, steelskin and
-turkey-mode hit FX, and the web's single-particle hit spray.
+turkey-mode hit FX, and the web's single-particle hit spray. The thirty-seventh
+replaces the EFX low-pass approximation with the web's exact 10-band
+muffled/club biquad cascade on decoded PCM (low-pass only as a streaming
+fallback).
 **230 host tests pass, 0 fail.**
 
 ---
@@ -77,7 +80,7 @@ turkey-mode hit FX, and the web's single-particle hit spray.
 | M3 | Net + headless sim | **done (host)** | join/update/kill/gameover/pickup/map dispatch, `snapshotText()`; multi-URL join fallback. |
 | M4 | Rendering | **done (major FX)** | terrain/objects/buildings/particles/decals/gas/skeletal player; active layer + interpolation; bullet tracers/impacts, explosions, projectiles, loot rings, player patches/nametags and airstrike zones. Remaining exact-normal/colour nuances are P2. |
 | M5 | Input + touch | **done (touch + hardware)** | move/aim/fire + reload/interact/equip/use/scope/drop HUD controls; P1.6 keyboard/mouse defaults + change-gated sends; keybind remap editor + web-compatible bind code (P2 pass 22). |
-| M6 | Audio | **mostly done** | engine/mixer/ambience/reverb/EQ/interior sounds, channel semantics, startup volume/mute, menu music and the real sound keys; notification/team-join cues are web-focus-only and exact EQ timbre remains P2. |
+| M6 | Audio | **done (fidelity)** | engine/mixer/ambience/reverb/EQ/interior sounds, channel semantics, startup volume/mute, menu music and the real sound keys; the web's 10-band muffled/club biquads run on decoded PCM (pass 37), so only human listening/convolution nuances remain; notification/team-join cues are web-focus-only. |
 | M7 | UI layer | **done** | Java menu/account/pass/team/loadout live; menu chrome is site_info-driven and localized (P1.7), settings language switch re-renders, death/result + spectate overlay live in the C++ HUD, live HUD has the full P1.4 set incl. the perk-mode class picker and live leaderboard; remaining menu art is P2. |
 | M8 | Accounts / API | **done (intentional deltas)** | device login + profile, quests/pass, team links, room props/rename/deep links, authenticated quick play, correct disconnect reasons, pass-new-items profile refresh; captcha is unsupported for signed-out users (server skips it for the device session), OAuth is an intentional platform delta. |
 | M9 | Polish & release | **started** | release APK/AAB pipeline verified (§45); waiting on the 1:1 gameplay gate (§3.7), a physical-device soak and final store upload. |
@@ -454,7 +457,8 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         and pauses loops started while muted.
       - Not ported because they are web-focus-only: `notification_start_01`
         (tab focus) and `notification_join_01` (team screen only plays it when
-        the browser window is unfocused). Exact EQ/convolution timbre stays P2.
+        the browser window is unfocused). The exact 10-band PCM EQ landed in
+        pass 37; only human listening/timbre verification remains.
       - Acceptance: device run shows menu music at boot, settings volume/mute
         survive the session; a full sound checklist on real hardware is still a
         P2 polish item.
@@ -1285,6 +1289,27 @@ Done in the thirty-sixth P2 pass (2026-10-28):
 - x86_64 native lib + debug APK build clean; quick-play smoke test with an empty
   crash buffer (a live pan/bullet duel still needs a device pass).
 
+Done in the thirty-seventh P2 pass (2026-10-28):
+- Exact EQ timbre (createJS muffled/club):
+  - `src/audio/AudioFilter.h` now carries the web's ten-band tables exactly
+    (freq/Q/gain/shelf type), the +24 dB makeup and the old low-pass values as a
+    fallback. Host test `audio_filter_mapping` pins the band count/values.
+  - New `ax/core/audio/AudioEq.h` (from
+    `tools/patch-axmol-audio-eq.ps1`) implements the RBJ biquad coefficients and
+    16-bit/float32 interleaved PCM processing with a peak limiter.
+  - `AudioCache::getEqBuffer` re-decodes a static sound, filters it and caches
+    the OpenAL buffer per preset; `AudioPlayerSettings::eq` selects it in
+    `AudioPlayer::resolvePlaybackBuffer`. The EFX low-pass is still applied for
+    streaming/unsupported formats.
+  - `AxmolAudioBackend` builds static `ax::EqChain` presets and sets
+    `settings.eq`; the old backend low-pass call is gone. The debug match-start
+    self-test now force-starts `emote_01` muffled/club even when muted.
+- Host tests: 3894 assertions / 230 tests.
+- Device check (x86_64, `debug.surv_debug=1`): the self-test logged
+  `eq=biquad bands=10 makeup=16.00` for both presets and
+  `getEqBuffer ... format=0x1101`, creating filtered buffers 52/53 with an
+  empty crash buffer. Listening verification on real hardware is still needed.
+
 Remaining:
 - **Rendering:** minor colour nuances only. Bullet impact normals, pan-surface
   blocking, steelskin sparks and turkey feathers are ported (pass 36);
@@ -1295,10 +1320,11 @@ Remaining:
   the Java avatar has no heal/boost view, so this only matters if the preview
   gains those tabs). The leaderboard status column still uses the `H/A/D`
   letters; it can follow the pass-34 help-key pattern.
-- **Audio:** exact EQ/convolution timbre (the web biquad chains are approximated
-  by an OpenAL low-pass); the web's channel-type volume quirk (ambient/map music
-  follows `soundVolume`) is reproduced and locked by
-  `audio_ui_cues_follow_the_channel_type_volume`.
+- **Audio:** only human listening/convolution nuance verification. The web's
+  10-band `muffled`/`club` biquad chains are now applied to decoded PCM (pass
+  37); the EFX low-pass remains only for streams/unsupported formats. The web's
+  channel-type volume quirk (ambient/map music follows `soundVolume`) is
+  reproduced and locked by `audio_ui_cues_follow_the_channel_type_volume`.
 - **Platform/perf:** device/tablet UI tiers (keybind remapping landed in the
   twenty-second pass); a physical gamepad soak.
 - **Release:** real upload keystore/Play upload, physical mid-range 60 fps soak,
@@ -1475,7 +1501,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - Structure interior ambience is immediate-mode: `Map::update` (structure updates) must run before `Ambiance::update` each frame, and `Structure::update` re-sets `interior_0/1` sound/filter/weight every frame
 - `SurvBridge` JNI methods run on the Java UI thread: scene/world/audio mutations must go through `UiBridge::runOnGameThread` (`Scheduler::runOnAxmolThread`); calling `enterWithJoin`/`leaveGame` inline races the GL thread and crashes in the player pool
 - Building `soundEmitters` are owned by `Building`: created on `isNew`, stopped in `m_free()` via the cached `audioOwner`, and updated at 10 Hz with `setVolume(..., "sound")`
-- Per-source EQ is an axmol patch: re-vendoring **must** run `tools/vendor-axmol.ps1` (which calls `patch-axmol-audio-filter.ps1`) or `AudioEngine::setFilterProperties` disappears; `audio/AudioFilter.h` maps muffled/club to the EFX low-pass
+- Per-source EQ is an axmol patch: re-vendoring **must** run `tools/vendor-axmol.ps1`, which calls both `patch-axmol-audio-filter.ps1` (EFX low-pass fallback) and `patch-axmol-audio-eq.ps1` (10-band PCM EQ files from `patches/axmol-audio-eq/`). The web's exact band tables/makeup live in `src/audio/AudioFilter.h`; `AudioPlayerSettings::eq` points at static `ax::EqChain` presets (do not pass temporaries), and `AudioCache::getEqBuffer` caches filtered buffers per chain pointer. The low-pass is only the streaming/unsupported-format fallback
 - Android has **no C++ MenuScene** (`installUiBridge(nullptr, gameScene)`): bridge config/name/loadout/crosshair writes use the standalone `UserDefaultConfigStorage` Config, and `joinUrls` must set the `Game` join info via `_game->getGame()`; `GameScene::enterWithJoin` must not overwrite it
 - Crosshair sprites come from `Content/gui/crosshair/<type>_s<0..6>.png` (`build-crosshair-icons.mjs`, staged by `sync-content.ps1`): seven 0.25 stroke steps over the web slider's 0.0..1.5 range, frame index `round(stroke * 4)`. The Java Scope editor writes the web float ranges (size 0.25..1.0, stroke 0..1.5) and a hex colour; the nested `crosshair` config shape wins over stale flat keys
 - `AudioManager` resolves `filter` like the web (different layer or `forceFilter` → EQ, otherwise `reverb`); the app-only backend trace is enabled with `debug.surv_debug=1` and prints `[audio] play ... filter=...`

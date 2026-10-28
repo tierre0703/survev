@@ -91,29 +91,33 @@ defs codegen into `MapObjectDef::soundEmitters` and `Building::update` runs the
 web's 10 Hz distance/fade/layer volume model, playing looped start-silent and
 stopping on `m_free()`.
 
-## Per-source EQ + audio trace (2026-10-24)
+## Per-source EQ + audio trace (updated 2026-10-28)
 
-The web's `muffled`/`club` biquad chains are approximated by an OpenAL EFX
-low-pass, added to the vendored engine by
-`tools/patch-axmol-audio-filter.ps1` (run automatically by
-`tools/vendor-axmol.ps1`):
+The web's `muffled`/`club` presets are ten-band RBJ biquad cascades
+(`client/src/lib/createJS.ts eqTypes`). The native client now applies the same
+cascade to the decoded PCM buffer before playback; the old EFX low-pass remains
+as the fallback for streams/unsupported formats.
 
-- `ax::AudioEngine::setFilterProperties(audioId, enabled, gain, gainHF)` ->
-  `AudioPlayer::setFilterProperties` (EFX `AL_FILTER_LOWPASS`, released in
-  `clearEffects`).
-- `audio/AudioFilter.h` maps muffled -> gain 0.90/gainHF 0.05 and club ->
-  0.85/0.02; never/reverb leave the filter off (reverb is EAX).
+- `src/audio/AudioFilter.h` owns the exact band tables (freq/Q/gain/type),
+  makeup gain 16 (+24 dB) and the fallback low-pass gains.
+- `tools/patch-axmol-audio-eq.ps1` (run by `tools/vendor-axmol.ps1`, after the
+  low-pass patch) adds `ax/core/audio/AudioEq.h` + `AudioPlayerSettings::eq`.
+  `AudioCache::getEqBuffer` decodes a static sound again, applies the biquad
+  cascade (`applyEq16`/`applyEqF32`), peak-limits it and caches the filtered
+  OpenAL buffer per chain pointer.
+- `AxmolAudioBackend` builds static `ax::EqChain` presets and passes one in
+  `settings.eq`; `AudioPlayer::resolvePlaybackBuffer` selects the filtered
+  buffer, or binds the EFX low-pass when the PCM path is unavailable.
 - `AudioManager` resolves the filter like `audioManager.ts` (different layer or
-  `forceFilter` -> EQ, otherwise `reverb`) and passes it via
-  `PlayOptions.filter`; `AxmolAudioBackend` applies it at play.
+  `forceFilter` -> EQ, otherwise `reverb`).
 - With `adb shell setprop debug.surv_debug 1`, every play is logged as
-  `[audio] play <sound><channel> filter=<name> [eq=lowpass gain=.. gainHF=..]
-  vol=.. loop=..`, so footsteps/interior tracks/EQ can be checked from
-  `logcat` without listening. A debug-only match-start self-test plays
-  `emote_01` muffled and club to prove the EFX path.
+  `[audio] play <sound><channel> filter=<name> eq=biquad bands=10 ... vol=..
+  loop=..`; `AudioCache ... EQ bands=.. buffer=..` confirms the filtered buffer.
+  The debug match-start self-test plays `emote_01` muffled and club.
 
-Still not ported: human timbre verification (the call trace now proves the
-parameters) and UI sounds (the Java UI owns those screens).
+Still not ported: human timbre listening verification (the chain/coefficients
+and buffer path are host-/device-verified) and UI sounds (the Java UI owns those
+screens).
 
 ## Update 2026-10-25 (P0.7/P1.5)
 
@@ -136,8 +140,8 @@ parameters) and UI sounds (the Java UI owns those screens).
   fail/complete + ceiling destroy, plane engine loop, and victory music
   (`GameOverMsg` + 1.3 s delay).
 - Not applicable on Android: `notification_start_01` (tab focus) and
-  `notification_join_01` (web team screen only when unfocused). Exact EQ timbre
-  remains P2.
+  `notification_join_01` (web team screen only when unfocused). The EQ timbre is
+  now the exact 10-band PCM cascade (pass 37); only human listening remains.
 - Host tests: 181 tests / 2,794 assertions, 0 failures.
 
 ## Update 2026-10-27 (Java UI cues)

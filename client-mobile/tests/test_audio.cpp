@@ -465,23 +465,35 @@ TEST(ambiance_tracks) {
 
 // ---------------------------------------------------------------------------
 TEST(audio_filter_mapping) {
-    // The web's createJS EQ chains are approximated by a single EFX low-pass.
+    // The web's createJS chains are 10-band RBJ biquad cascades; the native
+    // backend filters decoded PCM and keeps a low-pass fallback for streams.
     const audio::FilterParams none = audio::filterParamsFor("none");
     CHECK(!none.enabled);
-    CHECK_NEAR(none.gain, 1.0f, 1e-6f);
+    CHECK_EQ(none.bandCount, 0);
 
     // "reverb" is a send, not an EQ; the EAX path handles it.
     CHECK(!audio::filterParamsFor("reverb").enabled);
 
     const audio::FilterParams muffled = audio::filterParamsFor("muffled");
     CHECK(muffled.enabled);
-    CHECK(muffled.gainHF < 0.1f);
-    CHECK(muffled.gain > muffled.gainHF);
+    CHECK_EQ(muffled.bandCount, 10);
+    CHECK_NEAR(muffled.makeup, 16.0f, 1e-6f);
+    CHECK_NEAR(muffled.bands[0].freq, 20.0f, 1e-6f);
+    CHECK_NEAR(muffled.bands[0].gainDb, -6.0f, 1e-6f);
+    CHECK_EQ(muffled.bands[0].type, static_cast<int>(audio::EqBandType::Peaking));
+    CHECK_NEAR(muffled.bands[9].freq, 10240.0f, 1e-6f);
+    CHECK_NEAR(muffled.bands[9].gainDb, -25.0f, 1e-6f);
+    CHECK(muffled.fallbackGainHF < 0.1f);
+    CHECK(muffled.fallbackGain > muffled.fallbackGainHF);
 
     const audio::FilterParams club = audio::filterParamsFor("club");
     CHECK(club.enabled);
-    CHECK(club.gainHF < muffled.gainHF); // club cuts the highs harder
-    CHECK(club.gain > club.gainHF);
+    CHECK_EQ(club.bandCount, 10);
+    CHECK_EQ(club.bands[0].type, static_cast<int>(audio::EqBandType::LowShelf));
+    CHECK_NEAR(club.bands[6].gainDb, -48.0f, 1e-6f);
+    CHECK_EQ(club.bands[7].type, static_cast<int>(audio::EqBandType::HighShelf));
+    CHECK(club.fallbackGainHF < muffled.fallbackGainHF); // club cuts the highs harder
+    CHECK(club.fallbackGain > club.fallbackGainHF);
 }
 
 // ---------------------------------------------------------------------------
