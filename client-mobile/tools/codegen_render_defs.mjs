@@ -19,7 +19,7 @@ function pathToFile(dir, rel) {
 
 const { MapObjectDefs, GameObjectDefs } = await import(pathToFile(sharedDir, "defs/register.ts"));
 const { DecalDefs } = await import(pathToFile(sharedDir, "defs/mapObjects/decalDefs.ts"));
-const { EmotesDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/emoteDefs.ts"));
+const { EmotesDefs, EmoteCategory } = await import(pathToFile(sharedDir, "defs/gameObjects/emoteDefs.ts"));
 const { PingDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/pingDefs.ts"));
 const { RoleDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/roleDefs.ts"));
 const { MapDefs } = await import(pathToFile(sharedDir, "defs/mapDefs.ts"));
@@ -663,6 +663,12 @@ for (const type of gameTypes) {
 // screen lists the real outfit/melee/emote/heal/boost/crosshair defs with their
 // display name, lore, sprite and rarity instead of the old hardcoded IDs.
 const LOADOUT_DEF_TYPES = new Set(["outfit", "melee", "emote", "heal_effect", "boost_effect", "crosshair"]);
+// emoteDefs.ts EmoteCategory -> localization key suffix ("faces", "logos", ...).
+// Numeric enums keep their declaration order in Object.keys, so this tracks the
+// enum instead of hardcoding the list.
+const emoteCategoryKeys = Object.keys(EmoteCategory)
+    .filter((key) => Number.isNaN(Number(key)))
+    .map((key) => key.toLowerCase());
 let loadoutEntries = "";
 for (const type of gameTypes) {
     let def;
@@ -673,9 +679,27 @@ for (const type of gameTypes) {
     }
     if (!def || !LOADOUT_DEF_TYPES.has(def.type)) continue;
     const sprite = def.lootImg?.sprite || def.img?.sprite || def.texture || "";
+    const subcat = def.type === "emote" ? (emoteCategoryKeys[def.category] || "") : "";
     loadoutEntries += `    {${str(type)},${str(def.type)},${str(def.name || "")},${str(def.lore || "")},${
         str(sprite)
-    },${n(def.rarity, 0)},${n(def.lootImg?.tint, 0xffffff)}},\n`;
+    },${str(subcat)},${n(def.rarity, 0)},${n(def.lootImg?.tint, 0xffffff)}},\n`;
+}
+
+// Item "source" def display names: the server's items.source is a def type and
+// the web resolves it through GameObjectDefs.typeToDefSafe(source)?.name
+// (loadoutMenu.ts getItemSourceName). Only the grant-provider defs can be a
+// source, and only unlock defs currently carry a name.
+const SOURCE_DEF_TYPES = new Set(["unlock", "pass", "quest", "event"]);
+let loadoutSourceEntries = "";
+for (const type of gameTypes) {
+    let def;
+    try {
+        def = GameObjectDefs.typeToDef(type);
+    } catch {
+        def = null;
+    }
+    if (!def || !SOURCE_DEF_TYPES.has(def.type) || !def.name) continue;
+    loadoutSourceEntries += `    {${str(type)},${str(def.name)}},\n`;
 }
 
 const boneInit = (p) => `{${vec(p?.pivot)},${fp(p?.rot)},${vec(p?.pos)}}`;
@@ -1192,9 +1216,10 @@ struct RawExplosionEffect {
 };
 struct RawEmote { const char* type; const char* texture; const char* sound; const char* channel; const char* name; int teamOnly; int category; };
 struct RawLoadoutItem {
-    const char* type; const char* category; const char* name; const char* lore; const char* sprite; int rarity;
-    unsigned tint;
+    const char* type; const char* category; const char* name; const char* lore; const char* sprite;
+    const char* subcat; int rarity; unsigned tint;
 };
+struct RawLoadoutSource { const char* type; const char* name; };
 struct RawPing {
     const char* type; const char* texture; const char* mapTexture; const char* sound; const char* soundLeader;
     int pingMap; float pingLife, mapLife; int worldDisplay; int mapEvent; unsigned tint;
@@ -1312,6 +1337,8 @@ static const RawGameObj kGameObjs[] = {
 ${gameEntries}};
 static const RawLoadoutItem kLoadoutItems[] = {
 ${loadoutEntries}};
+static const RawLoadoutSource kLoadoutSources[] = {
+${loadoutSourceEntries}};
 static const RawParticle kParticles[] = {
 ${particleEntries}};
 static const RawEmitter kEmitters[] = {
@@ -1679,9 +1706,17 @@ ${
             d.name = r.name ? r.name : "";
             d.lore = r.lore ? r.lore : "";
             d.sprite = r.sprite ? r.sprite : "";
+            d.subcat = r.subcat ? r.subcat : "";
             d.rarity = r.rarity;
             d.tint = r.tint;
             _loadoutItems.push_back(std::move(d));
+        }
+        _loadoutSources.reserve(sizeof(kLoadoutSources) / sizeof(kLoadoutSources[0]));
+        for (const auto& r : kLoadoutSources) {
+            LoadoutSourceDef d;
+            d.type = r.type ? r.type : "";
+            d.name = r.name ? r.name : "";
+            _loadoutSources.push_back(std::move(d));
         }
         _planes.reserve(2);
         for (const auto& r : kPlanes) _planes.push_back(toPlane(r));
@@ -1755,6 +1790,9 @@ ${
     const std::vector<LoadoutItemDef>* loadoutItems() const override {
         return &_loadoutItems;
     }
+    const std::vector<LoadoutSourceDef>* loadoutSources() const override {
+        return &_loadoutSources;
+    }
 
 private:
     std::unordered_map<std::string, MapObjectDef> _mapObjs;
@@ -1771,6 +1809,7 @@ private:
     std::unordered_map<std::string, PlayerPose> _poses;
     std::unordered_map<std::string, PlayerAnimationDef> _animations;
     std::vector<LoadoutItemDef> _loadoutItems;
+    std::vector<LoadoutSourceDef> _loadoutSources;
     std::vector<PlaneDef> _planes;
 };
 

@@ -65,6 +65,9 @@ public:
     // Owned loadout items with shared-def metadata (type/category/name/lore/
     // sprite/rarity) for the Java customize screen: a JSON array.
     virtual std::string loadoutItemsJson() { return "[]"; }
+    // Item source def display names ({"type","name"}) for the detail panel's
+    // "Acquired: <source>" line (loadoutMenu.ts getItemSourceName).
+    virtual std::string loadoutSourcesJson() { return "[]"; }
     // Persists the account's owned item types (from /api/user profile `items`)
     // so ui::Loadout keeps non-default unlocks; JSON array of strings.
     virtual bool setAccountItemsJson(const std::string& json) {

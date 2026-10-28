@@ -182,7 +182,10 @@ TEST(ui_loadout_item_metadata_table) {
     if (emote) {
         CHECK_EQ(emote->category, std::string("emote"));
         CHECK(!emote->sprite.empty());
+        // emoteDefs.ts EmoteCategory.Faces -> the web's `Category: Faces` line.
+        CHECK_EQ(emote->subcat, std::string("faces"));
     }
+    if (outfit) CHECK(outfit->subcat.empty());
     const auto* heal = find("heal_basic");
     CHECK(heal != nullptr);
     if (heal) CHECK_EQ(heal->category, std::string("heal_effect"));
@@ -192,6 +195,34 @@ TEST(ui_loadout_item_metadata_table) {
         CHECK_EQ(crosshair->category, std::string("crosshair"));
         CHECK_EQ(crosshair->name, std::string("Default"));
     }
+}
+
+// Item source defs carry the display name the web resolves with
+// GameObjectDefs.typeToDefSafe(source)?.name before localizing
+// (`loadout-new-account` -> "Account Created").
+TEST(ui_loadout_source_names) {
+    installGeneratedDefs();
+    const surv::DefProvider* provider = surv::getDefProvider();
+    CHECK(provider != nullptr);
+    const auto* sources = provider ? provider->loadoutSources() : nullptr;
+    CHECK(sources != nullptr);
+    if (!sources) return;
+    CHECK(!sources->empty());
+    const auto findSource = [sources](const std::string& type) -> const surv::LoadoutSourceDef* {
+        for (const auto& source : *sources) {
+            if (source.type == type) return &source;
+        }
+        return nullptr;
+    };
+    const auto* newAccount = findSource("unlock_new_account");
+    CHECK(newAccount != nullptr);
+    if (newAccount) CHECK_EQ(newAccount->name, std::string("new-account"));
+    const auto* standard = findSource("unlock_default");
+    CHECK(standard != nullptr);
+    if (standard) CHECK_EQ(standard->name, std::string("standard-issue"));
+    // Passes have no def `name`, so they stay raw and localize by their type
+    // key (`pass_survivr1`); the table must not invent an entry for them.
+    CHECK(findSource("pass_survivr1") == nullptr);
 }
 
 // Crosshair settings arrive from the Java editor (nested shape after the

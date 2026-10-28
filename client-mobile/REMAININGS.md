@@ -38,7 +38,10 @@ level-up pulse plus the profile stats link. The twenty-fourth completes the
 crosshair editor (hex colour + web-range size/stroke sliders, seven stroke
 buckets). The twenty-fifth fixes the health-bar colour ramp and adds the
 low-health danger pulse. The twenty-sixth adds the grey damage trail and the
-faction red/blue flair on the health bar. **221 host tests pass, 0 fail.**
+faction red/blue flair on the health bar. The twenty-seventh adds the web
+loadout detail panel (localized rarity, `Acquired:` source resolved through the
+source def name, lore or emote `Category:` line) and the per-tab NEW alert dots.
+**222 host tests pass, 0 fail.**
 
 ---
 
@@ -105,7 +108,7 @@ faction red/blue flair on the health bar. **221 host tests pass, 0 fail.**
 | `client/src/main.ts` (app bootstrap) → `app/AppDelegate.*`, `app/GameScene.*`, `app/MenuScene.*` | ✅ join/reconnect, quickplay auth/captcha message, reason-string mapping and error dialogs (match-over latch done) |
 | `client/src/api.ts`/`siteInfo.ts` → `net/Api.*`, `net/SiteInfo.*`, Java `SurvApi.java` | ✅ Bearer find_game + protocol version; Java menu builds modes/regions from site_info (enabled/teamMode/l10n) and requires the fetch before Play (P1.7); mode/region icons remain P2 |
 | `client/src/ui/teamMenu.ts` → Java `TeamFragment.java` + `TeamSocket.java` + `TeamLinks.java` | ✅ real `/team_v2` protocol, invite links (copy/share/paste, config `webBaseUrl`), `survev://` + `https://…/#CODE` + `?u=&jt=` links, kick/mode/region/auto-fill, in-room rename, room-prop persistence, team match returns to the room |
-| `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | 🔶 real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack; source badges and the per-item lore modal remain P2 |
+| `client/src/ui/loadoutMenu.ts` → Java `LoadoutFragment.java` | ✅ real owned items from `shared/defs` (`getLoadoutItemsJson`) with the web's image tiles, 6 emote slots, crosshair type picker + preview, new-item confirm/ack, the header/footer detail panel (localized rarity, `Acquired:` source resolved through the source def name like `getItemSourceName`, lore or the emote `Category:` line) and the per-tab NEW alert dots |
 | `client/src/ui/ui.ts` (HUD) → `game/Hud.*` (pix adapter) | ✅ health/boost, weapon/ammo, alive/kills, kill feed (incl. role lines), kill leader, gas timer + gas/danger icon, death/result + spectate overlay, post-match teammate stats, inventory v2 strip, interaction prompt/touch target, toasts, squad group-colour dots + downed pulse, and the perk-mode class picker are live |
 | `client/src/ui/touch.ts` (pad gfx) → `ui/PadGraphicsAxmol.*` | ✅ real ring + touch dot at the web's scale |
 | `client/src/emote.ts` (pings + emote wheel + indicators) | ✅ world emotes (def textures) + ping indicators + minimap ping sprites + emote wheel UI/input/throttle + team-ping wheel (pings, medical/ammo emotes) |
@@ -976,6 +979,40 @@ Done in the twenty-sixth P2 pass (2026-10-27):
   - Device check (x86_64 emulator): a quick-play match rendered the HUD with no
     GL/audio/crash errors (the trail/flair need a damage or faction match for a
     visual check; both are host-tested).
+
+Done in the twenty-seventh P2 pass (2026-10-27):
+- Loadout item detail panel (`loadoutMenu.ts` `selectItem` header/footer +
+  `setCategoryAlerts`): the Java customize screen now mirrors the web instead of
+  one packed line.
+  - The header shows the item name (white) with the localized rarity label
+    (`loadout-stock/common/uncommon/rare/epic/mythic`) in the web's rarity
+    palette (`#c5c5c5`, `#12ff00`, `#00deff`, `#f600ff`, `#d96100`; the old
+    Java colours were WoW blue/purple).
+  - `Acquired:` resolves the account `source` exactly like
+    `getItemSourceName`: `codegen_render_defs.mjs` emits a
+    `LoadoutSourceDef` table for the named grant-provider defs
+    (`unlock_new_account` -> `new-account`, `unlock_default` ->
+    `standard-issue`) exposed as `SurvBridge.getLoadoutSourcesJson()`, and the
+    label tries `loadout-<name>` / `<name>` / raw, so an unlock shows "Account
+    Created" and a pass source falls back to its `pass_survivr1` l10n key.
+  - Default unlocks carry `source: "unlock_default"` in
+    `getLoadoutItemsJson` (loadout.ts `getUserAvailableItems`), so a stock item
+    shows "Standard Issue" instead of "Unknown".
+  - The lore line is the web footer text (green italic) and emotes show
+    `Category: <subcat>` instead of lore (the emote `EmoteCategory` name is
+    codegen'd into `LoadoutItemDef.subcat`).
+  - Category tabs get the web's unacknowledged-item alert dot (gold `●`, same
+    accent as the tile NEW badge); opening a category acks it and clears it.
+- Host tests: `ui_loadout_item_metadata_table` now asserts the emote subcat
+  (`emote_happyface` -> `faces`, outfits empty) and the new
+  `ui_loadout_source_names` locks the source table (unlock names, no invented
+  pass entry). 3785 assertions / 222 tests.
+- Device check (x86_64 emulator): Basic Outfit showed "Stock" +
+  "Acquired: Standard Issue" + its lore, The Semi-Pro showed
+  "Acquired: Account Created" (the old code printed the raw
+  `unlock_new_account`), Happy Face showed "Common" + "Category: Faces", the
+  outfit selection still round-trips (`select outfit=... accepted=true`) and
+  `logcat -b crash` stayed empty.
 
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`

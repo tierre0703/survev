@@ -155,6 +155,9 @@ public final class SurvBridge {
     /** Owned loadout items with shared-def metadata (JSON array; empty until defs load). */
     public static native String getLoadoutItemsJson();
 
+    /** Item source def display names (JSON array of {"type","name"}; empty until defs load). */
+    public static native String getLoadoutSourcesJson();
+
     /** Persists the account's owned item types (profile `items`) for the validator. */
     public static native boolean setAccountItems(String typesJson);
 

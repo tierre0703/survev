@@ -5,7 +5,9 @@
  * - Category tabs (outfit, melee, emote, heal, boost, player_icon, crosshair)
  * - Rarity color coding (Stock → Mythic)
  * - Sort options (Newest, Alpha, Rarity)
- * - Item details panel with name, rarity, description
+ * - Item details panel with name, rarity, acquired source and lore (the web
+ *   #modal-customize-item-header/footer), incl. emote subcategories
+ * - Category tabs get the web's unacknowledged-item alert dot
  * - Crosshair editor with color/size/stroke options
  * - Emote slot wheel visualization
  * - Paged item grid with selection highlighting
@@ -23,6 +25,9 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.text.InputType;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -45,18 +50,29 @@ import com.google.gson.JsonParser;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class LoadoutFragment {
     private static final String TAG = "LoadoutFragment";
 
-    // Rarity colors matching web client
-    private static final int RARITY_STOCK     = 0xFFB0B0B0; // grey
-    private static final int RARITY_COMMON    = 0xFFFFFFFF; // white
-    private static final int RARITY_UNCOMMON  = 0xFF1EFF00; // green
-    private static final int RARITY_RARE      = 0xFF0070DD; // blue
-    private static final int RARITY_EPIC      = 0xFFA335EE; // purple
-    private static final int RARITY_MYTHIC    = 0xFFFF8000; // orange
+    // Web loadoutMenu.ts Rarities table (Stock/Common grey, Uncommon green,
+    // Rare cyan, Epic magenta, Mythic orange).
+    private static final int RARITY_STOCK     = 0xFFC5C5C5;
+    private static final int RARITY_COMMON    = 0xFFC5C5C5;
+    private static final int RARITY_UNCOMMON  = 0xFF12FF00;
+    private static final int RARITY_RARE      = 0xFF00DEFF;
+    private static final int RARITY_EPIC      = 0xFFF600FF;
+    private static final int RARITY_MYTHIC    = 0xFFD96100;
+
+    // Web rarity label keys (en.json loadout-stock..mythic).
+    private static final String[] RARITY_KEYS =
+            {"stock", "common", "uncommon", "rare", "epic", "mythic"};
+
+    // Web #modal-customize-item-source / -lore colours.
+    private static final int DETAIL_SOURCE_COLOR = 0xFFFFDB7B;
+    private static final int DETAIL_LORE_COLOR   = 0xFFD2FF7B;
 
     private static final int SELECT_GREEN = 0xFF5A7A38;
     private static final int PANEL_BG    = 0xFF2A2A2A;
@@ -69,6 +85,9 @@ public class LoadoutFragment {
     private static final int TILE_IMAGE_DP = 64;
     private static final int TILE_MARGIN_DP = 5;
     private static final int ITEM_PAGE_SIZE = 9; // 3 rows x 3 columns
+    // Short labels for categories to fit (the alert dot is appended per tab).
+    private static final String[] CATEGORY_LABELS =
+            {"Skin", "Melee", "Emoji", "Heal", "Boost", "Icon", "Scope"};
     private static final String[] CATEGORY_ICONS = {
             "loadout-outfit", "loadout-melee", "loadout-emote", "loadout-heal",
             "loadout-boost", "loadout-player-icon", "loadout-crosshair",
@@ -82,7 +101,13 @@ public class LoadoutFragment {
     private final LinearLayout mCategoryRow;
     private final LinearLayout mGrid;
     private final TextView mSelectionLabel;
-    private final TextView mDetailPanel;      // item details area
+    // Detail panel: the web modal-customize header (name + rarity) and footer
+    // (source + lore) as separate lines.
+    private final LinearLayout mDetailPanel;
+    private final TextView mDetailName;
+    private final TextView mDetailRarity;
+    private final TextView mDetailSource;
+    private final TextView mDetailLore;
     private final Button mNewItemBtn;
     private final LinearLayout mEmoteSlotRow;
     private final Button[] mEmoteSlotButtons = new Button[6];
@@ -90,6 +115,11 @@ public class LoadoutFragment {
     private final Button mPrevBtn;
     private final Button mNextBtn;
     private final Button mCloseBtn;
+    private final Button[] mCatButtons = new Button[7];
+
+    // Account item source display names ({"type","name"}), resolved once from
+    // SurvBridge.getLoadoutSourcesJson(). Static: def data never changes.
+    private static Map<String, String> sSourceNames;
     
     // Crosshair editor widgets
     private final LinearLayout mCrosshairEditor;
@@ -203,10 +233,10 @@ public class LoadoutFragment {
         mCategoryRow.setPadding(0, dp(6), 0, dp(6));
         
         // Short labels for categories to fit
-        String[] catLabels = {"Skin", "Melee", "Emoji", "Heal", "Boost", "Icon", "Scope"};
         for (int i = 0; i < mCategories.length; i++) {
             final int catIdx = i;
-            Button catBtn = makeCatButton(catLabels[i], i == 0);
+            Button catBtn = makeCatButton(CATEGORY_LABELS[i], i == 0);
+            mCatButtons[i] = catBtn;
             Drawable catIcon = scaledDrawable(
                     loadAssetBitmap("gui/" + CATEGORY_ICONS[i] + ".png", 4), 16);
             if (catIcon != null) {
@@ -400,13 +430,45 @@ public class LoadoutFragment {
         scroll.addView(mGrid);
         panel.addView(scroll);
 
-        // Detail panel (shows selected item info)
-        mDetailPanel = new TextView(activity);
-        mDetailPanel.setTextColor(0xFFDDDDDD);
-        mDetailPanel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        // Detail panel (web #modal-customize-item-header + footer): name and
+        // rarity on one row, then the localized source and lore lines.
+        mDetailPanel = new LinearLayout(activity);
+        mDetailPanel.setOrientation(LinearLayout.VERTICAL);
         mDetailPanel.setPadding(dp(8), dp(4), dp(8), dp(4));
         mDetailPanel.setBackgroundColor(0xFF252525);
         mDetailPanel.setVisibility(View.GONE);
+
+        LinearLayout detailHeader = new LinearLayout(activity);
+        detailHeader.setOrientation(LinearLayout.HORIZONTAL);
+        detailHeader.setGravity(Gravity.CENTER_VERTICAL);
+
+        mDetailName = new TextView(activity);
+        mDetailName.setTextColor(Color.WHITE);
+        mDetailName.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        mDetailName.setTypeface(null, android.graphics.Typeface.BOLD);
+        detailHeader.addView(mDetailName, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        mDetailRarity = new TextView(activity);
+        mDetailRarity.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        mDetailRarity.setTypeface(null, android.graphics.Typeface.BOLD);
+        mDetailRarity.setPadding(dp(6), 0, 0, 0);
+        detailHeader.addView(mDetailRarity);
+        mDetailPanel.addView(detailHeader);
+
+        mDetailSource = new TextView(activity);
+        mDetailSource.setTextColor(DETAIL_SOURCE_COLOR);
+        mDetailSource.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        mDetailPanel.addView(mDetailSource);
+
+        mDetailLore = new TextView(activity);
+        mDetailLore.setTextColor(DETAIL_LORE_COLOR);
+        mDetailLore.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        mDetailLore.setTypeface(null, android.graphics.Typeface.ITALIC);
+        mDetailLore.setMaxLines(4);
+        mDetailLore.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        mDetailPanel.addView(mDetailLore);
+
         panel.addView(mDetailPanel);
 
         // Paging controls + Close
@@ -643,6 +705,7 @@ public class LoadoutFragment {
         AccountManager account = AccountManager.peek();
         if (account == null || !account.isLoggedIn()) {
             mNewItemBtn.setVisibility(View.GONE);
+            updateCategoryAlerts(null);
             return;
         }
         List<String> pending = new ArrayList<String>();
@@ -672,6 +735,42 @@ public class LoadoutFragment {
             }
         }
         if (!ack.isEmpty()) account.setItemStatus(2, ack);
+        updateCategoryAlerts(account);
+    }
+
+    /**
+     * Web loadoutMenu.ts setCategoryAlerts: a dot on every category tab that
+     * still has unacknowledged items. The opened category was just acked above,
+     * so its dot clears in the same refresh (the web behaves the same way).
+     */
+    private void updateCategoryAlerts(AccountManager account) {
+        boolean loggedIn = account != null && account.isLoggedIn();
+        for (int i = 0; i < mCatButtons.length && i < mCategories.length; i++) {
+            Button tab = mCatButtons[i];
+            if (tab == null) continue;
+            String wanted = itemCategory(mCategories[i]);
+            boolean hasNew = false;
+            if (loggedIn) {
+                for (AccountManager.ItemInfo info : account.getItems()) {
+                    if (info.status >= 1) continue;
+                    ItemEntry entry = findItem(info.type);
+                    if (entry != null && wanted.equals(entry.category)) {
+                        hasNew = true;
+                        break;
+                    }
+                }
+            }
+            // The dot keeps the web's alert look but the client's gold accent
+            // (it is the same colour as the tile NEW badge).
+            SpannableString text = new SpannableString(
+                    CATEGORY_LABELS[i] + (hasNew ? " \u25CF" : ""));
+            if (hasNew) {
+                int start = CATEGORY_LABELS[i].length() + 1;
+                text.setSpan(new ForegroundColorSpan(GOLD), start, text.length(),
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            tab.setText(text);
+        }
     }
 
     private void confirmNewItems() {
@@ -848,21 +947,64 @@ public class LoadoutFragment {
             mDetailPanel.setVisibility(View.GONE);
             return;
         }
-        StringBuilder sb = new StringBuilder();
-        sb.append(getRarityName(entry.rarity)).append(" | ");
-        sb.append(entry.displayName).append("\n");
-        if (entry.description != null && !entry.description.isEmpty()) {
-            sb.append(entry.description).append("\n");
+        // Web #modal-customize-item-header: white name, rarity label in the
+        // rarity colour.
+        mDetailName.setText(entry.displayName);
+        mDetailRarity.setText(getRarityName(entry.rarity));
+        mDetailRarity.setTextColor(entry.rarityColor);
+        // Web footer #modal-customize-item-source ("Acquired: <source>").
+        mDetailSource.setText(L10n.t("loadout-acquired", "Acquired") + ": "
+                + sourceLabel(entry.source));
+        // Web footer #modal-customize-item-lore: emotes show their subcategory
+        // (`Category: Faces`) instead of the lore text.
+        String lore;
+        if ("emote".equals(entry.category)) {
+            String subcat = entry.subcat == null || entry.subcat.isEmpty()
+                    ? "other" : entry.subcat;
+            lore = L10n.t("loadout-category", "Category") + ": "
+                    + L10n.t("emote-subcat-" + subcat, subcat);
+        } else {
+            lore = entry.description == null ? "" : entry.description;
         }
-        String source = entry.source == null || entry.source.isEmpty() ? "Unknown" : entry.source;
-        String sourceLabel = L10n.t("loadout-" + source, source);
-        if (sourceLabel == null || sourceLabel.isEmpty()) {
-            sourceLabel = source;
-        }
-        sb.append(L10n.t("loadout-acquired", "Acquired")).append(": ").append(sourceLabel);
-        mDetailPanel.setText(sb.toString());
-        mDetailPanel.setTextColor(entry.rarityColor);
+        mDetailLore.setText(lore);
+        mDetailLore.setVisibility(lore.isEmpty() ? View.GONE : View.VISIBLE);
         mDetailPanel.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Web loadoutMenu.ts getItemSourceName + the translate chain: the account
+     * source is a def type ("unlock_new_account", "pass_survivr1"), resolved to
+     * the def name ("new-account") and then localized through
+     * `loadout-<name>` / `<name>` / the raw name.
+     */
+    private String sourceLabel(String source) {
+        if (source == null || source.isEmpty()) return "Unknown";
+        String name = sourceNameMap().get(source);
+        if (name == null || name.isEmpty()) name = source;
+        String localized = L10n.t("loadout-" + name, null);
+        if (localized == null) localized = L10n.t(name, null);
+        return localized != null ? localized : name;
+    }
+
+    private Map<String, String> sourceNameMap() {
+        if (sSourceNames != null) return sSourceNames;
+        sSourceNames = new HashMap<String, String>();
+        String json = SurvBridge.getLoadoutSourcesJson();
+        if (json == null || json.isEmpty()) return sSourceNames;
+        try {
+            JsonElement parsed = JsonParser.parseString(json);
+            if (!parsed.isJsonArray()) return sSourceNames;
+            for (JsonElement element : parsed.getAsJsonArray()) {
+                if (element == null || !element.isJsonObject()) continue;
+                JsonObject obj = element.getAsJsonObject();
+                String type = jsonString(obj, "type");
+                String name = jsonString(obj, "name");
+                if (!type.isEmpty() && !name.isEmpty()) sSourceNames.put(type, name);
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "loadout sources parse failed: " + e.getMessage());
+        }
+        return sSourceNames;
     }
 
     // --- Sorting ---
@@ -1046,6 +1188,7 @@ public class LoadoutFragment {
         int rarityColor;
         String description;
         String sprite;
+        String subcat = ""; // emote subcategory key ("faces", "logos", ...)
         int tint = 0xFFFFFF;
         String source = "";
         long timeAcquired = 0L;
@@ -1072,6 +1215,10 @@ public class LoadoutFragment {
                 e.type = jsonString(obj, "type");
                 e.category = jsonString(obj, "category");
                 e.sprite = jsonString(obj, "sprite");
+                e.subcat = jsonString(obj, "subcat");
+                // loadout.ts getUserAvailableItems: unlock_default items carry
+                // source "unlock_default"; account items override it below.
+                e.source = jsonString(obj, "source");
                 String name = jsonString(obj, "name");
                 String l10nName = Json.peekString(l10n, "game-" + e.type);
                 e.displayName = l10nName != null && !l10nName.isEmpty() ? l10nName : name;
@@ -1110,7 +1257,11 @@ public class LoadoutFragment {
         for (ItemEntry e : mItems) {
             for (AccountManager.ItemInfo info : owned) {
                 if (e.type.equals(info.type)) {
-                    e.source = info.source;
+                    // The profile source wins; an empty one keeps the
+                    // unlock_default source from the item snapshot.
+                    if (info.source != null && !info.source.isEmpty()) {
+                        e.source = info.source;
+                    }
                     e.timeAcquired = info.timeAcquired;
                     e.isNew = info.status == 0;
                     break;
@@ -1165,15 +1316,10 @@ public class LoadoutFragment {
     }
     
     private String getRarityName(int rarity) {
-        switch (rarity) {
-            case 0: return "Stock";
-            case 1: return "Common";
-            case 2: return "Uncommon";
-            case 3: return "Rare";
-            case 4: return "Epic";
-            case 5: return "Mythic";
-            default: return "Unknown";
-        }
+        if (rarity < 0 || rarity >= RARITY_KEYS.length) return "Unknown";
+        String key = RARITY_KEYS[rarity];
+        // en.json loadout-stock/common/uncommon/rare/epic/mythic.
+        return L10n.t("loadout-" + key, Character.toUpperCase(key.charAt(0)) + key.substring(1));
     }
     
     private String catLabel(String cat) {

@@ -429,6 +429,13 @@ public:
             if (defCategory == "boost_effect") return std::string("boost");
             return defCategory;
         };
+        // shared/utils/loadout.ts getUserAvailableItems gives every
+        // unlock_default item source "unlock_default" (the web then shows the
+        // def name "standard-issue" -> "Standard Issue").
+        std::set<std::string> defaultUnlocks;
+        if (const auto* unlockDef = provider->gameObject("unlock_default")) {
+            defaultUnlocks.insert(unlockDef->unlocks.begin(), unlockDef->unlocks.end());
+        }
         uikit::JsonValue out;
         out.kind = uikit::JsonValue::Kind::Array;
         for (const auto& def : *provider->loadoutItems()) {
@@ -450,6 +457,8 @@ public:
             addString("name", def.name);
             addString("lore", def.lore);
             addString("sprite", def.sprite);
+            addString("subcat", def.subcat);
+            addString("source", defaultUnlocks.count(def.type) ? "unlock_default" : "");
             uikit::JsonValue rarity;
             rarity.kind = uikit::JsonValue::Kind::Number;
             rarity.number = def.rarity;
@@ -480,6 +489,30 @@ public:
         config().setJson("accountItems", types);
         config().save();
         return true;
+    }
+    // Display names for the account item `source` types (loadoutMenu.ts
+    // getItemSourceName): [{"type":"unlock_new_account","name":"new-account"}].
+    std::string loadoutSourcesJson() override {
+        const auto* provider = surv::getDefProvider();
+        if (!provider || !provider->loadoutSources()) {
+            return "[]";
+        }
+        uikit::JsonValue out;
+        out.kind = uikit::JsonValue::Kind::Array;
+        for (const auto& source : *provider->loadoutSources()) {
+            uikit::JsonValue item;
+            item.kind = uikit::JsonValue::Kind::Object;
+            uikit::JsonValue type;
+            type.kind = uikit::JsonValue::Kind::String;
+            type.string = source.type;
+            item.object["type"] = std::move(type);
+            uikit::JsonValue name;
+            name.kind = uikit::JsonValue::Kind::String;
+            name.string = source.name;
+            item.object["name"] = std::move(name);
+            out.array.push_back(std::move(item));
+        }
+        return uikit::jsonToString(out);
     }
 
     std::string siteInfoJson() override { return _menu ? _menu->siteInfoJson() : std::string(); }
@@ -845,6 +878,10 @@ JNIEXPORT jboolean JNICALL Java_dev_axmol_app_SurvBridge_setBindsCode(JNIEnv* en
 
 JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLoadoutItemsJson(JNIEnv* env, jclass) {
     return surv::toJstring(env, surv::uiBridge()->loadoutItemsJson());
+}
+
+JNIEXPORT jstring JNICALL Java_dev_axmol_app_SurvBridge_getLoadoutSourcesJson(JNIEnv* env, jclass) {
+    return surv::toJstring(env, surv::uiBridge()->loadoutSourcesJson());
 }
 
 JNIEXPORT jboolean JNICALL Java_dev_axmol_app_SurvBridge_setAccountItems(JNIEnv* env, jclass,

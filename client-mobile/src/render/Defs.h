@@ -668,11 +668,24 @@ struct LoadoutItemDef {
     std::string name;
     std::string lore;
     std::string sprite; // loot/emote/crosshair texture name
+    // Emote subcategory key ("locked" | "faces" | "food" | ... from
+    // emoteDefs.ts EmoteCategory); empty for non-emotes. The web customize
+    // screen shows it as `Category: <subcat>` instead of the lore line.
+    std::string subcat;
     int rarity = 0;
     // Outfit loot art is a white silhouette tinted by lootImg.tint (the web
     // applies an SVG multiply filter). The native loadout tile applies the same
     // multiply with a ColorMatrix.
     uint32_t tint = 0xffffff;
+};
+
+// Display names for item "source" defs. The server's `items.source` is a def
+// type (e.g. "unlock_new_account", "pass_survivr1"); the web customize screen
+// resolves it through GameObjectDefs.typeToDefSafe(source)?.name before
+// localizing (client/src/ui/loadoutMenu.ts getItemSourceName).
+struct LoadoutSourceDef {
+    std::string type;
+    std::string name;
 };
 
 class DefProvider {
@@ -683,6 +696,8 @@ public:
     virtual const GameObjRenderDef* gameObject(const std::string& type) const = 0;
     // Loadout metadata for the Java customize screen (null in fakes).
     virtual const std::vector<LoadoutItemDef>* loadoutItems() const { return nullptr; }
+    // Item source def display names (unlock/pass/quest provider defs).
+    virtual const std::vector<LoadoutSourceDef>* loadoutSources() const { return nullptr; }
     // Particle/emitter tables. Default to null so providers that don't emit
     // them (e.g. host-test fakes) keep compiling.
     virtual const ParticleDef* particle(const std::string&) const { return nullptr; }
