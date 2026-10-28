@@ -60,8 +60,10 @@ from the APK and a stale saved language is normalized to English. The
 thirty-fourth localizes the How-to-Play body (34 keys) and rebuilds the modal on
 open when the language changed. The thirty-fifth localizes the team room screen
 (invite code/copy/share, roster, region/mode/auto-fill, play/leave, rename and
-status/toast strings) and fixes the team panel's top clipping.
-**227 host tests pass, 0 fail.**
+status/toast strings) and fixes the team panel's top clipping. The thirty-sixth
+ports bullet impact normals, worn/equipped pan surface blocking, steelskin and
+turkey-mode hit FX, and the web's single-particle hit spray.
+**230 host tests pass, 0 fail.**
 
 ---
 
@@ -102,7 +104,7 @@ status/toast strings) and fixes the team panel's top clipping.
 | `client/src/game.ts` (main loop, net dispatch) → `game/Game.*`, `game/GameWorld.*` | ✅ dispatch/net, match-over latch + death/spectate, player/camera/projectile interpolation (P0.3), keyboard/mouse input + change-gated InputMsg (P1.6), perk-mode role selection (PerkModeRoleSelectMsg + config `perkModeRole`); local rotation remains desktop-only (P2) |
 | `client/src/objects/objectPool.ts` → `game/objects/GameObject.h` | ✅ |
 | `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | ✅ poses/animations faithful; faction patch, last-stand/bleed particles, same-group nametags, real action-sound keys, eased `m_bodyRad` and `maxVisualRadius` 3.75; minor easing nuances P2 |
-| `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | ✅ travelling tracer sprite, per-def palette/width/length, suppression, collision FX + hit groups, blood/pan sparks, stairs layer |
+| `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | ✅ travelling tracer sprite, per-def palette/width/length, suppression, collision FX + hit groups with the real AABB/circle collision normals, worn/equipped pan surface blocking (`pan_bullet`), steelskin spark, turkey-mode feathers, blood, stairs layer |
 | `client/src/objects/explosion.ts` → `objects/Barns.*` (ExplosionBarn) + `GameWorld.cpp` | ✅ generated burst/scatter/ripple/shake/lifetime/indoor suppression; physics particles |
 | `client/src/objects/shot.ts` → `objects/Barns.*` (ShotBarn) | ✅ def-driven fire sound with the web's team/last/alt precedence + `fallOff`/`ignoreDetune`/splinter volume, shot casings at the `pullDelay` mark (`createCasingParticle`: shell offset/scale/forward/reverse, alive + equipped check) and reload-timing casings (`caseTiming == "reload"`, maxReload shells), plus the local single-fire cycle/pull cue from the clip ammo |
 | `client/src/objects/obstacle.ts` → `objects/Barns.*` | ✅ door/button/destroy sounds, button useParticle + useImg/offImg swap, once-only destroy debris (def explodeParticle, 2-item pick) |
@@ -1257,10 +1259,37 @@ Done in the thirty-fifth P2 pass (2026-10-28):
   de l'équipe / Région / Mode / Remplir / Changer de nom / Jouer (1) / Quitter
   équipe`, with the full title visible. `logcat -b crash` empty.
 
+Done in the thirty-sixth P2 pass (2026-10-28):
+- Bullet impact parity (`bullet.ts` m_update / playHitFx):
+  - `core/Collider.h` gained normal-returning segment hits
+    (`intersectSegmentCircleHit`, `intersectSegmentAabbHit`,
+    `colliderIntersectSegmentHit`) ported from `coldet`, plus
+    `intersectSegmentSegmentRes`; `math::transformSegment`/`Segment` were added
+    to `MathUtil.h`. Bullet sparks/impacts now use the real collision normal
+    instead of the reversed bullet velocity (correct AABB face normals and
+    radial circle normals).
+  - **Pan surface**: `meleeDefs.pan.reflectSurface` (equipped/unequipped) and
+    `sound.bullet` are codegen'd. `Player::hasActivePan/getPanSegment` port
+    `player.ts`; a worn/equipped pan is a segment collider checked against both
+    the old and new visual pan segments, so it can stop a bullet before the body
+    and plays `barrelChip` + `pan_bullet`. Steelskin still adds its spark on a
+    body hit.
+  - `playHitFx` now spawns exactly one particle (the web's
+    `floor(util.random(1, 2))` is always 1; the port randomly spawned 1-2).
+  - Turkey mode adds `turkeyFeathersHit` at the victim when the shooter has
+    `turkey_shoot`.
+- Host tests: `collider_segment_hit_normals` (AABB/circle/segment-segment +
+  transformSegment), `bullet_pan_blocks_and_impact_normal` (back shot blocked by
+  the pan with no blood, front shot sprays blood) and
+  `bullet_hit_fx_spawns_exactly_one_particle`. 3883 assertions / 230 tests.
+- x86_64 native lib + debug APK build clean; quick-play smoke test with an empty
+  crash buffer (a live pan/bullet duel still needs a device pass).
+
 Remaining:
-- **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`
-  and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is now only
-  used by nothing at all (the live HUD draws dots/pings/indicators in
+- **Rendering:** minor colour nuances only. Bullet impact normals, pan-surface
+  blocking, steelskin sparks and turkey feathers are ported (pass 36);
+  `plane.ts` and `AirstrikeZone` are implemented; `MapSprite` (mapSprite.ts) is
+  now only used by nothing at all (the live HUD draws dots/pings/indicators in
   `MapView`), so its z-order path is dead code rather than a gap.
 - **HUD/menus:** menu preview heal/boost particle emitters (`opponentDisplay.ts`;
   the Java avatar has no heal/boost view, so this only matters if the preview
@@ -1415,7 +1444,7 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - Player/projectile interpolation is `visualPos(Old)` + `posInterpTicker / camera.m_interpInterval` seeded in `m_updateData` (`isNew ? data.pos : pos/dir`); the camera follows `activePlayer->visualPos`. Do not draw or follow raw `pos`
 - A duplicated net update re-seeds `visualPosOld`/`visualDirOld` from the current net position and restarts the ticker (web `player.ts:508-515`); it must not slide back to the previous sample
 - `config.interpolation` lives on the scene (`GameScene::_interpolationEnabled`) and is re-applied by `resetWorld()`, because each match builds a new `GameWorld` camera; `UiBridge::setConfigValue("interpolation")` pushes it through `runOnGameThread`
-- Bullet rendering is `BulletVisual::trail` (`player-bullet-trail-02.img`) with world scale divided by `camera.m_z()`; do not go back to a Graphics line. Collision/impact FX belongs in `BulletBarn::update` (obstacles + players, blood parented to the victim), because the server only sends the spawn event.
+- Bullet rendering is `BulletVisual::trail` (`player-bullet-trail-02.img`) with world scale divided by `camera.m_z()`; do not go back to a Graphics line. Collision/impact FX belongs in `BulletBarn::update` (obstacles + players, blood parented to the victim), because the server only sends the spawn event. Impact sparks must use `colliderIntersectSegmentHit`/`intersectSegmentCircleHit` normals (never the reversed velocity), `playBulletHitFx` spawns exactly one particle, and a worn/equipped pan is a blocking segment (`Player::getPanSegment` from the codegen'd `pan.reflectSurface`, `pan_bullet` FX) checked before the player circle; steelskin adds its spark and turkey mode adds `turkeyFeathersHit`
 - Explosion visuals come from the generated `ExplosionEffectRenderDef` table (`shared/defs/explosionEffectDefs.ts`); do not reintroduce the old orange-circle `ExplosionBarn` drawing.
 - Loot's outer ring is a separate `borderSprite` child at index 0; the item art keeps `lootInnerScale`/mirror/rotation and the ring tint comes from `lootBorderTint` (ammo's `tintDark` fallback at codegen).
 - Player nametags are visible only for same-group, non-active teammates (30 px below); faction patches are only drawn in `factionMode` and use the 2 team colors.

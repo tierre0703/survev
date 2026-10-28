@@ -914,6 +914,10 @@ public:
     void updateFrozenState(float dt, Ctx& ctx);
     // player.ts getMeleeCollider (attack offset capsule).
     Collider getMeleeCollider() const;
+    // player.ts m_hasActivePan/m_getPanSegment: worn pan (or equipped pan while
+    // not mid-melee) blocks bullets on its reflectSurface segment.
+    bool hasActivePan() const;
+    math::Segment getPanSegment() const;
     // player.ts m_getZoom(): the active player's view radius used by the camera
     // and the touch.ts aim line. `mobile` remaps the desktop step (device.mobile).
     float getZoom(bool mobile) const;

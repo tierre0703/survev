@@ -1064,6 +1064,33 @@ void Player::updateFrozenState(float dt, Ctx& ctx) {
     bodyEffectSprite->setVisible(frozenTicker > 0.0f);
 }
 
+bool Player::hasActivePan() const {
+    return wearingPan || (activeWeapon == "pan" && currentAnim != Anim_Melee);
+}
+
+math::Segment Player::getPanSegment() const {
+    const GameObjRenderDef* pan = item("pan");
+    if (!pan || !pan->hasPanSurface) {
+        return { Vec2(), Vec2() };
+    }
+    const bool equipped = !wearingPan;
+    Vec2 p0 = equipped ? pan->panEquippedP0 : pan->panUnequippedP0;
+    Vec2 p1 = equipped ? pan->panEquippedP1 : pan->panUnequippedP1;
+    if (!math::eqAbs(scale, 1.0f)) {
+        if (equipped) {
+            // player.ts: equipped pans offset by (scale - 1) * 0.75, down-left.
+            const float s = (scale - 1.0f) * 0.75f;
+            const Vec2 off(s, -s);
+            p0 = v2Add(p0, off);
+            p1 = v2Add(p1, off);
+        } else {
+            p0 = v2Mul(p0, scale);
+            p1 = v2Mul(p1, scale);
+        }
+    }
+    return { p0, p1 };
+}
+
 Collider Player::getMeleeCollider() const {
     const GameObjRenderDef* meleeDef = item(activeWeapon);
     const float ang = std::atan2(dir.y, dir.x);

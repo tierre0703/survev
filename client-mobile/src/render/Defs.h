@@ -556,6 +556,12 @@ struct GameObjRenderDef {
     // clip and the reserve ammo are empty.
     std::string soundEmpty;
     bool ammoInfinite = false;
+    // meleeDefs sound.bullet (pan_bullet) + pan reflectSurface: bullet.ts hits a
+    // worn/equipped pan on its own segment and plays the pan spark/sound.
+    std::string soundBullet;
+    bool hasPanSurface = false;
+    Vec2 panEquippedP0{}, panEquippedP1{};
+    Vec2 panUnequippedP0{}, panUnequippedP1{};
 
     // Map indicator (item/role minimap marker) fields.
     std::string mapIndicatorSprite;

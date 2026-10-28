@@ -1856,12 +1856,12 @@ void SmokeBarn::update(float dt, GameWorld& ctx) {
 // ---------------------------------------------------------------------------
 // Bullet (visual)
 // ---------------------------------------------------------------------------
-// bullet.ts playHitFx(): 1-2 particles sprayed along the impact normal plus the
-// obstacle's bullet hit group.
+// bullet.ts playHitFx(): one particle sprayed along the impact normal plus the
+// obstacle's bullet hit group (util.random(1, 2) floors to exactly 1).
 static void playBulletHitFx(GameWorld& ctx, const std::string& particle,
                             const std::string& sound, const Vec2& pos, const Vec2& dir,
                             int layer) {
-    const int count = 1 + (std::rand() % 2);
+    const int count = 1;
     Vec2 vel = v2Mul(dir, 9.5f);
     for (int i = 0; i < count; ++i) {
         vel = v2Rotate(vel, (rnd(0.0f, 1.0f) - 0.5f) * 3.14159265358979f / 3.0f);
@@ -2038,8 +2038,9 @@ void BulletBarn::update(float dt, GameWorld& ctx) {
             }
 
             struct Hit {
-                int type = 0; // 0 obstacle, 1 player
+                int type = 0; // 0 obstacle, 1 player, 2 pan
                 Vec2 point;
+                Vec2 normal;
                 float dist = 0.0f;
                 bool collidable = true;
                 Obstacle* obstacle = nullptr;
@@ -2056,11 +2057,13 @@ void BulletBarn::update(float dt, GameWorld& ctx) {
                         (b->reflectCount > 0 && obstacle->__id == b->reflectObjId)) {
                         continue;
                     }
-                    Vec2 point;
-                    if (colliderIntersectSegmentRes(obstacle->collider, posOld, b->pos, &point)) {
+                    Vec2 point, normal;
+                    if (colliderIntersectSegmentHit(obstacle->collider, posOld, b->pos, &point,
+                                                    &normal)) {
                         Hit hit;
                         hit.type = 0;
                         hit.point = point;
+                        hit.normal = normal;
                         hit.dist = v2Length(v2Sub(point, posOld));
                         hit.collidable = obstacle->collidable;
                         hit.obstacle = obstacle;
@@ -2077,12 +2080,48 @@ void BulletBarn::update(float dt, GameWorld& ctx) {
                     (player->__id == shooterId && !b->damageSelf)) {
                     continue;
                 }
-                Vec2 point;
-                if (intersectSegmentCircleRes(posOld, b->pos, player->pos, player->rad, &point)) {
+                // bullet.ts: a worn/equipped pan is its own segment collider and
+                // can block the bullet before the player circle.
+                bool panCollision = false;
+                Vec2 panPoint, panNormal;
+                if (player->hasActivePan()) {
+                    const math::Segment pan = player->getPanSegment();
+                    const math::Segment oldSeg = math::transformSegment(
+                        pan.p0, pan.p1, player->visualPosOld, player->visualDirOld);
+                    const math::Segment newSeg = math::transformSegment(
+                        pan.p0, pan.p1, player->pos, player->dir);
+                    Vec2 newInter, oldInter;
+                    const bool newHit = intersectSegmentSegmentRes(
+                        posOld, b->pos, oldSeg.p0, oldSeg.p1, &newInter);
+                    const bool oldHit = intersectSegmentSegmentRes(
+                        posOld, b->pos, newSeg.p0, newSeg.p1, &oldInter);
+                    if (oldHit || newHit) {
+                        panPoint = oldHit ? oldInter : newInter;
+                        panNormal = v2NormalizeSafe(
+                            v2Perp(v2Sub(newSeg.p1, newSeg.p0)), Vec2(1.0f, 0.0f));
+                        panCollision = true;
+                    }
+                }
+
+                Vec2 circlePoint, circleNormal;
+                const bool circleHit = intersectSegmentCircleHit(
+                    posOld, b->pos, player->pos, player->rad, &circlePoint, &circleNormal);
+                if (circleHit && (!panCollision
+                        || v2Length(v2Sub(circlePoint, b->startPos))
+                            < v2Length(v2Sub(panPoint, b->startPos)))) {
                     Hit hit;
                     hit.type = 1;
-                    hit.point = point;
-                    hit.dist = v2Length(v2Sub(point, posOld));
+                    hit.point = circlePoint;
+                    hit.normal = circleNormal;
+                    hit.dist = v2Length(v2Sub(circlePoint, posOld));
+                    hit.player = player;
+                    hits.push_back(hit);
+                } else if (panCollision) {
+                    Hit hit;
+                    hit.type = 2;
+                    hit.point = panPoint;
+                    hit.normal = panNormal;
+                    hit.dist = v2Length(v2Sub(panPoint, posOld));
                     hit.player = player;
                     hits.push_back(hit);
                 }
@@ -2099,12 +2138,11 @@ void BulletBarn::update(float dt, GameWorld& ctx) {
 
             bool hit = false;
             for (const Hit& h : hits) {
-                const Vec2 normal = v2NormalizeSafe(v2Sub(posOld, h.point), v2Neg(b->dir));
                 if (h.type == 0 && h.obstacle) {
                     const MapObjectDef* def = mapDefFor(h.obstacle->type);
                     playBulletHitFx(ctx, def ? def->hitParticle : std::string(),
                                     def ? def->bulletSound : std::string(), h.point,
-                                    normal, b->layer);
+                                    h.normal, b->layer);
                     hit = h.collidable;
                 } else if (h.type == 1 && h.player) {
                     Player* player = h.player;
@@ -2126,16 +2164,42 @@ void BulletBarn::update(float dt, GameWorld& ctx) {
                             opts.filter = "muffled";
                             ctx.audio()->playGroup("player_bullet_hit", opts);
                         }
-                        const bool pan = player->wearingPan ||
+                        const bool steelskin =
                             std::any_of(player->perks.begin(), player->perks.end(),
                                         [](const ObjectData::Perk& p) {
                                             return p.type == "steelskin";
                                         });
-                        if (pan) {
+                        if (steelskin) {
                             playBulletHitFx(ctx, "barrelChip", "player_bullet_hit",
-                                            h.point, normal, player->layer);
+                                            h.point, h.normal, player->layer);
+                        }
+                        if (ctx.map().turkeyMode) {
+                            const Player* shooter = ctx.playerBarn().getPlayerById(shooterId);
+                            const bool turkey = shooter &&
+                                std::any_of(shooter->perks.begin(), shooter->perks.end(),
+                                            [](const ObjectData::Perk& p) {
+                                                return p.type == "turkey_shoot";
+                                            });
+                            if (turkey) {
+                                const Vec2 vel = v2Mul(
+                                    v2Rotate(Vec2(1.0f, 0.0f), rnd(0.0f, 2.0f * pi)),
+                                    rnd(3.0f, 6.0f));
+                                ctx.particleBarn().addParticle(
+                                    ctx.factory(), "turkeyFeathersHit", player->layer,
+                                    player->pos, vel);
+                            }
                         }
                     }
+                    hit = h.collidable;
+                } else if (h.type == 2 && h.player) {
+                    // Pan surface: barrelChip + the pan's own bullet group.
+                    const DefProvider* provider = getDefProvider();
+                    const GameObjRenderDef* panDef = provider ? provider->gameObject("pan") : nullptr;
+                    const std::string panSound = panDef && !panDef->soundBullet.empty()
+                        ? panDef->soundBullet
+                        : std::string("pan_bullet");
+                    playBulletHitFx(ctx, "barrelChip", panSound, h.point, h.normal,
+                                    h.player->layer);
                     hit = h.collidable;
                 }
                 if (hit) {

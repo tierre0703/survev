@@ -1256,3 +1256,140 @@ TEST(aim_line_stops_at_obstacle) {
     line.update(true, *p, world.map(), world.camera(), world.renderer(), &factory, true);
     CHECK(line.dots.size() > 4u);
 }
+
+// ---------------------------------------------------------------------------
+// Bullet collision normals + pan surface (bullet.ts playHitFx / pan branch).
+// ---------------------------------------------------------------------------
+TEST(collider_segment_hit_normals) {
+    Vec2 point, normal;
+    // AABB left face.
+    CHECK(intersectSegmentAabbHit(Vec2(-5.0f, 5.0f), Vec2(5.0f, 5.0f),
+                                  Vec2(0.0f, 0.0f), Vec2(10.0f, 10.0f), &point, &normal));
+    CHECK_NEAR(point.x, 0.0f, 1e-4f);
+    CHECK_NEAR(point.y, 5.0f, 1e-3f);
+    CHECK_NEAR(normal.x, -1.0f, 1e-4f);
+    CHECK_NEAR(normal.y, 0.0f, 1e-4f);
+
+    // Circle radial normal.
+    CHECK(intersectSegmentCircleHit(Vec2(-5.0f, 0.0f), Vec2(5.0f, 0.0f), Vec2(0.0f, 0.0f),
+                                    1.0f, &point, &normal));
+    CHECK_NEAR(point.x, -1.0f, 1e-4f);
+    CHECK_NEAR(point.y, 0.0f, 1e-4f);
+    CHECK_NEAR(normal.x, -1.0f, 1e-4f);
+    CHECK_NEAR(normal.y, 0.0f, 1e-4f);
+
+    // Segment/segment crossing (pan surface).
+    CHECK(intersectSegmentSegmentRes(Vec2(0.0f, 0.0f), Vec2(10.0f, 10.0f),
+                                     Vec2(0.0f, 10.0f), Vec2(10.0f, 0.0f), &point));
+    CHECK_NEAR(point.x, 5.0f, 1e-4f);
+    CHECK_NEAR(point.y, 5.0f, 1e-4f);
+
+    // transformSegment rotates around the origin and translates.
+    const math::Segment seg = math::transformSegment(
+        Vec2(1.0f, 0.0f), Vec2(0.0f, 1.0f), Vec2(10.0f, 20.0f), Vec2(0.0f, 1.0f));
+    CHECK_NEAR(seg.p0.x, 10.0f, 1e-4f);
+    CHECK_NEAR(seg.p0.y, 21.0f, 1e-4f);
+    CHECK_NEAR(seg.p1.x, 9.0f, 1e-4f);
+    CHECK_NEAR(seg.p1.y, 20.0f, 1e-4f);
+}
+
+namespace {
+struct BulletFxCounts {
+    int blood = 0;
+    int other = 0;
+};
+
+BulletFxCounts countBulletFx(GameWorld& world) {
+    BulletFxCounts counts;
+    for (auto* particle : world.particleBarn().particles) {
+        if (!particle || !particle->active) continue;
+        // Blood is parented to the victim container; pan/obstacle sparks are
+        // standalone particles.
+        if (particle->hasParent) {
+            counts.blood++;
+        } else {
+            counts.other++;
+        }
+    }
+    return counts;
+}
+} // namespace
+
+TEST(bullet_pan_blocks_and_impact_normal) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(basicMap());
+    Player* p = makeLocalPlayer(world, 7, "fists");
+    p->pos = Vec2(100.0f, 100.0f);
+    p->visualPos = p->pos;
+    p->visualPosOld = p->pos;
+    p->dir = Vec2(1.0f, 0.0f);
+    p->visualDir = p->dir;
+    p->visualDirOld = p->dir;
+    p->wearingPan = true;
+    world.setActivePlayer(nullptr);
+    world.setActivePlayerId(0);
+
+    // Back shot: the worn pan is behind the player, so it blocks first.
+    Bullet back = makeBullet(2, 90.0f, 99.0f);
+    back.dir = Vec2(1.0f, 0.0f);
+    world.bulletBarn().spawn(&factory, back);
+    BulletVisual* b = world.bulletBarn().bullets.back();
+    for (int i = 0; i < 8 && !b->collided; i++) {
+        world.bulletBarn().update(0.02f, world);
+    }
+    CHECK(b->collided);
+    CHECK(b->pos.x < 99.5f);
+    BulletFxCounts backFx = countBulletFx(world);
+    CHECK_EQ(backFx.blood, 0);
+    CHECK(backFx.other >= 1);
+
+    // Keep the same player, but clear the previous pan spark particles.
+    world.bulletBarn().clear();
+    for (auto* particle : world.particleBarn().particles) {
+        if (particle) particle->active = false;
+    }
+
+    // Front shot: the body is hit before the pan, so blood sprays.
+    Bullet front = makeBullet(2, 110.0f, 100.0f);
+    front.dir = Vec2(-1.0f, 0.0f);
+    world.bulletBarn().spawn(&factory, front);
+    b = world.bulletBarn().bullets.back();
+    for (int i = 0; i < 8 && !b->collided; i++) {
+        world.bulletBarn().update(0.02f, world);
+    }
+    CHECK(b->collided);
+    CHECK(b->pos.x > 100.0f);
+    BulletFxCounts frontFx = countBulletFx(world);
+    CHECK_EQ(frontFx.blood, 1);
+}
+
+TEST(bullet_hit_fx_spawns_exactly_one_particle) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    world.loadMap(basicMap());
+
+    Obstacle* wall = world.map().obstaclePool.m_alloc();
+    wall->__id = 5;
+    wall->__type = ObjectType_Obstacle;
+    wall->type = "barrel_01";
+    wall->active = true;
+    wall->layer = 0;
+    wall->height = 2.0f;
+    wall->collidable = true;
+    wall->pos = Vec2(110.0f, 100.0f);
+    wall->collider = Collider::createAabb(Vec2(109.0f, 95.0f), Vec2(111.0f, 105.0f));
+
+    Bullet b = makeBullet(2, 100.0f, 100.0f);
+    b.dir = Vec2(1.0f, 0.0f);
+    world.bulletBarn().spawn(&factory, b);
+    BulletVisual* visual = world.bulletBarn().bullets.back();
+    for (int i = 0; i < 8 && !visual->collided; i++) {
+        world.bulletBarn().update(0.02f, world);
+    }
+    CHECK(visual->collided);
+    BulletFxCounts fx = countBulletFx(world);
+    CHECK_EQ(fx.other, 1);
+}

@@ -189,8 +189,9 @@ inline bool colliderIntersectCircleRes(const Collider& col, const Vec2& pos, flo
 }
 
 // coldet.intersectSegmentCircle: nearest point on segment s0->s1 inside circle.
-inline bool intersectSegmentCircleRes(const Vec2& s0, const Vec2& s1, const Vec2& pos, float rad,
-                                      Vec2* pointOut) {
+// `normalOut` (optional) is the radial hit normal (coldet's collision.normal).
+inline bool intersectSegmentCircleHit(const Vec2& s0, const Vec2& s1, const Vec2& pos, float rad,
+                                      Vec2* pointOut, Vec2* normalOut) {
     Vec2 d = v2Sub(s1, s0);
     const float len = math::max(v2Length(d), 0.000001f);
     d = v2Div(d, len);
@@ -211,14 +212,22 @@ inline bool intersectSegmentCircleRes(const Vec2& s0, const Vec2& s1, const Vec2
     }
     if (t <= len) {
         *pointOut = v2Add(s0, v2Mul(d, t));
+        if (normalOut) {
+            *normalOut = v2NormalizeSafe(v2Sub(*pointOut, pos), Vec2(1.0f, 0.0f));
+        }
         return true;
     }
     return false;
 }
 
-// coldet.intersectSegmentAabb: nearest segment/AABB hit point.
-inline bool intersectSegmentAabbRes(const Vec2& s0, const Vec2& s1, const Vec2& min, const Vec2& max,
-                                    Vec2* pointOut) {
+inline bool intersectSegmentCircleRes(const Vec2& s0, const Vec2& s1, const Vec2& pos, float rad,
+                                      Vec2* pointOut) {
+    return intersectSegmentCircleHit(s0, s1, pos, rad, pointOut, nullptr);
+}
+
+// coldet.intersectSegmentAabb: nearest segment/AABB hit point and face normal.
+inline bool intersectSegmentAabbHit(const Vec2& s0, const Vec2& s1, const Vec2& min, const Vec2& max,
+                                    Vec2* pointOut, Vec2* normalOut) {
     float tmin = 0.0f;
     float tmax = 3.402823466e+38f;
     const float eps = 0.00001f;
@@ -259,16 +268,60 @@ inline bool intersectSegmentAabbRes(const Vec2& s0, const Vec2& s1, const Vec2& 
         return false;
     }
     *pointOut = v2Add(s0, v2Mul(d, tmin));
+    if (normalOut) {
+        // coldet's AABB normal: snap the point's offset from the centre to the
+        // dominant face (±1 on the hit axis, 0 on the other).
+        const Vec2 c = v2Add(min, v2Mul(v2Sub(max, min), 0.5f));
+        const Vec2 p0 = v2Sub(*pointOut, c);
+        const Vec2 d0 = v2Mul(v2Sub(min, max), 0.5f);
+        const float ax = std::fabs(d0.x) > 0.000001f ? (p0.x / std::fabs(d0.x)) * 1.001f : 0.0f;
+        const float ay = std::fabs(d0.y) > 0.000001f ? (p0.y / std::fabs(d0.y)) * 1.001f : 0.0f;
+        const Vec2 n(
+            ax < 0.0f ? std::ceil(ax) : std::floor(ax),
+            ay < 0.0f ? std::ceil(ay) : std::floor(ay));
+        *normalOut = v2NormalizeSafe(n, Vec2(1.0f, 0.0f));
+    }
     return true;
 }
 
-// collider.intersectSegment(col, a, b) -> nearest hit point.
+inline bool intersectSegmentAabbRes(const Vec2& s0, const Vec2& s1, const Vec2& min, const Vec2& max,
+                                    Vec2* pointOut) {
+    return intersectSegmentAabbHit(s0, s1, min, max, pointOut, nullptr);
+}
+
+// collider.intersectSegment(col, a, b) -> nearest hit point (and normal).
+inline bool colliderIntersectSegmentHit(const Collider& col, const Vec2& a, const Vec2& b,
+                                        Vec2* pointOut, Vec2* normalOut) {
+    if (col.type == Collider::Aabb) {
+        return intersectSegmentAabbHit(a, b, col.min, col.max, pointOut, normalOut);
+    }
+    return intersectSegmentCircleHit(a, b, col.pos, col.rad, pointOut, normalOut);
+}
+
 inline bool colliderIntersectSegmentRes(const Collider& col, const Vec2& a, const Vec2& b,
                                         Vec2* pointOut) {
-    if (col.type == Collider::Aabb) {
-        return intersectSegmentAabbRes(a, b, col.min, col.max, pointOut);
+    return colliderIntersectSegmentHit(col, a, b, pointOut, nullptr);
+}
+
+// coldet.signedAreaTri + intersectSegmentSegment: segment/segment crossing.
+inline float signedAreaTri(const Vec2& a, const Vec2& b, const Vec2& c) {
+    return (a.x - c.x) * (b.y - c.y) - (a.y - c.y) * (b.x - c.x);
+}
+
+inline bool intersectSegmentSegmentRes(const Vec2& a0, const Vec2& a1, const Vec2& b0, const Vec2& b1,
+                                       Vec2* pointOut) {
+    const float x1 = signedAreaTri(a0, a1, b1);
+    const float x2 = signedAreaTri(a0, a1, b0);
+    if (x1 != 0.0f && x2 != 0.0f && x1 * x2 < 0.0f) {
+        const float x3 = signedAreaTri(b0, b1, a0);
+        const float x4 = x3 + x2 - x1;
+        if (x3 * x4 < 0.0f) {
+            const float t = x3 / (x3 - x4);
+            *pointOut = v2Add(a0, v2Mul(v2Sub(a1, a0), t));
+            return true;
+        }
     }
-    return intersectSegmentCircleRes(a, b, col.pos, col.rad, pointOut);
+    return false;
 }
 
 inline Collider boundingAabb(const std::vector<Collider>& colliders) {

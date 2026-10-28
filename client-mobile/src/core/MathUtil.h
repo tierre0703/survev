@@ -95,6 +95,19 @@ inline float remap(float v, float a, float b, float x, float y) {
     return lerp(t, x, y);
 }
 
+// math.ts Segment: a p0/p1 pair used by the pan reflect surface.
+struct Segment {
+    Vec2 p0;
+    Vec2 p1;
+};
+
+// math.transformSegment: rotate the segment around the origin and translate it
+// to `pos` (pan surfaces follow the player position/aim direction).
+inline Segment transformSegment(const Vec2& p0, const Vec2& p1, const Vec2& pos, const Vec2& dir) {
+    const float ang = std::atan2(dir.y, dir.x);
+    return { v2Add(pos, v2Rotate(p0, ang)), v2Add(pos, v2Rotate(p1, ang)) };
+}
+
 inline bool eqAbs(float a, float b, float eps = kEpsilon) {
     return std::fabs(a - b) < eps;
 }
