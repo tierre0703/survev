@@ -61,8 +61,10 @@ node --experimental-transform-types tools/codegen_sound_defs.mjs
   - ✅ **Door error** (`door_error_01` on locked/one-way door contact)
   - ✅ **Dry fire** (`empty_fire_01` when firing an empty gun)
 - ✅ **Explosion sounds** (per-type grass/water surface selection in `GameWorld::applyUpdate`)
+- ✅ **Shot sounds** (def-driven `sound.shoot` with the faction/last/alt
+  precedence, `fallOff`/`ignoreDetune`, splinter/AP/high-velocity detune layers
+  and the local single-fire cycle/pull rechamber cue, `ShotBarn::update`)
 - ✅ **Bullet whiz** group (close bullets from other players, `BulletBarn::update`)
-- ✅ **Shot sounds** (weapon shoot with splinter/AP/high-velocity detune variants, `ShotBarn::update`)
 - ✅ **Reverb/filters**: `AudioManager::update()` computes cathedral reverb volume from `activeLayer`/`underground`; `AxmolAudioBackend::update()` creates a silent reverb carrier and calls `ax::AudioEngine::setReverbProperties` with EAX parameters.
 - **UI sounds** (ambient lab, pickup pings, notifications) are not wired — no UI
   system in the C++ port yet. Java can now play one-shot cues through

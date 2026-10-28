@@ -41,7 +41,9 @@ low-health danger pulse. The twenty-sixth adds the grey damage trail and the
 faction red/blue flair on the health bar. The twenty-seventh adds the web
 loadout detail panel (localized rarity, `Acquired:` source resolved through the
 source def name, lore or emote `Category:` line) and the per-tab NEW alert dots.
-**222 host tests pass, 0 fail.**
+The twenty-eighth adds the def-driven shot fire cues (faction/last/alt sound
+variants, fallOff/ignoreDetune, pullDelay shells and the cycle/pull rechamber).
+**225 host tests pass, 0 fail.**
 
 ---
 
@@ -84,7 +86,7 @@ source def name, lore or emote `Category:` line) and the per-tab NEW alert dots.
 | `client/src/objects/player.ts` + `animData.ts` → `objects/PlayerRender.cpp` + `Barns.*` | ✅ poses/animations faithful; faction patch, last-stand/bleed particles, same-group nametags, real action-sound keys, eased `m_bodyRad` and `maxVisualRadius` 3.75; minor easing nuances P2 |
 | `client/src/objects/bullet.ts` → `objects/Barns.*` (BulletBarn) | ✅ travelling tracer sprite, per-def palette/width/length, suppression, collision FX + hit groups, blood/pan sparks, stairs layer |
 | `client/src/objects/explosion.ts` → `objects/Barns.*` (ExplosionBarn) + `GameWorld.cpp` | ✅ generated burst/scatter/ripple/shake/lifetime/indoor suppression; physics particles |
-| `client/src/objects/shot.ts` → `objects/Barns.*` (ShotBarn) | ✅ fire sound, shot casings (`createCasingParticle`: shell offset/scale/forward/reverse) and reload-timing casings (`caseTiming == "reload"`, maxReload shells); last/alt/team variants and cycle/pull timing remain P2 |
+| `client/src/objects/shot.ts` → `objects/Barns.*` (ShotBarn) | ✅ def-driven fire sound with the web's team/last/alt precedence + `fallOff`/`ignoreDetune`/splinter volume, shot casings at the `pullDelay` mark (`createCasingParticle`: shell offset/scale/forward/reverse, alive + equipped check) and reload-timing casings (`caseTiming == "reload"`, maxReload shells), plus the local single-fire cycle/pull cue from the clip ammo |
 | `client/src/objects/obstacle.ts` → `objects/Barns.*` | ✅ door/button/destroy sounds, button useParticle + useImg/offImg swap, once-only destroy debris (def explodeParticle, 2-item pick) |
 | `client/src/objects/building.ts` → `objects/Barns.*` | 🔶 ceiling reveal/sounds/residue + destroy particles; puzzle FX remain partial (P2) |
 | `client/src/objects/loot.ts` → `objects/Barns.*` | ✅ rarity border/outer ring, inner-art scale/rotation/mirror, tint |
@@ -1013,6 +1015,41 @@ Done in the twenty-seventh P2 pass (2026-10-27):
   `unlock_new_account`), Happy Face showed "Common" + "Category: Faces", the
   outfit selection still round-trips (`select outfit=... accepted=true`) and
   `logcat -b crash` stayed empty.
+
+Done in the twenty-eighth P2 pass (2026-10-28):
+- Shot fire cues (`shot.ts` `m_update`), the last named gap on the ShotBarn
+  row:
+  - **Def-driven sound**: `codegen_render_defs.mjs` now emits the gun
+    `sound.shoot`/`shootLast`/`shootAlt`/`shootTeam` (FactionTeam Red=1/Blue=2),
+    `sound.cycle`/`pull`, `sound.fallOff`, `ignoreDetune`, `fireMode` and
+    `pullDelay` into `GameObjRenderDef`. The old `"<type>_01"` naming guess
+    stays only as a fallback for defs without a shoot key.
+  - **Web precedence**: team sound (from `Player.teamId`) → `shootLast` →
+    `shootAlt`, all played on the `activePlayer`/`otherPlayers` channel at the
+    shot position with the player's render layer, `fallOff`, and the splinter
+    volume 0.75. Saturated tracers now win over splinter unless the gun sets
+    `ignoreDetune` (the old code let splinter override).
+  - **pullDelay**: the shot's lifetime/shell delay is `pullDelay * 0.45`
+    (scout_elite/scout/garand-class guns) instead of always 0; the shell is
+    ejected at that mark using the shooter's current pos/dir/layer and only
+    while the shooter is alive and still holds the firing weapon
+    (`weaponDef.caseTiming == "shoot"`).
+  - **Cycle/pull**: the local player's single-fire gun with a `pullDelay` plays
+    `sound.cycle` when a round is left and `sound.pull` when the clip is
+    empty, through the existing `Player.cycleSoundInstance` (stopped before
+    the next cue, and on weapon switch). The clip ammo comes from
+    `ActivePlayerData.weapons[curWeapIdx]` via `GameWorld::setLocalAmmo`
+    (GameScene feeds it from the UpdateMsg callback), since the native client
+    has no predicted clip.
+- Host tests: `gun_fire_cue_defs` (garand last / bugle team+alt+ignoreDetune /
+  scout_elite cycle+pull+pullDelay / ak47 auto), `shot_fire_sound_variants`
+  (team, alt-over-team, last-shot, otherPlayers channel) and
+  `shot_pull_delay_cycle_and_pull` (0.45 s shell delay, cycle vs pull from the
+  clip, auto guns still eject immediately). 3824 assertions / 225 tests.
+- Device check (x86_64 emulator): APK installs and joins a quick-play match
+  with the ambient/music mixer running and an empty crash buffer; the
+  shot-specific cues are host-tested (the spawn loadout had no gun to fire
+  with).
 
 Remaining:
 - **Rendering:** exact normal/colour nuances (`M4_REMAINING.md` §1). `plane.ts`

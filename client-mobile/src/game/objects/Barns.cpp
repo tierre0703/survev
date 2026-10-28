@@ -2898,7 +2898,10 @@ void ShotBarn::addShot(const Bullet& data) {
     shot->apRounds = data.apRounds;
     shot->highVelocity = data.highVelocity;
     shot->ticker = 0.0f;
-    shot->pullDelay = 0.0f;
+    // shot.ts m_addShot: guns with a rechamber delay eject the shell and end
+    // the shot after pullDelay * 0.45.
+    const GameObjRenderDef* def = gameDefFor(shot->weaponType);
+    shot->pullDelay = def && def->hasPullDelay ? def->pullDelay * 0.45f : 0.0f;
 }
 
 void ShotBarn::update(float dt, GameWorld& ctx) {
@@ -2914,40 +2917,54 @@ void ShotBarn::update(float dt, GameWorld& ctx) {
             Player* player = ctx.playerBarn().getPlayerById(shot->playerId);
 
             // M6: per-shot weapon fire sound (port of shot.ts).
-            // Only play the shot sound if there's a weapon def to look up.
             if (def && ctx.audio()) {
-                // shot.ts: start with weaponDef.sound.shoot, then apply
-                // team/last/alt overrides.
-                // Since the C++ port doesn't have direct access to the full
-                // GameObjectDef sound tables, we derive the sound name from
-                // the weapon type — the sound defs use the type as a prefix
-                // (e.g. "ak47_01.mp3" is registered as sound "ak47_01").
-                // For now, we play via the 'players' channel group; the
-                // channel is resolved from the player's identity.
+                // shot.ts: start with weaponDef.sound.shoot, then apply the
+                // team/last/alt overrides in that order.
+                std::string shootSound = def->soundShoot;
+                if (shootSound.empty()) {
+                    // Defs without an explicit shoot key fall back to the old
+                    // "<type>_01" convention.
+                    shootSound = shot->weaponType + "_01";
+                }
+                const uint8_t teamId = player ? player->teamId : 0;
+                const std::string* teamSound = nullptr;
+                if (teamId == 1) {
+                    teamSound = &def->soundShootTeamRed;
+                } else if (teamId == 2) {
+                    teamSound = &def->soundShootTeamBlue;
+                }
+                if (teamSound && !teamSound->empty()) {
+                    shootSound = *teamSound;
+                }
+                if (shot->lastShot && !def->soundShootLast.empty()) {
+                    shootSound = def->soundShootLast;
+                }
+                if (shot->shotAlt && !def->soundShootAlt.empty()) {
+                    shootSound = def->soundShootAlt;
+                }
+
                 const std::string& channel =
                     shot->playerId == activePlayerId ? "activePlayer" : "otherPlayers";
 
-                // Compute detune (shot.ts splinter/trailSaturated/logic).
+                // shot.ts: saturated tracers win over splinter, unless the gun
+                // opts out with ignoreDetune.
                 float detune = 0.0f;
-                if (shot->trailSaturated && def->category == "gun") {
+                if (shot->trailSaturated && !def->ignoreDetune) {
                     detune = 300.0f;
-                }
-                if (shot->splinter) {
+                } else if (shot->splinter) {
                     detune = -300.0f;
                 }
-
-                // Build the sound name from the weapon type + "_01" suffix
-                // (the soundDefs convention: each weapon has a _01 shoot sound).
-                const std::string shootSound = shot->weaponType + "_01";
 
                 audio::PlaySoundOptions opts;
                 opts.channel = channel;
                 opts.hasSoundPos = true;
                 opts.soundPos = shot->pos;
                 opts.hasLayer = true;
-                opts.layer = shot->layer;
+                opts.layer = player ? player->layer : shot->layer;
                 opts.filter = "muffled";
+                opts.fallOff = def->soundFallOff;
                 opts.detune = detune;
+                opts.volumeScale = shot->splinter ? 0.75f : 1.0f;
                 ctx.audio()->playSound(shootSound, opts);
 
                 // Splinter second layer (shot.ts lines 152-167).
@@ -2977,6 +2994,21 @@ void ShotBarn::update(float dt, GameWorld& ctx) {
                     hvOpts.filter = ""; // high-velocity has no muffled filter
                     ctx.audio()->playSound(shootSound, hvOpts);
                 }
+
+                // shot.ts: the local player's single-fire guns rechamber after
+                // pullDelay — cycle when a round is left, pull when empty. The
+                // web keys off the predicted clip ammo; the native client uses
+                // the server's ActivePlayerData weapons (GameScene feeds it).
+                if (player && player->__id == activePlayerId && def->fireModeSingle && def->hasPullDelay) {
+                    const std::string& chamberSound = ctx.localAmmo() > 0 ? def->cycleSound
+                                                                          : def->pullSound;
+                    if (!chamberSound.empty()) {
+                        if (player->cycleSoundInstance != audio::kInvalidSound) {
+                            ctx.audio()->stopSound(player->cycleSoundInstance);
+                        }
+                        player->cycleSoundInstance = ctx.audio()->playSound(chamberSound);
+                    }
+                }
             }
 
             if (player) {
@@ -2987,19 +3019,22 @@ void ShotBarn::update(float dt, GameWorld& ctx) {
                     if (leftHand) player->gunRecoil[0] += def->recoil;
                     if (rightHand) player->gunRecoil[1] += def->recoil;
                 }
-
-                // shot.ts createCasingParticle: eject a shell on shoot for guns
-                // whose caseTiming is "shoot" (revolvers/pistols eject on
-                // reload, so casingOnReload skips this branch).
-                if (def && def->category == "gun" && !def->casingOnReload) {
-                    createCasingParticle(ctx.factory(), *def, -pi * 0.5f, 1.0f, player->pos, player->dir,
-                                         shot->layer, player->renderZOrd + 1, ctx.particleBarn());
-                }
             }
         }
 
         shot->ticker += dt;
         if (shot->ticker >= shot->pullDelay) {
+            // shot.ts createCasingParticle: eject a shell at the pullDelay mark
+            // for guns whose caseTiming is "shoot" (revolvers/pistols eject on
+            // reload, so casingOnReload skips this branch). The web uses the
+            // player's current net pos/dir/render layer at that moment.
+            if (def && def->category == "gun" && !def->casingOnReload) {
+                Player* shooter = ctx.playerBarn().getPlayerById(shot->playerId);
+                if (shooter && !shooter->dead && shooter->activeWeapon == shot->weaponType) {
+                    createCasingParticle(ctx.factory(), *def, -pi * 0.5f, 1.0f, shooter->pos, shooter->dir,
+                                         shooter->layer, shooter->renderZOrd + 1, ctx.particleBarn());
+                }
+            }
             shot->active = false;
         }
     }

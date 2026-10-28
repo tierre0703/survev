@@ -543,6 +543,14 @@ bool GameScene::init() {
         // enterWithJoin()) must not dereference a null world.
         if (_world) {
             _world->applyUpdate(msg);
+            // shot.ts cycle/pull: the local gun's clip ammo from the active
+            // player snapshot (the native client has no predicted clip).
+            const ActivePlayerData& apd = _game->activePlayerData();
+            int ammo = -1;
+            if (apd.curWeapIdx >= 0 && apd.curWeapIdx < static_cast<int>(apd.weapons.size())) {
+                ammo = apd.weapons[static_cast<size_t>(apd.curWeapIdx)].ammo;
+            }
+            _world->setLocalAmmo(ammo);
         }
     });
 

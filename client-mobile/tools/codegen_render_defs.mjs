@@ -20,6 +20,7 @@ function pathToFile(dir, rel) {
 const { MapObjectDefs, GameObjectDefs } = await import(pathToFile(sharedDir, "defs/register.ts"));
 const { DecalDefs } = await import(pathToFile(sharedDir, "defs/mapObjects/decalDefs.ts"));
 const { EmotesDefs, EmoteCategory } = await import(pathToFile(sharedDir, "defs/gameObjects/emoteDefs.ts"));
+const { FactionTeam } = await import(pathToFile(sharedDir, "gameConfig.ts"));
 const { PingDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/pingDefs.ts"));
 const { RoleDefs } = await import(pathToFile(sharedDir, "defs/gameObjects/roleDefs.ts"));
 const { MapDefs } = await import(pathToFile(sharedDir, "defs/mapDefs.ts"));
@@ -619,7 +620,13 @@ for (const type of gameTypes) {
         def.caseTiming === "reload" ? 1 : 0
     },${n(def.maxReload, 1)},${f(def.particle?.shellScale, 1)},${f(def.particle?.shellOffset, 0.375)},${
         f(def.particle?.shellOffsetY, 0)
-    },${f(def.particle?.shellForward, 0)},${def.particle?.shellReverse ? 1 : 0}},\n`;
+    },${f(def.particle?.shellForward, 0)},${def.particle?.shellReverse ? 1 : 0},${str(def.sound?.shoot)},${
+        str(def.sound?.shootLast)
+    },${str(def.sound?.shootAlt)},${str(def.sound?.shootTeam?.[FactionTeam.Red])},${
+        str(def.sound?.shootTeam?.[FactionTeam.Blue])
+    },${str(def.sound?.cycle)},${str(def.sound?.pull)},${f(def.sound?.fallOff, 0)},${def.ignoreDetune ? 1 : 0},${
+        def.fireMode === "single" ? 1 : 0
+    },${f(def.pullDelay, 0)},${def.pullDelay !== undefined ? 1 : 0}},\n`;
     if (
         !def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack"
         && !def.frozenSprites
@@ -1189,7 +1196,12 @@ struct RawGameObj { const char* type; const char* category; RawImg img; int hasI
     int hasTrail; float trailMaxLength, trailWidth, trailAlpha; unsigned trailTint;
     float throwSpeed, spinVel, spinDrag; int randomizeSpinDir, alwaysRenderOntop; float projectileRad;
     const char* casing; int casingOnReload; int maxReload;
-    float shellScale, shellOffset, shellOffsetY, shellForward; int shellReverse; };
+    float shellScale, shellOffset, shellOffsetY, shellForward; int shellReverse;
+    const char* soundShoot; const char* soundShootLast; const char* soundShootAlt;
+    const char* soundShootTeamRed; const char* soundShootTeamBlue;
+    const char* cycleSound; const char* pullSound;
+    float soundFallOff; int ignoreDetune; int fireModeSingle;
+    float pullDelay; int hasPullDelay; };
 struct RawRange { float min; float max; int isConstant; };
 struct RawParticle {
     const char* name; const char* const* images; int imageCount; int zOrd;
@@ -1593,6 +1605,18 @@ public:
             d.shellOffsetY = r.shellOffsetY;
             d.shellForward = r.shellForward;
             d.shellReverse = r.shellReverse != 0;
+            d.soundShoot = r.soundShoot ? r.soundShoot : "";
+            d.soundShootLast = r.soundShootLast ? r.soundShootLast : "";
+            d.soundShootAlt = r.soundShootAlt ? r.soundShootAlt : "";
+            d.soundShootTeamRed = r.soundShootTeamRed ? r.soundShootTeamRed : "";
+            d.soundShootTeamBlue = r.soundShootTeamBlue ? r.soundShootTeamBlue : "";
+            d.cycleSound = r.cycleSound ? r.cycleSound : "";
+            d.pullSound = r.pullSound ? r.pullSound : "";
+            d.soundFallOff = r.soundFallOff;
+            d.ignoreDetune = r.ignoreDetune != 0;
+            d.fireModeSingle = r.fireModeSingle != 0;
+            d.pullDelay = r.pullDelay;
+            d.hasPullDelay = r.hasPullDelay != 0;
             _gameObjs[d.type] = d;
         }
 ${playerEntries}${poseEntries}

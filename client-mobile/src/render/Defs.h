@@ -533,6 +533,22 @@ struct GameObjRenderDef {
     float shellOffsetY = 0.0f;
     float shellForward = 0.0f;
     bool shellReverse = false;
+    // shot.ts m_update: the gun's fire cues. `soundShoot` replaces the old
+    // "<type>_01" naming convention; the faction/last/alt overrides follow the
+    // web's precedence, and `cycleSound`/`pullSound` play for the local player's
+    // single-fire guns with a `pullDelay` (scout/garand/... rechamber).
+    std::string soundShoot;
+    std::string soundShootLast;
+    std::string soundShootAlt;
+    std::string soundShootTeamRed;  // FactionTeam.Red
+    std::string soundShootTeamBlue; // FactionTeam.Blue
+    std::string cycleSound;
+    std::string pullSound;
+    float soundFallOff = 0.0f;
+    bool ignoreDetune = false;
+    bool fireModeSingle = false;
+    float pullDelay = 0.0f;
+    bool hasPullDelay = false;
 
     // Map indicator (item/role minimap marker) fields.
     std::string mapIndicatorSprite;

@@ -169,6 +169,11 @@ public:
     // Frame delta for the current update (obstacle.ts skin position interp).
     float dt() const { return _dt; }
 
+    // Active player's current clip ammo (UpdateMsg ActivePlayerData.weapons);
+    // shot.ts picks the gun's cycle vs pull sound from it. -1 = unknown.
+    void setLocalAmmo(int ammo) { _localAmmo = ammo; }
+    int localAmmo() const { return _localAmmo; }
+
     // M5/touch.ts: aim-line visibility (device.touch && touchingAim && touchAimLine)
     // is owned by the scene, which owns the Touch state.
     void setAimLineState(bool touchingAim, bool aimLineEnabled) {
@@ -223,6 +228,8 @@ public:
     bool _touchAimLine = true;
     bool _aimLineVisible = true;
     bool _mobile = true;
+    // ActivePlayerData.weapons[curWeapIdx].ammo (shot.ts cycle/pull cue).
+    int _localAmmo = -1;
     // Node GameWorld::attachTo() filled; holds the camera-transformed content
     // container (terrain + layers + gas overlay).
     pix::Node* _root = nullptr;

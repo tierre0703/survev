@@ -8,6 +8,8 @@
 #include "game/AimLine.h"
 #include "game/objects/Barns.h"
 #include "game/TouchInput.h"
+#include "audio/AudioManager.h"
+#include "audio/GeneratedSoundDefs.h"
 #include "net/Messages.h"
 #include "render/Defs.h"
 #include "render/GeneratedDefs.h"
@@ -34,6 +36,78 @@ MapMsg basicMap() {
     msg.grassInset = 2.0f;
     return msg;
 }
+
+// Records the sound ids the ShotBarn asks for (id = sound + channel, like
+// test_audio's backend) so the fire-cue variants can be asserted.
+class ShotAudioBackend : public audio::AudioBackend {
+public:
+    std::vector<std::string> played;
+    std::vector<audio::SoundHandle> stopped;
+    bool muted = false;
+    audio::SoundHandle nextHandle = 1;
+
+    bool load(const std::string&, const std::string&) override { return true; }
+    bool isLoaded(const std::string&) const override { return true; }
+    audio::SoundHandle play(const std::string& id, const audio::PlayOptions&) override {
+        played.push_back(id);
+        return nextHandle++;
+    }
+    void stop(audio::SoundHandle handle) override { stopped.push_back(handle); }
+    void stopAll() override { stopped.clear(); }
+    void setVolume(audio::SoundHandle, float) override {}
+    float getVolume(audio::SoundHandle) const override { return 1.0f; }
+    void setPan(audio::SoundHandle, float) override {}
+    void setMute(bool mute) override { muted = mute; }
+    bool isPlaying(audio::SoundHandle) const override { return true; }
+};
+
+int countPlayed(const ShotAudioBackend& backend, const std::string& id) {
+    int n = 0;
+    for (const auto& played : backend.played) {
+        if (played == id) {
+            ++n;
+        }
+    }
+    return n;
+}
+
+// A GameWorld with a local player (id 7) and a recording audio manager.
+struct ShotFixture {
+    pix::NullPixiFactory factory;
+    ShotAudioBackend backend;
+    audio::AudioManager manager{&backend};
+    GameWorld world{&factory, false};
+    Player* player = nullptr;
+
+    explicit ShotFixture(uint8_t teamId) {
+        installGeneratedDefs();
+        audio::installGeneratedSoundDefs();
+        manager.preloadSounds();
+        world.setAudio(&manager, nullptr);
+        world.loadMap(basicMap());
+        player = world.playerBarn().playerPool.m_alloc();
+        player->__id = 7;
+        player->active = true;
+        player->teamId = teamId;
+        player->container = factory.createContainer();
+        world.setActivePlayerId(7);
+        world.setActivePlayer(player);
+    }
+
+    ShotObj* fire(const std::string& weapon, bool lastShot = false, bool alt = false) {
+        player->activeWeapon = weapon;
+        Bullet bullet;
+        bullet.playerId = 7;
+        bullet.shotFx = true;
+        bullet.shotSourceType = weapon;
+        bullet.lastShot = lastShot;
+        bullet.shotAlt = alt;
+        bullet.pos = Vec2(10.0f, 10.0f);
+        world.shotBarn().addShot(bullet);
+        world.shotBarn().update(0.01f, world);
+        return world.shotBarn().shots.back();
+    }
+};
 
 } // namespace
 
@@ -436,10 +510,136 @@ TEST(flare_bullet_visual) {
 }
 
 // ---------------------------------------------------------------------------
+// Shot: gun fire cues (shot.ts sound.shoot/shootLast/shootAlt/shootTeam,
+// ignoreDetune, cycle/pull) come from the generated gun defs.
+// ---------------------------------------------------------------------------
+TEST(gun_fire_cue_defs) {
+    installGeneratedDefs();
+    const DefProvider* provider = getDefProvider();
+    CHECK(provider != nullptr);
+    if (!provider) {
+        return;
+    }
+    const GameObjRenderDef* garand = provider->gameObject("garand");
+    CHECK(garand != nullptr);
+    if (garand) {
+        CHECK_EQ(garand->soundShoot, std::string("garand_01"));
+        CHECK_EQ(garand->soundShootLast, std::string("garand_02"));
+        CHECK(garand->soundShootAlt.empty());
+        CHECK(garand->soundShootTeamRed.empty());
+        CHECK(garand->fireModeSingle);
+    }
+    const GameObjRenderDef* bugle = provider->gameObject("bugle");
+    CHECK(bugle != nullptr);
+    if (bugle) {
+        CHECK_EQ(bugle->soundShootAlt, std::string("bugle_03"));
+        CHECK_EQ(bugle->soundShootTeamRed, std::string("bugle_01"));
+        CHECK_EQ(bugle->soundShootTeamBlue, std::string("bugle_02"));
+        // gameConfig.ts FactionTeam.Red = 1 / Blue = 2.
+        CHECK(bugle->ignoreDetune);
+    }
+    const GameObjRenderDef* scout = provider->gameObject("scout_elite");
+    CHECK(scout != nullptr);
+    if (scout) {
+        CHECK_EQ(scout->cycleSound, std::string("scout_cycle_01"));
+        CHECK_EQ(scout->pullSound, std::string("scout_pull_01"));
+        CHECK(scout->hasPullDelay);
+        CHECK_NEAR(scout->pullDelay, 1.0f, 1e-5f);
+        CHECK(scout->fireModeSingle);
+    }
+    const GameObjRenderDef* ak = provider->gameObject("ak47");
+    CHECK(ak != nullptr);
+    if (ak) {
+        CHECK(!ak->fireModeSingle);
+        CHECK(!ak->hasPullDelay);
+    }
+}
+
+TEST(shot_fire_sound_variants) {
+    // Faction gun: the team sound replaces sound.shoot.
+    {
+        ShotFixture fx(1);
+        fx.fire("bugle");
+        CHECK_EQ(countPlayed(fx.backend, "bugle_01activePlayer"), 1);
+        CHECK_EQ(countPlayed(fx.backend, "bugle_01otherPlayers"), 0);
+    }
+    // ... and shootAlt wins over the faction sound.
+    {
+        ShotFixture fx(2);
+        fx.fire("bugle", false, true);
+        CHECK_EQ(countPlayed(fx.backend, "bugle_01activePlayer"), 0);
+        CHECK_EQ(countPlayed(fx.backend, "bugle_03activePlayer"), 1);
+    }
+    // Last shot replaces sound.shoot (garand_02).
+    {
+        ShotFixture fx(0);
+        fx.fire("garand", true);
+        CHECK_EQ(countPlayed(fx.backend, "garand_02activePlayer"), 1);
+        CHECK_EQ(countPlayed(fx.backend, "garand_01activePlayer"), 0);
+    }
+    // Other players use the otherPlayers channel; the shot position drives the
+    // distance attenuation (the sound still plays at this range).
+    {
+        pix::NullPixiFactory factory;
+        GameWorld world(&factory, false);
+        ShotAudioBackend backend;
+        audio::AudioManager manager(&backend);
+        audio::installGeneratedSoundDefs();
+        manager.preloadSounds();
+        world.setAudio(&manager, nullptr);
+        world.loadMap(basicMap());
+        Bullet bullet;
+        bullet.playerId = 99;
+        bullet.shotFx = true;
+        bullet.shotSourceType = "ak47";
+        bullet.pos = Vec2(10.0f, 10.0f);
+        world.shotBarn().addShot(bullet);
+        world.shotBarn().update(0.01f, world);
+        CHECK_EQ(countPlayed(backend, "ak47_01otherPlayers"), 1);
+    }
+}
+
+// shot.ts pullDelay: the shell is ejected after pullDelay * 0.45 (scout_elite
+// pullDelay 1 -> 0.45 s) and the local single-fire gun plays cycle when a round
+// is left, pull when the clip is empty.
+TEST(shot_pull_delay_cycle_and_pull) {
+    {
+        ShotFixture fx(0);
+        fx.world.setLocalAmmo(3);
+        ShotObj* shot = fx.fire("scout_elite");
+        CHECK_NEAR(shot->pullDelay, 0.45f, 1e-5f);
+        CHECK_EQ(countPlayed(fx.backend, "scout_cycle_01activePlayer"), 1);
+        CHECK_EQ(countPlayed(fx.backend, "scout_pull_01activePlayer"), 0);
+        // No casing on the firing frame: it waits for the rechamber.
+        CHECK(fx.world.particleBarn().particles.empty());
+
+        // After the pull delay the casing is ejected with the player's state.
+        fx.world.shotBarn().update(0.45f, fx.world);
+        CHECK(!shot->active);
+        CHECK(!fx.world.particleBarn().particles.empty());
+    }
+    {
+        ShotFixture fx(0);
+        fx.world.setLocalAmmo(0);
+        fx.fire("scout_elite");
+        CHECK_EQ(countPlayed(fx.backend, "scout_pull_01activePlayer"), 1);
+        CHECK_EQ(countPlayed(fx.backend, "scout_cycle_01activePlayer"), 0);
+    }
+    // Automatic guns have no rechamber cue and eject on the firing frame.
+    {
+        ShotFixture fx(0);
+        fx.world.setLocalAmmo(30);
+        ShotObj* shot = fx.fire("ak47");
+        CHECK_NEAR(shot->pullDelay, 0.0f, 1e-6f);
+        CHECK(!fx.world.particleBarn().particles.empty());
+        CHECK_EQ(fx.backend.played.size(), 1u);
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Shot: a shotFx bullet drives the weapon recoil on the owner's hands.
 // ---------------------------------------------------------------------------
 TEST(shot_handles_recoil_and_dual) {
-    installGeneratedDefs();
     pix::NullPixiFactory factory;
     GameWorld world(&factory, false);
     world.loadMap(basicMap());
@@ -447,6 +647,8 @@ TEST(shot_handles_recoil_and_dual) {
     Player* p = world.playerBarn().playerPool.m_alloc();
     p->__id = 42;
     p->active = true;
+    // shot.ts only ejects the shell while this weapon is still equipped.
+    p->activeWeapon = "m9_dual";
     p->container = factory.createContainer();
     world.playerBarn().playerPool.m_getPool();
 
