@@ -100,6 +100,11 @@ public:
     static constexpr float kSettingsSize = 44.0f;
     // Info bar under the minimap (#ui-map-info + alive/kill counters).
     static constexpr float kInfoBarTop = kMinimapTop + kMinimapSize + 4.0f;
+    // Squad rows sit to the right of the minimap, top-aligned with it.
+    static constexpr float kSquadBarWidth = 120.0f;
+    static constexpr float kSquadRowWidth = kSquadBarWidth + 8.0f;
+    static constexpr float kSquadRowHeight = 28.0f;
+    static constexpr float kSquadRowPitch = 30.0f;
     static constexpr float kBoxHeight = 34.0f;
     static constexpr float kGasBoxWidth = 82.0f;
     static constexpr float kCountBoxWidth = 56.0f;
@@ -363,6 +368,9 @@ public:
     const pix::Graphics* squadColorDot(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].colorDot : nullptr;
     }
+    const pix::Graphics* squadRowBg(int idx) const {
+        return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].bg : nullptr;
+    }
     // ui.ts team arrows: off-screen teammate indicators (screen-edge position).
     // `_teamArrows[slot]` is the rotated container (indicator.svg + colour dot).
     const pix::Container* teamArrow(int idx) const {
@@ -597,6 +605,7 @@ private:
 
     // Squad bars (left side, team modes).
     struct SquadRow {
+        pix::Graphics* bg = nullptr;
         pix::Text* name = nullptr;
         pix::Graphics* barBg = nullptr;
         pix::Graphics* barFill = nullptr;

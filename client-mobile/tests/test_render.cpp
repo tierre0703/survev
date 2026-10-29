@@ -2780,6 +2780,20 @@ TEST(hud_gear_levels_and_squad_polish) {
     hud.setSquadState(squad);
     CHECK(hud.squadColorDot(0) != nullptr);
     CHECK(static_cast<const pix::NullGraphics*>(hud.squadColorDot(0))->visible);
+    // Rows sit right of the minimap and carry a translucent backing sized to
+    // the bar. The group dot is above the bar's left end (not its right end).
+    const auto* rowBg = static_cast<const pix::NullGraphics*>(hud.squadRowBg(0));
+    CHECK(rowBg != nullptr);
+    CHECK(rowBg->visible);
+    CHECK_EQ(rowBg->commands.size(), static_cast<size_t>(3));
+    CHECK_NEAR(rowBg->commands[1].c, Hud::kSquadRowWidth, 1e-4f);
+    CHECK_NEAR(rowBg->commands[1].d, Hud::kSquadRowHeight, 1e-4f);
+    CHECK(rowBg->commands[0].alpha > 0.0f);
+    const float squadX = Hud::kMinimapLeft + Hud::kMinimapSize + 8.0f;
+    CHECK_NEAR(rowBg->commands[1].a, (squadX - 4.0f) - 640.0f, 1e-4f);
+    const auto* dot = static_cast<const pix::NullGraphics*>(hud.squadColorDot(0));
+    const float dotRightEdge = dot->commands[1].a + dot->commands[1].c;
+    CHECK(dotRightEdge < (squadX + Hud::kSquadBarWidth) - 640.0f);
     CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(0))->text, std::string("Down"));
     CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(1))->text, std::string("Dead"));
     // Dead/disconnected names fade to 30% (ui.ts updateTeam).

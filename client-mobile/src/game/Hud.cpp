@@ -699,39 +699,55 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
             Rect{X(slotX - 15.0f), Y(hudY - 4.0f), 30.0f, 30.0f};
     }
 
-    // Squad bars: under the scope strip on the left (team modes).
+    // Squad bars: to the right of the minimap, top-aligned with it (team
+    // modes). Each row gets a translucent backing sized to the health bar,
+    // and the group-colour dot sits above the bar's left end so it never
+    // covers the bar's right end.
+    const float squadX = kMinimapLeft + kMinimapSize + 8.0f;
     for (int i = 0; i < 4; ++i) {
         SquadRow& row = _squad[static_cast<size_t>(i)];
-        const float top = 460.0f + static_cast<float>(i) * 26.0f;
+        const float top = kMinimapTop + static_cast<float>(i) * kSquadRowPitch;
+        row.bg = _factory->createGraphics();
+        row.bg->beginFill(0x000000, 0.35f);
+        row.bg->drawRect(X(squadX - 4.0f), yTop(top + kSquadRowHeight), kSquadRowWidth,
+                         kSquadRowHeight);
+        row.bg->endFill();
+        row.bg->setVisible(false);
+        _root->addChild(row.bg);
+
         row.name = _factory->createText();
         row.name->setFontSize(12.0f);
         row.name->setColor(0xffffff, 0x000000, 1.0f, false);
         row.name->setAnchor(0.0f, 1.0f);
-        row.name->setPosition(X(mmX), yTop(top));
+        row.name->setPosition(X(squadX + 14.0f), yTop(top + 2.0f));
         row.name->setVisible(false);
         _root->addChild(row.name);
-        row.barBg = _factory->createGraphics();
-        row.barBg->beginFill(0x000000, 0.4f);
-        row.barBg->drawRect(X(mmX), yTop(top + 20.0f), 120.0f, 8.0f);
-        row.barBg->endFill();
-        row.barBg->setVisible(false);
-        _root->addChild(row.barBg);
-        row.barFill = _factory->createGraphics();
-        row.barFill->setPosition(X(mmX), yTop(top + 20.0f));
-        row.barFill->setVisible(false);
-        _root->addChild(row.barFill);
+
         row.status = _factory->createText();
         row.status->setFontSize(11.0f);
         row.status->setColor(0xffd060, 0x000000, 1.0f, false);
-        row.status->setAnchor(0.0f, 1.0f);
-        row.status->setPosition(X(mmX + 124.0f), yTop(top));
+        row.status->setAnchor(1.0f, 1.0f);
+        row.status->setPosition(X(squadX + kSquadBarWidth + 2.0f), yTop(top + 2.0f));
         row.status->setVisible(false);
         _root->addChild(row.status);
+
+        row.barBg = _factory->createGraphics();
+        row.barBg->beginFill(0x000000, 0.5f);
+        row.barBg->drawRect(X(squadX), yTop(top + 20.0f + 8.0f), kSquadBarWidth, 8.0f);
+        row.barBg->endFill();
+        row.barBg->setVisible(false);
+        _root->addChild(row.barBg);
+
+        row.barFill = _factory->createGraphics();
+        row.barFill->setPosition(X(squadX), yTop(top + 20.0f + 8.0f));
+        row.barFill->setVisible(false);
+        _root->addChild(row.barFill);
+
         // ui-team-member-color: fixed group color for this squad slot
         // (GameConfig.groupColors: yellow, magenta, cyan, orange).
         row.colorDot = _factory->createGraphics();
         row.colorDot->beginFill(kGroupColors[i], 1.0f);
-        row.colorDot->drawCircle(X(mmX + 150.0f), yTop(top + 12.0f), 6.0f);
+        row.colorDot->drawCircle(X(squadX + 6.0f), yTop(top + 7.0f), 4.5f);
         row.colorDot->endFill();
         row.colorDot->setVisible(false);
         _root->addChild(row.colorDot);
@@ -1239,6 +1255,9 @@ void Hud::setVisible(bool visible) {
     for (size_t i = 0; i < _squad.size(); ++i) {
         const bool showRow = visible && i < _squadState.size();
         SquadRow& row = _squad[i];
+        if (row.bg) {
+            row.bg->setVisible(showRow);
+        }
         if (row.name) {
             row.name->setVisible(showRow);
         }
@@ -1521,6 +1540,9 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
     for (size_t i = 0; i < _squad.size(); ++i) {
         SquadRow& row = _squad[i];
         if (i >= members.size()) {
+            if (row.bg) {
+                row.bg->setVisible(false);
+            }
             row.name->setVisible(false);
             row.barBg->setVisible(false);
             row.barFill->setVisible(false);
@@ -1562,7 +1584,7 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
         const uint32_t color = squadHealthColor(m.health, m.dead, m.downed);
         const float fillWidth = m.dead
             ? 0.0f
-            : std::max(1.0f, 120.0f * std::clamp(m.health, 0.0f, 100.0f) / 100.0f);
+            : std::max(1.0f, kSquadBarWidth * std::clamp(m.health, 0.0f, 100.0f) / 100.0f);
         row.barFill->clear();
         if (fillWidth > 0.0f) {
             row.barFill->beginFill(color, m.health <= 25.0f && !m.dead ? 0.8f : 1.0f);
@@ -1570,6 +1592,9 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
             row.barFill->endFill();
         }
         const bool showRow = _visible;
+        if (row.bg) {
+            row.bg->setVisible(showRow);
+        }
         row.name->setVisible(showRow);
         row.barBg->setVisible(showRow);
         row.barFill->setVisible(showRow && fillWidth > 0.0f);

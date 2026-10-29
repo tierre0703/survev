@@ -1541,13 +1541,16 @@ Ported the `ui.ts` team health display (previously only in the unused
   each frame by `GameScene` from `getTeamPlayerIds()` (sorted ascending, like
   `groupInfo.playerIds`), `groupStatus()` (health/DC) and `allPlayerStatus()`
   (dead/downed).
-- `Hud::setSquadState` draws up to four rows at the top-left: name, a 120px
-  colour-coded bar and a `DC` > `Dead` > `Down` status label. Rows are hidden in
-  solo or while the HUD is hidden, and repaint only when the
-  name/health/status key changes. The bar uses the exact `ui.ts
-  updateHealthBar` palette (grey 100, white 75..99, darkpink->lightpink below
-  75, red downed, 1px minimum for living members) and the `<=25` black/red
-  danger pulse; see the twenty-fifth P2 pass in `REMAININGS.md`.
+- `Hud::setSquadState` draws up to four rows to the right of the minimap,
+  top-aligned with it: a translucent row backing (`128x28`, sized around the
+  120px bar), name, a 120px colour-coded bar and a `DC` > `Dead` > `Down`
+  status label. The group-colour dot sits above the bar's left end, so it
+  never covers the bar's right end. Rows are hidden in solo or while the HUD
+  is hidden, and repaint only when the name/health/status key changes. The bar
+  uses the exact `ui.ts updateHealthBar` palette (grey 100, white 75..99,
+  darkpink->lightpink below 75, red downed, 1px minimum for living members)
+  and the `<=25` black/red danger pulse; see the twenty-fifth P2 pass in
+  `REMAININGS.md`.
 - The layout reuses the HUD's design-space `X/Y` helpers (squad rows are built
   after the static layout pass).
 
@@ -1583,7 +1586,7 @@ Ported the `ui.ts` team health display (previously only in the unused
 The live HUD now draws the `ui2.ts` gear/perk slots: `GameScene` resolves the
 active player's `helmet`/`chest`/`backpack` and each perk type through
 `DefProvider::gameObject(type)->img.sprite`, then `Hud::setGearState` shows up to
-seven 26px icons along the top-left (squad bars start below them). The icon
+seven 26px icons along the top-left (squad bars sit right of the minimap). The icon
 frames are the codegen'd gear/perk frames (`loot-helmet-*`, `loot-pack-*`,
 `loot-perk-*`). Host test: `hud_gear_and_perk_icons`.
 
