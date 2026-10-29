@@ -282,6 +282,14 @@ adb shell am start -n com.survev.mobile/dev.axmol.app.AppActivity
   backpack, chest, helmet, role visor, hip pan, melee, gun/magazine and throwable
   sprites. Equipment ordering, dual weapons, downed/revive hiding, ghillie
   colors, perk armor, player scale, stairs sorting and upright names are handled.
+- **Player-local offsets are PIXI y-down.** `animData.ts`/`player.ts` keep bone
+  poses and gun/mag/left-hand/held-item offsets in PIXI's y-down local frame;
+  the native player body is y-up. `PlayerRender` now converts every y offset
+  before use (rotations stay numeric because PIXI and axmol are both
+  clockwise-positive), which fixes the left/right hands being swapped across
+  the body axis. The Java menu preview uses the y-down convention directly and
+  applies `opponentDisplay.ts`'s `dir = (0,-1)` body rotation, so it faces down
+  like the web. Covered by `player_hand_side_matches_web`.
 - `codegen_render_defs.mjs` imports `client/src/animData.ts` and emits the idle
   poses and animation keyframes/easing, plus item skin/held-image definitions.
   Melee attack/deploy/inspect, cooking/throwing, crawl and revive animations are

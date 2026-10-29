@@ -57,6 +57,13 @@ public class CharacterPreviewView extends View {
     private static final float CENTER = 256.0f;
     /** animData.ts / build-character-preview.mjs: one world unit = 4 px. */
     private static final float WORLD_SCALE = 4.0f;
+    /**
+     * opponentDisplay.ts spawns the preview player with `dir = (0, -1)`, so
+     * player.ts `bodyContainer.rotation = -atan2(dir.y, dir.x)` = +PI/2:
+     * the avatar faces down. The rasterised layers are authored facing +x, so
+     * the whole body/hand/melee group is rotated clockwise by 90 degrees.
+     */
+    private static final float BODY_ROT_DEG = 90.0f;
     /** The character only occupies the middle of the 512 canvas. */
     private static final float ZOOM = 1.9f;
 
@@ -557,16 +564,25 @@ public class CharacterPreviewView extends View {
             float cx = boneOffsetX(hand) + mMeleeOffset[0];
             float cy = boneOffsetY(hand) + mMeleeOffset[1];
             float canvasX = cx * WORLD_SCALE;
-            float canvasY = -cy * WORLD_SCALE;
+            // animData.ts/player.ts local coordinates are PIXI y-down, and the
+            // Java canvas is also y-down, so no sign flip here.
+            float canvasY = cy * WORLD_SCALE;
             minX = Math.min(minX, canvasX + mMeleeBox[0]);
             minY = Math.min(minY, canvasY + mMeleeBox[1]);
             maxX = Math.max(maxX, canvasX + mMeleeBox[2]);
             maxY = Math.max(maxY, canvasY + mMeleeBox[3]);
         }
-        mFrameCx = (minX + maxX) * 0.5f;
-        mFrameCy = (minY + maxY) * 0.5f;
-        mFrameW = Math.max(maxX - minX, 1.0f);
-        mFrameH = Math.max(maxY - minY, 1.0f);
+        // onDraw rotates the character +90 degrees clockwise (faces down).
+        // Rotate the measured bounds with it so the framing/scale still centre
+        // the avatar and a long melee is not clipped.
+        float rMinX = -maxY;
+        float rMaxX = -minY;
+        float rMinY = minX;
+        float rMaxY = maxX;
+        mFrameCx = (rMinX + rMaxX) * 0.5f;
+        mFrameCy = (rMinY + rMaxY) * 0.5f;
+        mFrameW = Math.max(rMaxX - rMinX, 1.0f);
+        mFrameH = Math.max(rMaxY - rMinY, 1.0f);
     }
 
     /**
@@ -623,6 +639,7 @@ public class CharacterPreviewView extends View {
         canvas.clipRect(0, 0, getWidth(), getHeight());
         canvas.translate(dx, dy);
         canvas.scale(scale, scale);
+        canvas.rotate(BODY_ROT_DEG);
         canvas.drawBitmap(mBody, -CENTER, -CENTER, mPaint);
         // player.ts bodyContainer order: left hand, then the right hand (which
         // carries the melee sprite, below or above the hand per renderOnHand).
@@ -639,9 +656,10 @@ public class CharacterPreviewView extends View {
     private void drawHand(Canvas canvas, Bitmap hand, Bone bone, Bitmap melee) {
         if (hand == null && melee == null) return;
         canvas.save();
-        // world +y is canvas -y.
-        canvas.translate(boneOffsetX(bone) * WORLD_SCALE, -boneOffsetY(bone) * WORLD_SCALE);
-        canvas.rotate((float) Math.toDegrees(-bone.rot));
+        // animData.ts/player.ts local coordinates are PIXI y-down, and the Java
+        // canvas is y-down too: use the offsets and rotations verbatim.
+        canvas.translate(boneOffsetX(bone) * WORLD_SCALE, boneOffsetY(bone) * WORLD_SCALE);
+        canvas.rotate((float) Math.toDegrees(bone.rot));
         if (melee != null && !mRenderOnHand) drawMelee(canvas);
         if (hand != null) canvas.drawBitmap(hand, -CENTER, -CENTER, mPaint);
         if (melee != null && mRenderOnHand) drawMelee(canvas);
@@ -652,8 +670,8 @@ public class CharacterPreviewView extends View {
         Bone bone = mBones[BONE_MELEE_R];
         meleeOffset(bone);
         canvas.save();
-        canvas.translate(mMeleeOffset[0] * WORLD_SCALE, -mMeleeOffset[1] * WORLD_SCALE);
-        canvas.rotate((float) Math.toDegrees(-bone.rot));
+        canvas.translate(mMeleeOffset[0] * WORLD_SCALE, mMeleeOffset[1] * WORLD_SCALE);
+        canvas.rotate((float) Math.toDegrees(bone.rot));
         canvas.drawBitmap(mMelee, -CENTER, -CENTER, mPaint);
         canvas.restore();
     }

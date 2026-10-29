@@ -1428,6 +1428,9 @@ TEST(player_skin_and_equipment) {
     CHECK(sprite(p.gunSprites[1])->frame != getDefProvider()->gameObject("ak47")->img.sprite);
     CHECK_NEAR(container(p.boneContainers[0])->x, 28.0f + getDefProvider()->gameObject("ak47")->leftHandOffset.x, 1e-4f);
     CHECK_NEAR(container(p.boneContainers[1])->x, 14.0f, 1e-4f);
+    // Gun offsets are PIXI y-down in player.ts (-1.75 is up); the native hand
+    // container is y-up, so the converted position is +1.75.
+    CHECK_NEAR(container(p.gunContainers[1])->y, 1.75f, 1e-4f);
     d.dir = Vec2(0, 1);
     p.m_updateData(d, false, false, world);
     p.update(0, world);
@@ -1439,6 +1442,43 @@ TEST(player_skin_and_equipment) {
     // counter-flip; the old negative-Y camera needed one).
     CHECK(p.nameText != nullptr);
     CHECK(!text(p.nameText)->flipY);
+}
+
+// player.ts stores bone/art offsets in PIXI's y-down local frame; the native
+// player container is y-up. Without the y conversion the left/right hands are
+// swapped across the facing axis (visible with distinct hand art or a gun).
+TEST(player_hand_side_matches_web) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    d.activeWeapon = "fists"; // fists: HandL at y -12.25, HandR at y +12.25
+
+    // Facing right (dir 1,0): HandL is north/up in the y-up player frame,
+    // HandR south/down (PIXI's HandL y=-12.25 is up on screen). This is the
+    // regression check: the old raw PIXI y put HandL below.
+    d.dir = Vec2(1.0f, 0.0f);
+    p.m_updateData(d, true, true, world);
+    p.update(0, world);
+    const auto* handL = container(p.boneContainers[0]);
+    const auto* handR = container(p.boneContainers[1]);
+    CHECK(handL->y > 0.0f);
+    CHECK(handR->y < 0.0f);
+
+    // Facing up (dir 0,1): the body rotation (-90deg clockwise in axmol)
+    // puts HandL on screen-left and HandR on screen-right.
+    d.dir = Vec2(0.0f, 1.0f);
+    p.m_updateData(d, true, false, world);
+    p.update(0, world);
+    const float bodyRot = -std::atan2(1.0f, 0.0f);
+    const float c = std::cos(bodyRot);
+    const float s = std::sin(bodyRot);
+    const float leftX = handL->x * c + handL->y * s; // axmol clockwise rotation
+    const float rightX = handR->x * c + handR->y * s;
+    CHECK(leftX < 0.0f);
+    CHECK(rightX > 0.0f);
 }
 
 TEST(player_animation_sequence_and_interpolation) {

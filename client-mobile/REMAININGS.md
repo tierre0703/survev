@@ -783,6 +783,13 @@ Done in the eighteenth P2 pass (2026-10-27):
   into the view (the web's `getCameraTargetZoom`/`getCameraLoadoutOffset`
   equivalent for a fixed Java slot), so long melees (katana/naginata) are never
   clipped.
+- Coordinate frame: `animData.ts`/`player.ts` store player-local offsets in
+  PIXI's y-down frame, while the native player body is y-up. `PlayerRender`
+  now converts bone poses and gun/mag/left-hand/held-item offsets to y-up
+  (rotations stay numeric: both PIXI and axmol are clockwise-positive), fixing
+  the swapped left/right hands. The Java preview uses the y-down convention
+  directly and applies `opponentDisplay.ts`'s `dir = (0,-1)` body rotation
+  (+90 degrees), so the avatar faces down like the web.
 - Device check (x86_64 emulator): the `fists` avatar animates (hands/weapon move
   between frames), and a temporary forced `katana` loadout rendered the blade
   anchor-centred in the `meleeKatana` idle stance and swung it around the hand

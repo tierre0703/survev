@@ -54,9 +54,19 @@ void skinSprite(pix::Sprite* sprite, const std::string& frame, uint32_t tint, fl
     sprite->setScale(scale, scale);
     sprite->setVisible(valid && visible);
 }
+// player.ts stores every player-local offset (bone poses, gun/mag/melee
+// positions, held-item positions) in PIXI's y-down local frame. The native
+// player container lives in the y-up world frame, so local y must be negated
+// before use. Rotations stay numeric: PIXI and axmol both rotate clockwise
+// for positive values.
+Vec2 localFromWeb(const Vec2& v) {
+    return Vec2(v.x, -v.y);
+}
+
 void heldSprite(pix::Sprite* sprite, const HeldImageDef& def) {
     skinSprite(sprite, def.sprite, def.tint, 1.0f);
-    sprite->setPosition(def.pos.x, def.pos.y);
+    const Vec2 pos = localFromWeb(def.pos);
+    sprite->setPosition(pos.x, pos.y);
     sprite->setScale(def.scale.x, def.scale.y);
     sprite->setRotation(def.rot);
 }
@@ -402,10 +412,13 @@ void Player::updateVisuals(Ctx& ctx) {
             gunSprites[i]->setAnchor(0.5f, 0.0f);
             gunSprites[i]->setScale(weapon->worldImg.scale.x * 0.5f / bodyScale, weapon->worldImg.scale.y * 0.5f / bodyScale);
             gunContainers[i]->setRotation(pi / 2.0f);
-            gunContainers[i]->setPosition((weapon->isDual ? -5.95f : -4.25f) + weapon->gunOffset.x,
-                                          (weapon->isDual ? 0.0f : -1.75f) + weapon->gunOffset.y);
+            const Vec2 gunPos = localFromWeb(Vec2((weapon->isDual ? -5.95f : -4.25f) + weapon->gunOffset.x,
+                                                  (weapon->isDual ? 0.0f : -1.75f) + weapon->gunOffset.y));
+            gunContainers[i]->setPosition(gunPos.x, gunPos.y);
             skinSprite(magSprites[i], weapon->magSprite, 0xffffff, 0.25f / bodyScale);
-            magSprites[i]->setPosition(weapon->magPos.x / bodyScale, weapon->magPos.y / bodyScale);
+            const Vec2 magPos = localFromWeb(Vec2(
+                weapon->magPos.x / bodyScale, weapon->magPos.y / bodyScale));
+            magSprites[i]->setPosition(magPos.x, magPos.y);
             gunContainers[i]->setChildIndex(magSprites[i], weapon->magTop ? 1 : 0);
             boneContainers[i]->setChildIndex(gunContainers[i], weapon->worldImg.handsBelow ? 2 : 0);
         }
@@ -495,10 +508,16 @@ void Player::update(float dt, Ctx& ctx) {
     if (state != throwableState) { throwableState = state; visualsDirty = true; }
     if (visualsDirty) { updateVisuals(ctx); visualsDirty = false; }
     for (int i = 0; i < 4; ++i) {
-        // PIXI pivot=-pose.pivot: equivalent translation avoids adding an
-        // engine-specific pivot API to the adapter.
-        Vec2 offset = v2Add(bones[i].pos, v2Rotate(bones[i].pivot, bones[i].rot));
-        if (i == 0 && weapon && weapon->category == "gun" && !downed && currentAnim != Anim_Revive) offset = v2Add(offset, weapon->leftHandOffset);
+        // player.ts `e.position = pose.pos` with `e.pivot = -pose.pivot`
+        // (PIXI y-down). Convert the local positions to the y-up world frame;
+        // the pivot rotation is the same clockwise rotation PIXI uses, so the
+        // offset is pos + R(clockwise, rot) * pivot.
+        const Vec2 posePos = localFromWeb(bones[i].pos);
+        const Vec2 posePivot = localFromWeb(bones[i].pivot);
+        Vec2 offset = v2Add(posePos, v2Rotate(posePivot, -bones[i].rot));
+        if (i == 0 && weapon && weapon->category == "gun" && !downed && currentAnim != Anim_Revive) {
+            offset = v2Add(offset, localFromWeb(weapon->leftHandOffset));
+        }
         if (i < 2) offset.x -= gunRecoil[i] * 1.125f;
         boneContainers[i]->setPosition(offset.x, offset.y);
         boneContainers[i]->setRotation(bones[i].rot);
@@ -508,9 +527,13 @@ void Player::update(float dt, Ctx& ctx) {
         const auto& img = weapon->worldImg;
         const float bodyScale = bodyRad / PlayerConfig::radius;
         const float r = img.rot + bone.rot;
-        Vec2 offset = v2Add(bone.pos, img.pos);
-        offset = Vec2(offset.x * img.scale.x / bodyScale, offset.y * img.scale.y / bodyScale);
-        offset = v2Sub(v2Rotate(offset, r), bone.pivot);
+        // player.ts: meleeSprite.position = -MeleeR.pivot and
+        // meleeSprite.pivot = -(MeleeR.pos + worldImg.pos), both in the
+        // hand's PIXI-y-down local frame.
+        const Vec2 webPos = v2Add(bone.pos, img.pos);
+        const Vec2 spritePos = localFromWeb(Vec2(-bone.pivot.x, -bone.pivot.y));
+        const Vec2 spritePivot = localFromWeb(Vec2(-webPos.x, -webPos.y));
+        const Vec2 offset = v2Add(spritePos, v2Rotate(spritePivot, -r));
         meleeSprite->setPosition(offset.x, offset.y);
         meleeSprite->setRotation(r);
         meleeSprite->setScale(img.scale.x / bodyScale, img.scale.y / bodyScale);
