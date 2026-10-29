@@ -127,9 +127,17 @@ public:
         // Playtesting shift (session 52): the (1.75x) rings need room, so the
         // locked centres sit a little above and a little further inside than
         // the web defaults — landscape (160, 140), portrait (120, 176).
-        const float offX = (isLandscape ? 160.0f : 120.0f * (::ui::Device::get().tablet ? 1.25f : 1.0f)) *
-            padOffsetScale;
-        const float offY = (isLandscape ? 140.0f : 176.0f) * padOffsetScale;
+        const float baseOffX = isLandscape
+            ? 160.0f
+            : 120.0f * (::ui::Device::get().tablet ? 1.25f : 1.0f);
+        const float baseOffY = isLandscape ? 140.0f : 176.0f;
+        // Playtesting: double the empty gap between the drawn ring and the
+        // side/bottom screen edges. Derive it from the ring radius (the
+        // pad.img 208px art times the drawn scale) so the visible margin is
+        // what doubles, not the centre offset.
+        const float padRadius = 104.0f * padScaleBase * padScaleDown * padSizeScale;
+        const float offX = (padRadius + (baseOffX - padRadius) * 2.0f) * padOffsetScale;
+        const float offY = (padRadius + (baseOffY - padRadius) * 2.0f) * padOffsetScale;
         leftLockedPadCenter = Vec2(offX, screenHeight - offY);
         rightLockedPadCenter = Vec2(screenWidth - offX, screenHeight - offY);
         _appliedOffsetScale = padOffsetScale;

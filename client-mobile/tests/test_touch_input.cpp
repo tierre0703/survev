@@ -10,23 +10,28 @@ using namespace surv_test;
 
 namespace {
 
-// Landscape 800x480: locked pads sit at (160,340) and (640,340), range 48.
+// Landscape 800x480. The locked centres use the playtest spacing: the empty
+// gap from the ring edge to the side/bottom screen edges is doubled from the
+// web defaults (padScaleBase 1, padScaleDown 0.6, padSizeScale 1.75).
 constexpr float kWidth = 800.0f;
 constexpr float kHeight = 480.0f;
-// Playtesting locked offsets (session 52): landscape (160, 140).
-constexpr float nkLeftX = 160.0f;
-constexpr float nkRightX = kWidth - 160.0f;
+constexpr float kPadRadius = 104.0f * 1.0f * 0.6f * 1.75f;
+constexpr float kPadOffX = kPadRadius + (160.0f - kPadRadius) * 2.0f;
+constexpr float kPadOffY = kPadRadius + (140.0f - kPadRadius) * 2.0f;
+constexpr float nkLeftX = kPadOffX;
+constexpr float nkRightX = kWidth - kPadOffX;
+constexpr float nkPadY = kHeight - kPadOffY;
 
 void setMovePull(Touch& t, float dx, float dy) {
     t.touches[0].active = true;
-    t.touches[0].posDown = Vec2(nkLeftX, 340.0f);
-    t.touches[0].pos = Vec2(nkLeftX + dx, 340.0f + dy);
+    t.touches[0].posDown = Vec2(nkLeftX, nkPadY);
+    t.touches[0].pos = Vec2(nkLeftX + dx, nkPadY + dy);
 }
 
 void setAimPull(Touch& t, float dx, float dy) {
     t.touches[1].active = true;
-    t.touches[1].posDown = Vec2(nkRightX, 340.0f);
-    t.touches[1].pos = Vec2(nkRightX + dx, 340.0f + dy);
+    t.touches[1].posDown = Vec2(nkRightX, nkPadY);
+    t.touches[1].pos = Vec2(nkRightX + dx, nkPadY + dy);
 }
 
 } // namespace
@@ -138,16 +143,16 @@ TEST(touch_pad_gfx_locked_scales_and_positions) {
     CHECK_EQ(aim.visible, true);
     CHECK_NEAR(move.centerScale, 0.6f * sizeScale, 1e-6f);
     CHECK_NEAR(move.touchScale, 0.25f * sizeScale, 1e-6f);
-    // Locked landscape offsets: left (160, 480-140), right (800-160, 340).
-    CHECK_NEAR(t.leftLockedPadCenter.x, 160.0f, 1e-4f);
-    CHECK_NEAR(t.rightLockedPadCenter.x, 640.0f, 1e-4f);
-    CHECK_NEAR(t.leftLockedPadCenter.y, 340.0f, 1e-4f);
-    CHECK_NEAR(t.rightLockedPadCenter.y, 340.0f, 1e-4f);
-    CHECK_NEAR(move.center.y, 340.0f, 1e-4f);
-    CHECK_NEAR(move.touch.x, 160.0f, 1e-4f);
-    CHECK_NEAR(move.touch.y, 340.0f, 1e-4f);
-    CHECK_NEAR(aim.center.x, 640.0f, 1e-4f);
-    CHECK_NEAR(aim.touch.x, 640.0f, 1e-4f);
+    // Locked landscape centres: doubled ring-to-edge gaps.
+    CHECK_NEAR(t.leftLockedPadCenter.x, kPadOffX, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.x, kWidth - kPadOffX, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.y, nkPadY, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.y, nkPadY, 1e-4f);
+    CHECK_NEAR(move.center.y, nkPadY, 1e-4f);
+    CHECK_NEAR(move.touch.x, kPadOffX, 1e-4f);
+    CHECK_NEAR(move.touch.y, nkPadY, 1e-4f);
+    CHECK_NEAR(aim.center.x, kWidth - kPadOffX, 1e-4f);
+    CHECK_NEAR(aim.touch.x, kWidth - kPadOffX, 1e-4f);
 
     // Portrait (padScaleBase 0.8) and hideAll().
     Touch portrait(480.0f, 800.0f, false);
@@ -170,18 +175,23 @@ TEST(touch_pad_tablet_portrait_offsets) {
     ui::Device& device = ui::Device::get();
     device.tablet = true;
 
+    // Portrait ring is padScaleBase 0.8 smaller (208 * 0.8 * 0.6 * 1.75 / 2).
+    constexpr float kPortraitRadius = 104.0f * 0.8f * 0.6f * 1.75f;
+    constexpr float kTabletOff = kPortraitRadius + (120.0f * 1.25f - kPortraitRadius) * 2.0f;
+    constexpr float kPhoneOff = kPortraitRadius + (120.0f - kPortraitRadius) * 2.0f;
+
     Touch portrait(480.0f, 800.0f, false);
-    CHECK_NEAR(portrait.leftLockedPadCenter.x, 120.0f * 1.25f, 1e-4f);
-    CHECK_NEAR(portrait.rightLockedPadCenter.x, 480.0f - 120.0f * 1.25f, 1e-4f);
+    CHECK_NEAR(portrait.leftLockedPadCenter.x, kTabletOff, 1e-4f);
+    CHECK_NEAR(portrait.rightLockedPadCenter.x, 480.0f - kTabletOff, 1e-4f);
 
     Touch landscape(kWidth, kHeight, true);
-    CHECK_NEAR(landscape.leftLockedPadCenter.x, 160.0f, 1e-4f);
-    CHECK_NEAR(landscape.rightLockedPadCenter.x, 640.0f, 1e-4f);
+    CHECK_NEAR(landscape.leftLockedPadCenter.x, kPadOffX, 1e-4f);
+    CHECK_NEAR(landscape.rightLockedPadCenter.x, kWidth - kPadOffX, 1e-4f);
 
     // Non-tablet portrait keeps the shifted defaults.
     device.tablet = false;
     Touch phone(480.0f, 800.0f, false);
-    CHECK_NEAR(phone.leftLockedPadCenter.x, 120.0f, 1e-4f);
+    CHECK_NEAR(phone.leftLockedPadCenter.x, kPhoneOff, 1e-4f);
 }
 
 // touch.ts `padOffsetScale`: the locked offsets (and the pad radius) scale with
@@ -189,25 +199,25 @@ TEST(touch_pad_tablet_portrait_offsets) {
 // proportionally and shifts their detect radius with them.
 TEST(touch_pad_offsets_scale_with_zoom) {
     Touch t(kWidth, kHeight, true);
-    CHECK_NEAR(t.leftLockedPadCenter.x, 160.0f, 1e-4f);
-    CHECK_NEAR(t.rightLockedPadCenter.x, 640.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, kPadOffX, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.x, kWidth - kPadOffX, 1e-4f);
     CHECK_NEAR(t.padPosRange, 48.0f, 1e-4f);
 
     t.setPadOffsetScale(1.5f);
-    CHECK_NEAR(t.leftLockedPadCenter.x, 240.0f, 1e-4f);
-    CHECK_NEAR(t.leftLockedPadCenter.y, 480.0f - 210.0f, 1e-4f);
-    CHECK_NEAR(t.rightLockedPadCenter.x, 800.0f - 240.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, kPadOffX * 1.5f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.y, kHeight - kPadOffY * 1.5f, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.x, kWidth - kPadOffX * 1.5f, 1e-4f);
     // The pad radius scales with the zoom too (padPosBase * padScaleBase *
     // padOffsetScale), so the aim threshold moves with the offsets.
     CHECK_NEAR(t.padPosRange, 72.0f, 1e-4f);
 
     // A zoom <= 0 is ignored (keep the last valid scale).
     t.setPadOffsetScale(0.0f);
-    CHECK_NEAR(t.leftLockedPadCenter.x, 240.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, kPadOffX * 1.5f, 1e-4f);
 
     // Back to the unscoped view.
     t.setPadOffsetScale(1.0f);
-    CHECK_NEAR(t.leftLockedPadCenter.x, 160.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, kPadOffX, 1e-4f);
     CHECK_NEAR(t.padPosRange, 48.0f, 1e-4f);
 }
 
@@ -226,7 +236,7 @@ TEST(touch_pad_gfx_anywhere_follows_touch) {
     t.m_update(move, aim);
 
     CHECK_NEAR(move.center.x, nkLeftX, 1e-4f);
-    CHECK_NEAR(move.center.y, 340.0f, 1e-4f);
+    CHECK_NEAR(move.center.y, nkPadY, 1e-4f);
     CHECK_NEAR(move.touch.x, nkLeftX + 20.0f, 1e-4f);
-    CHECK_NEAR(move.touch.y, 340.0f, 1e-4f);
+    CHECK_NEAR(move.touch.y, nkPadY, 1e-4f);
 }

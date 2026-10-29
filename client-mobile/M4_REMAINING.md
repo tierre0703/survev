@@ -3054,7 +3054,10 @@ Replaces the drag-to-select emote/ping wheel flow requested by playtesting:
    normalization) stays at the web value so control sensitivity is unchanged.
    The locked centres moved to fit: landscape (160, 140) instead of
    (126, 100), portrait (120, 176) instead of (96, 160) — a little above the
-   bottom edge and a little further inside.
+   bottom edge and a little further inside. Playtesting then doubled the
+   visible gap between the drawn ring and the side/bottom screen edges, so
+   the centres are derived from the ring radius + 2x the old margin (e.g.
+   landscape ~210.8, ~170.8 around the 104px-radius ring).
 9. **Team arrows sit on the screen edge and use `indicator.svg`.** The port
    used to draw a small custom chevron `dir * 300` from the (centred) HUD
    origin, so an off-screen teammate's indicator hovered next to the local
