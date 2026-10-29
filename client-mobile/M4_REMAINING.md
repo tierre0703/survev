@@ -760,7 +760,11 @@ applies `activePlayerData.zoom` when `zoomDirty`.
 scale axmol node (y up), so the health bar appeared at the top. The layout is
 now done in design-space bottom-left coordinates and converted to the centred
 container; `AxText` also applies its anchor to the glyph sprite (previously only
-the empty wrapper node, so every anchored label was top-left).
+the empty wrapper node, so every anchored label was top-left). `AxText` now
+rasterises at 2x and scales the sprite back down: the app's 0.5 content scale
+otherwise produced half-resolution HUD glyphs, which looked blurry when the
+design root was fitted to the screen. (axmol's global SDF option does not apply
+here because `AxText` bypasses `FontFreeType`/`Label`.)
 
 Pads: `Touch` was fed axmol touch points (y up) as if they were web points
 (y down) - the listener now flips y. `GameScene` also passed the player's view

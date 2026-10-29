@@ -501,9 +501,16 @@ private:
         if (_text.empty()) {
             return;
         }
+        // Rasterise at 2x and scale the sprite back down. The app runs with a
+        // 0.5 content scale for the low-res game atlas; without this, the
+        // canvas text texture is only _size*0.5 pixels and looks blurry when
+        // the HUD root scales it. This keeps the visual size and doubles the
+        // glyph resolution. (SDF does not apply here: AxText bypasses
+        // FontFreeType/Label and uses Texture2D::initWithString.)
+        constexpr float kTextSupersample = 2.0f;
         ax::FontDefinition def;
         def._fontName = _family.empty() || _family == "Arial" ? "sans-serif" : _family;
-        def._fontSize = _size;
+        def._fontSize = _size * kTextSupersample;
         auto* texture = new ax::Texture2D();
         texture->initWithString(_text, def);
         auto* sprite = ax::Sprite::createWithTexture(texture);
@@ -516,11 +523,8 @@ private:
         // anchor (HUD code passes CSS-style anchors, e.g. (0,1) = top-left).
         sprite->setAnchorPoint(ax::Vec2(_anchorX, _anchorY));
         sprite->setPosition(ax::Vec2::ZERO);
-        // Optional counter-flip about the anchor line (kept for y-down
-        // parents; the world camera is positive-Y since the §23 fix).
-        if (_flipY) {
-            sprite->setScaleY(-1.0f);
-        }
+        const float textScale = 1.0f / kTextSupersample;
+        sprite->setScale(textScale, _flipY ? -textScale : textScale);
         // (No outline: ax::Sprite has no text outline; HUD text uses a drop
         // shadow via the stroke colour being ignored, like the menu labels.)
         sprite->retain();
