@@ -1466,6 +1466,11 @@ bool Hud::minimapTapHit(float designX, float designY) const {
     // Callers pass design-space coordinates (0..design); the widget positions
     // are in the centred HUD container.
     const Vec2 p(designX - _design.x * 0.5f, designY - _design.y * 0.5f);
+    // The settings gear is drawn inside the minimap's top-left corner; let it
+    // win the touch instead of opening the big map underneath it.
+    if (_settingsRect.contains(p.x, p.y)) {
+        return false;
+    }
     return _minimapTapRect.contains(p.x, p.y);
 }
 

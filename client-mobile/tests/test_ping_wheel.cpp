@@ -444,6 +444,12 @@ TEST(hud_minimap_positions_ping_sprites) {
     CHECK_NEAR(mini.pos().x, Hud::kMinimapLeft - 640.0f, 0.01f);
     CHECK_NEAR(mini.pos().y,
                (720.0f - Hud::kMinimapTop - Hud::kMinimapSize) - 360.0f, 0.01f);
+    // The settings gear is inside the minimap corner but must take the touch:
+    // it wins over the minimap/big-map hit target.
+    const float gearX = Hud::kMinimapLeft + Hud::kSettingsSize * 0.5f;
+    const float gearY = Hud::kMinimapTop + Hud::kSettingsSize * 0.5f;
+    CHECK(!hud.minimapTapHit(gearX, 720.0f - gearY));
+    CHECK(hud.hitTest(gearX, 720.0f - gearY).kind == Hud::TapKind::Settings);
 
     std::vector<MapPing> pings(1);
     pings[0].texture = "ping-map-danger.img";
