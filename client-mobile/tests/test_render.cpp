@@ -2794,6 +2794,11 @@ TEST(hud_gear_levels_and_squad_polish) {
     const auto* dot = static_cast<const pix::NullGraphics*>(hud.squadColorDot(0));
     const float dotRightEdge = dot->commands[1].a + dot->commands[1].c;
     CHECK(dotRightEdge < (squadX + Hud::kSquadRowPadding + Hud::kSquadBarWidth) - 640.0f);
+    // The 16px name's bottom edge stays above the bar's top edge.
+    const auto* name0 = static_cast<const pix::NullText*>(hud.squadNameText(0));
+    const auto* barBg0 = static_cast<const pix::NullGraphics*>(hud.squadBarBg(0));
+    CHECK(name0 != nullptr && barBg0 != nullptr);
+    CHECK(name0->y - 20.0f > barBg0->commands[1].b + barBg0->commands[1].d);
     CHECK_EQ(static_cast<const pix::NullSprite*>(hud.squadStatusIcon(0))->frame,
              std::string("gui/down.png"));
     CHECK_EQ(static_cast<const pix::NullSprite*>(hud.squadStatusIcon(1))->frame,

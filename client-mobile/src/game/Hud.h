@@ -106,7 +106,7 @@ public:
     static constexpr float kSquadBarWidth = 200.0f;
     static constexpr float kSquadRowPadding = 4.0f;
     static constexpr float kSquadRowWidth = kSquadBarWidth + kSquadRowPadding * 2.0f;
-    static constexpr float kSquadRowHeight = 40.0f;
+    static constexpr float kSquadRowHeight = 44.0f;
     static constexpr float kSquadRowGap = 8.0f;
     static constexpr float kSquadRowPitch = kSquadRowHeight + kSquadRowGap;
     static constexpr float kSquadStatusSize = 32.0f;
@@ -386,6 +386,9 @@ public:
     }
     const pix::Graphics* squadHealthFill(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].barFill : nullptr;
+    }
+    const pix::Graphics* squadBarBg(int idx) const {
+        return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].barBg : nullptr;
     }
     // ui.ts faction flair (the red/blue patch beside the health counter).
     void setLocalTeamId(uint8_t teamId) { _localTeamId = teamId; }

@@ -704,7 +704,7 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     // (200px bar, 4px padding, 8px gap below), with room for the 16px name.
     const float squadX = kMinimapLeft + kMinimapSize + 8.0f;
     const float barX = squadX + kSquadRowPadding;
-    const float barTop = 24.0f; // name row + gap inside the 40px block
+    const float barTop = 28.0f; // name row + gap inside the 44px block
     for (int i = 0; i < 4; ++i) {
         SquadRow& row = _squad[static_cast<size_t>(i)];
         const float top = kMinimapTop + static_cast<float>(i) * kSquadRowPitch;
@@ -719,7 +719,9 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         row.name->setFontSize(16.0f);
         row.name->setColor(0xffffff, 0x000000, 1.5f, true);
         row.name->setAnchor(0.0f, 1.0f);
-        row.name->setPosition(X(squadX + kSquadRowPadding + 16.0f), yTop(top + 20.0f));
+        // Text anchors are axmol anchors (0,1 = top-left), so position the
+        // top edge 4px into the block; the 16px name then ends above the bar.
+        row.name->setPosition(X(squadX + kSquadRowPadding + 16.0f), yTop(top + 4.0f));
         row.name->setVisible(false);
         _root->addChild(row.name);
 
