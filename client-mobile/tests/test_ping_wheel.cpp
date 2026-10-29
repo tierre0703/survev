@@ -439,10 +439,11 @@ TEST(hud_minimap_positions_ping_sprites) {
     CHECK_NEAR(map->getAlpha(), 0.8f, 0.001f);
     const auto* clip = static_cast<const pix::NullContainer*>(mini.root());
     CHECK(clip != nullptr && clip->maskNode != nullptr);
-    // Bottom-left of the top-left 140px frame under the settings gear
-    // (design 1280x720, centred): left 12, top 50.
-    CHECK_NEAR(mini.pos().x, 12.0f - 640.0f, 0.01f);
-    CHECK_NEAR(mini.pos().y, (720.0f - 50.0f - Hud::kMinimapSize) - 360.0f, 0.01f);
+    // Bottom-left of the top-left 140px frame (design 1280x720, centred):
+    // playtest inset 3,3.
+    CHECK_NEAR(mini.pos().x, Hud::kMinimapLeft - 640.0f, 0.01f);
+    CHECK_NEAR(mini.pos().y,
+               (720.0f - Hud::kMinimapTop - Hud::kMinimapSize) - 360.0f, 0.01f);
 
     std::vector<MapPing> pings(1);
     pings[0].texture = "ping-map-danger.img";

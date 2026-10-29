@@ -219,8 +219,10 @@ TEST(hud_action_bar_hit_test) {
     CHECK(slot3.kind == Hud::TapKind::WeaponSlot);
     CHECK_EQ(slot3.slot, 3);
 
-    // The settings gear is the top-left corner button.
-    CHECK(hud.hitTest(32.0f, 692.0f).kind == Hud::TapKind::Settings);
+    // The settings gear sits just right of the top-left minimap.
+    const float gearX = Hud::kMinimapLeft + Hud::kMinimapSize + 6.0f + Hud::kSettingsSize * 0.5f;
+    const float gearY = Hud::kMinimapTop + Hud::kSettingsSize * 0.5f;
+    CHECK(hud.hitTest(gearX, 720.0f - gearY).kind == Hud::TapKind::Settings);
 }
 
 TEST(hud_action_bar_shows_inventory_state) {

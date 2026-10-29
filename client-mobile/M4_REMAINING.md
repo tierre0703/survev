@@ -2936,14 +2936,17 @@ and the gear + emote/ping wheels repositioned.
 
 ### What changed
 
-1. **Settings gear (top-left), opens the game menu.** `TapKind::Settings` on
-   the 44px `#ui-menu-display`-style box routes to `uiHost()->togglePause()`
-   (the Java `GamePauseDialog`, same path as BACK); hosts without the bridge
-   get a Hud panel (RESUME/LEAVE, `showGameMenu()` + `menuActionAt()`). The
-   icon uses the direct `gui/cog.png` file because the HUD builds before the
-   map atlases are registered.
-2. **Minimap top-left; tapping it opens the big map.** The old 22px expand
-   button is gone; `minimapTapHit()` covers the whole 140px box.
+1. **Settings gear (right of the minimap), opens the game menu.**
+   `TapKind::Settings` on the 44px `#ui-menu-display`-style box routes to
+   `uiHost()->togglePause()` (the Java `GamePauseDialog`, same path as BACK);
+   hosts without the bridge get a Hud panel (RESUME/LEAVE, `showGameMenu()` +
+   `menuActionAt()`). The icon uses the direct `gui/cog.png` file because the
+   HUD builds before the map atlases are registered. It moved right of the map
+   so the 3px map inset does not bury the button.
+2. **Minimap pinned to the top-left (3,3); tapping it opens the big map.** The
+   old 22px expand button is gone; `minimapTapHit()` covers the whole 140px
+   box. The info bar follows the map (`kInfoBarTop = kMinimapTop +
+   kMinimapSize + 4`).
 3. **Gas timer + alive count (+ kills) in an info bar under the minimap**
    (mirrors `.ui-map-wrapper-mobile #ui-map-info`).
 4. **Scope strip on the left side** (`#ui-top-center-scopes-wrapper` mobile):

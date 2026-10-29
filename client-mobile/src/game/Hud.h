@@ -89,16 +89,17 @@ public:
     static constexpr float kHealthBarHeight = 32.0f;
     static constexpr float kHealthBarPadding = 6.0f;
     static constexpr float kBoostBarHeight = 8.0f;
-    // Web mobile #ui-map-wrapper-mobile: left 6px, top 46px; the gear cog
-    // (#ui-menu-display) sits above the map in the very top-left corner.
+    // Web mobile #ui-map-wrapper-mobile, pinned to the very top-left corner
+    // (playtest: 3px inset instead of the web's left 6/top 46). The settings
+    // cog sits immediately right of the map so it stays tappable.
     static constexpr float kMinimapSize = 140.0f;
-    static constexpr float kMinimapLeft = 12.0f;
-    static constexpr float kMinimapTop = 50.0f; // from the top edge
+    static constexpr float kMinimapLeft = 3.0f;
+    static constexpr float kMinimapTop = 3.0f; // from the top edge
     // Settings button (#ui-menu-display). Tapping it opens the in-game menu
     // (the Java GamePauseDialog on Android).
     static constexpr float kSettingsSize = 44.0f;
     // Info bar under the minimap (#ui-map-info + alive/kill counters).
-    static constexpr float kInfoBarTop = 194.0f; // from the top edge
+    static constexpr float kInfoBarTop = kMinimapTop + kMinimapSize + 4.0f;
     static constexpr float kBoxHeight = 34.0f;
     static constexpr float kGasBoxWidth = 82.0f;
     static constexpr float kCountBoxWidth = 56.0f;

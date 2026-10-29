@@ -418,10 +418,12 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_mapFrame);
     _minimapTapRect = Rect{_minimapPos.x - 4.0f, _minimapPos.y - 4.0f, mm + 8.0f, mm + 8.0f};
 
-    // Settings gear (#ui-menu-display) at the very top-left corner. The icon
-    // uses the direct file (Content/gui/cog.png) instead of a loadout-atlas
-    // frame: resetWorld() runs before the map atlases are loaded.
-    _settingsRect = Rect{X(10.0f), yTop(6.0f + kSettingsSize), kSettingsSize, kSettingsSize};
+    // Settings gear (#ui-menu-display), immediately right of the top-left
+    // minimap so the 3px map inset does not bury the button underneath it.
+    // The icon uses the direct file (Content/gui/cog.png) instead of a
+    // loadout-atlas frame: resetWorld() runs before the map atlases are loaded.
+    const float settingsX = kMinimapLeft + kMinimapSize + 6.0f;
+    _settingsRect = Rect{X(settingsX), yTop(kMinimapTop + kSettingsSize), kSettingsSize, kSettingsSize};
     _settingsBg = _factory->createGraphics();
     paintBox(_settingsBg, _settingsRect, 0x000000, 0.4f, 0.5f);
     _root->addChild(_settingsBg);
