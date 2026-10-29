@@ -289,6 +289,33 @@ inline bool intersectSegmentAabbRes(const Vec2& s0, const Vec2& s1, const Vec2& 
     return intersectSegmentAabbHit(s0, s1, min, max, pointOut, nullptr);
 }
 
+// coldet.intersectRayAabb: the ray/AABB hit point. Unlike the segment helper
+// above this returns the *exit* crossing when the origin is inside the box
+// (the ray helper clamps tmin to 0 and would otherwise return the origin),
+// matching the web's use for off-screen team arrows.
+inline Vec2 intersectRayAabb(const Vec2& o, const Vec2& dir, const Vec2& min, const Vec2& max,
+                             bool* hitOut = nullptr) {
+    const float eps = 0.00001f;
+    Vec2 d = dir;
+    if (std::fabs(d.x) < eps) {
+        d.x = eps * 2.0f;
+    }
+    if (std::fabs(d.y) < eps) {
+        d.y = eps * 2.0f;
+    }
+    const Vec2 tmin((min.x - o.x) / d.x, (min.y - o.y) / d.y);
+    const Vec2 tmax((max.x - o.x) / d.x, (max.y - o.y) / d.y);
+    const Vec2 rmin(std::min(tmin.x, tmax.x), std::min(tmin.y, tmax.y));
+    const Vec2 rmax(std::max(tmin.x, tmax.x), std::max(tmin.y, tmax.y));
+    const float minmax = std::min(rmax.x, rmax.y);
+    const float maxmin = std::max(rmin.x, rmin.y);
+    const bool hit = minmax >= maxmin;
+    if (hitOut) {
+        *hitOut = hit;
+    }
+    return hit ? v2Add(o, v2Mul(d, minmax)) : o;
+}
+
 // collider.intersectSegment(col, a, b) -> nearest hit point (and normal).
 inline bool colliderIntersectSegmentHit(const Collider& col, const Vec2& a, const Vec2& b,
                                         Vec2* pointOut, Vec2* normalOut) {

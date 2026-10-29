@@ -1260,6 +1260,31 @@ TEST(aim_line_stops_at_obstacle) {
 // ---------------------------------------------------------------------------
 // Bullet collision normals + pan surface (bullet.ts playHitFx / pan branch).
 // ---------------------------------------------------------------------------
+TEST(collider_ray_aabb_from_inside) {
+    // coldet.intersectRayAabb / ui.ts team arrows: the camera centre is always
+    // inside camAabb, and the arrow needs the *exit* crossing (the segment
+    // helper clamps tmin to 0 and would return the origin).
+    const Vec2 min(-10.0f, -5.0f);
+    const Vec2 max(10.0f, 5.0f);
+    Vec2 p = intersectRayAabb(Vec2(0.0f, 0.0f), Vec2(1.0f, 0.0f), min, max);
+    CHECK_NEAR(p.x, 10.0f, 1e-3f);
+    CHECK_NEAR(p.y, 0.0f, 1e-3f);
+    p = intersectRayAabb(Vec2(0.0f, 0.0f), Vec2(-1.0f, 0.0f), min, max);
+    CHECK_NEAR(p.x, -10.0f, 1e-3f);
+    CHECK_NEAR(p.y, 0.0f, 1e-3f);
+    p = intersectRayAabb(Vec2(0.0f, 0.0f), Vec2(0.0f, 1.0f), min, max);
+    CHECK_NEAR(p.x, 0.0f, 1e-3f);
+    CHECK_NEAR(p.y, 5.0f, 1e-3f);
+    p = intersectRayAabb(Vec2(0.0f, 0.0f), Vec2(0.0f, -1.0f), min, max);
+    CHECK_NEAR(p.x, 0.0f, 1e-3f);
+    CHECK_NEAR(p.y, -5.0f, 1e-3f);
+    // A corner-ward ray exits the nearer face (the 5-tall top edge at y=5,
+    // x=5) rather than continuing to the 10-wide right edge.
+    p = intersectRayAabb(Vec2(0.0f, 0.0f), v2NormalizeSafe(Vec2(1.0f, 1.0f)), min, max);
+    CHECK_NEAR(p.x, 5.0f, 1e-3f);
+    CHECK_NEAR(p.y, 5.0f, 1e-3f);
+}
+
 TEST(collider_segment_hit_normals) {
     Vec2 point, normal;
     // AABB left face.

@@ -1759,11 +1759,11 @@ void GameScene::update(float delta) {
                         continue;
                     }
                     // coldet.intersectRayAabb from the camera centre through
-                    // the teammate; the hit sits on the camera AABB.
+                    // the teammate. The camera centre is inside the AABB, so
+                    // this must be the ray helper: the segment helper returns
+                    // the origin (the player's own position) in that case.
                     const Vec2 dir = v2NormalizeSafe(v2Sub(mate->pos, camera.m_pos), Vec2(1.0f, 0.0f));
-                    Vec2 edge = mate->pos;
-                    intersectSegmentAabbRes(
-                        camera.m_pos, v2Add(camera.m_pos, v2Mul(dir, 1.0e6f)), camMin, camMax, &edge);
+                    const Vec2 edge = intersectRayAabb(camera.m_pos, dir, camMin, camMax);
                     const Vec2 screenEdge = camera.m_pointToScreen(edge);
                     const Vec2 clamped(math::clamp(screenEdge.x, off, screen.x - off),
                         math::clamp(screenEdge.y, off, screen.y - off));
