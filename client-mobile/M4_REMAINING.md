@@ -3104,3 +3104,108 @@ Replaces the drag-to-select emote/ping wheel flow requested by playtesting:
 Tests updated to tap semantics (`emote_wheel_tap_selects_and_closes`,
 `ping_wheel_tap_selects_pings_and_team_emotes`, cooldown/solo gates, etc)
 and to the 1.5x centred flow (`emote_wheel_geometry_scale_1_5x`).
+
+## 52. Session 51 - held-melee placement + team socket loss (2026-10-29)
+
+### 52.1 Melee weapons were placed outside the hand
+
+`player.ts updateRotation` sets `meleeSprite.position = -MeleeR.pivot` and
+`meleeSprite.pivot = -(MeleeR.pos + worldImg.pos)`; PIXI applies the sprite's
+own scale to the pivot, so the rendered offset is `-R*scale*pivot`. The port
+added the pivot unscaled and with the wrong sign, which put the woodaxe (and
+other melee defs with a non-zero `worldImg.pos`) away from the hand.
+`PlayerRender.cpp` now computes `position - R*(scale*pivot)`; the woodaxe idle
+offset is `(3.6341, 6.1069)` in the hand frame. Host test
+`player_melee_hold_position` pins the woodaxe position/rotation/scale.
+
+`EmoteManager::kPingEdgeScale` is public so the pass-50 edge-scale test
+compiles (it was left private). Host tests: 4007 assertions / 240 tests,
+0 failures.
+
+### 52.2 Team room socket closed during a match
+
+`TeamFragment.handleSocketError` used `returnToMenu`, which re-showed the dead
+room over the still-running match. It now mirrors `teamMenu.ts` while
+`joiningGame`: `JavaUiHost.dropTeam()` forgets the room without switching
+screens, the independent match socket keeps playing, and the match-end
+callback opens the main menu. A localized toast reports the lost room.
+
+## 53. Session 52 - HUD action bar placement/lifetime (2026-10-29)
+
+The commit that replaced the pie timer with the HUD action bar
+(`9a85af1e`, "rework the hud, emote wheel and ping wheel interactions")
+left a bordered box sitting on the player whenever a reload/use/revive
+action ran. Two bugs combined:
+
+### 53.1 The action bar background was drawn at the HUD origin
+
+`Hud::paintBox()` positions its node from the rect it draws (that is how
+the settings box, the touch prompt and the counter rows place themselves),
+but `setActionProgress()` passed `Rect{0, 0, 240, 14}`. The background node
+therefore jumped to the centred container's origin - which is the screen
+centre, i.e. the player - while the fill and label stayed at the top
+centre. The 240x14 background is exactly the long thin bordered box players
+saw next to the player. `Hud` now keeps the absolute `_actionBarRect` set
+in `build()` and paints from it; host test
+`hud_action_bar_background_stays_above_the_messages` pins its origin rect.
+
+### 53.2 The bar never advanced and never disappeared
+
+`activePlayerData.actionDirty` only carries the action *start*; the server's
+`cancelAction()` clears the dirty flag (the end reaches clients through the
+player object's `actionType`/`actionSeq`, which `setDirty()` sends as a full
+object). The port only read `actionDuration` and `actionTime`, so the bar
+stayed at 0 progress and remained on screen for the rest of the match after
+the first action. `GameScene` now mirrors `PieTimer`: it gates the bar on
+the active player's `actionType`, advances the elapsed time locally, and
+restarts it from the player's `actionSeq` (added to `Player`). The bar is
+also cleared when the match ends, the local player dies or spectating
+starts. Verified on the x86_64 emulator (reload fills the top bar, then it
+disappears). Host tests: 4019 assertions / 241 tests, 0 failures.
+
+## 54. Session 53 - pickup prompt styling (2026-10-29)
+
+The near-loot prompt ("PICK UP <item>") now matches the web's
+`#ui-interaction` / `#ui-interaction-outer` composition: the item name is
+white instead of amber and sits in its own dark box (black 50% fill, white
+border) beside the finger-press button, sized from the label (`10px` inner
+padding, `8px` gap, `34px` tall). The name box is part of the same tap
+target, and it flips to the left of the button near the right screen edge.
+
+The prompt's screen clamp was also wrong: container coordinates are centred,
+but `updatePrompt()` clamped `cx/cy` to `[+box/2, ...]`, so every loot left
+of or above the player had its prompt pinned near the middle of the screen.
+It now clamps to `+/- (design half - box/2)`. Tests:
+`hud_prompt_announcement_and_faction_counts` pins the white fill, the name
+box origin/size/visibility and the combined hit rect; `NullText` now records
+`setColor` for that assertion. Host tests: 4030 assertions / 241 tests,
+0 failures.
+
+## 55. Session 54 - atlas trim offset sign (M1100 grip gap) (2026-10-29)
+
+The M1100 (and other trimmed sprites) sat ahead of the hand when held:
+the gun's grip was ~12 world units in front of the palm with the support
+hand left behind on the pump.
+
+The web renders these sprites through PIXI, which applies the spritesheet's
+`spriteSourceSize` (trimmed rect top-left) in the texture's y-down space.
+`tools/build-atlas.mjs` converts the same data to a cocos2d plist, whose
+frame `offset` is the trimmed centre relative to the original centre in
+**y-up** points, but it copied the y value unchanged:
+
+    y: sss.y - (source.h - frame.h) / 2      // web (y down)
+    y: (source.h - frame.h) / 2 - sss.y      // cocos (y up) - fixed
+
+For `gun-m1100-01.img` (frame 22x91 of a 28x116 source, top trim 25) this
+wrote +12.5 instead of -12.5, i.e. twice the trim distance (25 atlas px =
+50 points at the 0.5 content scale, 12.5 world units at the 0.25 gun
+scale) shifted the barrel forward. The same error moved every trimmed
+sprite (guns, melee with trims, helmets/chests, loot) vertically in its
+local frame; symmetric sprites (body, hands, woodaxe) were unaffected,
+which is why the earlier melee fix held.
+
+Fixed in `frameOffset()` and the atlas regenerated with
+`node tools/build-atlas.mjs --res low` (all 1706 frames; Content/atlas is
+generated, do not hand-edit). Verified on the x86_64 emulator: the M1100
+grip now sits in the right hand and the support hand lands on the pump.
+Host tests unaffected (4030 assertions / 241 tests, 0 failures).

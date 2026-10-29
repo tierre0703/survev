@@ -238,11 +238,20 @@ public:
     std::string text;
     float fontSize = 24.0f;
     std::string family;
+    uint fill = 0xffffff;
+    uint stroke = 0x000000;
+    float strokeThickness = 0.0f;
+    bool bold = false;
     bool flipY = false;
     void setText(const std::string& t) override { text = t; }
     void setFontSize(float s) override { fontSize = s; }
     void setFontFamily(const std::string& f) override { family = f; }
-    void setColor(uint, uint, float, bool) override {}
+    void setColor(uint f, uint s, float thickness, bool isBold) override {
+        fill = f;
+        stroke = s;
+        strokeThickness = thickness;
+        bold = isBold;
+    }
     void setFlipY(bool flip) override { flipY = flip; }
 };
 

@@ -207,6 +207,7 @@ void Player::m_updateData(const ObjectData& data, bool fullUpdate, bool isNew, C
     perks = data.perks;
     animType = data.animType;
     actionType = data.actionType;
+    actionSeq = data.actionSeq;
     actionItem = data.actionItem;
     frozen = data.frozen;
     frozenActive = data.frozen;
@@ -527,16 +528,21 @@ void Player::update(float dt, Ctx& ctx) {
         const auto& img = weapon->worldImg;
         const float bodyScale = bodyRad / PlayerConfig::radius;
         const float r = img.rot + bone.rot;
+        const Vec2 spriteScale(img.scale.x / bodyScale, img.scale.y / bodyScale);
         // player.ts: meleeSprite.position = -MeleeR.pivot and
         // meleeSprite.pivot = -(MeleeR.pos + worldImg.pos), both in the
-        // hand's PIXI-y-down local frame.
+        // hand's PIXI-y-down local frame. PIXI applies the sprite's own
+        // scale to the pivot (position - R*scale*pivot), while the native
+        // sprite already has its 0.5 anchor; offset the position by the
+        // scaled pivot so the axe/melee grip lands in the hand.
         const Vec2 webPos = v2Add(bone.pos, img.pos);
         const Vec2 spritePos = localFromWeb(Vec2(-bone.pivot.x, -bone.pivot.y));
         const Vec2 spritePivot = localFromWeb(Vec2(-webPos.x, -webPos.y));
-        const Vec2 offset = v2Add(spritePos, v2Rotate(spritePivot, -r));
+        const Vec2 pivotOffset = v2Rotate(v2MulElems(spritePivot, spriteScale), -r);
+        const Vec2 offset = v2Sub(spritePos, pivotOffset);
         meleeSprite->setPosition(offset.x, offset.y);
         meleeSprite->setRotation(r);
-        meleeSprite->setScale(img.scale.x / bodyScale, img.scale.y / bodyScale);
+        meleeSprite->setScale(spriteScale.x, spriteScale.y);
     }
     bodyContainer->setScale(bodyRad / PlayerConfig::radius, bodyRad / PlayerConfig::radius);
     // player.ts update(): interpolate the render position/direction between the

@@ -566,6 +566,11 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         `pass.newItems` is set (account.ts:284), so freshly unlocked items reach
         the loadout/new-item badges; the existing `set_item_status` ack/confirm
         flow and loadout badge remain in place.
+      - A lost team-room socket while a team match is running now mirrors
+        `teamMenu.ts` (`joiningGame` -> `leave()` without an error): the room is
+        dropped (`JavaUiHost.dropTeam`) and the match keeps playing, with a
+        "Lost connection to team" toast; the match-end callback then opens the
+        main menu instead of re-showing the dead room over the game.
       - Acceptance: team quit/room persistence, rename, invite/join links and
         the pass-new-items profile refresh are code-complete and device-checked;
         a full two-device team match and a pass-unlock grant still need a live
@@ -1440,6 +1445,48 @@ walkthrough (x86_64 emulator, §3.4 tail):
   → quit → menu cycle, and the localized surfaces from passes 34/38. Crash
   buffer stayed empty; FPS 57-59 throughout.
 
+Done in the forty-second P2 pass (2026-10-29) - held-melee placement:
+- **Melee weapons sat outside the hand** (woodaxe reported on device). The
+  port copied `player.ts updateRotation`'s `meleeSprite.pivot` into a position
+  offset but dropped PIXI's own sprite scale and the sign: PIXI renders
+  `position - R*scale*pivot`, while the native sprite already has its 0.5
+  anchor. `PlayerRender.cpp` now scales the pivot by the sprite scale and
+  subtracts it, so the woodaxe (and every other melee def with a
+  `worldImg.pos` pivot) grips in the right hand. Host test
+  `player_melee_hold_position` pins the woodaxe offset/rotation/scale.
+- `EmoteManager::kPingEdgeScale` is public so the pass-50 edge-scale host test
+  compiles (the constant was left private).
+- Host tests: 4007 assertions / 240 tests, 0 failures.
+- **The HUD action bar showed as a thin box on the player** after a
+  reload/use/revive. `Hud::paintBox()` positions its node from the rect it
+  draws, so `setActionProgress()` passing the relative `{0,0,240,14}` rect put
+  the background at the centred container's origin (screen centre = the
+  player). The bar also never advanced or hid: the server only sends the
+  action start on `actionDirty`, and `cancelAction()` clears that flag (the end
+  reaches clients via the player object's `actionType`/`actionSeq` full
+  update). `Hud` now paints from the absolute `_actionBarRect`, and
+  `GameScene` gates the bar on the player's `actionType`, advances the elapsed
+  time locally and restarts it per `actionSeq` (added to `Player`), mirroring
+  `PieTimer`. Host test
+  `hud_action_bar_background_stays_above_the_messages`; 4019 assertions / 241
+  tests, 0 failures; emulator-checked (reload fills the top bar, then it
+  disappears).
+- **Pickup prompt** ("PICK UP <item>") now uses white text and wraps the item
+  name in its own dark bordered box beside the finger-press icon
+  (`ui2.ts #ui-interaction-outer`), sharing the same tap target; the screen
+  clamp now uses the centred container bounds, so loot left of/above the
+  player no longer pins its prompt near the middle of the screen. Tests:
+  `hud_prompt_announcement_and_faction_counts` (4030 assertions / 241 tests,
+  0 failures).
+- **M1100 floated ahead of the hands** (and every other trimmed sprite was
+  shifted in its local frame). `build-atlas.mjs` copied PIXI's y-down
+  `spriteSourceSize` into cocos2d's y-up plist `offset` without flipping y;
+  the M1100's top trim (25 px of a 116 px source) became +12.5 instead of
+  -12.5, moving the grip ~12.5 world units past the palm. `frameOffset()` now
+  negates the y term and the atlas was regenerated
+  (`node tools/build-atlas.mjs --res low`); the grip sits in the right hand
+  and the support hand on the pump on the x86_64 emulator.
+
 ### 3.5 Intentional platform differences (not TODO)
 
 - Device login instead of Google/Discord OAuth (`AccountManager`); no web account
@@ -1772,7 +1819,10 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - The team socket must survive a team match: `TeamFragment.hideForGame()` keeps
   it, `JavaUiHost.returnToMenu` re-shows the room and `onGameComplete()` sends
   the `gameComplete` message. Do not route that path through `showMenu()` (it
-  closes the socket and dissolves the room).
+  closes the socket and dissolves the room). If the room socket itself closes
+  during the match, `TeamFragment.handleSocketError` must drop the room
+  (`JavaUiHost.dropTeam`, no menu switch) and keep the independent match socket
+  playing; the match-end callback then opens the main menu.
 - The Java team screen gets site_info from `MenuFragment.siteInfoJson()`:
   `SurvBridge.getSiteInfoJson()` is empty on Android (no C++ MenuScene). Keep the
   default Solo/Duo/Squad fallback for deep links that arrive before the fetch.

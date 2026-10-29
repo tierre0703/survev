@@ -511,6 +511,17 @@ public class TeamFragment {
             return;
         }
         Log.w(TAG, "team socket error: " + reason);
+        if (mInGame) {
+            // teamMenu.ts onclose while `joiningGame`: leave(errMsg=undefined).
+            // The match socket is independent from the room socket, so keep
+            // playing instead of re-showing the dead room over the game. When
+            // the match ends, JavaUiHost.returnToMenu sees mInTeam == false and
+            // opens the main menu.
+            Log.i(TAG, "team socket lost during a match; leaving the room");
+            mHost.dropTeam();
+            toast(l10n("index-lost-connection", "Lost connection to team."));
+            return;
+        }
         if (mJoined) {
             mHost.returnToMenu("index-lost-connection");
         } else {

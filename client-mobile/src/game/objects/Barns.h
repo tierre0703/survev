@@ -818,6 +818,9 @@ public:
     int animType = 0;
     int animSeq = -1;
     int actionType = 0;
+    // player.ts m_action.seq: bumped by the server on start and cancel, so the
+    // HUD action bar can reset its locally advanced timer per action.
+    int actionSeq = 0;
     std::string actionItem;
     bool frozen = false;
     int frozenOri = 0;

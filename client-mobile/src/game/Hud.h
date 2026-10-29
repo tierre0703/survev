@@ -426,6 +426,7 @@ public:
     const pix::Text* spectateStatsText() const { return _specStatsText; }
     const pix::Text* deathTitleText() const { return _overTitle; }
     const pix::Text* interactionPromptText() const { return _promptText; }
+    const pix::Graphics* interactionPromptTextBox() const { return _promptTextBox; }
     const pix::Text* announcementText() const { return _announcementText; }
     const pix::Text* aliveText() const { return _aliveText; }
     const pix::Text* waitingText() const { return _waitingText; }
@@ -440,6 +441,7 @@ public:
         return (idx >= 0 && idx < 6) ? _killFeedRows[static_cast<size_t>(idx)] : nullptr;
     }
     const pix::Text* actionBarText() const { return _actionBarText; }
+    const pix::Graphics* actionBarBg() const { return _actionBarBg; }
 
 private:
     struct Rect;
@@ -530,6 +532,9 @@ private:
     pix::Graphics* _actionBarBg = nullptr;
     pix::Graphics* _actionBarFill = nullptr;
     pix::Text* _actionBarText = nullptr;
+    // paintBox() positions its node from the rect it draws, so the bar needs
+    // the absolute rect (the fill's node already sits at this origin).
+    Rect _actionBarRect;
     std::string _lastAction;
     float _lastActionProgress = -1.0f;
 
@@ -650,8 +655,10 @@ private:
     std::string _boostItem;
     int _equippedSlot = -1;
 
-    // Finger-press prompt beside a nearby loot (#ui-interaction).
+    // Finger-press prompt beside a nearby loot (#ui-interaction): the button
+    // box, plus the item-name box (#ui-interaction-outer) beside it.
     pix::Graphics* _promptBox = nullptr;
+    pix::Graphics* _promptTextBox = nullptr;
     pix::Sprite* _promptIcon = nullptr;
     pix::Text* _promptText = nullptr;
     std::string _lastPrompt;

@@ -106,12 +106,14 @@ public:
     // Active minimap ping sprites, drawn by game/Hud.
     const std::vector<MapPing>& mapPings() const { return _mapPings; }
 
-private:
-    static constexpr int kPingIndicatorCount = 6; // 4 team + airdrop + airstrike
     // World ping indicator scales (emote.ts baseScale 0.4/0.5, shrunk so the
     // airdrop direction icon + arrow stays small; see the mockup HUD note).
-    static constexpr float kPingIconScale = 0.22f;
+    // Public so the host test can assert the screen->world edge scale.
     static constexpr float kPingEdgeScale = 0.28f;
+
+private:
+    static constexpr int kPingIndicatorCount = 6; // 4 team + airdrop + airstrike
+    static constexpr float kPingIconScale = 0.22f;
     static constexpr float kEmoteLifeIn = 0.75f;
     static constexpr float kEmoteLife = 1.0f;
     static constexpr float kEmoteLifeOut = 0.1f;

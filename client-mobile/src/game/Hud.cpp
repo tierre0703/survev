@@ -517,8 +517,13 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_actionBarBg);
     _actionBarFill = _factory->createGraphics();
     _root->addChild(_actionBarFill);
-    _actionBarBg->setPosition(X((vw - kActionWidth) * 0.5f), yTop(kActionTop + kActionHeight));
-    _actionBarFill->setPosition(X((vw - kActionWidth) * 0.5f), yTop(kActionTop + kActionHeight));
+    // The bar is painted from this rect: paintBox() also moves the node to it,
+    // and a rect at (0,0) used to park the background on the HUD origin
+    // (screen centre = the player) while the fill/text stayed up here.
+    _actionBarRect = Rect{X((vw - kActionWidth) * 0.5f), yTop(kActionTop + kActionHeight),
+                          kActionWidth, kActionHeight};
+    _actionBarBg->setPosition(_actionBarRect.x, _actionBarRect.y);
+    _actionBarFill->setPosition(_actionBarRect.x, _actionBarRect.y);
     _actionBarText = _factory->createText();
     _actionBarText->setFontSize(11.0f);
     _actionBarText->setColor(0xffffff, 0x000000, 1.0f, false);
@@ -558,8 +563,12 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     }
 
     // --- Interact prompt: finger-press button + loot name next to the item ---
+    // The name sits in its own box (ui2.ts #ui-interaction-outer), styled like
+    // the finger-press button.
     _promptBox = _factory->createGraphics();
     _root->addChild(_promptBox);
+    _promptTextBox = _factory->createGraphics();
+    _root->addChild(_promptTextBox);
     // Content/gui/tap.png loads without an atlas (the loadout atlas is only
     // registered on MapMsg), so the finger-press icon never gets missed.
     _promptIcon = _factory->createSprite("gui/tap.png");
@@ -573,7 +582,7 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_promptIcon);
     _promptText = _factory->createText();
     _promptText->setFontSize(16.0f);
-    _promptText->setColor(0xffe08a, 0x000000, 2.0f, true);
+    _promptText->setColor(0xffffff, 0x000000, 2.0f, true);
     _promptText->setAnchor(0.0f, 0.5f);
     _promptText->setVisible(false);
     _root->addChild(_promptText);
@@ -1389,6 +1398,9 @@ void Hud::setVisible(bool visible) {
     if (_promptBox) {
         _promptBox->setVisible(_visible && !_lastPrompt.empty());
     }
+    if (_promptTextBox) {
+        _promptTextBox->setVisible(_visible && !_lastPrompt.empty());
+    }
     if (_promptIcon) {
         _promptIcon->setVisible(_visible && !_lastPrompt.empty() &&
                                 _promptIcon->sourceWidth() > 0.0f);
@@ -1902,8 +1914,7 @@ void Hud::setActionProgress(const std::string& label, float elapsed, float durat
     _lastActionProgress = progress;
     if (bgChanged) {
         if (_actionBarBg) {
-            paintBox(_actionBarBg, Rect{0.0f, 0.0f, kActionWidth, kActionHeight}, 0x000000, 0.45f,
-                     0.5f);
+            paintBox(_actionBarBg, _actionBarRect, 0x000000, 0.45f, 0.5f);
             _actionBarBg->setVisible(_visible);
         }
         if (_actionBarText) {
@@ -1938,11 +1949,12 @@ void Hud::setInteractionPrompt(const std::string& text, const Vec2& designPos) {
 }
 
 void Hud::updatePrompt() {
-    if (!_promptBox || !_promptIcon || !_promptText || !_built) {
+    if (!_promptBox || !_promptTextBox || !_promptIcon || !_promptText || !_built) {
         return;
     }
     if (_lastPrompt.empty()) {
         _promptBox->setVisible(false);
+        _promptTextBox->setVisible(false);
         _promptIcon->setVisible(false);
         _promptText->setVisible(false);
         _promptRect = Rect{};
@@ -1954,23 +1966,38 @@ void Hud::updatePrompt() {
     // position is design-space (y up); nodes/rects are in the centred container.
     const float vw = _design.x;
     const float vh = _design.y;
+    // Container coords are centred, so the screen bounds are +/- (half - box)
+    // (the old lower bound of +box/2 pinned every loot left of/above the
+    // player to the middle of the screen).
+    const float halfBox = kPromptSize * 0.5f;
     const float cx = std::clamp(_promptPos.x - vw * 0.5f,
-                                kPromptSize * 0.5f, vw * 0.5f - kPromptSize * 0.5f);
-    const float cy =
-        std::clamp(_promptPos.y - vh * 0.5f, kPromptSize * 0.5f,
-                   vh * 0.5f - kPromptSize * 0.5f);
+                                -vw * 0.5f + halfBox, vw * 0.5f - halfBox);
+    const float cy = std::clamp(_promptPos.y - vh * 0.5f,
+                                -vh * 0.5f + halfBox, vh * 0.5f - halfBox);
     const Rect box{cx - kPromptSize * 0.5f, cy - kPromptSize * 0.5f, kPromptSize, kPromptSize};
-    const float textWidth = static_cast<float>(_lastPrompt.size()) * 9.0f;
-    const bool flipLeft = cx + kPromptSize * 0.5f + 12.0f + textWidth > vw * 0.5f - 12.0f;
-    if (flipLeft) {
-        _promptRect = Rect{cx - kPromptSize * 0.5f - 16.0f - textWidth, cy - kPromptSize * 0.5f - 4.0f,
-                           kPromptSize + 20.0f + textWidth, kPromptSize + 8.0f};
-    } else {
-        _promptRect = Rect{cx - kPromptSize * 0.5f - 4.0f, cy - kPromptSize * 0.5f - 4.0f,
-                           kPromptSize + 12.0f + textWidth, kPromptSize + 8.0f};
-    }
+    // ui2.ts #ui-interaction-outer: the item name gets its own dark box with
+    // the same border as the finger-press button (white text inside).
+    constexpr float kTextPad = 10.0f;
+    constexpr float kTextGap = 8.0f;
+    constexpr float kTextBoxHeight = 34.0f;
+    const float textWidth = static_cast<float>(_lastPrompt.size()) * 9.5f;
+    const float textBoxWidth = textWidth + kTextPad * 2.0f;
+    const bool flipLeft =
+        cx + kPromptSize * 0.5f + kTextGap + textBoxWidth > vw * 0.5f - 8.0f;
+    const Rect textBox = flipLeft
+        ? Rect{cx - kPromptSize * 0.5f - kTextGap - textBoxWidth, cy - kTextBoxHeight * 0.5f,
+               textBoxWidth, kTextBoxHeight}
+        : Rect{cx + kPromptSize * 0.5f + kTextGap, cy - kTextBoxHeight * 0.5f, textBoxWidth,
+               kTextBoxHeight};
+    // The icon button and the name box are one tap target beside the loot.
+    const float hitLeft = flipLeft ? textBox.x : box.x;
+    const float hitRight = flipLeft ? box.x + box.w : textBox.x + textBox.w;
+    _promptRect = Rect{hitLeft - 4.0f, cy - kPromptSize * 0.5f - 4.0f,
+                       hitRight - hitLeft + 8.0f, kPromptSize + 8.0f};
     paintBox(_promptBox, box, 0x000000, 0.5f, 0.6f);
+    paintBox(_promptTextBox, textBox, 0x000000, 0.5f, 0.6f);
     _promptBox->setVisible(_visible);
+    _promptTextBox->setVisible(_visible);
     const float source = std::max(_promptIcon->sourceWidth(), _promptIcon->sourceHeight());
     if (source > 0.0f) {
         const float scale = 36.0f / source;
@@ -1983,10 +2010,10 @@ void Hud::updatePrompt() {
     _promptText->setText(_lastPrompt);
     if (flipLeft) {
         _promptText->setAnchor(1.0f, 0.5f);
-        _promptText->setPosition(box.x - 12.0f, cy);
+        _promptText->setPosition(textBox.x + textBox.w - kTextPad, cy);
     } else {
         _promptText->setAnchor(0.0f, 0.5f);
-        _promptText->setPosition(box.x + box.w + 12.0f, cy);
+        _promptText->setPosition(textBox.x + kTextPad, cy);
     }
     _promptText->setVisible(_visible);
 }

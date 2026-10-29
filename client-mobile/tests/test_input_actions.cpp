@@ -225,6 +225,39 @@ TEST(hud_action_bar_hit_test) {
     CHECK(hud.hitTest(gearX, 720.0f - gearY).kind == Hud::TapKind::Settings);
 }
 
+TEST(hud_action_bar_background_stays_above_the_messages) {
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.setVisible(true);
+    hud.setActionProgress("RELOADING", 0.0f, 1.0f);
+
+    auto* bg = static_cast<const pix::NullGraphics*>(hud.actionBarBg());
+    CHECK(bg != nullptr);
+    if (!bg) {
+        return;
+    }
+    // The 240x14 bar is centred 88px below the top of the 1280x720 design
+    // space, in the centred HUD container. paintBox() positions its node from
+    // the rect it draws; passing the relative {0,0,...} rect parked the
+    // background at the HUD origin (screen centre = the player) while the fill
+    // and label stayed above the messages.
+    CHECK_NEAR(bg->x, -120.0f, 0.001f);
+    CHECK_NEAR(bg->y, 258.0f, 0.001f);
+    bool sawRect = false;
+    for (const auto& cmd : bg->commands) {
+        if (cmd.kind == pix::DrawCommand::Rect) {
+            sawRect = true;
+            CHECK_NEAR(cmd.a, 0.0f, 0.001f);
+            CHECK_NEAR(cmd.b, 0.0f, 0.001f);
+            CHECK_NEAR(cmd.c, 240.0f, 0.001f);
+            CHECK_NEAR(cmd.d, 14.0f, 0.001f);
+        }
+    }
+    CHECK(sawRect);
+}
+
 TEST(hud_action_bar_shows_inventory_state) {
     Harness h;
     UpdateMsg update = makeActionUpdate();
@@ -396,11 +429,33 @@ TEST(hud_prompt_announcement_and_faction_counts) {
     CHECK(prompt != nullptr);
     CHECK(prompt->visible);
     CHECK_EQ(prompt->text, std::string("PICK UP FRAG"));
+    CHECK_EQ(prompt->fill, 0xffffffu); // white name text on the dark box
+    // The item name gets its own box, right of the finger-press button and
+    // vertically centred on it (ui2.ts #ui-interaction-outer).
+    auto* nameBox = static_cast<const pix::NullGraphics*>(hud.interactionPromptTextBox());
+    CHECK(nameBox != nullptr);
+    if (nameBox) {
+        CHECK(nameBox->visible);
+        CHECK_NEAR(nameBox->x, 34.0f, 0.001f);  // 26 (half icon) + 8 gap
+        CHECK_NEAR(nameBox->y, 263.0f, 0.001f); // cy 280 - 34/2
+        bool sawRect = false;
+        for (const auto& cmd : nameBox->commands) {
+            if (cmd.kind == pix::DrawCommand::Rect) {
+                sawRect = true;
+                CHECK_NEAR(cmd.d, 34.0f, 0.001f);
+                CHECK(cmd.c > 100.0f);
+            }
+        }
+        CHECK(sawRect);
+    }
     // The finger-press button and the item name are one tap target beside the
     // loot (design position fed by GameScene).
     CHECK(hud.hitTest(640.0f, 640.0f).kind == Hud::TapKind::Interact);
     hud.setInteractionPrompt(std::string(), Vec2(640.0f, 640.0f));
     CHECK(!prompt->visible);
+    if (nameBox) {
+        CHECK(!nameBox->visible);
+    }
     CHECK(hud.hitTest(640.0f, 640.0f).kind == Hud::TapKind::None);
 
     hud.showAnnouncement("ROLE ASSIGNED: LEADER");

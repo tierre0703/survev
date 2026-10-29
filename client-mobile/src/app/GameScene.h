@@ -348,6 +348,12 @@ private:
     // P0.1 gameplay action buttons: taps/holds on the HUD controls queue into
     // `_pendingInputs` and drain into the next InputMsg (see updateInput()).
     InputActions _pendingInputs;
+    // Reload/use/revive action bar. The server only sends the action start
+    // (activePlayerData.actionDirty); the end arrives as the player object's
+    // actionType going back to None, so the elapsed time is advanced locally
+    // like PieTimer.update (client/src/ui/pieTimer.ts).
+    int _actionBarSeq = 0;
+    float _actionBarElapsed = 0.0f;
     // A touch driving a weapon card (tap = equip, hold = drop/drag-swap). `kind`
     // is a Hud::TapKind kept as int so this header stays independent of Hud.h.
     struct HudPress {

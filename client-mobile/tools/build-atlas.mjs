@@ -74,13 +74,17 @@ function latestAtlasDirs() {
     return byAtlas;
 }
 
-// Pixi spriteSourceSize is the trimmed rect's top-left in the original image.
-// cocos2d's `offset` is the trimmed content's centre relative to the original
-// centre: offset = spriteSourceSize - (sourceSize - frameSize) / 2.
+// Pixi spriteSourceSize is the trimmed rect's top-left in the original image
+// (y down). cocos2d's `offset` is the trimmed content's centre relative to the
+// original centre in points with **y up**, so the y term keeps its magnitude
+// but flips sign: a content that sits lower in the image needs a negative
+// cocos offset. (Using the raw y-down value shifted every trimmed sprite -
+// guns, helmets, bodies - by twice the trim distance; the M1100's +12.5 gap
+// between the grip and the hand came from this.)
 function frameOffset(sss, frame, source) {
     return {
         x: sss.x - (source.w - frame.w) / 2,
-        y: sss.y - (source.h - frame.h) / 2,
+        y: (source.h - frame.h) / 2 - sss.y,
     };
 }
 

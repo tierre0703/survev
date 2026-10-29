@@ -2004,12 +2004,26 @@ void GameScene::update(float delta) {
 
     // Priority 2: reloading/using/reviving progress bar (pieTimer.ts port is
     // drawn by the Hud action bar now, centred above the in-game messages).
-    if (_game && isStarted()) {
+    // activePlayerData.actionDirty only carries the start of an action; the end
+    // arrives as the player object's actionType going back to None. The elapsed
+    // time is advanced locally like PieTimer.update, otherwise the bar sat at 0
+    // progress and never disappeared (its background then stayed on screen).
+    const bool actionBarAllowed = _game && isStarted() && !_game->gameOver() &&
+        !_game->isLocalDead() && !_game->isSpectating();
+    if (actionBarAllowed) {
         const auto& apd = _game->activePlayerData();
-        std::string label;
-        if (apd.actionDuration > 0.0f) {
-            const Player* me = _world ? _world->activePlayer() : nullptr;
-            switch (me ? me->actionType : Action_None) {
+        const Player* me = _world ? _world->activePlayer() : nullptr;
+        const int actionType = me ? me->actionType : Action_None;
+        if (actionType != Action_None && apd.actionDuration > 0.0f) {
+            // actionSeq (player.ts m_action.seq) changes on start and cancel;
+            // a fresh action restarts the local timer.
+            if (me->actionSeq != _actionBarSeq) {
+                _actionBarSeq = me->actionSeq;
+                _actionBarElapsed = apd.actionTime;
+            }
+            _actionBarElapsed = std::min(_actionBarElapsed + delta, apd.actionDuration);
+            std::string label;
+            switch (actionType) {
                 case Action_Reload:
                 case Action_ReloadAlt: label = "RELOADING"; break;
                 case Action_UseItem: label = "USING"; break;
@@ -2017,11 +2031,16 @@ void GameScene::update(float delta) {
                 default: label = "ACTION"; break;
             }
             if (_hud) {
-                _hud->setActionProgress(label, apd.actionTime, apd.actionDuration);
+                _hud->setActionProgress(label, _actionBarElapsed, apd.actionDuration);
             }
         } else if (_hud) {
+            _actionBarSeq = me ? me->actionSeq : 0;
+            _actionBarElapsed = 0.0f;
             _hud->setActionProgress(std::string(), 0.0f, 0.0f);
         }
+    } else if (_hud) {
+        _actionBarElapsed = 0.0f;
+        _hud->setActionProgress(std::string(), 0.0f, 0.0f);
     }
 
     // M7 crosshair removed (session 51): the wheel-driven pings/emotes already

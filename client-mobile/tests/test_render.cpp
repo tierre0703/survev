@@ -1720,6 +1720,40 @@ TEST(player_throwable_and_melee_pose) {
     CHECK(!container(p.container)->visible);
 }
 
+// player.ts updateRotation(): meleeSprite.position = -MeleeR.pivot and
+// meleeSprite.pivot = -(MeleeR.pos + worldImg.pos), with PIXI applying the
+// sprite scale to the pivot (position - R*scale*pivot). The port used to add
+// the unscaled pivot, which put the woodaxe well outside the hand.
+TEST(player_melee_hold_position) {
+    installGeneratedDefs();
+    pix::NullPixiFactory factory;
+    GameWorld world(&factory, false);
+    Player p;
+    p.m_init();
+    auto d = playerData();
+    d.activeWeapon = "woodaxe";
+    p.m_updateData(d, true, true, world);
+    p.update(0, world);
+
+    const GameObjRenderDef* axe = getDefProvider()->gameObject("woodaxe");
+    CHECK(axe != nullptr);
+    if (!axe) return;
+    const float r = axe->worldImg.rot;
+    // meleeTwoHanded leaves the MeleeR bone at the origin, so the pivot is
+    // worldImg.pos in the hand's PIXI-y-down frame -> (12.5, -16) y-up.
+    const Vec2 pivot(-axe->worldImg.pos.x, axe->worldImg.pos.y);
+    const Vec2 expected = v2Neg(
+        v2Rotate(v2Mul(pivot, axe->worldImg.scale.x), -r));
+    CHECK_NEAR(sprite(p.meleeSprite)->x, expected.x, 1e-4f);
+    CHECK_NEAR(sprite(p.meleeSprite)->y, expected.y, 1e-4f);
+    CHECK_NEAR(sprite(p.meleeSprite)->rotation, r, 1e-4f);
+    CHECK_NEAR(sprite(p.meleeSprite)->sx, axe->worldImg.scale.x, 1e-4f);
+    CHECK_NEAR(sprite(p.meleeSprite)->sy, axe->worldImg.scale.y, 1e-4f);
+    // Pin the woodaxe offset: the grip now sits in the right hand.
+    CHECK_NEAR(sprite(p.meleeSprite)->x, 3.6341f, 1e-3f);
+    CHECK_NEAR(sprite(p.meleeSprite)->y, 6.1069f, 1e-3f);
+}
+
 TEST(player_generated_animation_tables) {
     installGeneratedDefs();
     const auto* defs = getDefProvider();

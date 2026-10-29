@@ -476,6 +476,18 @@ public class JavaUiHost {
         if (mMenu != null) mMenu.show();
     }
 
+    /**
+     * The team room is gone (its socket closed) but the match it started is
+     * still running: forget the team without changing the current screen, so
+     * the match-end callback opens the main menu instead of the dead room.
+     */
+    public void dropTeam() {
+        mInTeam = false;
+        if (mTeam != null) mTeam.hide();
+        updateBackBtn();
+        Log.i(TAG, "dropTeam (room socket lost)");
+    }
+
     public void updateTeam(float dt) {
         // TeamFragment handles its own updates via WebSocket callbacks
     }
