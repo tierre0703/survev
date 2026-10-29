@@ -418,25 +418,9 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_mapFrame);
     _minimapTapRect = Rect{_minimapPos.x - 4.0f, _minimapPos.y - 4.0f, mm + 8.0f, mm + 8.0f};
 
-    // Settings gear (#ui-menu-display), immediately right of the top-left
-    // minimap so the 3px map inset does not bury the button underneath it.
-    // The icon uses the direct file (Content/gui/cog.png) instead of a
-    // loadout-atlas frame: resetWorld() runs before the map atlases are loaded.
-    const float settingsX = kMinimapLeft + kMinimapSize + 6.0f;
-    _settingsRect = Rect{X(settingsX), yTop(kMinimapTop + kSettingsSize), kSettingsSize, kSettingsSize};
-    _settingsBg = _factory->createGraphics();
-    paintBox(_settingsBg, _settingsRect, 0x000000, 0.4f, 0.5f);
-    _root->addChild(_settingsBg);
-    _settingsIcon = _factory->createSprite("gui/cog.png");
-    _settingsIcon->setAnchor(0.5f, 0.5f);
-    _root->addChild(_settingsIcon);
-    {
-        const float source = std::max(_settingsIcon->sourceWidth(), _settingsIcon->sourceHeight());
-        const float scale = source > 0.0f ? 32.0f / source : 1.0f;
-        _settingsIcon->setScale(scale, scale);
-        _settingsIcon->setPosition(_settingsRect.x + kSettingsSize * 0.5f,
-                                   _settingsRect.y + kSettingsSize * 0.5f);
-    }
+    // Settings gear (#ui-menu-display) is created after the minimap contents
+    // below so it draws inside the map's top-left corner (0,0) instead of
+    // being covered by the map texture.
 
     // Info row under the minimap: gas timer + alive count + kill count.
     const float infoTop = kInfoBarTop;
@@ -913,6 +897,24 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     // --- Minimap contents (map.ts renderMap + ui.ts map sprites) ---
     _miniMap.build(_factory, _root, _minimapPos, kMinimapSize);
     _miniMap.setZoomed(true);
+
+    // Settings gear (#ui-menu-display) inside the minimap's top-left corner.
+    // The icon uses the direct file (Content/gui/cog.png) instead of a
+    // loadout-atlas frame: resetWorld() runs before the map atlases are loaded.
+    _settingsRect = Rect{X(kMinimapLeft), yTop(kMinimapTop + kSettingsSize), kSettingsSize, kSettingsSize};
+    _settingsBg = _factory->createGraphics();
+    paintBox(_settingsBg, _settingsRect, 0x000000, 0.4f, 0.5f);
+    _root->addChild(_settingsBg);
+    _settingsIcon = _factory->createSprite("gui/cog.png");
+    _settingsIcon->setAnchor(0.5f, 0.5f);
+    _root->addChild(_settingsIcon);
+    {
+        const float source = std::max(_settingsIcon->sourceWidth(), _settingsIcon->sourceHeight());
+        const float scale = source > 0.0f ? 32.0f / source : 1.0f;
+        _settingsIcon->setScale(scale, scale);
+        _settingsIcon->setPosition(_settingsRect.x + kSettingsSize * 0.5f,
+                                   _settingsRect.y + kSettingsSize * 0.5f);
+    }
 
     // --- Full-screen big map (#big-map) ---
     _bigMapPos = Vec2(X((_design.x - kBigMapSize) * 0.5f), Y((_design.y - kBigMapSize) * 0.5f));

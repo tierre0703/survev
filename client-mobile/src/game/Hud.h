@@ -91,7 +91,7 @@ public:
     static constexpr float kBoostBarHeight = 8.0f;
     // Web mobile #ui-map-wrapper-mobile, pinned to the very top-left corner
     // (playtest: 3px inset instead of the web's left 6/top 46). The settings
-    // cog sits immediately right of the map so it stays tappable.
+    // cog sits inside the map's top-left corner (0,0 of the minimap).
     static constexpr float kMinimapSize = 140.0f;
     static constexpr float kMinimapLeft = 3.0f;
     static constexpr float kMinimapTop = 3.0f; // from the top edge

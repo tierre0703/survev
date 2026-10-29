@@ -2936,13 +2936,14 @@ and the gear + emote/ping wheels repositioned.
 
 ### What changed
 
-1. **Settings gear (right of the minimap), opens the game menu.**
-   `TapKind::Settings` on the 44px `#ui-menu-display`-style box routes to
-   `uiHost()->togglePause()` (the Java `GamePauseDialog`, same path as BACK);
-   hosts without the bridge get a Hud panel (RESUME/LEAVE, `showGameMenu()` +
-   `menuActionAt()`). The icon uses the direct `gui/cog.png` file because the
-   HUD builds before the map atlases are registered. It moved right of the map
-   so the 3px map inset does not bury the button.
+1. **Settings gear (inside the minimap's top-left corner), opens the game
+   menu.** `TapKind::Settings` on the 44px `#ui-menu-display`-style box routes
+   to `uiHost()->togglePause()` (the Java `GamePauseDialog`, same path as
+   BACK); hosts without the bridge get a Hud panel (RESUME/LEAVE,
+   `showGameMenu()` + `menuActionAt()`). The icon uses the direct
+   `gui/cog.png` file because the HUD builds before the map atlases are
+   registered. It is created after `_miniMap.build()` so it draws over the map
+   texture at the minimap's (0,0).
 2. **Minimap pinned to the top-left (3,3); tapping it opens the big map.** The
    old 22px expand button is gone; `minimapTapHit()` covers the whole 140px
    box. The info bar follows the map (`kInfoBarTop = kMinimapTop +
