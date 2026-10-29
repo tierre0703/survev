@@ -591,18 +591,34 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_promptText);
     _promptPos = Vec2(vw * 0.5f, vh * 0.5f);
 
-    // ui.ts off-screen teammate arrows.
-    for (auto*& arrow : _teamArrows) {
-        arrow = _factory->createGraphics();
-        arrow->beginFill(0xffffff, 0.9f);
-        arrow->moveTo(10.0f, 0.0f);
-        arrow->lineTo(-7.0f, -7.0f);
-        arrow->lineTo(-3.0f, 0.0f);
-        arrow->lineTo(-7.0f, 7.0f);
-        arrow->closePath();
-        arrow->endFill();
+    // ui.ts off-screen teammate arrows: `.ui-team-indicator` uses the
+    // 64x64 `/img/gui/indicator.svg` art plus a 32x32 group-colour dot at
+    // `.ui-team-indicator-pos`. The small layout applies `scale(0.5)` to the
+    // whole 64px box, hence the 32px art and 8px dot radius here.
+    for (int i = 0; i < kTeamArrowCount; ++i) {
+        pix::Container* arrow = _factory->createContainer();
+        pix::Sprite* art = _factory->createSprite("gui/indicator.png");
+        art->setAnchor(0.5f, 0.5f);
+        const float source = std::max(art->sourceWidth(), art->sourceHeight());
+        if (source > 0.0f) {
+            const float scale = kTeamArrowArtSize / source;
+            art->setScale(scale, scale);
+        }
+        arrow->addChild(art);
+
+        // index.html gives the five main indicators fixed group colours
+        // (yellow, magenta, cyan, orange, yellow again for slot 4).
+        pix::Graphics* dot = _factory->createGraphics();
+        dot->beginFill(kGroupColors[i % 4], 1.0f);
+        dot->drawCircle(0.0f, kTeamArrowDotOffsetY, kTeamArrowDotRadius);
+        dot->endFill();
+        dot->setAlpha(kTeamArrowDotOpacity);
+        arrow->addChild(dot);
+
         arrow->setVisible(false);
         _root->addChild(arrow);
+        _teamArrows[static_cast<size_t>(i)] = arrow;
+        _teamArrowDots[static_cast<size_t>(i)] = dot;
     }
 
     // --- Weapon cards (right column, tap-to-equip / hold-to-drop) ---
@@ -1160,7 +1176,9 @@ void Hud::setVisible(bool visible) {
         if (_teamArrows[i]) {
             // Only slots GameScene actually populated may show; otherwise a
             // big-map toggle would revive stale arrow nodes.
-            _teamArrows[i]->setVisible(visible && !_bigMapVisible && i < _teamArrowState.size());
+            const bool populated = std::any_of(_teamArrowState.begin(), _teamArrowState.end(),
+                [i](const TeammateArrow& arrow) { return arrow.slot == static_cast<int>(i); });
+            _teamArrows[i]->setVisible(visible && !_bigMapVisible && populated);
         }
     }
     for (auto* seg : _boostSegments) {
@@ -1916,26 +1934,34 @@ void Hud::showAnnouncement(const std::string& text, float seconds) {
     }
 }
 
+float Hud::teamArrowRotation(const Vec2& worldDir) {
+    // ui.ts: `Math.atan2(dir.y, -dir.x) - Math.PI * 0.5`. `dir` is a world
+    // vector and indicator.svg points up, and both CSS and axmol treat a
+    // positive rotation as clockwise on screen, so no extra flip is needed.
+    return std::atan2(worldDir.y, -worldDir.x) - 1.5707963267948966f;
+}
+
 void Hud::setTeammateArrows(const std::vector<TeammateArrow>& arrows) {
     _teamArrowState = arrows;
     if (!_built) {
         return;
     }
     for (size_t i = 0; i < _teamArrows.size(); ++i) {
-        pix::Graphics* node = _teamArrows[i];
+        pix::Container* node = _teamArrows[i];
         if (!node) {
             continue;
         }
-        const bool show = _visible && !_bigMapVisible && i < arrows.size();
+        // The web keeps one element per group slot; unset slots stay hidden.
+        const auto it = std::find_if(arrows.begin(), arrows.end(),
+            [i](const TeammateArrow& arrow) { return arrow.slot == static_cast<int>(i); });
+        const bool show = _visible && !_bigMapVisible && it != arrows.end();
         node->setVisible(show);
         if (!show) {
             continue;
         }
-        const TeammateArrow& arrow = arrows[i];
+        const TeammateArrow& arrow = *it;
         node->setPosition(arrow.pos.x, arrow.pos.y);
         node->setRotation(arrow.rot);
-        node->setTint(arrow.tint);
-        node->setAlpha(arrow.downed ? 0.55f : 0.9f);
     }
 }
 

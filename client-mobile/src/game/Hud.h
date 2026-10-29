@@ -59,16 +59,31 @@ struct GasHudState {
 
 // ui.ts team arrows: a teammate outside the camera view, pinned to the screen
 // edge (ui.ts clamps the camera-AABB edge hit to a 16px inset on the mobile
-// layout).
+// layout). The web has one `.ui-indicator-main[data-id=slot]` element per
+// group slot; the group colour comes from that slot, not from the downed
+// state.
 struct TeammateArrow {
+    int slot = 0;                // groupInfo.playerIds index (0..4)
     Vec2 pos = Vec2(0.0f, 0.0f); // HUD design space (y-up, centred)
-    float rot = 0.0f;            // design-space rotation (clockwise positive)
-    uint32_t tint = 0xffffff;
-    bool downed = false;
+    float rot = 0.0f;            // clockwise rotation of the up-pointing art
 };
 
 class Hud {
 public:
+    // ui.ts team arrows: index.html #ui-team-indicators has five
+    // `.ui-indicator-main` elements (data-id 0..4).
+    static constexpr int kTeamArrowCount = 5;
+    // .ui-team-indicator: 64x64 art, `scale(0.5)` on the small/mobile layout.
+    static constexpr float kTeamArrowArtSize = 32.0f;
+    // .ui-team-indicator-pos: 32x32 dot at top 23px in the 64px box, i.e. its
+    // centre sits 7px below the arrow centre (and is scaled by 0.5 too).
+    static constexpr float kTeamArrowDotRadius = 8.0f;
+    static constexpr float kTeamArrowDotOffsetY = -3.5f;
+    static constexpr float kTeamArrowDotOpacity = 0.75f;
+    // ui.ts `rot = Math.atan2(dir.y, -dir.x) - Math.PI * 0.5`, applied to the
+    // up-pointing indicator.svg art (axmol/CSS both rotate clockwise).
+    static float teamArrowRotation(const Vec2& worldDir);
+
     // Web sizes (client/css/game.css).
     static constexpr float kHealthBarWidth = 400.0f;
     static constexpr float kHealthBarHeight = 32.0f;
@@ -348,10 +363,12 @@ public:
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].colorDot : nullptr;
     }
     // ui.ts team arrows: off-screen teammate indicators (screen-edge position).
-    const pix::Graphics* teamArrow(int idx) const {
-        return (idx >= 0 && idx < static_cast<int>(_teamArrows.size()))
-            ? _teamArrows[static_cast<size_t>(idx)]
-            : nullptr;
+    // `_teamArrows[slot]` is the rotated container (indicator.svg + colour dot).
+    const pix::Container* teamArrow(int idx) const {
+        return (idx >= 0 && idx < kTeamArrowCount) ? _teamArrows[static_cast<size_t>(idx)] : nullptr;
+    }
+    const pix::Graphics* teamArrowDot(int idx) const {
+        return (idx >= 0 && idx < kTeamArrowCount) ? _teamArrowDots[static_cast<size_t>(idx)] : nullptr;
     }
     const pix::Graphics* squadHealthFill(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].barFill : nullptr;
@@ -660,7 +677,8 @@ private:
     std::string _flairFrame;
     pix::Sprite* _flairLeft = nullptr;
     pix::Sprite* _flairRight = nullptr;
-    std::array<pix::Graphics*, 3> _teamArrows{};
+    std::array<pix::Container*, kTeamArrowCount> _teamArrows{};
+    std::array<pix::Graphics*, kTeamArrowCount> _teamArrowDots{};
     std::vector<TeammateArrow> _teamArrowState;
 
     Vec2 _design = Vec2(1280.0f, 720.0f);

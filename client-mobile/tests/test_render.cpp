@@ -8,6 +8,7 @@
 #include "audio/Ambiance.h"
 #include "audio/AudioManager.h"
 #include "audio/GeneratedSoundDefs.h"
+#include "core/GameConfig.h"
 #include "game/GameWorld.h"
 #include "game/Map.h"
 #include "game/Gas.h"
@@ -25,6 +26,7 @@
 #include "render/Renderer.h"
 #include "render/Terrain.h"
 
+#include <cmath>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -2752,7 +2754,8 @@ TEST(hud_gear_levels_and_squad_polish) {
 
 // ui.ts team arrows: Hud places each indicator at the caller-supplied
 // screen-edge position, not at a fixed radius around the HUD centre (which
-// put the arrow next to the local player's head).
+// put the arrow next to the local player's head). The indicator is the
+// up-pointing `/img/gui/indicator.svg` art plus the group-colour dot.
 TEST(hud_team_arrow_positions) {
     pix::NullPixiFactory factory;
     auto* root = static_cast<pix::NullContainer*>(factory.createContainer());
@@ -2762,31 +2765,42 @@ TEST(hud_team_arrow_positions) {
 
     std::vector<TeammateArrow> arrows(2);
     // Hud child coordinates are centred on the 1280x720 design rect.
+    arrows[0].slot = 0;
     arrows[0].pos = Vec2(0.0f, 344.0f); // top edge, 16px inset
-    arrows[0].rot = -1.5707964f;        // arrow art +x rotated to point up
-    arrows[0].tint = 0xffffff;
+    arrows[0].rot = Hud::teamArrowRotation(Vec2(0.0f, 1.0f)); // up
+    arrows[1].slot = 1;
     arrows[1].pos = Vec2(624.0f, 0.0f); // right edge
-    arrows[1].rot = 0.0f;
-    arrows[1].downed = true;
+    arrows[1].rot = Hud::teamArrowRotation(Vec2(1.0f, 0.0f)); // right
     hud.setTeammateArrows(arrows);
 
-    const auto* first = static_cast<const pix::NullGraphics*>(hud.teamArrow(0));
+    const auto* first = static_cast<const pix::NullContainer*>(hud.teamArrow(0));
     CHECK(first != nullptr);
     CHECK(first->visible);
     CHECK_NEAR(first->x, 0.0f, 1e-4f);
     CHECK_NEAR(first->y, 344.0f, 1e-4f);
-    CHECK_NEAR(first->rotation, -1.5707964f, 1e-4f);
-    CHECK_NEAR(first->alpha, 0.9f, 1e-5f);
+    CHECK_NEAR(first->rotation, 0.0f, 1e-4f);
 
-    const auto* second = static_cast<const pix::NullGraphics*>(hud.teamArrow(1));
+    // .ui-team-indicator-pos: 32x32 group-colour dot, 7px below the centre of
+    // the 64px box and scaled by 0.5 with the rest of the indicator.
+    const auto* dot0 = static_cast<const pix::NullGraphics*>(hud.teamArrowDot(0));
+    CHECK(dot0 != nullptr);
+    CHECK_EQ(dot0->commands.size(), static_cast<size_t>(3));
+    CHECK_EQ(dot0->commands[0].color, kGroupColors[0]);
+    CHECK_NEAR(dot0->commands[1].a, 0.0f, 1e-4f);
+    CHECK_NEAR(dot0->commands[1].b, Hud::kTeamArrowDotOffsetY, 1e-4f);
+    CHECK_NEAR(dot0->commands[1].c, Hud::kTeamArrowDotRadius, 1e-4f);
+    CHECK_NEAR(dot0->alpha, Hud::kTeamArrowDotOpacity, 1e-5f);
+
+    const auto* second = static_cast<const pix::NullContainer*>(hud.teamArrow(1));
     CHECK(second->visible);
     CHECK_NEAR(second->x, 624.0f, 1e-4f);
     CHECK_NEAR(second->y, 0.0f, 1e-4f);
-    // Downed teammates fade like the web's `.ui-team-indicator-down` style.
-    CHECK_NEAR(second->alpha, 0.55f, 1e-5f);
+    CHECK_NEAR(second->rotation, 1.5707964f, 1e-4f);
+    const auto* dot1 = static_cast<const pix::NullGraphics*>(hud.teamArrowDot(1));
+    CHECK_EQ(dot1->commands[0].color, kGroupColors[1]);
 
-    // Slots beyond the caller's list stay hidden (3 arrow nodes are built).
-    CHECK(!static_cast<const pix::NullGraphics*>(hud.teamArrow(2))->visible);
+    // Unused group slots stay hidden (the web has five main indicators).
+    CHECK(!static_cast<const pix::NullContainer*>(hud.teamArrow(2))->visible);
     // The big map hides every arrow.
     hud.setBigMapVisible(true);
     CHECK(!first->visible);
@@ -2797,6 +2811,17 @@ TEST(hud_team_arrow_positions) {
 
     hud.setTeammateArrows({});
     CHECK(!first->visible);
+}
+
+// ui.ts rotation for the up-pointing indicator.svg art: cardinals must point
+// at the teammate (right -> +90deg clockwise, up -> 0, ...).
+TEST(hud_team_arrow_rotation) {
+    constexpr float kPi = 3.14159265358979f;
+    CHECK_NEAR(Hud::teamArrowRotation(Vec2(0.0f, 1.0f)), 0.0f, 1e-5f);
+    CHECK_NEAR(Hud::teamArrowRotation(Vec2(1.0f, 0.0f)), kPi * 0.5f, 1e-5f);
+    CHECK_NEAR(Hud::teamArrowRotation(Vec2(-1.0f, 0.0f)), -kPi * 0.5f, 1e-5f);
+    CHECK_NEAR(std::fabs(Hud::teamArrowRotation(Vec2(0.0f, -1.0f))), kPi, 1e-5f);
+    CHECK_NEAR(Hud::teamArrowRotation(Vec2(1.0f, 1.0f)), kPi * 0.25f, 1e-5f);
 }
 
 // game.ts RoleAnnouncement: promoted/dead lines go into the kill feed with the

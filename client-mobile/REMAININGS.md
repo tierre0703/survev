@@ -430,11 +430,11 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
         `YOU KILLED <name>`.
       - Kill feed: six individually coloured rows (local killer green, local
         target red, otherwise orange) rather than one monochrome text block.
-      - Faction modes show `R n   B n`; team arrows sit 300 px from the screen
-        centre for living/downed off-screen teammates; role announcements appear
-        under the kill leader; `WAITING FOR PLAYERS` is shown until
-        `JoinedMsg.started`; the pie timer now gets `RELOADING`/`USING`/
-        `REVIVING` labels from the active player action.
+      - Faction modes show `R n   B n`; off-screen teammate arrows use the web's
+        `indicator.svg` art (group-colour dot) and sit on the camera-view edge;
+        role announcements appear under the kill leader; `WAITING FOR PLAYERS`
+        is shown until `JoinedMsg.started`; the pie timer now gets
+        `RELOADING`/`USING`/`REVIVING` labels from the active player action.
       - Perk-mode role picker landed in the fourteenth P2 pass (roles list,
         selection/confirm, 20 s countdown); exact CDN role art beyond the
         rasterized `gui/role-*.png` remains P2.

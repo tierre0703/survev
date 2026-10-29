@@ -3055,14 +3055,21 @@ Replaces the drag-to-select emote/ping wheel flow requested by playtesting:
    The locked centres moved to fit: landscape (160, 140) instead of
    (126, 100), portrait (120, 176) instead of (96, 160) — a little above the
    bottom edge and a little further inside.
-9. **Team arrows sit on the screen edge.** `Hud::setTeammateArrows` used to
-   place each arrow at `dir * 300` from the (centred) HUD origin, so an
-   off-screen teammate's indicator hovered next to the local player's head.
-   `GameScene` now mirrors `ui.ts 808-857`: it intersects the ray from the
-   camera centre through the teammate with the `camAabb`, clamps the hit to a
-   16px inset (the small/mobile layout) and passes the centred design-space
-   position + rotation; hidden slots can no longer be revived by a big-map
-   toggle. Covered by `hud_team_arrow_positions`.
+9. **Team arrows sit on the screen edge and use `indicator.svg`.** The port
+   used to draw a small custom chevron `dir * 300` from the (centred) HUD
+   origin, so an off-screen teammate's indicator hovered next to the local
+   player's head, and its rotation matched the art's local +x axis instead of
+   the web's up-pointing art. `GameScene` now mirrors `ui.ts 808-857`: the
+   teammate's group slot is kept (sorted `groupInfo.playerIds` order), the
+   arrow is shown only once `testCircleAabb` says the whole player radius has
+   left the `camAabb`, the ray from the camera centre is clamped to a 16px
+   inset (small/mobile layout), and the rotation is the web's
+   `atan2(dir.y, -dir.x) - PI/2` for the up-pointing `/img/gui/indicator.svg`
+   art. `Hud` renders the rasterised `gui/indicator.png` (32px on the small
+   layout) plus `.ui-team-indicator-pos`'s 32x32 group-colour dot at 75%
+   opacity, one node per group slot; faction mode suppresses the arrows and a
+   big-map toggle cannot revive hidden slots. Covered by
+   `hud_team_arrow_positions` and `hud_team_arrow_rotation`.
 
 Tests updated to tap semantics (`emote_wheel_tap_selects_and_closes`,
 `ping_wheel_tap_selects_pings_and_team_emotes`, cooldown/solo gates, etc)
