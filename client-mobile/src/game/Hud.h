@@ -1,21 +1,27 @@
 #pragma once
 // Plain (non-FairyGUI) in-game HUD, drawn through the pix adapter on the game
 // root, i.e. in the 1280x720 design space of the scene (the same space the menu
-// uses via `ui::layoutUiRoot`). It mirrors the web HUD's layout
-// (client/index.html + client/css/game.css):
+// uses via `ui::layoutUiRoot`). Layout mirrors the web client's mobile HUD
+// (client/index.html + client/css/game.css `.ui-map-wrapper-mobile`):
 //
-//   #ui-bottom-center-0  health bar (400x32) + boost, bottom centre
-//   #ui-map-wrapper      minimap + alive counter, top right
-//   #ui-bottom-right     weapon cards / ammo, bottom right
-//   #ui-bottom-center-2  pickup message, below the centre
-//   #ui-killfeed         kill feed, right side
+//   gear button        top-left corner -> the in-game menu (Java pause dialog)
+//   minimap            top-left under the gear; tapping it opens the big map
+//   info bar           gas timer + alive count (+ kills), under the minimap
+//   scope strip        1x/2x/4x/8x/15x pills down the left side (web
+//                      #ui-top-center-scopes, mobile: left 6px top 132)
+//   messages           "Waiting for players..." / announcements horizontally
+//                      centred, half a minimap size down from the top
+//   action bar         reload/use/revive progress bar, centred above the
+//                      messages
+//   bag counters       bandage / medkit / soda / pills counts across the top
+//   ammo column        per-ammo-type counts with coloured chips, top right
+//   weapon cards       guns / melee / throwable down the right side
+//   interact prompt    finger-press button + item name shown next to the
+//                      nearby loot; tapping either picks it up
+//   health bar         400x32 + boost, bottom centre
 //
-// Touch action controls (P0.1): reload + interaction buttons (#ui-reload-button
-// and the touch #ui-interaction tap target), a quick-use heal/boost pair, a
-// scope cycle pill, a weapon-slot swap pill, and the four weapon cards as
-// tap-to-equip / long-press-to-drop targets. The web drives these through
-// DOM buttons; the native HUD exposes hitTest() so GameScene can route a touch
-// into the InputActions queue instead of the joystick pads.
+// Touch controls: HitTest() so GameScene can route a touch into the
+// InputActions queue instead of the joystick pads.
 //
 // Engine-independent like the rest of `src/game`: it only uses pix::Factory
 // nodes and reads the Game snapshot, so `surv_tests` exercises it with
@@ -65,27 +71,60 @@ public:
     static constexpr float kHealthBarHeight = 32.0f;
     static constexpr float kHealthBarPadding = 6.0f;
     static constexpr float kBoostBarHeight = 8.0f;
+    // Web mobile #ui-map-wrapper-mobile: left 6px, top 46px; the gear cog
+    // (#ui-menu-display) sits above the map in the very top-left corner.
     static constexpr float kMinimapSize = 140.0f;
+    static constexpr float kMinimapLeft = 12.0f;
+    static constexpr float kMinimapTop = 50.0f; // from the top edge
+    // Settings button (#ui-menu-display). Tapping it opens the in-game menu
+    // (the Java GamePauseDialog on Android).
+    static constexpr float kSettingsSize = 44.0f;
+    // Info bar under the minimap (#ui-map-info + alive/kill counters).
+    static constexpr float kInfoBarTop = 194.0f; // from the top edge
+    static constexpr float kBoxHeight = 34.0f;
+    static constexpr float kGasBoxWidth = 82.0f;
+    static constexpr float kCountBoxWidth = 56.0f;
+    static constexpr float kKillBoxWidth = 52.0f;
+    // #ui-top-center-scopes-wrapper (mobile): one pill per owned scope.
+    static constexpr int kScopeSlotCount = 5;
+    static constexpr float kScopeButtonW = 48.0f;
+    static constexpr float kScopeButtonH = 34.0f;
+    static constexpr float kScopePitch = 40.0f;
+    static constexpr float kScopeStripTop = 236.0f; // from the top edge
+    // #ui-top-center messages sit half a minimap down from the top, centred.
+    static constexpr float kMessageTop = kMinimapTop + kMinimapSize * 0.5f;
+    // Reload/use/revive progress bar, centred above the messages.
+    static constexpr float kActionWidth = 240.0f;
+    static constexpr float kActionHeight = 14.0f;
+    static constexpr float kActionTop = 88.0f; // from the top edge
+    // ui2.ts heal/boost bag strip reduced to the four counters the mockup
+    // shows: bandage, med kit, soda, painkillers (tap = use, hold = drop).
+    static constexpr int kTopLootCount = 4;
+    static constexpr float kTopLootW = 44.0f;
+    static constexpr float kTopLootH = 32.0f;
+    static constexpr float kTopLootPitch = 58.0f;
+    // ui2.tsmm #ui-ammo-interactive: one row per ammo type in the bag.
+    static constexpr int kAmmoRowCount = 8;
+    static constexpr float kAmmoRowW = 64.0f;
+    static constexpr float kAmmoRowH = 26.0f;
+    static constexpr float kAmmoRowPitch = 30.0f;
+    // Weapon cards (#ui-weapon-id-N): tap = equip, hold = drop / drag-swap.
+    static constexpr float kWeaponSlotWidth = 150.0f;
+    static constexpr float kWeaponSlotHeight = 42.0f;
+    static constexpr float kWeaponCardPitch = 46.0f;
     // Gear (helmet/chest/backpack) + up to 4 perk icons.
     static constexpr int kGearIconCount = 7;
-    static constexpr float kWeaponSlotWidth = 160.0f;
-    static constexpr float kWeaponSlotHeight = 30.0f;
 
-    // P0.1 action controls (design px, bottom-left origin).
+    // P0.1 action buttons still owned directly by the HUD.
     static constexpr float kReloadButtonWidth = 108.0f;
     static constexpr float kReloadButtonHeight = 44.0f;
-    static constexpr float kInteractButtonWidth = 180.0f;
-    static constexpr float kInteractButtonHeight = 56.0f;
-    static constexpr float kPillWidth = 160.0f;
+    static constexpr float kPillWidth = 110.0f;
     static constexpr float kPillHeight = 42.0f;
-    static constexpr float kSmallPillWidth = 110.0f;
-    // Touch target around the #ui-interaction prompt (the web binds touchstart
-    // to the prompt element itself, not just the action pill).
-    static constexpr float kPromptHitWidth = 240.0f;
-    static constexpr float kPromptHitHeight = 40.0f;
-    // Long-press a pill/weapon card to drop instead of use/equip (the web's
-    // touch UI only binds tap-to-use; drop is a native touch affordance for the
-    // mouse right-click action in ui2.ts itemActions).
+    // Finger-press prompt next to a nearby loot.
+    static constexpr float kPromptSize = 52.0f;
+    // Long-press a counter/pill/weapon card to drop instead of use/equip (the
+    // web's touch UI only binds tap-to-use; drop is the mouse right-click
+    // action in ui2.ts itemActions).
     static constexpr float kLongPressSeconds = 0.45f;
 
     // Result of a HUD action hit test (design coords).
@@ -93,9 +132,9 @@ public:
         None,
         Reload,
         Interact,
-        Heal,
-        Boost,
-        ScopeNext,
+        Settings,
+        LootUse,     // slot = kTopLootTypes index (bandage/medkit/...)
+        ScopeSlot,   // slot = scope list index (tap = equip, hold = drop)
         SwapWeapons,
         WeaponSlot,
         GearSlot,
@@ -124,8 +163,11 @@ public:
         bool droppable = true;
     };
     void setGearSlots(const std::vector<GearSlot>& slots);
-    // ui.ts #ui-interaction: nearby item / action text ("" hides it).
-    void setInteractionPrompt(const std::string& text);
+    // ui.ts #ui-interaction: the nearby item shown as the finger-press button +
+    // item name next to the loot's own position (design coords, y up). An
+    // empty text hides the prompt.
+    void setInteractionPrompt(const std::string& text, const Vec2& designPos);
+    const std::string& interactionPrompt() const { return _lastPrompt; }
     // ui.ts announcements (role assigned/dead, rare loot). Visible for seconds.
     void showAnnouncement(const std::string& text, float seconds = 3.5f);
     // game.ts faction mode: two alive counts (red/blue) instead of one total.
@@ -134,6 +176,9 @@ public:
     void setTeammateArrows(const std::vector<TeammateArrow>& arrows);
     // ui.ts #ui-waiting-text: shown after join until the match starts.
     void setWaitingForPlayers(bool waiting);
+    // pieTimer.ts: reload/use/revive progress ("RELOADING" and friends). The
+    // label sits inside a slim bar centred above the in-game messages.
+    void setActionProgress(const std::string& label, float elapsed, float duration);
 
     // --- Perk-mode class picker (ui.ts setRoleMenuOptions / setRoleMenuActive) --
     // Shown on a perk map until the local player picks a class (or the 20 s
@@ -211,9 +256,9 @@ public:
     // ui.ts: keep the player-centred minimap scrolled to the active player.
     void setMapCenter(const Vec2& worldPos);
 
-    // Full-screen map (#big-map): toggled from the minimap's expand button.
+    // Full-screen map (#big-map): opening it is the minimap tap itself (the
+    // web's #ui-map-expand-mobile covers the map area).
     static constexpr float kBigMapSize = 640.0f;
-    static constexpr float kMinimapExpandSize = 22.0f;
     bool bigMapVisible() const { return _bigMapVisible; }
     void setBigMapVisible(bool visible);
     void toggleBigMap() { setBigMapVisible(!_bigMapVisible); }
@@ -222,33 +267,50 @@ public:
     bool minimapHidden() const { return _minimapHidden; }
     void setMinimapHidden(bool hidden);
     void toggleMinimapHidden() { setMinimapHidden(!_minimapHidden); }
-    bool minimapExpandHit(float designX, float designY) const;
+    // Tapping the minimap opens the big map. Pass design-space coordinates.
+    bool minimapTapHit(float designX, float designY) const;
     bool bigMapContains(float designX, float designY) const;
     bool bigMapCloseHit(float designX, float designY) const;
 
+    // In-game menu (the settings gear top-left opens it; the actual UI is the
+    // Java GamePauseDialog on Android, and this panel mirrors it for hosts
+    // without that bridge).
+    void showGameMenu(bool visible);
+    bool gameMenuVisible() const { return _menuShown; }
+    enum class MenuAction {
+        None,
+        Resume,
+        Leave,
+    };
+    MenuAction menuActionAt(float designX, float designY) const;
+
     // P0.1: action controls. `designX/Y` are HUD design-space coords (0..1280,
     // 0..720 bottom-left); only live while the HUD is visible and no result
-    // screen/map is open. Touch order is buttons first, then weapon cards.
+    // screen/map/menu is open. Touch order is buttons first, then weapon cards.
     TapResult hitTest(float designX, float designY) const;
 
-    // ui2.ts loot/scope strip helpers, reduced to the single quick-use pills the
-    // touch HUD shows. `inventory` is ActivePlayerData.inventory (kBagSizeKeys
-    // order). Returns "" when the item is not in the bag.
+    // ui2.ts loot/scope helpers. `inventory` is ActivePlayerData.inventory
+    // (kBagSizeKeys order). Returns "" when the item is not in the bag.
     static int bagCount(const std::vector<uint16_t>& inventory, const char* type);
+    // Best quick-use item from the bag: the small bandage for a top-up, the
+    // med kit when badly hurt; soda is the cheap boost, pills below 50.
     static std::string healItemFor(const std::vector<uint16_t>& inventory, float health);
     static std::string boostItemFor(const std::vector<uint16_t>& inventory, float boost);
-    // "SCOPE 4X" for 4xscope, "SCOPE" when no scope is equipped.
+    // ui.ts "1x"/"4x" scope-strip labels ("SCOPE" when no scope is equipped).
     static std::string scopeLabel(const std::string& scope);
 
-    // Currently selected quick-use items ("" = empty bag/hidden pill). The pills
-    // feed these to InputActions::use; long-press drops them.
+    // Quick-use items currently selected for the top counters ("") = empty
+    // bag = hidden counter). Fed to InputActions::use; long-press drops them.
     const std::string& healItem() const { return _healItem; }
     const std::string& boostItem() const { return _boostItem; }
-    const std::string& scopeType() const { return _scopeType; }
-    // Weapon type in a slot ("" = empty), used for Long-press DropItemMsg.
+    // Weapon type in a slot ("" = empty), used for long-press DropItemMsg.
     const std::string& weaponType(int slot) const;
+    // Top bag counters / ammo rows / scope strip ("" = hidden row).
+    const std::string& topLootType(int idx) const;
+    const std::string& ammoRowType(int idx) const;
+    const std::string& scopeSlotType(int idx) const;
 
-    // #ui-pickup-message: shows 	ext for 3s (ui2.ts pickup duration).
+    // #ui-pickup-message: shows text for 3s (ui2.ts pickup duration).
     void displayPickupMessage(const std::string& text);
 
     void setVisible(bool visible);
@@ -302,13 +364,19 @@ public:
         return (idx >= 0 && idx < kGearIconCount) ? _gearLevelText[static_cast<size_t>(idx)] : nullptr;
     }
     const pix::Text* reloadButtonText() const { return _reloadText; }
-    const pix::Text* interactButtonText() const { return _interactText; }
-    const pix::Text* healButtonText() const { return _healText; }
-    const pix::Text* boostButtonText() const { return _boostText; }
-    const pix::Text* scopeButtonText() const { return _scopeText; }
     const pix::Text* swapButtonText() const { return _swapText; }
     const pix::Text* weaponSlotText(int idx) const {
         return (idx >= 0 && idx < 4) ? _weaponSlots[idx] : nullptr;
+    }
+    // The four top bag counters ("1x" .. "15x" scope strip) / ammo rows.
+    const pix::Text* topLootCountText(int idx) const {
+        return (idx >= 0 && idx < kTopLootCount) ? _topLoot[static_cast<size_t>(idx)].count : nullptr;
+    }
+    const pix::Text* ammoRowCountText(int idx) const {
+        return (idx >= 0 && idx < kAmmoRowCount) ? _ammoRows[static_cast<size_t>(idx)].count : nullptr;
+    }
+    const pix::Text* scopeSlotLabel(int idx) const {
+        return (idx >= 0 && idx < kScopeSlotCount) ? _scopeSlots[static_cast<size_t>(idx)].label : nullptr;
     }
     const pix::Text* spectateLabelText() const { return _specLabel; }
     const pix::Text* spectateCountText() const { return _specCountText; }
@@ -328,9 +396,12 @@ public:
     const pix::Text* killFeedRowText(int idx) const {
         return (idx >= 0 && idx < 6) ? _killFeedRows[static_cast<size_t>(idx)] : nullptr;
     }
+    const pix::Text* actionBarText() const { return _actionBarText; }
 
 private:
-    void layout(pix::Graphics* g, float w, float h) const;
+    struct Rect;
+    void paintBox(pix::Graphics* g, const Rect& rect, uint32_t fill, float alpha,
+                  float borderAlpha) const;
 
     struct Rect {
         float x = 0.0f;
@@ -342,8 +413,10 @@ private:
         }
     };
 
-    // Repaints the P0.1 action controls from the state update() sampled.
+    // Repaints the touch controls from the state update() sampled.
     void updateActionButtons();
+    // The near-loot finger prompt (setInteractionPrompt fed position).
+    void updatePrompt();
     // ui.ts setRoleMenuInfo: repaints the class picker for one option.
     void selectRole(int index);
 
@@ -356,25 +429,45 @@ private:
     pix::Text* _healthText = nullptr;
     pix::Graphics* _boostSegments[4] = {nullptr, nullptr, nullptr, nullptr};
     pix::Text* _ammoText = nullptr;
-    pix::Text* _lootCountsText = nullptr;
 
-    pix::Container* _mapBox = nullptr;
     pix::Graphics* _mapFrame = nullptr;
     MapView _miniMap;
     MapView _bigMap;
     pix::Graphics* _bigMapBackdrop = nullptr;
     pix::Graphics* _bigMapCloseBg = nullptr;
     pix::Text* _bigMapCloseText = nullptr;
-    pix::Graphics* _mapExpandBg = nullptr;
-    pix::Graphics* _mapExpandIcon = nullptr;
     Vec2 _bigMapPos;
-    Vec2 _expandPos;
     bool _bigMapVisible = false;
     bool _minimapHidden = false;
+    // The whole minimap box is the big-map tap target (web
+    // #ui-map-expand-mobile covers the map).
+    Rect _minimapTapRect;
+    // Settings gear (#ui-menu-display).
+    pix::Graphics* _settingsBg = nullptr;
+    pix::Sprite* _settingsIcon = nullptr;
+    Rect _settingsRect;
+    bool _menuShown = false;
+    pix::Graphics* _menuBackdrop = nullptr;
+    pix::Graphics* _menuPanel = nullptr;
+    pix::Text* _menuTitle = nullptr;
+    pix::Graphics* _menuResumeBg = nullptr;
+    pix::Text* _menuResumeText = nullptr;
+    pix::Graphics* _menuLeaveBg = nullptr;
+    pix::Text* _menuLeaveText = nullptr;
+    Rect _menuResumeRect;
+    Rect _menuLeaveRect;
+    // Cached updateActionButtons() state key (repaint gate).
+    std::string _actionKey;
+    // Equipped scope type ("" = none); drives the scope-strip highlight.
+    std::string _scopeEquipped;
+
+    // Info row under the minimap: gas timer + alive count (+ kill counter).
+    pix::Graphics* _mapInfoBg = nullptr;
     pix::Text* _aliveText = nullptr;
+    pix::Sprite* _aliveIcon = nullptr;
     pix::Text* _killsText = nullptr;
-    pix::Text* _killLeaderText = nullptr;
-    std::string _lastKillLeader;
+    std::string _lastAliveText;
+    int _lastKills = -1;
 
     // Gas countdown (ui.ts #ui-gas-timer) and the result screen.
     pix::Text* _gasText = nullptr;
@@ -383,6 +476,19 @@ private:
     GasHudState _gas;
     std::string _lastGasText;
     float _gasPulseTicker = 0.0f;
+
+    // In-game messages (#ui-top-center) + announcements, centred at half a
+    // minimap down from the top.
+    pix::Text* _announcementText = nullptr;
+    pix::Text* _waitingText = nullptr;
+    bool _waiting = false;
+
+    // Reload/use/revive bar above the messages (PieTimer replacement).
+    pix::Graphics* _actionBarBg = nullptr;
+    pix::Graphics* _actionBarFill = nullptr;
+    pix::Text* _actionBarText = nullptr;
+    std::string _lastAction;
+    float _lastActionProgress = -1.0f;
 
     pix::Graphics* _overBackdrop = nullptr;
     pix::Graphics* _overPanel = nullptr;
@@ -427,7 +533,42 @@ private:
     uint8_t _specCount = 0;
     std::string _specName;
 
-    // Squad bars (top-left, team modes).
+    // Scope strip (#ui-top-center-scopes-wrapper, mobile): one pill per scope
+    // level; owned scopes only.
+    struct ScopeSlot {
+        pix::Graphics* bg = nullptr;
+        pix::Text* label = nullptr;
+        std::string type;
+        Rect rect;
+    };
+    std::array<ScopeSlot, kScopeSlotCount> _scopeSlots{};
+
+    // Top bag counters (bandage/medkit/soda/pills): tap = use, hold = drop.
+    struct TopLootRow {
+        pix::Graphics* bg = nullptr;
+        pix::Sprite* icon = nullptr;
+        pix::Text* count = nullptr;
+        std::string type;
+        std::string lastFrame;
+        int countValue = 0;
+        Rect rect;
+    };
+    std::array<TopLootRow, kTopLootCount> _topLoot{};
+
+    // Ammo column top right (count + coloured chip per owned ammo type).
+    struct AmmoRow {
+        pix::Graphics* bg = nullptr;
+        pix::Graphics* chip = nullptr;
+        pix::Sprite* icon = nullptr;
+        pix::Text* count = nullptr;
+        std::string type;
+        std::string lastFrame;
+        int countValue = 0;
+        Rect rect;
+    };
+    std::array<AmmoRow, kAmmoRowCount> _ammoRows{};
+
+    // Squad bars (left side, team modes).
     struct SquadRow {
         pix::Text* name = nullptr;
         pix::Graphics* barBg = nullptr;
@@ -446,48 +587,36 @@ private:
     std::array<GearSlot, kGearIconCount> _gearSlots{};
     std::array<Rect, kGearIconCount> _gearRects{};
 
-    pix::Container* _weaponBox = nullptr;
     pix::Graphics* _weaponBoxBg = nullptr;
     pix::Text* _weaponSlots[4] = {nullptr, nullptr, nullptr, nullptr};
+    pix::Sprite* _weaponIcons[4] = {nullptr, nullptr, nullptr, nullptr};
 
-    // P0.1 action controls.
+    // P0.1 remaining action controls.
     pix::Graphics* _reloadBg = nullptr;
     pix::Text* _reloadText = nullptr;
-    pix::Graphics* _interactBg = nullptr;
-    pix::Text* _interactText = nullptr;
-    pix::Graphics* _healBg = nullptr;
-    pix::Text* _healText = nullptr;
-    pix::Graphics* _boostBg = nullptr;
-    pix::Text* _boostText = nullptr;
-    pix::Graphics* _scopeBg = nullptr;
-    pix::Text* _scopeText = nullptr;
     pix::Graphics* _swapBg = nullptr;
     pix::Text* _swapText = nullptr;
     pix::Graphics* _weaponSlotBg[4] = {nullptr, nullptr, nullptr, nullptr};
     Rect _reloadRect;
-    Rect _interactRect;
-    Rect _promptRect;
-    Rect _healRect;
-    Rect _boostRect;
-    Rect _scopeRect;
     Rect _swapRect;
     Rect _weaponRect[4];
     std::array<std::string, 4> _weaponTypes{};
     std::string _healItem;
     std::string _boostItem;
-    std::string _scopeType;
-    int _healCount = 0;
-    int _boostCount = 0;
     int _equippedSlot = -1;
-    std::string _actionKey;
+
+    // Finger-press prompt beside a nearby loot (#ui-interaction).
+    pix::Graphics* _promptBox = nullptr;
+    pix::Sprite* _promptIcon = nullptr;
+    pix::Text* _promptText = nullptr;
+    std::string _lastPrompt;
+    Vec2 _promptPos;       // design coords, hidden position = (-1, -1)
+    Vec2 _lastPromptPos;
+    Rect _promptRect;
 
     pix::Text* _pickupText = nullptr;
-    pix::Text* _killFeedText = nullptr;
     std::array<pix::Text*, 6> _killFeedRows{};
-    pix::Text* _promptText = nullptr;
-    pix::Text* _announcementText = nullptr;
-    pix::Text* _waitingText = nullptr;
-    bool _waiting = false;
+    std::array<bool, 6> _killFeedHas{};
 
     // Perk-mode class picker (ui.ts #ui-role-menu-wrapper / #ui-role-menu).
     pix::Container* _rolePanel = nullptr;
@@ -515,6 +644,7 @@ private:
     Rect _roleConfirmRect;
     std::string _lastRoleFooter;
     float _announcementTicker = 0.0f;
+    std::string _lastAnnouncement;
     bool _factionMode = false;
     // ui.ts faction flair: the local team id + the patch sprite frame in use.
     uint8_t _localTeamId = 0;
@@ -525,6 +655,7 @@ private:
     std::vector<TeammateArrow> _teamArrowState;
 
     Vec2 _design = Vec2(1280.0f, 720.0f);
+    Vec2 _designPos = Vec2(0.0f, 0.0f);
     // Bottom-left of the minimap frame in the centred HUD container.
     Vec2 _minimapPos;
     bool _visible = false;
@@ -532,6 +663,7 @@ private:
 
     // Change detection (only repaint what moved).
     float _lastHealth = -1.0f;
+    std::string _lastHealthText;
     // #ui-health-depleted: the rendered grey trail (0..100) lags the fill with
     // the web's 1 s ease-out CSS width transition.
     float _healthDepletedWidth = 0.0f;
@@ -539,14 +671,11 @@ private:
     float _healthDepletedTo = 0.0f;
     float _healthDepletedTicker = 1.0f;
     float _lastBoost = -1.0f;
-    int _lastAlive = -1;
-    int _lastKills = -1;
     std::string _lastWeapon;
     std::string _lastPickup;
+    std::string _lastKillsText;
+    std::string _lastAmmoText;
     std::string _lastFeed;
-    std::string _lastAliveText;
-    std::string _lastPrompt;
-    std::string _lastAnnouncement;
     std::vector<std::string> _lastPerkTypes;
     bool _perksInitialized = false;
     int _lastLocalKills = -1;

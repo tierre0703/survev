@@ -78,6 +78,10 @@ public:
     // ui.ts: minimap window / map sprite size (256 / (0.75 * 1600 / 1.2)).
     // The minimap shows ~25.6% of the map width, centred on the player.
     static constexpr float kMinimapViewFraction = 0.256f;
+    // ui.ts createPing: map ping textures drawn at ping.scale on a ~750px map
+    // sprite land at `ping.scale * 64 * 0.5626` CSS px; reuse that constant
+    // here so map pings keep the web's size on the minimap and big map.
+    static constexpr float kPingDisplayPx = 36.0f;
     static constexpr int kDotPool = 40;
     static constexpr int kPingPool = 32;
     static constexpr int kLabelPool = 16;

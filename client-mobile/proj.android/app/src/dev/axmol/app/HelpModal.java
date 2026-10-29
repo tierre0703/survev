@@ -87,6 +87,9 @@ public class HelpModal {
 
         // === Touch controls (native HUD) ===
         addSectionHeader(content, "\uD83D\uDCF1 " + L10n.t("help-touch", "Touch"), 0xFF4CAF50);
+        addControlRow(content, "\u2699",
+                L10n.t("help-settings", "Settings"),
+                L10n.t("help-settings-desc", "Top-left gear opens the game menu"));
         addControlRow(content, "\uD83D\uDD79",
                 L10n.t("help-left-pad", "Left pad"),
                 L10n.t("help-left-pad-desc", "Drag to move"));
@@ -95,25 +98,23 @@ public class HelpModal {
                 L10n.t("help-right-pad-desc", "Drag to aim; release past the edge to fire"));
         addControlRow(content, "\u270B",
                 L10n.t("help-pickup-prompt", "PICK UP prompt"),
-                L10n.t("help-pickup-desc", "Tap the prompt (or USE) to loot"));
-        addControlRow(content, "\uD83D\uDD27",
-                L10n.t("help-use-reload", "USE / RELOAD"),
-                L10n.t("help-use-reload-desc", "Action pills above the pads"));
+                L10n.t("help-pickup-desc", "Tap the finger button beside an item to loot"));
         addControlRow(content, "\uD83D\uDC8A",
-                L10n.t("help-heal-boost", "HEAL / BOOST"),
-                L10n.t("help-heal-boost-desc", "Quick-use the best item in the bag"));
-        addControlRow(content, "\uD83D\uDD0D",
-                L10n.t("help-scope-swap", "SCOPE / SWAP"),
-                L10n.t("help-scope-swap-desc", "Cycle scopes or switch gun slots"));
+                L10n.t("help-bag-counters", "Bag counters"),
+                L10n.t("help-bag-counters-desc", "Top strip: tap to use bandages/meds/boosts; hold to drop"));
+        addControlRow(content, "\uD83C\uDFAF",
+                L10n.t("help-scope-pill", "Scope pills"),
+                L10n.t("help-scope-pill-desc", "Left side: tap to zoom; hold to drop the scope"));
         addControlRow(content, "\uD83D\uDD2B",
                 L10n.t("help-weapon-cards", "Weapon cards"),
-                L10n.t("help-weapon-cards-desc", "Tap to equip; hold to drop"));
+                L10n.t("help-weapon-cards-desc", "Right side: tap to equip; hold to drop"));
         addControlRow(content, "\uD83D\uDCAC",
                 L10n.t("help-emote-ping", "Emote / ping"),
-                L10n.t("help-emote-ping-desc", "Right-side wheel buttons"));
+                L10n.t("help-emote-ping-desc",
+                        "Ring wheels: emote in the bottom-right corner, ping right of the health bar"));
         addControlRow(content, "\uD83D\uDDFA",
                 L10n.t("help-minimap", "Minimap"),
-                L10n.t("help-minimap-desc", "Tap to open the big map"));
+                L10n.t("help-minimap-desc", "Top-left; tap to open the big map"));
 
         addGap(content, dp(8));
 

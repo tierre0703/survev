@@ -2914,3 +2914,148 @@ an empty crash buffer.
 
 Verification: `surv_tests` 190 tests / 2,870 assertions, 0 failures; x86_64
 native and APK builds installed and launched with an empty crash buffer.
+
+---
+
+## 50. Session 49 - full HUD rework to the mobile mockup layout (2026-10-28)
+
+Reworks the live HUD (`game/Hud.{h,cpp}`) to the requested touch layout (the
+web client's mobile layout as the reference): settings gear top-left, minimap
+under it (tap = big map), gas/alive/kills info bar, scope strip on the left,
+messages centred at half a minimap down from the top with the reload progress
+bar above them, top bag counters, per-ammo column, weapon cards on the right,
+and the gear + emote/ping wheels repositioned.
+
+### What changed
+
+1. **Settings gear (top-left), opens the game menu.** `TapKind::Settings` on
+   the 44px `#ui-menu-display`-style box routes to `uiHost()->togglePause()`
+   (the Java `GamePauseDialog`, same path as BACK); hosts without the bridge
+   get a Hud panel (RESUME/LEAVE, `showGameMenu()` + `menuActionAt()`). The
+   icon uses the direct `gui/cog.png` file because the HUD builds before the
+   map atlases are registered.
+2. **Minimap top-left; tapping it opens the big map.** The old 22px expand
+   button is gone; `minimapTapHit()` covers the whole 140px box.
+3. **Gas timer + alive count (+ kills) in an info bar under the minimap**
+   (mirrors `.ui-map-wrapper-mobile #ui-map-info`).
+4. **Scope strip on the left side** (`#ui-top-center-scopes-wrapper` mobile):
+   one pill per owned scope (1x…15x), tap equips the tapped scope via
+   `InputActions::use(type)` (game.ts "use" scope), long-press drops it. The
+   equipped one is highlighted. The old scope-cycle pill is gone.
+5. **Messages ("Waiting for players...", announcements) horizontally centred,
+   half a minimap down from the top** (`kMessageTop = kMinimapTop +
+   kMinimapSize * 0.5`). The kill-leader line stays hidden like the web's
+   `hide-on-mobile`.
+6. **Reload/use/revive progress bar above the messages** (pieTimer.ts port,
+   now a Graphics bar + label at `kActionTop`). The FairyGUI `PieTimer`
+   (`ui/FguiPieTimer.*`) is no longer built or updated per frame — that path
+   rasterised its counter/label text every frame and is the most likely source
+   of the on-device "large string flickering" report. Remaining per-frame HUD
+   text writes were also change-gated (health number, ammo/loot counter
+   strings) so they only re-rasterise on real changes. Needs a re-test on
+   device to confirm the flicker is gone.
+7. **Interact prompt next to the item.** `GameScene` feeds the nearest loot's
+   screen position (camera `m_pointToScreen` → `screenToDesign`) into
+   `setInteractionPrompt(text, designPos)`; `Hud::updatePrompt()` clamps it and
+   puts a 52px finger-press button (`gui/tap.png`) plus the item-name label
+   beside the loot (flipped to the left near the right edge). Tapping either
+   still sends Interact + Cancel; the USE pill is gone.
+8. **Top bag counters: bandage / medkit / soda / pills** with loot-def icons,
+   tap = use, long-press = drop (`TapKind::LootUse`).
+9. **Ammo column top right** (`#ui-ammo-interactive`): one row per owned ammo
+   type with the count and a per-type colour chip (game.css overlay colours).
+10. **Weapon cards on the right** (primary/secondary/fists/throwable)
+    including loot-def icons; tap = equip, hold = drop, drag = aim handoff
+    unchanged.
+11. **Emote button in the bottom-right corner** (`EmoteWheel::setButtonPosition`,
+    wheel centre clamped into the safe box; `EmoteWheel::wheelContains()`).
+12. **Ping button right of the health bar** (`PingWheel::setButtonPosition`).
+    Pressing outside an open emote/ping wheel ring now closes it instead of
+    moving/aiming (GameScene outside-touch handler).
+13. **Airdrop/ping markers are small again.** `MapView::setPings()` no longer
+    multiplies the ping scale by the 256-based `artScale` (the minimap factor
+    was 0.55 and the big map factor 2.5, i.e. the icons were drawn ~3-6x too
+    large); it now fits each sprite to `ping.scale * kPingDisplayPx (36px)`,
+    matching `ui.ts createPing`. Player map pings use the web's raw 0.15 Sm
+    scale. The world edge indicators (airdrop direction arrow) were shrunk
+    from 0.4/0.5 to 0.22/0.28 in `EmoteManager`.
+14. Gear/perk slots moved beside the health bar (web `#ui-bottom-center-left`),
+    squad rows under the scope strip, pickup toast under the messages.
+
+### Wiring/verification
+
+- `GameScene` feeds the action progress (`setActionProgress`), prompt
+  position, and routes the new touches (gear, minimap tap, bag counters /
+  scope slots via long-press drop, wheel outside-close). `GamePauseDialog`
+  handles the settings open.
+- Host tests updated to the new layout geometry (reload/swap pills, weapon
+  cards, bag counters, scope strip, prompt target, minimap tap, ping scales);
+  `HelpModal.java` touch-rows rewritten for the new controls.
+- `surv_tests`: 233 tests / 3,913 assertions, 0 failures.
+- x86_64 emulator verification against the bundle server (local bots fill the
+  match): the HUD renders per the mockup — gear, minimap + info bar, gas
+  countdown, scope pills, centred messages, weapon cards with item icons,
+  ammo chip counts, health/boost, emote + ping buttons. Interactively
+  verified: the minimap tap opens the big map (X closes), the gear opens the
+  Java pause dialog, holding the emote button opens the loadout wheel and
+  dragging into a wedge sends the emote (thumbs-up above the player), holding
+  the ping button opens the team-ping wheel (Danger/Coming/Help/Medical/Ammo),
+  picking up a gun fills the weapon card + ammo chip and adds its scope to the
+  strip. Both wheels gained an intent guard in `select()`: a wedge only sends
+  when the finger is inside the ring and moved past `kDeadZone` from the press
+  point, so the button press can't send by itself (emote.ts drags into the
+  wedge). `logcat -b crash` empty. Not reproducible here: airdrop markers
+  (needs a server airdrop; scale fix covered by tests) and a final on-device
+  confirmation that the per-frame text changes removed the "large string
+  flickering".
+
+## 51. Session 50 - touch-select wheels: tap-to-send, sticky wheel (2026-10-29)
+
+Replaces the drag-to-select emote/ping wheel flow requested by playtesting:
+
+1. **The wheels are no longer tied to the touch that opened them.** The button
+   press opens the wheel and it STAYS open after that touch lifts
+   (`GameScene::onTouchEnded` only releases the `_emoteTouchId`/
+   `_pingTouchId` claim now; `_pingTargetValid` also survives so a big-map
+   ping target reaches the next tap).
+2. **Tap-to-send.** `EmoteWheel::select()` -> `EmoteWheel::tap()` /
+   `PingWheel::tap()` (return `TapResult` None/Close/Send): a tap on a usable
+   wedge sends instantly (throttle, team-only and greyed gates unchanged); a
+   tap on the centre close selector closes; unusable taps (empty wedge,
+   team-only in solo, hard cooldown) leave the wheel open and swallow the
+   touch. The old "moved past `kDeadZone` from the press point" intent guard
+   and `_pressPos` tracking are gone.
+3. **Tap outside dismisses.** Any touch outside all open rings closes them
+   and is swallowed (cannot move/aim behind the wheel). The wheel buttons sit
+   outside the rings, so pressing a wheel's own button while it is open
+   dismisses it (toggle); pressing it while closed opens it. Opening one
+   wheel closes the other if the tap was outside its ring.
+4. **Emote button icon is the static gas icon** (`Content/gui/gas.png`,
+   `EmoteWheel::kButtonIconFrame`) instead of the first loadout emote sticker.
+   The ping button keeps the danger-ping icon.
+5. **1.5x wheels at the screen centre.** `EmoteWheel::kGeometryScale` and
+   `PingWheel::kGeometryScale` (1.5) multiply the ring/selector geometry
+   visually (container scale, open ease: 0.85*1.5 -> 1.5) and hit tests
+   (`tap()` divides the tap offset back into selector-space,
+   `wheelContains()`/`open()` use the scaled radius for the clamp). GameScene
+   opens both the emote and the ping wheel at the design centre (640x360),
+   not around their buttons; the buttons stay in place.
+6. **Crosshair removed.** The M7 always-on screen-centre crosshair overlay
+   (`_crosshairSprite`/`_crosshairFallback`, drawn over the player's
+   position) is gone per playtesting; wheels/pings mark the aim instead.
+7. **Crosshair pings sit just above the head.** A ping wheel send without a
+   big-map target targets `activePlayer` + `PlayerConfig::radius * 2.0f` on
+   y (the web draws pings exactly at their pos; the touch flow pings the
+   camera centre, so the raised position keeps the message off the body).
+8. **Bigger game pads, slightly up/inward.** `Touch::padSizeScale` (1.75)
+   multiplies the drawn ring/thumb scales only — the web sizes its pads in
+   device CSS px, so on the phone they are proportionally larger than in the
+   fixed 1280x720 design space; `padPosRange` (thumb travel, move/aim
+   normalization) stays at the web value so control sensitivity is unchanged.
+   The locked centres moved to fit: landscape (160, 140) instead of
+   (126, 100), portrait (120, 176) instead of (96, 160) — a little above the
+   bottom edge and a little further inside.
+
+Tests updated to tap semantics (`emote_wheel_tap_selects_and_closes`,
+`ping_wheel_tap_selects_pings_and_team_emotes`, cooldown/solo gates, etc)
+and to the 1.5x centred flow (`emote_wheel_geometry_scale_1_5x`).

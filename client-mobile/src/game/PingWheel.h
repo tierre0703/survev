@@ -4,9 +4,10 @@
 // The web client has no dedicated touch button for the team ping wheel: the
 // wheel opens over the crosshair when the team-ping bind is held, and the big
 // map can move its world position. On the native touch client it gets its own
-// on-screen button next to the emote button; the ping is sent at the crosshair
-// (the camera centre, i.e. the active player), which is the web's behaviour for
-// `TeamPingSingle` presses without a big-map position.
+// on-screen button next to the emote button; crosshair pings (no big-map
+// target) are sent at the active player with the message floated just above
+// the player's head (GameScene; the web draws pings exactly at their pos, but
+// the touch flow pings the camera centre, i.e. the player).
 //
 // The six selectors mirror emote.ts `teamPingData` exactly:
 //   middle      -> close
@@ -38,6 +39,10 @@ public:
     // emote.ts `distMinLength`: inside this radius the centre selector wins.
     static constexpr float kDeadZone = 35.0f;
     static constexpr float kOpenDuration = 0.15f;
+    // Touch-flow override (matches the emote wheel): the whole wheel (ring,
+    // selectors, icons, labels) draws at 1.5x and opens centred on the screen.
+    // Hit tests must use the scaled radii.
+    static constexpr float kGeometryScale = 1.5f;
 
     // On-screen team-ping button, placed one gap left of the emote button so
     // the wheel it opens stays fully on screen.
@@ -87,15 +92,21 @@ public:
     void open(const Vec2& center);
     void close();
     bool visible() const { return _active; }
+    // True while a touch at `pos` (design coords) is inside the open ring.
+    bool wheelContains(float designX, float designY) const;
 
-    // Highlights the selector under `pos` (design coords) and writes the send
-    // payload when it is usable. emote.ts sends as soon as a wedge highlights.
-    bool select(const Vec2& pos, Selection& out);
+    // Tap-select (touch-select mode, like EmoteWheel::tap): reacts to a tap on
+    // the open wheel (no drag-to-highlight). centre -> Close, usable selector
+    // -> Send with the payload, unusable/closed -> None (wheel stays open).
+    enum class TapResult { None, Close, Send };
+    TapResult tap(const Vec2& pos, Selection& out);
 
     void update(float dt);
 
     bool buttonHit(float designX, float designY) const;
     const Vec2& buttonCenter() const { return _buttonCenter; }
+    // Repositions the on-screen button (mockup layout: right of the HP bar).
+    void setButtonPosition(const Vec2& center);
     int highlighted() const { return _highlighted; }
 
     // Selector under a drag offset from the wheel centre (0 = middle/close,
@@ -143,6 +154,8 @@ private:
     bool _hudVisible = false;
     bool _active = false;
     bool _built = false;
+    Vec2 _buttonPosOverride = Vec2(0.0f, 0.0f);
+    bool _buttonPosCustom = false;
     Vec2 _center;
     int _highlighted = -1;
     float _openT = 0.0f;

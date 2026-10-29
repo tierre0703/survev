@@ -18,12 +18,11 @@
 #include "../audio/Ambiance.h"
 #include "../audio/AxmolAudioBackend.h"
 #include "../audio/GeneratedSoundDefs.h"
-#include "../ui/FguiHud.h"
 #include "../game/Hud.h"
 #include "../game/RoleFeed.h"
 #include "../game/EmoteWheel.h"
 #include "../game/PingWheel.h"
-#include "../ui/FguiPieTimer.h"
+#include "../core/GameConfig.h"
 #include "../ui/PadGraphicsAxmol.h"
 #include "../ui/Layout.h"
 #include "../../../shared/config/ui2Constants.inc"
@@ -485,9 +484,9 @@ bool GameScene::init() {
     _game = std::make_unique<Game>();
     _game->init(this, createWebSocketConnection);
 
-    // Priority 2: build the pie timer.
-    _pieTimer = std::make_unique<PieTimer>();
-    _pieTimer->build();
+    // Priority 2: the emote/ping wheels are built in resetWorld() (Priority 2
+    // emote wheel UI/input); the loadout comes from the JoinMsg/JoinedMsg
+    // emotes and is refreshed once the server accepts the join in update().
 
     // M4: render world (terrain + z-sorted object layers) driven by the map /
     // update messages the game dispatches.
@@ -793,9 +792,6 @@ void GameScene::resetWorld() {
     if (_worldRoot) {
         static_cast<ax::Node*>(_worldRoot->native())->removeFromParent();
     }
-    _crosshairSprite = nullptr; // owned (and freed) by the factory
-    _crosshairFallback = nullptr;
-    _crosshairFrame.clear();
     _emoteWheel.reset();
     _emoteTouchId = -1;
     _pingWheel.reset();
@@ -877,12 +873,20 @@ void GameScene::resetWorld() {
     _emoteWheel = std::make_unique<EmoteWheel>();
     _emoteWheel->build(_pixiFactory.get(), _hudRoot,
                        Vec2(svui::kit::designWidth(), svui::kit::designHeight()));
+    // The emote button lives in the bottom-right corner (the mockup layout);
+    // the wheel it opens is 1.5x and centred on the screen (GameScene opens
+    // it at the design centre).
+    _emoteWheel->setButtonPosition(Vec2(svui::kit::designWidth() - 50.0f, 50.0f));
     _emoteWheel->setLoadout(_game->emotes());
     _emoteWheel->setTeamMode(_game->teamMode() == 1);
     // Team-ping wheel (Priority 2: ping wheel input + ammo-specific pings).
     _pingWheel = std::make_unique<PingWheel>();
     _pingWheel->build(_pixiFactory.get(), _hudRoot,
                       Vec2(svui::kit::designWidth(), svui::kit::designHeight()));
+    // The ping button sits right of the health bar (which is a 412x44 box,
+    // 12px above the bottom edge; its centre is at design y = 34).
+    _pingWheel->setButtonPosition(Vec2((svui::kit::designWidth() - 412.0f) * 0.5f + 412.0f + 44.0f,
+                                       34.0f));
     _pingWheel->setTeamMode(_game->teamMode() == 1);
 }
 
@@ -1064,12 +1068,6 @@ void GameScene::leaveGame() {
             _audio->stopSound(_roleMenuSound);
         }
         _roleMenuSound = -1;
-    }
-    if (_crosshairSprite) {
-        _crosshairSprite->setVisible(false);
-    }
-    if (_crosshairFallback) {
-        _crosshairFallback->setVisible(false);
     }
     if (_audio) {
         if (_ambiance) {
@@ -1680,11 +1678,14 @@ void GameScene::update(float delta) {
         }
         _hud->setWaitingForPlayers(_inGame && _game->hasJoined() && !_game->hasStarted() &&
                                    !_game->gameOver());
-        // ui.ts interaction prompt: nearest loot on the active layer. The
-        // server performs the actual pickup; this is only the touch hint.
+        // ui.ts interaction prompt: nearest loot on the active layer, shown as
+        // the finger-press button + item name next to the loot's own screen
+        // position. The server performs the actual pickup; this is the hint.
         if (_world && !deadOrSpectating) {
             const Player* me = _world->activePlayer();
             std::string prompt;
+            Vec2 promptPos = screenToDesign(_world->camera().m_screenWidth * 0.5f,
+                                            _world->camera().m_screenHeight * 0.5f);
             if (me && me->actionType == Action_None) {
                 const Loot* best = nullptr;
                 float bestDist = 0.0f;
@@ -1705,9 +1706,12 @@ void GameScene::update(float delta) {
                         c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
                     }
                     prompt = "PICK UP " + name;
+                    // World -> screen (y down) -> HUD design space (y up).
+                    const Vec2 screenPos = _world->camera().m_pointToScreen(best->pos);
+                    promptPos = screenToDesign(screenPos.x, screenPos.y);
                 }
             }
-            _hud->setInteractionPrompt(prompt);
+            _hud->setInteractionPrompt(prompt, promptPos);
             _hud->setFactionMode(_world->map().mapDef.factionMode);
             // ui.ts faction flair: the health counter shows the active player's
             // red/blue patch in faction modes.
@@ -1739,7 +1743,7 @@ void GameScene::update(float delta) {
             }
             _hud->setTeammateArrows(arrows);
         } else if (_hud) {
-            _hud->setInteractionPrompt(std::string());
+            _hud->setInteractionPrompt(std::string(), Vec2(0.0f, 0.0f));
             _hud->setTeammateArrows({});
         }
         _hud->update(delta, *_game,
@@ -1924,7 +1928,8 @@ void GameScene::update(float delta) {
         _emoteWheel->setTeamMode(_game->teamMode() == 1);
         // The class picker's wrapper covers the web HUD (z-index 11), so the
         // emote/ping buttons hide behind it too.
-        _emoteWheel->setHudVisible(playing && !deadOrSpectating && !_hud->roleMenuActive());
+        _emoteWheel->setHudVisible(playing && !deadOrSpectating && !_hud->roleMenuActive() &&
+                                   !_hud->gameMenuVisible());
         _emoteWheel->update(delta);
     }
     // Team-ping wheel: same visibility, sharing the emote throttle (the web
@@ -1947,7 +1952,8 @@ void GameScene::update(float delta) {
         }
         _pingWheel->setTeamMode(_game->teamMode() == 1);
         _pingWheel->setAmmoType(ammoType);
-        _pingWheel->setHudVisible(playing && !deadOrSpectating && !_hud->roleMenuActive());
+        _pingWheel->setHudVisible(playing && !deadOrSpectating && !_hud->roleMenuActive() &&
+                              !_hud->gameMenuVisible());
         _pingWheel->setGreyed(_emoteWheel && !_emoteWheel->canSend());
         _pingWheel->update(delta);
         if (!_pingWheel->visible()) {
@@ -1959,114 +1965,31 @@ void GameScene::update(float delta) {
         }
     }
 
-    // Priority 2: pie timer — driven by active player action data each frame.
-    if (_pieTimer && _game && isStarted()) {
+    // Priority 2: reloading/using/reviving progress bar (pieTimer.ts port is
+    // drawn by the Hud action bar now, centred above the in-game messages).
+    if (_game && isStarted()) {
         const auto& apd = _game->activePlayerData();
-        if (apd.actionDirty && apd.actionDuration > 0.0f) {
-            // pieTimer.ts action labels (Reloading/Using/Reviving).
-            std::string label = "ACTION";
+        std::string label;
+        if (apd.actionDuration > 0.0f) {
             const Player* me = _world ? _world->activePlayer() : nullptr;
-            if (me) {
-                switch (me->actionType) {
-                    case Action_Reload:
-                    case Action_ReloadAlt: label = "RELOADING"; break;
-                    case Action_UseItem: label = "USING"; break;
-                    case Action_Revive: label = "REVIVING"; break;
-                    default: break;
-                }
+            switch (me ? me->actionType : Action_None) {
+                case Action_Reload:
+                case Action_ReloadAlt: label = "RELOADING"; break;
+                case Action_UseItem: label = "USING"; break;
+                case Action_Revive: label = "REVIVING"; break;
+                default: label = "ACTION"; break;
             }
-            _pieTimer->start(label, apd.actionTime, apd.actionDuration);
-        }
-        if (_pieTimer->isActive()) {
-            // ui.ts resize(): the small layout locks screenScaleFactor 0.5626
-            // (Android is always the small layout — device.uiLayout == Sm);
-            // the large layout follows the viewport.
-            const Camera& camera = _world ? _world->camera() : Camera();
-            const svui::Device& device = svui::Device::get();
-            float screenScaleFactor = 0.5626f;
-            if (device.uiLayout != svui::Device::Sm) {
-                screenScaleFactor =
-                    surv::math::min(1.0f, surv::math::clamp(camera.m_screenWidth / 1280.0f, 0.75f, 1.0f) *
-                            surv::math::clamp(camera.m_screenHeight / 1024.0f, 0.75f, 1.0f));
+            if (_hud) {
+                _hud->setActionProgress(label, apd.actionTime, apd.actionDuration);
             }
-            _pieTimer->resize(device.uiLayout == svui::Device::Sm, device.tablet,
-                              device.isLandscape, screenScaleFactor);
-            _pieTimer->update(delta, camera);
-            // Stop when action completes.
-            if (apd.actionDuration > 0.0f && apd.actionTime >= apd.actionDuration) {
-                _pieTimer->stop();
-            }
+        } else if (_hud) {
+            _hud->setActionProgress(std::string(), 0.0f, 0.0f);
         }
     }
 
-    // M7: crosshair — a screen-space overlay drawn at the screen centre above
-    // the game world. The default crosshair's art is an inline SVG in
-    // crosshairDefs.ts, not an atlas frame, so it is drawn as two bars here
-    // (64 px art: 32 px long, 4 px thick).
-    if (_world && _pixiFactory && isStarted() && _game->isPlaying() && _game->hasJoined()) {
-        const Game::JoinInfo& join = _game->getJoinInfo();
-        // The web stroke slider is 0.0..1.5; Content/gui/crosshair bakes 0.25
-        // steps (7 buckets), so the frame index is round(stroke * 4).
-        const int strokeBucket =
-            std::clamp(static_cast<int>(std::lround(join.crosshairStroke * 4.0f)), 0, 6);
-        const std::string frame = "gui/crosshair/" + join.crosshairType + "_s" +
-            std::to_string(strokeBucket) + ".png";
-        const bool hasFrame = ax::FileUtils::getInstance()->isFileExist(frame);
-        if (hasFrame && _crosshairFrame != frame) {
-            if (audio::audioTraceEnabled()) {
-                AXLOGI("[ui] crosshair type={} color={:06x} size={} stroke={} frame={} found={}",
-                       join.crosshairType, join.crosshairColor, join.crosshairSize,
-                       join.crosshairStroke, frame, hasFrame ? 1 : 0);
-            }
-            if (_crosshairSprite) {
-                _crosshairSprite->setVisible(false);
-            }
-            _crosshairSprite = _pixiFactory->createSprite(frame);
-            _crosshairSprite->setAnchor(0.5f, 0.5f);
-            _crosshairSprite->setAlpha(0.85f);
-            _crosshairSprite->setTint(join.crosshairColor);
-            _gameRoot->addChild(static_cast<ax::Node*>(_crosshairSprite->native()));
-            _crosshairFrame = frame;
-        }
-        const auto screen = ax::Director::getInstance()->getVisibleSize();
-        if (hasFrame && _crosshairSprite) {
-            const float designScale = screen.height > 0.0f ? screen.height / 720.0f : 1.0f;
-            const float pixelSize = 64.0f * join.crosshairSize * designScale;
-            const float source = _crosshairSprite->sourceWidth();
-            const float scale = source > 0.0f ? pixelSize / source : 1.0f;
-            _crosshairSprite->setPosition(screen.width * 0.5f, screen.height * 0.5f);
-            _crosshairSprite->setScale(scale, scale);
-            _crosshairSprite->setTint(join.crosshairColor);
-            _crosshairSprite->setVisible(true);
-            if (_crosshairFallback) {
-                _crosshairFallback->setVisible(false);
-            }
-        } else {
-            if (!_crosshairFallback) {
-                _crosshairFallback = _pixiFactory->createGraphics();
-                _crosshairFallback->beginFill(0xffffff, 0.85f);
-                _crosshairFallback->drawRect(-2.0f, -16.0f, 4.0f, 32.0f);
-                _crosshairFallback->drawRect(-16.0f, -2.0f, 32.0f, 4.0f);
-                _crosshairFallback->endFill();
-                _gameRoot->addChild(static_cast<ax::Node*>(_crosshairFallback->native()));
-            }
-            _crosshairFallback->setPosition(screen.width * 0.5f, screen.height * 0.5f);
-            const float designScale = screen.height > 0.0f ? screen.height / 720.0f : 1.0f;
-            const float fallbackScale = designScale * join.crosshairSize;
-            _crosshairFallback->setScale(fallbackScale, fallbackScale);
-            _crosshairFallback->setVisible(true);
-            if (_crosshairSprite) {
-                _crosshairSprite->setVisible(false);
-            }
-        }
-    } else {
-        if (_crosshairSprite) {
-            _crosshairSprite->setVisible(false);
-        }
-        if (_crosshairFallback) {
-            _crosshairFallback->setVisible(false);
-        }
-    }
+    // M7 crosshair removed (session 51): the wheel-driven pings/emotes already
+    // mark the aim, and the always-on screen-centre crosshair sat on the
+    // player's position. The crosshair members/_frames stay unused.
 
     // S6: the pause menu is now Java (GamePauseDialog).
     // The C++ _overlay is never created; skip the isOpen check.
@@ -2364,40 +2287,179 @@ void GameScene::onTouchBegan(float x, float y, int id) {
         _bigMapTouchId = id;
         return;
     }
-    // A programmatically opened ping wheel (big-map tap) claims the next touch
-    // so it does not move or fire.
-    if (_pingWheel && _pingWheel->visible() && _pingTouchId < 0) {
-        _pingTouchId = id;
+    // In-game menu (the settings gear opens it): modal, only the two buttons
+    // respond (and the gear itself closes it), everything else is swallowed.
+    if (_hud && _hud->gameMenuVisible()) {
+        const Vec2 design = screenToDesign(x, y);
+        const Hud::TapResult tap = _hud->hitTest(design.x, design.y);
+        if (tap.kind == Hud::TapKind::Settings) {
+            _hud->showGameMenu(false);
+            resumeGame();
+            return;
+        }
+        switch (_hud->menuActionAt(design.x, design.y)) {
+            case Hud::MenuAction::Resume:
+                _hud->showGameMenu(false);
+                resumeGame();
+                break;
+            case Hud::MenuAction::Leave:
+                _hud->showGameMenu(false);
+                returnToMenu();
+                break;
+            case Hud::MenuAction::None:
+                break;
+        }
         return;
     }
-    // Minimap expand button (#ui-map-expand-mobile) opens the big map.
-    if (_hud && _game->isPlaying()) {
+    // Touch-select wheels (item 11/12 v2): the open wheels are NOT tied to the
+    // touch that opened them. They stay open until a tap inside the wheel
+    // selects (sends instantly) or any tap outside dismisses them. While a
+    // wheel is open every wheel-area touch is swallowed so it cannot move/aim.
+    const bool emoteOpen = _emoteWheel && _emoteWheel->visible();
+    const bool pingOpen = _pingWheel && _pingWheel->visible();
+    if (emoteOpen || pingOpen) {
         const Vec2 design = screenToDesign(x, y);
-        if (_hud->minimapExpandHit(design.x, design.y)) {
+        // The wheel buttons are outside both rings: they toggle their own
+        // wheel (pressed again = dismiss) and never leave the touch free to
+        // move/fire.
+        if (_game->isPlaying() && _emoteWheel->buttonHit(design.x, design.y)) {
+            if (emoteOpen) {
+                _emoteWheel->close();
+                _emoteTouchId = -1;
+            } else {
+                AXLOGI("[hud] emote button hit, opening wheel");
+                _emoteTouchId = id;
+                // Touch-select layout: the (1.5x) wheel opens centred on the
+                // screen, not around the bottom-right button.
+                _emoteWheel->open(Vec2(svui::kit::designWidth() * 0.5f,
+                                       svui::kit::designHeight() * 0.5f));
+            }
+            if (pingOpen && !_pingWheel->wheelContains(design.x, design.y)) {
+                _pingWheel->close();
+                _pingTargetValid = false;
+                _pingTouchId = -1;
+            }
+            return;
+        }
+        if (_game->isPlaying() && _pingWheel->buttonHit(design.x, design.y)) {
+            if (pingOpen) {
+                _pingWheel->close();
+                _pingTargetValid = false;
+                _pingTouchId = -1;
+            } else {
+                AXLOGI("[hud] ping button hit, opening wheel");
+                _pingTouchId = id;
+                // Touch-select layout: the (1.5x) wheel opens centred on the
+                // screen, not around the HP-bar button.
+                _pingWheel->open(Vec2(svui::kit::designWidth() * 0.5f,
+                                      svui::kit::designHeight() * 0.5f));
+            }
+            if (emoteOpen && !_emoteWheel->wheelContains(design.x, design.y)) {
+                _emoteWheel->close();
+                _emoteTouchId = -1;
+            }
+            return;
+        }
+        // Tap inside the emote wheel: send instantly (usable wedges only).
+        if (emoteOpen && _emoteWheel->wheelContains(design.x, design.y)) {
+            std::string type;
+            const EmoteWheel::TapResult result = _emoteWheel->tap(design, type);
+            if (result == EmoteWheel::TapResult::Send && _world && _world->activePlayer()) {
+                // Queue for Game::sendEmote (game.ts newEmotes) and apply the
+                // emote.ts throttle.
+                _world->emoteManager().queueEmote(type, _world->activePlayer()->pos);
+                _emoteWheel->incrementEmote();
+            }
+            if (result != EmoteWheel::TapResult::None) {
+                _emoteWheel->close();
+            }
+            _emoteTouchId = id;
+            return;
+        }
+        // Tap inside the team-ping wheel: send instantly, or close on the
+        // centre selector.
+        if (pingOpen && _pingWheel->wheelContains(design.x, design.y)) {
+            PingWheel::Selection selection;
+            const PingWheel::TapResult result = _pingWheel->tap(design, selection);
+            if (result == PingWheel::TapResult::Send && _world && _world->activePlayer() &&
+                _emoteWheel && _emoteWheel->canSend()) {
+                // Pings target the big-map tap when there was one, otherwise
+                // the crosshair: the message sits just above the player's
+                // head (one player radius above the head line, i.e. 2x the
+                // radius above the body centre), then clamps to map bounds.
+                Vec2 pos;
+                if (_pingTargetValid && !selection.ping.empty()) {
+                    pos = _pingTarget;
+                } else {
+                    pos = v2Add(_world->activePlayer()->pos,
+                                Vec2(0.0f, PlayerConfig::radius * 2.0f));
+                }
+                pos.x = std::clamp(pos.x, 0.0f, _world->map().width);
+                pos.y = std::clamp(pos.y, 0.0f, _world->map().height);
+                if (!selection.ping.empty()) {
+                    _world->emoteManager().queuePing(selection.ping, pos);
+                } else if (!selection.emote.empty()) {
+                    _world->emoteManager().queueEmote(selection.emote, _world->activePlayer()->pos);
+                }
+                // Pings and emotes share the emote.ts counter.
+                _emoteWheel->incrementEmote();
+            }
+            if (result != PingWheel::TapResult::None) {
+                _pingTargetValid = false;
+                _pingWheel->close();
+            }
+            _pingTouchId = id;
+            return;
+        }
+        // Touch outside every open wheel: dismiss the wheels and swallow the
+        // touch so it cannot move or fire behind them.
+        if (emoteOpen) {
+            _emoteWheel->close();
+        }
+        if (pingOpen) {
+            _pingWheel->close();
+            _pingTargetValid = false;
+        }
+        _emoteTouchId = -1;
+        _pingTouchId = -1;
+        return;
+    }
+    // The minimap is the big-map tap target itself (the web's
+    // #ui-map-expand-mobile covers the whole map):
+    if (_hud && !_hud->bigMapVisible() && _game->isPlaying()) {
+        const Vec2 design = screenToDesign(x, y);
+        if (_hud->minimapTapHit(design.x, design.y)) {
             _hud->setBigMapVisible(true);
             _bigMapTouchId = id;
             return;
         }
     }
-    // Emote wheel trigger (#ui-emote-button): the touch drives the wheel and is
-    // kept away from the pads so opening it never moves or fires.
-    if (_emoteWheel && _game->isPlaying()) {
+    // Emote wheel trigger (#ui-emote-button): the touch opens the wheel and is
+    // kept away from the pads so opening it never moves or fires; the wheel
+    // stays open after this touch lifts (touch-select mode).
+    if (_emoteWheel && _game->isPlaying() && !_emoteWheel->visible()) {
         const Vec2 design = screenToDesign(x, y);
         if (_emoteWheel->buttonHit(design.x, design.y)) {
+            AXLOGI("[hud] emote button hit, opening wheel");
             _emoteTouchId = id;
-            // Open the wheel around the button so dragging outward picks a
-            // wedge (the button sits one wheel radius in from the edge, so the
-            // whole wheel stays on screen).
-            _emoteWheel->open(_emoteWheel->buttonCenter());
+            // Touch-select layout: the (1.5x) wheel opens centred on the
+            // screen, not around the bottom-right button.
+            _emoteWheel->open(Vec2(svui::kit::designWidth() * 0.5f,
+                                   svui::kit::designHeight() * 0.5f));
             return;
         }
     }
-    // Team-ping wheel trigger (the button sits left of the emote button).
-    if (_pingWheel && _game->isPlaying()) {
+    // Team-ping wheel trigger (the button sits right of the health bar); the
+    // wheel stays open after this touch lifts (touch-select mode).
+    if (_pingWheel && _game->isPlaying() && !_pingWheel->visible()) {
         const Vec2 design = screenToDesign(x, y);
         if (_pingWheel->buttonHit(design.x, design.y)) {
+            AXLOGI("[hud] ping button hit, opening wheel");
             _pingTouchId = id;
-            _pingWheel->open(_pingWheel->buttonCenter());
+            // Touch-select layout: the (1.5x) wheel opens centred on the
+            // screen, not around the HP-bar button.
+            _pingWheel->open(Vec2(svui::kit::designWidth() * 0.5f,
+                                  svui::kit::designHeight() * 0.5f));
             return;
         }
     }
@@ -2406,10 +2468,11 @@ void GameScene::onTouchBegan(float x, float y, int id) {
     if (_game->isSpectating() || _game->isLocalDead()) {
         return;
     }
-    // P0.1 gameplay action buttons (reload/interact/heal/boost/scope/swap and
-    // the weapon cards). Hit-tested before the pads, like the web's DOM buttons
-    // above the canvas. A weapon-card touch that turns into a drag is handed
-    // back to Touch (see onTouchMoved), so the pads still work under the cards.
+    // P0.1 gameplay action buttons and the new mobile layout controls (gear,
+    // bag counters, scope strip, weapon cards). Hit-tested before the pads,
+    // like the web's DOM buttons above the canvas. A weapon-card touch that
+    // turns into a drag is handed back to Touch (see onTouchMoved), so the
+    // pads still work under the cards.
     if (_hud && _game->isPlaying()) {
         const Vec2 design = screenToDesign(x, y);
         const Hud::TapResult tap = _hud->hitTest(design.x, design.y);
@@ -2425,15 +2488,27 @@ void GameScene::onTouchBegan(float x, float y, int id) {
                 _pendingInputs.press(Input_Interact);
                 _pendingInputs.press(Input_Cancel);
                 return;
+            case Hud::TapKind::Settings:
+                // The in-game settings UI is the Java GamePauseDialog; hosts
+                // without the bridge fall back to the Hud panel.
+                if (!uiHost()->togglePause()) {
+                    const bool open = !_hud->gameMenuVisible();
+                    _hud->showGameMenu(open);
+                    if (open) {
+                        pauseGame();
+                    } else {
+                        resumeGame();
+                    }
+                }
+                return;
             case Hud::TapKind::SwapWeapons:
                 _pendingInputs.press(Input_SwapWeapSlots);
                 return;
-            // Item/weapon controls: tap on release, long-press drops (the web's
-            // touch cards only bind tap-to-use; drop is the mouse right-click
-            // action, so the native touch HUD uses a hold).
-            case Hud::TapKind::Heal:
-            case Hud::TapKind::Boost:
-            case Hud::TapKind::ScopeNext:
+            // Counters/scope weapons: tap on release = use, long-press drops
+            // (the web's touch cards only bind tap-to-use; drop is the mouse
+            // right-click action, so the native touch HUD uses a hold).
+            case Hud::TapKind::LootUse:
+            case Hud::TapKind::ScopeSlot:
             case Hud::TapKind::WeaponSlot:
                 _hudPress = HudPress{id, static_cast<int>(tap.kind), tap.slot, 0.0f,
                                      Vec2(x, y), design};
@@ -2469,27 +2544,28 @@ void GameScene::finishHudPress(bool longPress) {
         return;
     }
     switch (kind) {
-        case Hud::TapKind::Heal:
+        case Hud::TapKind::LootUse: {
+            // The top bag counters (bandage/medkit/soda/pills): tap uses the
+            // item, hold drops it (ui2.ts itemActions).
+            const std::string& item = _hud->topLootType(slot);
             if (longPress) {
-                sendHudDrop(_hud->healItem(), 0, true);
-            } else {
-                _pendingInputs.use(_hud->healItem());
+                sendHudDrop(item, 0, true);
+            } else if (!item.empty()) {
+                _pendingInputs.use(item);
             }
             break;
-        case Hud::TapKind::Boost:
+        }
+        case Hud::TapKind::ScopeSlot: {
+            // Scope strip: tap equips the tapped scope (game.ts
+            // "use" scope -> inputMsg.useItem), hold drops it.
+            const std::string& scope = _hud->scopeSlotType(slot);
             if (longPress) {
-                sendHudDrop(_hud->boostItem(), 0, true);
-            } else {
-                _pendingInputs.use(_hud->boostItem());
+                sendHudDrop(scope, 0, true);
+            } else if (!scope.empty()) {
+                _pendingInputs.use(scope);
             }
             break;
-        case Hud::TapKind::ScopeNext:
-            if (longPress) {
-                sendHudDrop(_hud->scopeType(), 0, true);
-            } else if (!_hud->scopeType().empty()) {
-                _pendingInputs.press(Input_EquipNextScope);
-            }
-            break;
+        }
         case Hud::TapKind::WeaponSlot: {
             if (!longPress) {
                 const uint8_t input = inputForWeaponSlot(slot);
@@ -2546,45 +2622,15 @@ void GameScene::onTouchMoved(float x, float y, int id) {
     if (id == _bigMapTouchId) {
         return;
     }
-    if (id == _emoteTouchId && _emoteWheel) {
-        std::string type;
-        const Vec2 design = screenToDesign(x, y);
-        if (_emoteWheel->select(design, type)) {
-            // Queue for Game::sendEmote (game.ts newEmotes) and apply the
-            // emote.ts throttle.
-            if (_world && _world->activePlayer()) {
-                _world->emoteManager().queueEmote(type, _world->activePlayer()->pos);
-            }
-            _emoteWheel->incrementEmote();
-            _emoteWheel->close();
-            _emoteTouchId = -1;
-        }
+    // Touch-select wheels: strokes never drag-select; while the wheels own
+    // their driving touch (button press / wheel tap) it must not move or aim.
+    // The touch axes stay out of Touch (began returned early before
+    // touches[id].active was set), so the generic move handling below cannot
+    // leak them into gameplay either.
+    if (_emoteWheel && id == _emoteTouchId) {
         return;
     }
-    if (id == _pingTouchId && _pingWheel) {
-        PingWheel::Selection selection;
-        const Vec2 design = screenToDesign(x, y);
-        if (_pingWheel->select(design, selection)) {
-            if (_world && _world->activePlayer() && _emoteWheel && _emoteWheel->canSend()) {
-                // Pings target the big-map tap when there was one, otherwise
-                // the crosshair (the active player; web clamps to map bounds).
-                Vec2 pos = (_pingTargetValid && !selection.ping.empty())
-                    ? _pingTarget
-                    : _world->activePlayer()->pos;
-                pos.x = std::clamp(pos.x, 0.0f, _world->map().width);
-                pos.y = std::clamp(pos.y, 0.0f, _world->map().height);
-                if (!selection.ping.empty()) {
-                    _world->emoteManager().queuePing(selection.ping, pos);
-                } else if (!selection.emote.empty()) {
-                    _world->emoteManager().queueEmote(selection.emote, _world->activePlayer()->pos);
-                }
-                // Pings and emotes share the emote.ts counter.
-                _emoteWheel->incrementEmote();
-            }
-            _pingTargetValid = false;
-            _pingWheel->close();
-            _pingTouchId = -1;
-        }
+    if (_pingWheel && id == _pingTouchId) {
         return;
     }
     if (_touch->touches[id].active) {
@@ -2603,17 +2649,13 @@ void GameScene::onTouchEnded(float x, float y, int id) {
         return;
     }
     if (id == _pingTouchId) {
-        if (_pingWheel) {
-            _pingWheel->close();
-        }
-        _pingTargetValid = false;
+        // Touch-select wheels stay open when the driving touch lifts; only a
+        // tap on the centre close selector or outside the wheel dismisses
+        // them. The big-map ping target stays valid until the wheel closes.
         _pingTouchId = -1;
         return;
     }
     if (id == _emoteTouchId) {
-        if (_emoteWheel) {
-            _emoteWheel->close();
-        }
         _emoteTouchId = -1;
         return;
     }

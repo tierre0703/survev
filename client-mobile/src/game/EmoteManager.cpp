@@ -179,7 +179,7 @@ void EmoteManager::addPing(const Emote& msg, bool factionMode, GameWorld& ctx) {
         icon.pos = pos;
         icon.playerId = msg.playerId;
         icon.tint = tint;
-        icon.scale = pingDef->mapEvent ? 0.3f : 0.2f;
+        icon.scale = pingDef->mapEvent ? 0.3f : 0.15f;
         icon.life = pingDef->mapLife;
         icon.maxLife = pingDef->mapLife;
         _mapPings.push_back(icon);
@@ -199,29 +199,32 @@ void EmoteManager::addPing(const Emote& msg, bool factionMode, GameWorld& ctx) {
     if (indicatorIdx >= 0 && indicatorIdx < kPingIndicatorCount) {
         PingIndicator* ind = &_indicators[indicatorIdx];
 
-        // Create indicator sprites lazily.
+        // Create indicator sprites lazily. The atlas art (ping-border.img and
+        // co.) is 64px, so these raw scales are what the web uses; the
+        // airdrop/airstrike edge markers were shrunk (0.4/0.5 -> 0.22/0.28)
+        // so the airdrop icon + arrow stays small at the screen edge.
         if (!ind->pingContainer) {
             ind->pingContainer = ctx.factory()->createContainer();
             ind->indContainer = ctx.factory()->createContainer();
 
             ind->borderSprite = ctx.factory()->createSprite("ping-border.img");
             ind->borderSprite->setAnchor(0.5f, 0.5f);
-            ind->borderSprite->setScale(0.4f, 0.4f);
+            ind->borderSprite->setScale(kPingIconScale, kPingIconScale);
             ind->pingContainer->addChild(ind->borderSprite);
 
             ind->pingSprite = ctx.factory()->createSprite("ping-team-danger.img");
             ind->pingSprite->setAnchor(0.5f, 0.5f);
-            ind->pingSprite->setScale(0.4f, 0.4f);
+            ind->pingSprite->setScale(kPingIconScale, kPingIconScale);
             ind->pingContainer->addChild(ind->pingSprite);
 
             ind->indSpriteInner = ctx.factory()->createSprite("ping-team-danger.img");
             ind->indSpriteInner->setAnchor(0.5f, 0.5f);
-            ind->indSpriteInner->setScale(0.5f, 0.5f);
+            ind->indSpriteInner->setScale(kPingEdgeScale, kPingEdgeScale);
             ind->indContainer->addChild(ind->indSpriteInner);
 
             ind->indSpriteOuter = ctx.factory()->createSprite("ping-indicator.img");
             ind->indSpriteOuter->setAnchor(0.5f, 0.0f);
-            ind->indSpriteOuter->setScale(0.5f, 0.5f);
+            ind->indSpriteOuter->setScale(kPingEdgeScale, kPingEdgeScale);
             ind->indContainer->addChild(ind->indSpriteOuter);
         }
 
@@ -412,8 +415,8 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             // The web scales indicators in screen space with camera.m_pixels;
             // these nodes live under the camera-transformed world root, whose
             // scale is m_z = m_ppu * m_zoom, so divide by m_z.
-            float borderScale = camera.m_pixels(0.4f) / camera.m_z();
-            float pingScale = camera.m_pixels(0.4f) / camera.m_z();
+            float borderScale = camera.m_pixels(kPingIconScale) / camera.m_z();
+            float pingScale = camera.m_pixels(kPingIconScale) / camera.m_z();
 
             ind.borderSprite->setScale(borderScale, borderScale);
             ind.pingSprite->setScale(pingScale, pingScale);
@@ -445,7 +448,8 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             // Pulse effect on border
             float pulseAlpha = ind.borderSprite->getAlpha() <= 0 ? 1 : ind.borderSprite->getAlpha() - dt;
             ind.borderSprite->setAlpha(pulseAlpha);
-            float pulseScale = camera.m_pixels(0.4f * (2 - pulseAlpha)) / camera.m_z();
+            float pulseScale =
+                camera.m_pixels(kPingIconScale * (2 - pulseAlpha)) / camera.m_z();
             ind.borderSprite->setScale(pulseScale, pulseScale);
 
             // Fade in/out

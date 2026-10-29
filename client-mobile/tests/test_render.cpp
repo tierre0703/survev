@@ -2717,13 +2717,14 @@ TEST(hud_gear_levels_and_squad_polish) {
     CHECK(hud.gearDroppable(3));
 
     // Tap the droppable slots: hitTest maps back through the centred root.
-    const float hitY = 708.0f - 28.0f + 8.0f;
-    Hud::TapResult helmet = hud.hitTest(12.0f + 8.0f, hitY);
+    // The gear row sits left of the health bar (hudX - 34 - i*32, bottom).
+    const float gearSlotX = 400.0f; // hudX - 34 design px, i.e. slot 0 centre
+    Hud::TapResult helmet = hud.hitTest(gearSlotX, 23.0f);
     CHECK(helmet.kind == Hud::TapKind::GearSlot);
     CHECK_EQ(helmet.slot, 0);
-    Hud::TapResult backpack = hud.hitTest(12.0f + 2.0f * 32.0f + 8.0f, hitY);
+    Hud::TapResult backpack = hud.hitTest(gearSlotX - 2.0f * 32.0f, 23.0f);
     CHECK(backpack.kind == Hud::TapKind::None);
-    Hud::TapResult perk = hud.hitTest(12.0f + 3.0f * 32.0f + 8.0f, hitY);
+    Hud::TapResult perk = hud.hitTest(gearSlotX - 3.0f * 32.0f, 23.0f);
     CHECK(perk.kind == Hud::TapKind::GearSlot);
     CHECK_EQ(perk.slot, 3);
 

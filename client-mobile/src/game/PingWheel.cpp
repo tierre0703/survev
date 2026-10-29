@@ -199,15 +199,23 @@ void PingWheel::build(pix::Factory* factory, pix::Container* root, const Vec2& d
     refreshIcons();
 }
 
+void PingWheel::setButtonPosition(const Vec2& center) {
+    _buttonPosOverride = center;
+    _buttonPosCustom = true;
+    layout();
+}
+
 void PingWheel::layout() {
     if (!_built) {
         return;
     }
     const float halfW = _design.x * 0.5f;
     const float halfH = _design.y * 0.5f;
-    // One gap left of the emote button (game/EmoteWheel.cpp).
-    const float emoteButtonX = _design.x - EmoteWheel::kButtonRight;
-    _buttonCenter = Vec2(emoteButtonX - kButtonGap, _design.y * 0.5f);
+    // Default: one gap left of the emote button (game/EmoteWheel.cpp); the
+    // GameScene can override it (mobile hud: right of the health bar).
+    _buttonCenter = _buttonPosCustom
+        ? Vec2(_buttonPosOverride.x, _buttonPosOverride.y)
+        : Vec2(_design.x - EmoteWheel::kButtonRight - kButtonGap, _design.y * 0.5f);
     if (_button) {
         _button->setPosition(_buttonCenter.x - halfW, _buttonCenter.y - halfH);
     }
@@ -362,14 +370,19 @@ void PingWheel::open(const Vec2& center) {
     }
     // Atlases are registered on MapMsg, which can arrive after build().
     refreshIcons();
-    _center = center;
+    // Clamp the wheel centre so the whole (1.5x) ring stays inside the design
+    // space (GameScene opens at the design centre; the clamp is a safety net).
+    const float outer = kOuterRadius * kGeometryScale;
+    _center = Vec2(
+        std::clamp(center.x, outer + 16.0f, _design.x - outer - 16.0f),
+        std::clamp(center.y, outer + 16.0f, _design.y - outer - 16.0f));
     _active = true;
     _openT = 0.0f;
     _idle = 0.0f;
     _highlighted = -1;
     applyHighlight();
     _wheel->setVisible(true);
-    _wheel->setScale(0.85f, 0.85f);
+    _wheel->setScale(0.85f * kGeometryScale, 0.85f * kGeometryScale);
     _wheel->setAlpha(1.0f);
     updateGrey();
     layout();
@@ -435,35 +448,47 @@ bool PingWheel::itemUsable(int selector) const {
     return !(_items[selector].teamOnly && _solo);
 }
 
-bool PingWheel::select(const Vec2& pos, Selection& out) {
+PingWheel::TapResult PingWheel::tap(const Vec2& pos, Selection& out) {
+    out = Selection{};
     if (!_active) {
-        return false;
+        return TapResult::None;
     }
     _idle = 0.0f;
-    const int idx = selectorAt(pos.x - _center.x, pos.y - _center.y);
-    const int nextHighlight = _greyed ? -1 : idx;
-    if (nextHighlight != _highlighted) {
-        _highlighted = nextHighlight;
-        applyHighlight();
+    const float dx = pos.x - _center.x;
+    const float dy = pos.y - _center.y;
+    const float outer = kOuterRadius * kGeometryScale;
+    // Touches outside the ring are the dismiss gesture (GameScene handles
+    // them), they never select.
+    if (dx * dx + dy * dy > outer * outer) {
+        return TapResult::None;
     }
+    const int idx = selectorAt(dx / kGeometryScale, dy / kGeometryScale);
+    if (idx <= Middle) {
+        // No matching sector: the centre dead zone is the close selector
+        // (emote.ts middle); tap-select closes on it without sending.
+        _highlighted = -1;
+        applyHighlight();
+        return TapResult::Close;
+    }
+    const int nextHighlight = _greyed ? -1 : idx;
+    _highlighted = nextHighlight;
+    applyHighlight();
     if (!itemUsable(idx)) {
-        return false;
+        return TapResult::None;
     }
     const char* ping = kPingOf[idx];
     if (ping && *ping) {
         out.ping = ping;
-        out.emote.clear();
         out.ammoEmote = false;
-        return true;
+        return TapResult::Send;
     }
     const std::string emote = emoteType(idx);
     if (emote.empty()) {
-        return false;
+        return TapResult::None;
     }
-    out.ping.clear();
     out.emote = emote;
     out.ammoEmote = idx == TopLeft;
-    return true;
+    return TapResult::Send;
 }
 
 void PingWheel::applyHighlight() {
@@ -491,7 +516,7 @@ void PingWheel::update(float dt) {
     _openT += dt;
     const float t = std::min(_openT / kOpenDuration, 1.0f);
     const float eased = 1.0f - (1.0f - t) * (1.0f - t);
-    const float scale = 0.85f + 0.15f * eased;
+    const float scale = kGeometryScale * (0.85f + 0.15f * eased);
     _wheel->setScale(scale, scale);
     _wheel->setAlpha(_greyed ? 0.5f : 1.0f);
 }
@@ -504,6 +529,16 @@ bool PingWheel::buttonHit(float designX, float designY) const {
     const float dy = designY - _buttonCenter.y;
     const float reach = kButtonRadius * 1.5f;
     return dx * dx + dy * dy <= reach * reach;
+}
+
+bool PingWheel::wheelContains(float designX, float designY) const {
+    if (!_built || !_active) {
+        return false;
+    }
+    const float dx = designX - _center.x;
+    const float dy = designY - _center.y;
+    const float outer = kOuterRadius * kGeometryScale;
+    return dx * dx + dy * dy <= outer * outer;
 }
 
 } // namespace surv

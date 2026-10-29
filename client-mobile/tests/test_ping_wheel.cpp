@@ -126,72 +126,89 @@ TEST(ping_wheel_button_and_ammo_mapping) {
     CHECK_EQ(icon->frame, std::string("ping-team-danger.img"));
 }
 
-TEST(ping_wheel_selects_pings_and_team_emotes) {
+TEST(ping_wheel_tap_selects_pings_and_team_emotes) {
     PingFixture fx;
-    const Vec2 c = fx.wheel.buttonCenter();
+    // Runtime opens the (1.5x) wheel at the design centre (GameScene).
+    const Vec2 c(kDesign.x * 0.5f, kDesign.y * 0.5f);
     fx.wheel.setAmmoType("556mm");
     fx.wheel.open(c);
     CHECK(fx.wheel.visible());
 
     PingWheel::Selection sel;
-    // Centre is the close selector: no payload.
-    CHECK(!fx.wheel.select(Vec2(c.x + 10.0f, c.y + 10.0f), sel));
+    // The centre dead zone is the close selector: tap-to-close, never a
+    // payload (GameScene closes on it).
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x + 10.0f, c.y + 10.0f), sel), PingWheel::TapResult::Close);
     CHECK(!sel.valid());
 
-    CHECK(fx.wheel.select(Vec2(c.x, c.y + 100.0f), sel));
+    // The scaled ring spans 198px: hits between the original 132px radius and
+    // the scaled one must still select.
+    sel = {};
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 150.0f), sel), PingWheel::TapResult::Send);
     CHECK_EQ(sel.ping, std::string("ping_danger"));
     CHECK(sel.emote.empty());
 
     sel = {};
-    CHECK(fx.wheel.select(Vec2(c.x + 100.0f, c.y), sel));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x + 150.0f, c.y), sel), PingWheel::TapResult::Send);
     CHECK_EQ(sel.ping, std::string("ping_coming"));
 
     sel = {};
-    CHECK(fx.wheel.select(Vec2(c.x, c.y - 100.0f), sel));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y - 100.0f), sel), PingWheel::TapResult::Send);
     CHECK_EQ(sel.ping, std::string("ping_help"));
 
     sel = {};
-    CHECK(fx.wheel.select(Vec2(c.x - 100.0f, c.y - 40.0f), sel));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x - 100.0f, c.y - 40.0f), sel), PingWheel::TapResult::Send);
     CHECK(sel.ping.empty());
     CHECK_EQ(sel.emote, std::string("emote_medical"));
     CHECK(!sel.ammoEmote);
 
     sel = {};
-    CHECK(fx.wheel.select(Vec2(c.x - 100.0f, c.y + 40.0f), sel));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x - 100.0f, c.y + 40.0f), sel), PingWheel::TapResult::Send);
     CHECK(sel.ping.empty());
     CHECK_EQ(sel.emote, std::string("emote_ammo556mm"));
     CHECK(sel.ammoEmote);
 
+    // Outside the scaled ring: dismiss gesture, no selection.
+    sel = {};
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 250.0f), sel), PingWheel::TapResult::None);
+    CHECK(!sel.valid());
+
     fx.wheel.close();
     CHECK(!fx.wheel.visible());
+    // Tapping only works while the wheel is open.
+    sel = {};
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 100.0f), sel), PingWheel::TapResult::None);
+    CHECK(!sel.valid());
 }
 
 TEST(ping_wheel_solo_gating_and_throttle_grey) {
     PingFixture fx;
-    const Vec2 c = fx.wheel.buttonCenter();
+    // Runtime opens the wheel at the design centre.
+    const Vec2 c(kDesign.x * 0.5f, kDesign.y * 0.5f);
     fx.wheel.setTeamMode(false); // team: medical/ammo emotes allowed
     fx.wheel.open(c);
     PingWheel::Selection sel;
-    CHECK(fx.wheel.select(Vec2(c.x - 100.0f, c.y - 40.0f), sel));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x - 100.0f, c.y - 40.0f), sel), PingWheel::TapResult::Send);
     CHECK_EQ(sel.emote, std::string("emote_medical"));
 
-    // Solo greys out the team-only emote selectors, but pings still work.
+    // Solo greys out the team-only emote selectors, but pings still work. An
+    // unusable tap leaves the wheel open.
     fx.wheel.setTeamMode(true);
     fx.wheel.open(c);
     sel = {};
-    CHECK(!fx.wheel.select(Vec2(c.x - 100.0f, c.y - 40.0f), sel));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x - 100.0f, c.y - 40.0f), sel), PingWheel::TapResult::None);
     CHECK(!sel.valid());
-    CHECK(fx.wheel.select(Vec2(c.x, c.y + 100.0f), sel));
+    CHECK(fx.wheel.visible());
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 100.0f), sel), PingWheel::TapResult::Send);
     CHECK_EQ(sel.ping, std::string("ping_danger"));
 
     // The shared emote hard cooldown greys the whole wheel.
     fx.wheel.setGreyed(true);
     fx.wheel.open(c);
     sel = {};
-    CHECK(!fx.wheel.select(Vec2(c.x, c.y + 100.0f), sel));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 100.0f), sel), PingWheel::TapResult::None);
     CHECK(!sel.valid());
     fx.wheel.setGreyed(false);
-    CHECK(fx.wheel.select(Vec2(c.x, c.y + 100.0f), sel));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 100.0f), sel), PingWheel::TapResult::Send);
     CHECK_EQ(sel.ping, std::string("ping_danger"));
 }
 
@@ -354,7 +371,8 @@ TEST(map_pings_spawn_on_minimap_and_expire) {
     CHECK(!icon.pulse);
     CHECK_EQ(icon.texture, std::string("ping-map-danger.img"));
     CHECK_NEAR(icon.life, 4.0f, 0.001f);
-    CHECK_NEAR(icon.scale, 0.2f, 0.001f);
+    // Player pings: the web's raw 0.15 Sm createPing scale.
+    CHECK_NEAR(icon.scale, 0.15f, 0.001f);
     CHECK_EQ(icon.tint, 0xffffffu);
     CHECK(pulse.pulse);
     CHECK_EQ(pulse.texture, std::string("ping-map-pulse.img"));
@@ -421,9 +439,10 @@ TEST(hud_minimap_positions_ping_sprites) {
     CHECK_NEAR(map->getAlpha(), 0.8f, 0.001f);
     const auto* clip = static_cast<const pix::NullContainer*>(mini.root());
     CHECK(clip != nullptr && clip->maskNode != nullptr);
-    // Bottom-left of the top-right 140px frame (design 1280x720, centred).
-    CHECK_NEAR(mini.pos().x, (1280.0f - Hud::kMinimapSize - 12.0f) - 640.0f, 0.01f);
-    CHECK_NEAR(mini.pos().y, (720.0f - Hud::kMinimapSize - 12.0f) - 360.0f, 0.01f);
+    // Bottom-left of the top-left 140px frame under the settings gear
+    // (design 1280x720, centred): left 12, top 50.
+    CHECK_NEAR(mini.pos().x, 12.0f - 640.0f, 0.01f);
+    CHECK_NEAR(mini.pos().y, (720.0f - 50.0f - Hud::kMinimapSize) - 360.0f, 0.01f);
 
     std::vector<MapPing> pings(1);
     pings[0].texture = "ping-map-danger.img";
@@ -441,7 +460,10 @@ TEST(hud_minimap_positions_ping_sprites) {
     CHECK_EQ(sprite->frame, std::string("ping-map-danger.img"));
     CHECK_NEAR(sprite->x, Hud::kMinimapSize * 0.5f, 0.01f);
     CHECK_NEAR(sprite->y, Hud::kMinimapSize * 0.5f, 0.01f);
-    CHECK_NEAR(sprite->sx, 0.2f * Hud::kMinimapSize / 256.0f, 0.001f);
+    // ui.ts createPing: the sprite is fitted to ping.scale * 36 design px
+    // (relative to the sprite's own source size).
+    const float source = sprite->texture ? sprite->texture->width() : 1.0f;
+    CHECK_NEAR(sprite->sx, 0.2f * MapView::kPingDisplayPx / source, 0.001f);
     CHECK_EQ(sprite->getTint(), 0xffff00u);
 
     // Hidden HUD hides the minimap view (and its pings).
@@ -909,18 +931,23 @@ TEST(hud_big_map_toggle_and_hits) {
     CHECK(!hud.bigMapVisible());
     CHECK(hud.minimap().visible());
 
-    // Expand affordance sits inside the minimap's bottom-right corner. Hit
-    // tests take design-space coordinates; the view positions are centred.
+    // The minimap itself is the big-map tap target: any point in its 140px
+    // box (design-space coords) opens the big map.
     const Vec2 designOrigin(640.0f, 360.0f);
-    const Vec2 expand = v2Add(v2Add(hud.minimap().pos(), designOrigin),
-                              Vec2(Hud::kMinimapSize - Hud::kMinimapExpandSize - 4.0f + 11.0f, 15.0f));
-    CHECK(hud.minimapExpandHit(expand.x, expand.y));
-    CHECK(!hud.minimapExpandHit(expand.x - 100.0f, expand.y));
+    const Vec2 mapPoints[2] = {
+        v2Add(v2Add(hud.minimap().pos(), designOrigin), Vec2(5.0f, 5.0f)),
+        v2Add(v2Add(hud.minimap().pos(), designOrigin),
+              Vec2(Hud::kMinimapSize - 5.0f, Hud::kMinimapSize - 5.0f)),
+    };
+    for (const Vec2& point : mapPoints) {
+        CHECK(hud.minimapTapHit(point.x, point.y));
+    }
+    CHECK(!hud.minimapTapHit(mapPoints[0].x - 100.0f, mapPoints[0].y));
 
     hud.setBigMapVisible(true);
     CHECK(hud.bigMapVisible());
     CHECK(!hud.minimap().visible());
-    CHECK(!hud.minimapExpandHit(expand.x, expand.y));
+    CHECK(!hud.minimapTapHit(mapPoints[0].x, mapPoints[0].y));
 
     const Vec2 center = v2Add(v2Add(hud.bigMap().pos(), designOrigin),
                               Vec2(Hud::kBigMapSize * 0.5f, Hud::kBigMapSize * 0.5f));
@@ -939,11 +966,11 @@ TEST(hud_big_map_toggle_and_hits) {
     hud.setMinimapHidden(true);
     CHECK(hud.minimapHidden());
     CHECK(!hud.minimap().visible());
-    CHECK(!hud.minimapExpandHit(expand.x, expand.y));
+    CHECK(!hud.minimapTapHit(mapPoints[0].x, mapPoints[0].y));
     hud.setMinimapHidden(false);
     CHECK(!hud.minimapHidden());
     CHECK(hud.minimap().visible());
-    CHECK(hud.minimapExpandHit(expand.x, expand.y));
+    CHECK(hud.minimapTapHit(mapPoints[0].x, mapPoints[0].y));
 
     // Hiding the HUD also closes the big map.
     hud.setBigMapVisible(true);

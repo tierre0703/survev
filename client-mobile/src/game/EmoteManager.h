@@ -56,8 +56,9 @@ struct PingIndicator {
 };
 
 // A minimap ping sprite (client/src/ui/ui.ts createPing + objects/mapSprite.ts):
-// the ping def's map texture plus the expanding pulse ring. Hud draws these over
-// the baked minimap; EmoteManager owns the lifetimes.
+// the ping def's map texture plus the expanding pulse ring. Hud draws these
+// over the baked minimap; EmoteManager owns the lifetimes. `scale` carries the
+// web's raw createPing scale (map events 0.3, player pings 0.15).
 struct MapPing {
     bool active = true;
     bool pulse = false;
@@ -107,6 +108,10 @@ public:
 
 private:
     static constexpr int kPingIndicatorCount = 6; // 4 team + airdrop + airstrike
+    // World ping indicator scales (emote.ts baseScale 0.4/0.5, shrunk so the
+    // airdrop direction icon + arrow stays small; see the mockup HUD note).
+    static constexpr float kPingIconScale = 0.22f;
+    static constexpr float kPingEdgeScale = 0.28f;
     static constexpr float kEmoteLifeIn = 0.75f;
     static constexpr float kEmoteLife = 1.0f;
     static constexpr float kEmoteLifeOut = 0.1f;

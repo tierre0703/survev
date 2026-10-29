@@ -87,53 +87,84 @@ TEST(emote_wheel_button_and_loadout) {
     CHECK(!fx.wheel.buttonHit(fx.wheel.buttonCenter().x, fx.wheel.buttonCenter().y));
 
     // GameScene calls refreshFrames() once the map atlases are registered (the
-    // wheel is built before the first MapMsg). It must re-resolve the button
-    // icon frame, which the build-time pass could not find.
+    // wheel is built before the first MapMsg). The button uses the static gas
+    // icon (EmoteWheel::kButtonIconFrame), re-resolved like every other frame.
     fx.wheel.setHudVisible(true);
     fx.wheel.refreshFrames();
     const auto* icon = static_cast<const pix::NullSprite*>(fx.wheel.buttonIcon());
     CHECK(icon != nullptr);
     CHECK(icon->visible);
-    CHECK_EQ(icon->frame, std::string("face-happy.img"));
+    CHECK_EQ(icon->frame, std::string(EmoteWheel::kButtonIconFrame));
 }
 
-TEST(emote_wheel_selects_and_closes) {
+TEST(emote_wheel_tap_selects_and_closes) {
     WheelFixture fx;
-    fx.wheel.open(fx.wheel.buttonCenter());
+    // Runtime opens the (1.5x) wheel at the design centre (GameScene).
+    const Vec2 c(kDesign.x * 0.5f, kDesign.y * 0.5f);
+    fx.wheel.open(c);
     CHECK(fx.wheel.visible());
 
     std::string type;
-    // A small drag stays in the dead zone: no emote, no send.
-    CHECK(!fx.wheel.select(Vec2(fx.wheel.buttonCenter().x + 10.0f, fx.wheel.buttonCenter().y), type));
+    // The centre dead zone is the close selector: tap-to-close, never sends.
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x + 10.0f, c.y), type), EmoteWheel::TapResult::Close);
     CHECK(type.empty());
 
-    // Drag up selects the top EmoteSlot.
-    CHECK(fx.wheel.select(Vec2(fx.wheel.buttonCenter().x, fx.wheel.buttonCenter().y + 100.0f), type));
+    // A stroke outside the ring is the dismiss gesture: no selection, and the
+    // wheel the caller owns stays open.
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 200.0f), type), EmoteWheel::TapResult::None);
+    CHECK(type.empty());
+
+    // A tap on the top wedge sends the top EmoteSlot instantly.
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 100.0f), type), EmoteWheel::TapResult::Send);
     CHECK_EQ(type, std::string("emote_happyface"));
 
     fx.wheel.close();
     CHECK(!fx.wheel.visible());
-    // Selection only works while the wheel is open.
-    CHECK(!fx.wheel.select(Vec2(fx.wheel.buttonCenter().x, fx.wheel.buttonCenter().y + 100.0f), type));
+    // Tapping only works while the wheel is open.
+    type.clear();
+    CHECK_EQ(fx.wheel.tap(Vec2(fx.wheel.buttonCenter().x, fx.wheel.buttonCenter().y + 100.0f), type),
+             EmoteWheel::TapResult::None);
+    CHECK(type.empty());
 }
 
 TEST(emote_wheel_team_only_wedges_are_disabled_in_solo) {
     WheelFixture fx;
     fx.wheel.setLoadout({ "emote_medical", "emote_thumbsup", "emote_surviv", "emote_sadface" });
     fx.wheel.setTeamMode(false); // team mode: allowed
-    fx.wheel.open(fx.wheel.buttonCenter());
+    const Vec2 c(kDesign.x * 0.5f, kDesign.y * 0.5f);
+    fx.wheel.open(c);
     std::string type;
-    CHECK(fx.wheel.select(Vec2(fx.wheel.buttonCenter().x, fx.wheel.buttonCenter().y + 120.0f), type));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 120.0f), type), EmoteWheel::TapResult::Send);
     CHECK_EQ(type, std::string("emote_medical"));
 
-    // Solo (TeamMode.Solo == 1) greys out teamOnly emotes.
+    // Solo (TeamMode.Solo == 1) greys out teamOnly emotes: the tap does
+    // nothing and the wheel stays open.
     fx.wheel.setTeamMode(true);
-    fx.wheel.open(fx.wheel.buttonCenter());
+    fx.wheel.open(c);
     type.clear();
-    CHECK(!fx.wheel.select(Vec2(fx.wheel.buttonCenter().x, fx.wheel.buttonCenter().y + 120.0f), type));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 120.0f), type), EmoteWheel::TapResult::None);
     CHECK(type.empty());
+    CHECK(fx.wheel.visible());
     // A non-team wedge still works in solo.
-    CHECK(fx.wheel.select(Vec2(fx.wheel.buttonCenter().x + 120.0f, fx.wheel.buttonCenter().y), type));
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x + 120.0f, c.y), type), EmoteWheel::TapResult::Send);
+    CHECK_EQ(type, std::string("emote_thumbsup"));
+}
+
+TEST(emote_wheel_hard_cooldown_tap_does_nothing) {
+    WheelFixture fx;
+    const Vec2 c(kDesign.x * 0.5f, kDesign.y * 0.5f);
+    fx.wheel.open(c);
+    // During the hard cooldown every wedge tap is refused (the wheel is grey).
+    for (int i = 0; i < 6; ++i) {
+        fx.wheel.incrementEmote();
+    }
+    CHECK(!fx.wheel.canSend());
+    std::string type;
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x + 120.0f, c.y), type), EmoteWheel::TapResult::None);
+    CHECK(type.empty());
+    CHECK(fx.wheel.visible());
+    fx.wheel.resetThrottle();
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x + 120.0f, c.y), type), EmoteWheel::TapResult::Send);
     CHECK_EQ(type, std::string("emote_thumbsup"));
 }
 
@@ -163,14 +194,32 @@ TEST(emote_wheel_throttle_matches_web_cooldowns) {
     CHECK_EQ(wheel.emoteCounter(), 1);
 }
 
+TEST(emote_wheel_geometry_scale_1_5x) {
+    WheelFixture fx;
+    const Vec2 c(kDesign.x * 0.5f, kDesign.y * 0.5f);
+    fx.wheel.open(c);
+    std::string type;
+    // The 1.5x ring spans 198px around the centre: taps between the original
+    // 132px radius and the scaled one must still wedge-select (scaled dead
+    // zone and ring in tap(), wedgeAt gets unscaled offsets).
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 150.0f), type), EmoteWheel::TapResult::Send);
+    CHECK_EQ(type, std::string("emote_happyface"));
+    // Hits outside the scaled ring are the dismiss gesture.
+    fx.wheel.setLoadout({ "emote_happyface", "emote_thumbsup", "emote_surviv", "emote_sadface" });
+    type.clear();
+    CHECK_EQ(fx.wheel.tap(Vec2(c.x, c.y + 250.0f), type), EmoteWheel::TapResult::None);
+    CHECK(type.empty());
+}
+
 TEST(emote_wheel_opens_and_updates) {
     WheelFixture fx;
     CHECK(!fx.wheel.visible());
     fx.wheel.open(fx.wheel.buttonCenter());
     CHECK(fx.wheel.visible());
     CHECK(fx.wheel.canSend());
-    // Opening animates the wheel and keeps it visible.
-    fx.wheel.update(1.0f / 60.0f);
+    // Opening animates the wheel and keeps it visible; the ease finishes at
+    // the 1.5x touch-flow scale (EmoteWheel::kGeometryScale).
+    fx.wheel.update(EmoteWheel::kOpenDuration + 1.0f / 60.0f);
     CHECK(fx.wheel.visible());
     fx.wheel.close();
     CHECK(!fx.wheel.visible());

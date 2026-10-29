@@ -58,9 +58,9 @@ void EmoteWheel::build(pix::Factory* factory, pix::Container* root, const Vec2& 
         return;
     }
 
-    // #ui-emote-button: round button showing the first loadout emote (the web
-    // button is a generic smiley icon). The circle/ring stay visible even when
-    // no emote texture resolved yet, so the button is always tappable.
+    // #ui-emote-button: round button with the static gas icon. The circle/ring
+    // stay visible even when no texture resolved yet, so the button is always
+    // tappable.
     _button = _factory->createContainer();
     _root->addChild(_button);
     _buttonBg = _factory->createGraphics();
@@ -159,13 +159,21 @@ void EmoteWheel::build(pix::Factory* factory, pix::Container* root, const Vec2& 
     refreshWedges();
 }
 
+void EmoteWheel::setButtonPosition(const Vec2& center) {
+    _buttonPosOverride = center;
+    _buttonPosCustom = true;
+    layout();
+}
+
 void EmoteWheel::layout() {
     if (!_built) {
         return;
     }
     const float halfW = _design.x * 0.5f;
     const float halfH = _design.y * 0.5f;
-    _buttonCenter = Vec2(_design.x - kButtonRight, _design.y * 0.5f);
+    _buttonCenter = _buttonPosCustom
+        ? Vec2(_buttonPosOverride.x, _buttonPosOverride.y)
+        : Vec2(_design.x - kButtonRight, _design.y * 0.5f);
     if (_button) {
         _button->setPosition(_buttonCenter.x - halfW, _buttonCenter.y - halfH);
     }
@@ -232,18 +240,15 @@ void EmoteWheel::refreshWedges() {
         }
     }
 
-    // Button icon: the first loadout emote, like the web's smiley button art.
+    // Button icon: the static gas icon (EmoteWheel::kButtonIconFrame). The
+    // loose "gui/*.png" asset resolves before the map atlases are registered,
+    // so the art shows right away.
     if (_buttonIcon) {
-        const std::string& type = _loadout[0];
-        const EmoteRenderDef* def = (!type.empty() && provider) ? provider->emote(type) : nullptr;
-        const bool hasIcon = def != nullptr && !def->texture.empty();
-        _buttonIcon->setVisible(hasIcon);
-        if (hasIcon) {
-            _buttonIcon->setFrame(def->texture);
-            const float source = std::max(_buttonIcon->sourceWidth(), _buttonIcon->sourceHeight());
-            const float scale = source > 0.0f ? (kButtonRadius * 1.7f) / source : 1.0f;
-            _buttonIcon->setScale(scale, scale);
-        }
+        _buttonIcon->setFrame(kButtonIconFrame);
+        _buttonIcon->setVisible(true);
+        const float source = std::max(_buttonIcon->sourceWidth(), _buttonIcon->sourceHeight());
+        const float scale = source > 0.0f ? (kButtonRadius * 1.7f) / source : 1.0f;
+        _buttonIcon->setScale(scale, scale);
     }
 }
 
@@ -271,13 +276,18 @@ void EmoteWheel::open(const Vec2& center) {
     // The atlas for the loadout emotes is registered on MapMsg, which can
     // arrive after build(); re-resolve the frames here.
     refreshWedges();
-    _center = center;
+    // Clamp the wheel centre so the whole (1.5x) ring stays inside the design
+    // space (GameScene opens at the design centre; the clamp is a safety net).
+    const float outer = kOuterRadius * kGeometryScale;
+    _center = Vec2(
+        std::clamp(center.x, outer + 16.0f, _design.x - outer - 16.0f),
+        std::clamp(center.y, outer + 16.0f, _design.y - outer - 16.0f));
     _active = true;
     _openT = 0.0f;
     _highlighted = -1;
     applyHighlight();
     _wheel->setVisible(true);
-    _wheel->setScale(0.85f, 0.85f);
+    _wheel->setScale(0.85f * kGeometryScale, 0.85f * kGeometryScale);
     _wheel->setAlpha(canSend() ? 1.0f : 0.5f);
     layout();
 }
@@ -304,24 +314,38 @@ int EmoteWheel::wedgeAt(float dx, float dy) {
     return dy > 0.0f ? 0 : 2;
 }
 
-bool EmoteWheel::select(const Vec2& pos, std::string& outType) {
+EmoteWheel::TapResult EmoteWheel::tap(const Vec2& pos, std::string& outType) {
+    outType.clear();
     if (!_active) {
-        return false;
+        return TapResult::None;
     }
-    const int idx = wedgeAt(pos.x - _center.x, pos.y - _center.y);
-    if (idx != _highlighted) {
-        _highlighted = idx;
+    const float dx = pos.x - _center.x;
+    const float dy = pos.y - _center.y;
+    const float outer = kOuterRadius * kGeometryScale;
+    // Touches outside the ring are the dismiss gesture (GameScene handles
+    // them), they never select.
+    if (dx * dx + dy * dy > outer * outer) {
+        return TapResult::None;
+    }
+    const int idx = wedgeAt(dx / kGeometryScale, dy / kGeometryScale);
+    // Centre dead zone is the close selector (emote.ts middle: "close.svg");
+    // tap-select closes on it without sending.
+    if (idx < 0 || idx > 3) {
+        _highlighted = -1;
         applyHighlight();
+        return TapResult::Close;
     }
-    if (idx < 0 || idx > 3 || !canSend()) {
-        return false;
+    _highlighted = idx;
+    applyHighlight();
+    if (!canSend()) {
+        return TapResult::None;
     }
     const std::string& type = _loadout[idx];
     if (type.empty() || (_wedges[idx].teamOnly && _solo)) {
-        return false;
+        return TapResult::None;
     }
     outType = type;
-    return true;
+    return TapResult::Send;
 }
 
 void EmoteWheel::applyHighlight() {
@@ -344,7 +368,7 @@ void EmoteWheel::update(float dt) {
     _openT += dt;
     const float t = std::min(_openT / kOpenDuration, 1.0f);
     const float eased = 1.0f - (1.0f - t) * (1.0f - t);
-    const float scale = 0.85f + 0.15f * eased;
+    const float scale = kGeometryScale * (0.85f + 0.15f * eased);
     _wheel->setScale(scale, scale);
     _wheel->setAlpha(canSend() ? 1.0f : 0.5f);
 }
@@ -386,7 +410,22 @@ bool EmoteWheel::buttonHit(float designX, float designY) const {
     const float dx = designX - _buttonCenter.x;
     const float dy = designY - _buttonCenter.y;
     const float reach = kButtonRadius * 1.5f; // forgiving for a finger
-    return dx * dx + dy * dy <= reach * reach;
+    const bool hit = dx * dx + dy * dy <= reach * reach;
+#ifdef SURV_WHEEL_DEBUG
+    std::printf("[ddd] emote hit=%d design=(%g,%g) center=(%g,%g)\n", (int)hit, designX, designY,
+                _buttonCenter.x, _buttonCenter.y);
+#endif
+    return hit;
+}
+
+bool EmoteWheel::wheelContains(float designX, float designY) const {
+    if (!_built || !_active) {
+        return false;
+    }
+    const float dx = designX - _center.x;
+    const float dy = designY - _center.y;
+    const float outer = kOuterRadius * kGeometryScale;
+    return dx * dx + dy * dy <= outer * outer;
 }
 
 } // namespace surv

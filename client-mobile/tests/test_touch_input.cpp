@@ -10,20 +10,23 @@ using namespace surv_test;
 
 namespace {
 
-// Landscape 800x480: locked pads sit at (126,380) and (674,380), range 48.
+// Landscape 800x480: locked pads sit at (160,340) and (640,340), range 48.
 constexpr float kWidth = 800.0f;
 constexpr float kHeight = 480.0f;
+// Playtesting locked offsets (session 52): landscape (160, 140).
+constexpr float nkLeftX = 160.0f;
+constexpr float nkRightX = kWidth - 160.0f;
 
 void setMovePull(Touch& t, float dx, float dy) {
     t.touches[0].active = true;
-    t.touches[0].posDown = Vec2(100.0f, 380.0f);
-    t.touches[0].pos = Vec2(126.0f + dx, 380.0f + dy);
+    t.touches[0].posDown = Vec2(nkLeftX, 340.0f);
+    t.touches[0].pos = Vec2(nkLeftX + dx, 340.0f + dy);
 }
 
 void setAimPull(Touch& t, float dx, float dy) {
     t.touches[1].active = true;
-    t.touches[1].posDown = Vec2(700.0f, 380.0f);
-    t.touches[1].pos = Vec2(674.0f + dx, 380.0f + dy);
+    t.touches[1].posDown = Vec2(nkRightX, 340.0f);
+    t.touches[1].pos = Vec2(nkRightX + dx, 340.0f + dy);
 }
 
 } // namespace
@@ -116,10 +119,12 @@ struct PadGfxRecorder : public PadGraphics {
 } // namespace
 
 // Web `createPadSprite`: centre scale = padScaleBase * padScaleDown (0.6),
-// touch scale = padScaleBase * padScalePos (0.25); the ring sits at the locked
+// touch scale = padScalePos (0.25) — both multiplied by the `padSizeScale`
+// 1.75x playtesting multiplier (drawn sizes only). The ring sits at the locked
 // pad center and the dot rests on it while the pad is untouched.
 TEST(touch_pad_gfx_locked_scales_and_positions) {
     Touch t(kWidth, kHeight, true);
+    const float sizeScale = t.padSizeScale;
     PadGfxRecorder move;
     PadGfxRecorder aim;
     // The zoom-driven offset scale is process-wide state on Touch (GameWorld
@@ -131,26 +136,26 @@ TEST(touch_pad_gfx_locked_scales_and_positions) {
     CHECK_EQ(aim.updates, 1);
     CHECK_EQ(move.visible, true);
     CHECK_EQ(aim.visible, true);
-    CHECK_NEAR(move.centerScale, 0.6f, 1e-6f);
-    CHECK_NEAR(move.touchScale, 0.25f, 1e-6f);
-    // Locked landscape offsets: left (126, 480-100), right (800-126, 380).
-    CHECK_NEAR(t.leftLockedPadCenter.x, 126.0f, 1e-4f);
-    CHECK_NEAR(t.rightLockedPadCenter.x, 674.0f, 1e-4f);
-    CHECK_NEAR(t.leftLockedPadCenter.y, 380.0f, 1e-4f);
-    CHECK_NEAR(t.rightLockedPadCenter.y, 380.0f, 1e-4f);
-    CHECK_NEAR(move.center.y, 380.0f, 1e-4f);
-    CHECK_NEAR(move.touch.x, 126.0f, 1e-4f);
-    CHECK_NEAR(move.touch.y, 380.0f, 1e-4f);
-    CHECK_NEAR(aim.center.x, 674.0f, 1e-4f);
-    CHECK_NEAR(aim.touch.x, 674.0f, 1e-4f);
+    CHECK_NEAR(move.centerScale, 0.6f * sizeScale, 1e-6f);
+    CHECK_NEAR(move.touchScale, 0.25f * sizeScale, 1e-6f);
+    // Locked landscape offsets: left (160, 480-140), right (800-160, 340).
+    CHECK_NEAR(t.leftLockedPadCenter.x, 160.0f, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.x, 640.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.y, 340.0f, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.y, 340.0f, 1e-4f);
+    CHECK_NEAR(move.center.y, 340.0f, 1e-4f);
+    CHECK_NEAR(move.touch.x, 160.0f, 1e-4f);
+    CHECK_NEAR(move.touch.y, 340.0f, 1e-4f);
+    CHECK_NEAR(aim.center.x, 640.0f, 1e-4f);
+    CHECK_NEAR(aim.touch.x, 640.0f, 1e-4f);
 
     // Portrait (padScaleBase 0.8) and hideAll().
     Touch portrait(480.0f, 800.0f, false);
     PadGfxRecorder pmove;
     PadGfxRecorder paim;
     portrait.m_update(pmove, paim);
-    CHECK_NEAR(pmove.centerScale, 0.48f, 1e-6f); // 0.8 * 0.6
-    CHECK_NEAR(pmove.touchScale, 0.20f, 1e-6f);  // 0.8 * 0.25
+    CHECK_NEAR(pmove.centerScale, 0.48f * sizeScale, 1e-6f);
+    CHECK_NEAR(pmove.touchScale, 0.20f * sizeScale, 1e-6f);
 
     t.hideAll();
     t.m_update(move, aim);
@@ -159,23 +164,24 @@ TEST(touch_pad_gfx_locked_scales_and_positions) {
 }
 
 // touch.ts resize(): tablets shift the portrait pad offsets inward (x * 1.25)
-// — the landscape offsets are unchanged (`x * 1` there).
+// — the landscape offsets are unchanged (`x * 1` there). Session 52 shifted
+// both a little above/inside: landscape (160, 140), portrait (120, 176).
 TEST(touch_pad_tablet_portrait_offsets) {
     ui::Device& device = ui::Device::get();
     device.tablet = true;
 
     Touch portrait(480.0f, 800.0f, false);
-    CHECK_NEAR(portrait.leftLockedPadCenter.x, 96.0f * 1.25f, 1e-4f);
-    CHECK_NEAR(portrait.rightLockedPadCenter.x, 480.0f - 96.0f * 1.25f, 1e-4f);
+    CHECK_NEAR(portrait.leftLockedPadCenter.x, 120.0f * 1.25f, 1e-4f);
+    CHECK_NEAR(portrait.rightLockedPadCenter.x, 480.0f - 120.0f * 1.25f, 1e-4f);
 
     Touch landscape(kWidth, kHeight, true);
-    CHECK_NEAR(landscape.leftLockedPadCenter.x, 126.0f, 1e-4f);
-    CHECK_NEAR(landscape.rightLockedPadCenter.x, 674.0f, 1e-4f);
+    CHECK_NEAR(landscape.leftLockedPadCenter.x, 160.0f, 1e-4f);
+    CHECK_NEAR(landscape.rightLockedPadCenter.x, 640.0f, 1e-4f);
 
-    // Non-tablet portrait keeps the web defaults (existing tests rely on it).
+    // Non-tablet portrait keeps the shifted defaults.
     device.tablet = false;
     Touch phone(480.0f, 800.0f, false);
-    CHECK_NEAR(phone.leftLockedPadCenter.x, 96.0f, 1e-4f);
+    CHECK_NEAR(phone.leftLockedPadCenter.x, 120.0f, 1e-4f);
 }
 
 // touch.ts `padOffsetScale`: the locked offsets (and the pad radius) scale with
@@ -183,25 +189,25 @@ TEST(touch_pad_tablet_portrait_offsets) {
 // proportionally and shifts their detect radius with them.
 TEST(touch_pad_offsets_scale_with_zoom) {
     Touch t(kWidth, kHeight, true);
-    CHECK_NEAR(t.leftLockedPadCenter.x, 126.0f, 1e-4f);
-    CHECK_NEAR(t.rightLockedPadCenter.x, 674.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, 160.0f, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.x, 640.0f, 1e-4f);
     CHECK_NEAR(t.padPosRange, 48.0f, 1e-4f);
 
     t.setPadOffsetScale(1.5f);
-    CHECK_NEAR(t.leftLockedPadCenter.x, 189.0f, 1e-4f);
-    CHECK_NEAR(t.leftLockedPadCenter.y, 480.0f - 150.0f, 1e-4f);
-    CHECK_NEAR(t.rightLockedPadCenter.x, 800.0f - 189.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, 240.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.y, 480.0f - 210.0f, 1e-4f);
+    CHECK_NEAR(t.rightLockedPadCenter.x, 800.0f - 240.0f, 1e-4f);
     // The pad radius scales with the zoom too (padPosBase * padScaleBase *
     // padOffsetScale), so the aim threshold moves with the offsets.
     CHECK_NEAR(t.padPosRange, 72.0f, 1e-4f);
 
     // A zoom <= 0 is ignored (keep the last valid scale).
     t.setPadOffsetScale(0.0f);
-    CHECK_NEAR(t.leftLockedPadCenter.x, 189.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, 240.0f, 1e-4f);
 
     // Back to the unscoped view.
     t.setPadOffsetScale(1.0f);
-    CHECK_NEAR(t.leftLockedPadCenter.x, 126.0f, 1e-4f);
+    CHECK_NEAR(t.leftLockedPadCenter.x, 160.0f, 1e-4f);
     CHECK_NEAR(t.padPosRange, 48.0f, 1e-4f);
 }
 
@@ -215,12 +221,12 @@ TEST(touch_pad_gfx_anywhere_follows_touch) {
     // style must not depend on it, so pin it to the unscoped view.
     t.setPadOffsetScale(1.0f);
     t.setMoveStyle(TouchStyle::Anywhere);
-    setMovePull(t, 20.0f, 0.0f); // posDown (100,380), pos (146,380)
+    setMovePull(t, 20.0f, 0.0f); // posDown (160,340), pos (180,340)
     t.getMovement(kWidth);
     t.m_update(move, aim);
 
-    CHECK_NEAR(move.center.x, 100.0f, 1e-4f);
-    CHECK_NEAR(move.center.y, 380.0f, 1e-4f);
-    CHECK_NEAR(move.touch.x, 146.0f, 1e-4f);
-    CHECK_NEAR(move.touch.y, 380.0f, 1e-4f);
+    CHECK_NEAR(move.center.x, nkLeftX, 1e-4f);
+    CHECK_NEAR(move.center.y, 340.0f, 1e-4f);
+    CHECK_NEAR(move.touch.x, nkLeftX + 20.0f, 1e-4f);
+    CHECK_NEAR(move.touch.y, 340.0f, 1e-4f);
 }

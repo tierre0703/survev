@@ -40,7 +40,6 @@ fairygui::GRoot* fguiRoot();
 
 class FguiHud;
 class Hud;
-class PieTimer;
 class EmoteWheel;
 class PingWheel;
 
@@ -278,12 +277,6 @@ private:
     // HUD container on _gameRoot (pix adapter nodes, design space). Owned by
     // `_pixiFactory`; see `_worldRoot` above.
     pix::Container* _hudRoot = nullptr;
-    std::unique_ptr<PieTimer> _pieTimer;
-    // Crosshair overlay (factor-owned; parented to _gameRoot, not the camera-
-    // transformed world root).
-    pix::Sprite* _crosshairSprite = nullptr;
-    pix::Graphics* _crosshairFallback = nullptr;
-    std::string _crosshairFrame;
     FindGameRequest _findGameRequest;
     uikit::UiOverlay* _overlay = nullptr;
     ax::Node* _uiRoot = nullptr;

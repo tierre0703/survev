@@ -221,7 +221,6 @@ void MapView::setPings(const std::vector<MapPing>& pings) {
         return;
     }
     int used = 0;
-    const float artScale = _size / kTextureSize;
     for (const auto& ping : pings) {
         if (!ping.active || ping.texture.empty() || used >= kPingPool) {
             continue;
@@ -236,7 +235,13 @@ void MapView::setPings(const std::vector<MapPing>& pings) {
         const Vec2 p = project(ping.pos);
         sprite->setPosition(p.x, p.y);
         sprite->setFrame(ping.texture);
-        const float s = ping.scale * artScale;
+        // ui.ts createPing renders the map ping textures at a raw canvas
+        // scale (map events 0.3 / player pings 0.15) on the web's ~750px map
+        // sprite, i.e. ping.scale * 36 CSS px (64px atlas art * 0.5626 DOM
+        // zoom) on both the minimap and the big map. Scale the sprite from
+        // its own frame size to that target so airdrop markers stay small.
+        const float source = std::max(sprite->sourceWidth(), sprite->sourceHeight());
+        const float s = source > 0.0f ? ping.scale * kPingDisplayPx / source : 0.0f;
         sprite->setScale(s, s);
         sprite->setTint(ping.tint);
 

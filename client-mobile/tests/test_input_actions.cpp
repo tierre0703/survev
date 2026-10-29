@@ -199,25 +199,28 @@ TEST(hud_action_bar_hit_test) {
     CHECK(hud.hitTest(900.0f, 90.0f).kind == Hud::TapKind::None);
     hud.setVisible(true);
 
+    // The reload pill next to the health bar and the swap pill above it stay.
     CHECK(hud.hitTest(900.0f, 90.0f).kind == Hud::TapKind::Reload);
-    CHECK(hud.hitTest(400.0f, 300.0f).kind == Hud::TapKind::Interact);
-    // Empty quick-use pills are hidden and must not swallow aiming touches.
-    CHECK(hud.hitTest(610.0f, 326.0f).kind == Hud::TapKind::None);
-    CHECK(hud.hitTest(610.0f, 276.0f).kind == Hud::TapKind::None);
-    CHECK(hud.hitTest(770.0f, 326.0f).kind == Hud::TapKind::None);
-    CHECK(hud.hitTest(770.0f, 276.0f).kind == Hud::TapKind::SwapWeapons);
+    CHECK(hud.hitTest(900.0f, 150.0f).kind == Hud::TapKind::SwapWeapons);
+    // An empty bag hides all counters, and without a nearby prompt the
+    // interact hit stays None (touch falls through to the pads).
+    CHECK(hud.hitTest(400.0f, 300.0f).kind == Hud::TapKind::None);
+    CHECK(hud.hitTest(640.0f, 692.0f).kind == Hud::TapKind::None);
+    CHECK(hud.hitTest(40.0f, 466.0f).kind == Hud::TapKind::None);
 
     // Tap targets outside every control fall through to the pads.
     CHECK(hud.hitTest(640.0f, 600.0f).kind == Hud::TapKind::None);
     CHECK(hud.hitTest(250.0f, 200.0f).kind == Hud::TapKind::None);
-
-    // The four weapon cards (bottom-right) are tap-to-equip targets.
-    const Hud::TapResult slot0 = hud.hitTest(1150.0f, 142.0f);
+    // The four weapon cards (right column) are tap-to-equip targets.
+    const Hud::TapResult slot0 = hud.hitTest(1150.0f, 400.0f);
     CHECK(slot0.kind == Hud::TapKind::WeaponSlot);
     CHECK_EQ(slot0.slot, 0);
-    const Hud::TapResult slot3 = hud.hitTest(1150.0f, 46.0f);
+    const Hud::TapResult slot3 = hud.hitTest(1150.0f, 260.0f);
     CHECK(slot3.kind == Hud::TapKind::WeaponSlot);
     CHECK_EQ(slot3.slot, 3);
+
+    // The settings gear is the top-left corner button.
+    CHECK(hud.hitTest(32.0f, 692.0f).kind == Hud::TapKind::Settings);
 }
 
 TEST(hud_action_bar_shows_inventory_state) {
@@ -231,35 +234,40 @@ TEST(hud_action_bar_shows_inventory_state) {
     hud.build(&factory, root, Vec2(1280.0f, 720.0f));
     hud.update(0.016f, h.game, true);
 
-    // Quick-use pills: best heal/boost from the bag, counts from inventory.
-    CHECK_EQ(hud.healItem(), std::string("bandage"));
-    CHECK_EQ(Hud::bagCount(h.game.activePlayerData().inventory, "painkiller"), 1);
-    // 10 boost is quantized to 8 bits on the wire (10.196...).
-    CHECK(h.game.activePlayerData().boost > 9.0f);
-    CHECK_EQ(hud.boostItem(), std::string("painkiller"));
-    auto* heal = static_cast<const pix::NullText*>(hud.healButtonText());
-    auto* boost = static_cast<const pix::NullText*>(hud.boostButtonText());
-    auto* scope = static_cast<const pix::NullText*>(hud.scopeButtonText());
-    CHECK(heal && boost && scope);
-    CHECK(heal->visible);
-    CHECK(boost->visible);
-    CHECK(scope->visible);
-    CHECK_EQ(heal->text, std::string("BANDAGE x3"));
-    // boost=10: the 50-boost pills beat the 25-boost soda.
-    CHECK_EQ(boost->text, std::string("PILLS x1"));
-    CHECK_EQ(scope->text, std::string("SCOPE 4X"));
+    // Top bag counters: bandage=3, healthkit/soda/painkiller per inventory
+    // (painkiller=1 behind the LOADOUT tap-to-use rows).
+    auto* bandage = static_cast<const pix::NullText*>(hud.topLootCountText(0));
+    auto* pills = static_cast<const pix::NullText*>(hud.topLootCountText(3));
+    auto* medkit = static_cast<const pix::NullText*>(hud.topLootCountText(1));
+    CHECK(bandage && pills && medkit);
+    CHECK_EQ(bandage->text, std::string("3"));
+    CHECK(bandage->visible);
+    CHECK_EQ(hud.topLootType(0), std::string("bandage"));
+    CHECK_EQ(pills->text, std::string("1"));
+    CHECK(pills->visible);
+    // healthkit/soda are 0 in the bag -> hidden counters.
+    CHECK(!medkit->visible);
+    CHECK(hud.hitTest(640.0f, 692.0f).kind == Hud::TapKind::LootUse);
+    CHECK_EQ(hud.hitTest(640.0f, 692.0f).slot, 0);
 
-    // The pills are live tap targets now that the bag has the items.
-    CHECK(hud.hitTest(610.0f, 326.0f).kind == Hud::TapKind::Heal);
-    CHECK(hud.hitTest(610.0f, 276.0f).kind == Hud::TapKind::Boost);
-    CHECK(hud.hitTest(770.0f, 326.0f).kind == Hud::TapKind::ScopeNext);
+    // Scope strip: only owned scopes show; "4xscope" is owned and equipped.
+    auto* scope4 = static_cast<const pix::NullText*>(hud.scopeSlotLabel(2));
+    auto* scope1 = static_cast<const pix::NullText*>(hud.scopeSlotLabel(0));
+    CHECK(scope4 && scope1);
+    CHECK_EQ(scope4->text, std::string("4x"));
+    CHECK(scope4->visible);
+    CHECK(!scope1->visible);
+    CHECK_EQ(hud.scopeSlotType(2), std::string("4xscope"));
+    const Hud::TapResult scopeTap = hud.hitTest(40.0f, 386.0f);
+    CHECK(scopeTap.kind == Hud::TapKind::ScopeSlot);
+    CHECK_EQ(scopeTap.slot, 2);
 
     // Weapon cards expose the live types for the long-press DropItemMsg.
     CHECK_EQ(hud.weaponType(0), std::string("ak47"));
     CHECK_EQ(hud.weaponType(1), std::string());
     CHECK_EQ(hud.weaponType(2), std::string("fists"));
     auto* slot0 = static_cast<const pix::NullText*>(hud.weaponSlotText(0));
-    CHECK(slot0 && slot0->text.find("ak47") != std::string::npos);
+    CHECK(slot0 && slot0->text == std::string("AK47"));
 
     // The action bar disappears with the result screen.
     GameOverMsg over;
@@ -381,17 +389,17 @@ TEST(hud_prompt_announcement_and_faction_counts) {
     hud.build(&factory, root, Vec2(1280.0f, 720.0f));
     hud.update(0.016f, h.game, true);
 
-    hud.setInteractionPrompt("PICK UP FRAG");
+    hud.setInteractionPrompt("PICK UP FRAG", Vec2(640.0f, 640.0f));
     auto* prompt = static_cast<const pix::NullText*>(hud.interactionPromptText());
     CHECK(prompt != nullptr);
     CHECK(prompt->visible);
     CHECK_EQ(prompt->text, std::string("PICK UP FRAG"));
-    // ui.ts binds touchstart to the prompt element itself: tapping the visible
-    // "PICK UP <TYPE>" text must interact (not fall through to the pads).
-    CHECK(hud.hitTest(640.0f, 144.0f).kind == Hud::TapKind::Interact);
-    hud.setInteractionPrompt(std::string());
+    // The finger-press button and the item name are one tap target beside the
+    // loot (design position fed by GameScene).
+    CHECK(hud.hitTest(640.0f, 640.0f).kind == Hud::TapKind::Interact);
+    hud.setInteractionPrompt(std::string(), Vec2(640.0f, 640.0f));
     CHECK(!prompt->visible);
-    CHECK(hud.hitTest(640.0f, 144.0f).kind == Hud::TapKind::None);
+    CHECK(hud.hitTest(640.0f, 640.0f).kind == Hud::TapKind::None);
 
     hud.showAnnouncement("ROLE ASSIGNED: LEADER");
     auto* announcement = static_cast<const pix::NullText*>(hud.announcementText());
@@ -409,7 +417,7 @@ TEST(hud_prompt_announcement_and_faction_counts) {
     hud.update(0.016f, h.game, true);
     auto* aliveText = static_cast<const pix::NullText*>(hud.aliveText());
     CHECK(aliveText != nullptr);
-    CHECK_EQ(aliveText->text, std::string("R 7   B 3"));
+    CHECK_EQ(aliveText->text, std::string("7:3"));
 
     // JoinedMsg.started=false: waiting text stays visible even though the
     // normal HUD is gated off until the match is playable.
@@ -418,7 +426,7 @@ TEST(hud_prompt_announcement_and_faction_counts) {
     auto* waiting = static_cast<const pix::NullText*>(hud.waitingText());
     CHECK(waiting != nullptr);
     CHECK(waiting->visible);
-    CHECK_EQ(waiting->text, std::string("WAITING FOR PLAYERS"));
+    CHECK_EQ(waiting->text, std::string("Waiting for players..."));
     hud.setWaitingForPlayers(false);
     CHECK(!waiting->visible);
 }

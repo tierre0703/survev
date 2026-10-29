@@ -53,6 +53,13 @@ public:
     // further in. 1.0 = the unscoped view; GameWorld publishes the active
     // player's zoom each frame.
     float padOffsetScale = 1.0f;
+    // Playtesting size override: the web draws the pads in device CSS px, so
+    // on the phone the 124.8 px ring is ~2/3 again larger relative to the
+    // screen than in this fixed 1280x720 design space. `padSizeScale`
+    // multiplies the DRAWN ring/thumb sizes only; `padPosRange` (thumb travel
+    // and movement/aim normalization) keeps the web value so control
+    // sensitivity is unchanged.
+    float padSizeScale = 1.75f;
 
     bool moveDetected = false;
     bool shotDetected = false;
@@ -117,9 +124,12 @@ public:
         _landscape = isLandscape;
         // touch.ts resize(): tablets shift the portrait pad offsets inward
         // (x * 1.25); the landscape offsets are unchanged (`* 1`).
-        const float offX = (isLandscape ? 126.0f : 96.0f * (::ui::Device::get().tablet ? 1.25f : 1.0f)) *
+        // Playtesting shift (session 52): the (1.75x) rings need room, so the
+        // locked centres sit a little above and a little further inside than
+        // the web defaults — landscape (160, 140), portrait (120, 176).
+        const float offX = (isLandscape ? 160.0f : 120.0f * (::ui::Device::get().tablet ? 1.25f : 1.0f)) *
             padOffsetScale;
-        const float offY = (isLandscape ? 100.0f : 160.0f) * padOffsetScale;
+        const float offY = (isLandscape ? 140.0f : 176.0f) * padOffsetScale;
         leftLockedPadCenter = Vec2(offX, screenHeight - offY);
         rightLockedPadCenter = Vec2(screenWidth - offX, screenHeight - offY);
         _appliedOffsetScale = padOffsetScale;
@@ -284,8 +294,10 @@ public:
                 gfx->setTouchPos(pads[i].touchPos.x, pads[i].touchPos.y);
             }
             gfx->setVisible(display);
-            gfx->setCenterScale(padScaleBase * padScaleDown);
-            gfx->setTouchScale(padScaleBase * padScalePos);
+            // Drawn sizes are 1.75x the web scales (playtesting: the web pads
+            // are sized in device CSS px; padPosRange stays at the web value).
+            gfx->setCenterScale(padScaleBase * padScaleDown * padSizeScale);
+            gfx->setTouchScale(padScaleBase * padScalePos * padSizeScale);
             gfx->update();
         }
     }

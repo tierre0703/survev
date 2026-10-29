@@ -33,12 +33,55 @@ const float kBoostBreakpoints[4] = {1.0f, 1.0f, 1.5f, 0.5f};
 constexpr float kBoostBreakpointsTotal = 4.0f;
 const uint32_t kBoostColors[4] = {0xff901a, 0xff751a, 0xff6616, 0xff5600};
 
-// ui.ts updateHealthBar palette (the squad bars; different from the ui2.ts main
-// bar steps above): grey at 100, white at 75..99, darkpink -> lightpink below
-// 75, and the CSS `ui-bar-danger` pulse at 25 or less.
+// Top bag counters (#ui-medical-interactive + #ui-loot-soda/#ui-loot-painkiller).
+const char* kTopLootTypes[Hud::kTopLootCount] = {"bandage", "healthkit", "soda", "painkiller"};
+
+// #ui-ammo-interactive rows, game.css overlay colours per ammo type.
+struct AmmoTypeStyle {
+    const char* type;
+    uint32_t color;
+};
+const AmmoTypeStyle kAmmoTypes[Hud::kAmmoRowCount] = {
+    {"12gauge", 0xff0000},
+    {"9mm", 0xff9900},
+    {"762mm", 0x0066ff},
+    {"556mm", 0x037b00},
+    {"45acp", 0x7900ff},
+    {"308sub", 0x8e8e00},
+    {"50AE", 0x606060},
+    {"flare", 0xff5500},
+};
+
+// Scope strip (#ui-top-center-scopes-wrapper): one pill per scope level.
+const char* kScopeTypes[Hud::kScopeSlotCount] = {
+    "1xscope", "2xscope", "4xscope", "8xscope", "15xscope"};
+
+// ui.ts updateHealthBar squad palette (the team bars, not the main bar):
+// grey at 100, white at 75..99, red for downed/<=25.
 constexpr uint32_t kSquadHealthGrey = 0xb3b3b3; // rgb(179,179,179)
 constexpr uint32_t kSquadHealthWhite = 0xffffff;
 constexpr uint32_t kSquadHealthRed = 0xff0000;
+
+std::string uppercase(std::string out) {
+    for (char& c : out) {
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
+    return out;
+}
+
+// ui2.ts item label ("MEDKIT" for healthkit, "PILLS" for painkiller).
+std::string itemLabel(const std::string& item) {
+    if (item == "healthkit") return "MEDKIT";
+    if (item == "painkiller") return "PILLS";
+    return uppercase(item);
+}
+
+// GameObjRenderDef img sprite for inventory/loot icons ("" without defs).
+std::string itemIconFrame(const std::string& type) {
+    const DefProvider* defs = getDefProvider();
+    const GameObjRenderDef* def = defs ? defs->gameObject(type) : nullptr;
+    return def ? def->img.sprite : std::string();
+}
 } // namespace
 
 uint32_t Hud::squadHealthColor(float health, bool dead, bool downed) {
@@ -112,12 +155,12 @@ int Hud::bagCount(const std::vector<uint16_t>& inventory, const char* type) {
     return 0;
 }
 
+// Best quick-use heal from the bag: the small bandage for a top-up, the med
+// kit when badly hurt (ui2.ts shows both strips and lets the player pick; the
+// mockup HUD shows the four fixed bag counters instead).
 std::string Hud::healItemFor(const std::vector<uint16_t>& inventory, float health) {
     const int bandage = bagCount(inventory, "bandage");
     const int healthkit = bagCount(inventory, "healthkit");
-    // One quick-use pill for both heal items (the web shows a loot grid; touch
-    // gets a single best-item button until the inventory v2 HUD lands). Prefer
-    // the small bandage for a top-up, the med kit when badly hurt.
     if (healthkit > 0 && (health < 50.0f || bandage == 0)) {
         return "healthkit";
     }
@@ -127,11 +170,10 @@ std::string Hud::healItemFor(const std::vector<uint16_t>& inventory, float healt
     return healthkit > 0 ? "healthkit" : std::string();
 }
 
+// Best quick-use boost: soda is the cheap top-up; pills are worth it below 50.
 std::string Hud::boostItemFor(const std::vector<uint16_t>& inventory, float boost) {
     const int soda = bagCount(inventory, "soda");
     const int pills = bagCount(inventory, "painkiller");
-    // Soda is the cheap top-up; pills are worth it at low boost (ui2.ts shows
-    // both strips and lets the player pick, the touch HUD uses one button).
     if (pills > 0 && (boost < 50.0f || soda == 0)) {
         return "painkiller";
     }
@@ -151,10 +193,18 @@ std::string Hud::scopeLabel(const std::string& scope) {
         out.compare(out.size() - suffix.size(), suffix.size(), suffix) == 0) {
         out.resize(out.size() - suffix.size());
     }
-    for (char& c : out) {
-        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    return "SCOPE " + uppercase(out);
+}
+
+// ui.ts scope strip label: "4xscope" -> "4x".
+static std::string scopeStripLabel(const std::string& type) {
+    std::string out = type;
+    const std::string suffix = "scope";
+    if (out.size() > suffix.size() &&
+        out.compare(out.size() - suffix.size(), suffix.size(), suffix) == 0) {
+        out.resize(out.size() - suffix.size());
     }
-    return "SCOPE " + out;
+    return out;
 }
 
 const std::string& Hud::weaponType(int slot) const {
@@ -162,9 +212,24 @@ const std::string& Hud::weaponType(int slot) const {
     return (slot >= 0 && slot < 4) ? _weaponTypes[static_cast<size_t>(slot)] : kEmpty;
 }
 
+const std::string& Hud::topLootType(int idx) const {
+    static const std::string kEmpty;
+    return (idx >= 0 && idx < kTopLootCount) ? _topLoot[static_cast<size_t>(idx)].type : kEmpty;
+}
+
+const std::string& Hud::ammoRowType(int idx) const {
+    static const std::string kEmpty;
+    return (idx >= 0 && idx < kAmmoRowCount) ? _ammoRows[static_cast<size_t>(idx)].type : kEmpty;
+}
+
+const std::string& Hud::scopeSlotType(int idx) const {
+    static const std::string kEmpty;
+    return (idx >= 0 && idx < kScopeSlotCount) ? _scopeSlots[static_cast<size_t>(idx)].type : kEmpty;
+}
+
 Hud::TapResult Hud::hitTest(float designX, float designY) const {
     if (!_built || !_visible || _overShown || _deathShown || _spectating || _bigMapVisible ||
-        _roleMenuActive) {
+        _roleMenuActive || _menuShown) {
         return TapResult{};
     }
     // Rects are stored in the centred HUD container.
@@ -173,23 +238,25 @@ Hud::TapResult Hud::hitTest(float designX, float designY) const {
     if (_reloadRect.contains(px, py)) {
         return TapResult{TapKind::Reload, -1};
     }
-    // ui.ts binds touchstart to #ui-interaction (the prompt itself), so tapping
-    // the visible "PICK UP <TYPE>" text interacts just like the action pill.
-    if (!_lastPrompt.empty() && _promptRect.contains(px, py)) {
+    // ui.ts binds touchstart to #ui-interaction (the prompt itself), so
+    // tapping the finger-press button or the item name picks the loot up.
+    if (!_lastPrompt.empty() && _promptRect.w > 0.0f && _promptRect.contains(px, py)) {
         return TapResult{TapKind::Interact, -1};
     }
-    if (_interactRect.contains(px, py)) {
-        return TapResult{TapKind::Interact, -1};
+    if (_settingsRect.contains(px, py)) {
+        return TapResult{TapKind::Settings, -1};
     }
-    // Item pills are only tappable while the pill is shown (empty bag hides it).
-    if (!_healItem.empty() && _healRect.contains(px, py)) {
-        return TapResult{TapKind::Heal, -1};
+    for (int i = 0; i < kTopLootCount; ++i) {
+        const TopLootRow& row = _topLoot[static_cast<size_t>(i)];
+        if (!row.type.empty() && row.countValue > 0 && row.rect.contains(px, py)) {
+            return TapResult{TapKind::LootUse, i};
+        }
     }
-    if (!_boostItem.empty() && _boostRect.contains(px, py)) {
-        return TapResult{TapKind::Boost, -1};
-    }
-    if (!_scopeType.empty() && _scopeRect.contains(px, py)) {
-        return TapResult{TapKind::ScopeNext, -1};
+    for (int i = 0; i < kScopeSlotCount; ++i) {
+        const ScopeSlot& slot = _scopeSlots[static_cast<size_t>(i)];
+        if (!slot.type.empty() && slot.rect.contains(px, py)) {
+            return TapResult{TapKind::ScopeSlot, i};
+        }
     }
     if (_swapRect.contains(px, py)) {
         return TapResult{TapKind::SwapWeapons, -1};
@@ -213,9 +280,25 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _factory = factory;
     _root = root;
     _design = design;
+    _designPos = Vec2(_design.x, _design.y);
     if (!_factory || !_root) {
         return;
     }
+
+    const float vw = _design.x;
+    const float vh = _design.y;
+    const auto X = [vw](float x) { return x - vw * 0.5f; };
+    const auto Y = [vh](float y) { return y - vh * 0.5f; };
+    // CSS top-based positions -> container Y (the design space is y up).
+    // yTop(t) is the TOP edge (container Y) of an element whose CSS top is
+    // `t` px from the top of the screen; a box's bottom edge is yTop(t + h).
+    const auto yTop = [&](float top) { return Y(vh - top); };
+
+    // #ui-bottom-center-0: 400x32 bar in a 412x44 box, 12px above the bottom.
+    const float hudW = kHealthBarWidth + kHealthBarPadding * 2.0f;
+    const float hudH = kHealthBarHeight + kHealthBarPadding * 2.0f;
+    const float hudX = (vw - hudW) * 0.5f;
+    const float hudY = 12.0f;
 
     // #ui-bottom-center-0: health counter (game.css: 400x32 bar, 6px padding,
     // rgba(0,0,0,0.4) background).
@@ -255,54 +338,404 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _ammoText = _factory->createText();
     _ammoText->setFontSize(20.0f);
     _ammoText->setColor(0xffffff, 0x000000, 2.0f, true);
-    _ammoText->setAnchor(0.0f, 1.0f);
     _root->addChild(_ammoText);
 
-    // ui2.ts bag strip: reserve ammo / heals / boosts / throwables, under the
-    // equipped-ammo readout.
-    _lootCountsText = _factory->createText();
-    _lootCountsText->setFontSize(13.0f);
-    _lootCountsText->setColor(0xffffff, 0x000000, 2.0f, true);
-    _lootCountsText->setAnchor(0.0f, 1.0f);
-    _root->addChild(_lootCountsText);
+    _healthBg->clear();
+    _healthBg->beginFill(0x000000, 0.4f);
+    _healthBg->drawRect(X(hudX), yTop(vh - hudY), hudW, hudH);
+    _healthBg->endFill();
 
-    // #ui-map-wrapper: minimap frame + alive / kill counters (top right).
-    // The baked map texture is attached by setMinimap() once the MapMsg lands.
+    _healthFill->setPosition(X(hudX + kHealthBarPadding), Y(hudY + kHealthBarPadding));
+    _healthDepleted->setPosition(X(hudX + kHealthBarPadding), Y(hudY + kHealthBarPadding));
+    _healthText->setPosition(X(vw * 0.5f), Y(hudY + hudH * 0.5f));
+    // game.css .ui-health-flair: 64x64, left:-32/top:13 (rotated 270deg) and
+    // right:-32/top:13 (90deg); the counter is hudH tall.
+    if (_flairLeft) {
+        _flairLeft->setPosition(X(hudX), Y(hudY + hudH - 13.0f - 32.0f));
+        _flairLeft->setRotation(-3.14159265358979f * 0.5f);
+        const float source = std::max(_flairLeft->sourceWidth(), _flairLeft->sourceHeight());
+        const float scale = source > 0.0f ? 64.0f / source : 1.0f;
+        _flairLeft->setScale(scale, scale);
+    }
+    if (_flairRight) {
+        _flairRight->setPosition(X(hudX + hudW), Y(hudY + hudH - 13.0f - 32.0f));
+        _flairRight->setRotation(3.14159265358979f * 0.5f);
+        const float source = std::max(_flairRight->sourceWidth(), _flairRight->sourceHeight());
+        const float scale = source > 0.0f ? 64.0f / source : 1.0f;
+        _flairRight->setScale(scale, scale);
+    }
+    {
+        float x = hudX + kHealthBarPadding;
+        for (int i = 0; i < 4; ++i) {
+            const float span = kBoostBreakpoints[i] / kBoostBreakpointsTotal;
+            _boostSegments[i]->setAnchor(0.0f, 0.0f);
+            _boostSegments[i]->setPosition(X(x), Y(hudY + hudH + 4.0f));
+            x += kHealthBarWidth * span;
+        }
+    }
+    _ammoText->setAnchor(0.0f, 1.0f);
+    _ammoText->setPosition(X(hudX + hudW + 12.0f), Y(hudY + hudH));
+
+    // #ui-approxominator top-right (ui2.ts #ui-ammo-interactive): one row per
+    // owned ammo type.
+    for (int i = 0; i < kAmmoRowCount; ++i) {
+        AmmoRow& row = _ammoRows[static_cast<size_t>(i)];
+        const float top = 14.0f + static_cast<float>(i) * kAmmoRowPitch;
+        row.rect = Rect{X(vw - kAmmoRowW - 12.0f), yTop(top + kAmmoRowH), kAmmoRowW,
+                        kAmmoRowH};
+        row.bg = _factory->createGraphics();
+        row.chip = _factory->createGraphics();
+        row.icon = _factory->createSprite("bullets.img");
+        row.icon->setAnchor(0.5f, 0.5f);
+        row.count = _factory->createText();
+        row.count->setFontSize(14.0f);
+        row.count->setColor(0xffffff, 0x000000, 1.5f, true);
+        row.count->setAnchor(0.0f, 0.5f);
+        row.type = kAmmoTypes[i].type;
+        row.bg->setVisible(false);
+        row.chip->setVisible(false);
+        row.icon->setVisible(false);
+        row.count->setVisible(false);
+        _root->addChild(row.bg);
+        _root->addChild(row.chip);
+        _root->addChild(row.icon);
+        _root->addChild(row.count);
+        row.count->setPosition(X(vw - kAmmoRowW - 12.0f + 8.0f),
+                               yTop(top + kAmmoRowH * 0.5f));
+        row.icon->setPosition(X(vw - 12.0f - kAmmoRowW * 0.5f + 20.0f),
+                              yTop(top + kAmmoRowH * 0.5f));
+    }
+
+    // --- Minimap + settings + info row (web mobile hud top-left) ---
+    // #ui-map-wrapper-mobile: left 6px, top 46px; the map is 140px here.
+    const float mm = kMinimapSize;
+    const float mmX = kMinimapLeft;
+    const float mmTop = kMinimapTop;
+    _minimapPos = Vec2(X(mmX), yTop(mmTop + mm));
     _mapFrame = _factory->createGraphics();
+    _mapFrame->lineStyle(2.0f, 0xffffff, 0.6f);
+    _mapFrame->drawRect(_minimapPos.x, _minimapPos.y, mm, mm);
     _root->addChild(_mapFrame);
-    _aliveText = _factory->createText();
-    _aliveText->setFontSize(16.0f);
-    _aliveText->setColor(0xffffff, 0x000000, 2.0f, true);
-    _aliveText->setAnchor(1.0f, 0.0f);
-    _root->addChild(_aliveText);
-    _killsText = _factory->createText();
-    _killsText->setFontSize(16.0f);
-    _killsText->setColor(0xffffff, 0x000000, 2.0f, true);
-    _killsText->setAnchor(1.0f, 0.0f);
-    _root->addChild(_killsText);
-    // #ui-kill-leader-wrapper: name + kill count, top centre (game.ts
-    // msg.killLeaderDirty -> uiManager.updateKillLeader).
-    _killLeaderText = _factory->createText();
-    _killLeaderText->setFontSize(15.0f);
-    _killLeaderText->setColor(0xffd060, 0x000000, 2.0f, true);
-    _killLeaderText->setAnchor(0.5f, 1.0f);
-    _root->addChild(_killLeaderText);
+    _minimapTapRect = Rect{_minimapPos.x - 4.0f, _minimapPos.y - 4.0f, mm + 8.0f, mm + 8.0f};
 
-    // #ui-gas-timer: countdown under the minimap (ui.ts updateGasDisplay).
+    // Settings gear (#ui-menu-display) at the very top-left corner. The icon
+    // uses the direct file (Content/gui/cog.png) instead of a loadout-atlas
+    // frame: resetWorld() runs before the map atlases are loaded.
+    _settingsRect = Rect{X(10.0f), yTop(6.0f + kSettingsSize), kSettingsSize, kSettingsSize};
+    _settingsBg = _factory->createGraphics();
+    paintBox(_settingsBg, _settingsRect, 0x000000, 0.4f, 0.5f);
+    _root->addChild(_settingsBg);
+    _settingsIcon = _factory->createSprite("gui/cog.png");
+    _settingsIcon->setAnchor(0.5f, 0.5f);
+    _root->addChild(_settingsIcon);
+    {
+        const float source = std::max(_settingsIcon->sourceWidth(), _settingsIcon->sourceHeight());
+        const float scale = source > 0.0f ? 32.0f / source : 1.0f;
+        _settingsIcon->setScale(scale, scale);
+        _settingsIcon->setPosition(_settingsRect.x + kSettingsSize * 0.5f,
+                                   _settingsRect.y + kSettingsSize * 0.5f);
+    }
+
+    // Info row under the minimap: gas timer + alive count + kill count.
+    const float infoTop = kInfoBarTop;
+    const float infoY = yTop(infoTop + kBoxHeight);
+    const float gasW = kGasBoxWidth;
+    const float countW = kCountBoxWidth;
+    const float killW = kKillBoxWidth;
+    _mapInfoBg = _factory->createGraphics();
+    _mapInfoBg->beginFill(0x000000, 0.4f);
+    _mapInfoBg->drawRect(X(mmX), infoY, gasW, kBoxHeight);
+    _mapInfoBg->drawRect(X(mmX + gasW + 6.0f), infoY, countW, kBoxHeight);
+    _mapInfoBg->drawRect(X(mmX + gasW + countW + 14.0f), infoY, killW, kBoxHeight);
+    _mapInfoBg->endFill();
+    _root->addChild(_mapInfoBg);
+    const float infoCenterY = infoY + kBoxHeight * 0.5f;
+    _gasIcon = _factory->createSprite("gui/gas.png");
+    _gasIcon->setAnchor(0.5f, 0.5f);
+    {
+        const float source = std::max(_gasIcon->sourceWidth(), _gasIcon->sourceHeight());
+        const float scale = source > 0.0f ? 18.0f / source : 1.0f;
+        _gasIcon->setScale(scale, scale);
+    }
+    _gasIcon->setPosition(X(mmX + 18.0f), infoCenterY);
+    _root->addChild(_gasIcon);
     _gasText = _factory->createText();
     _gasText->setFontSize(14.0f);
     _gasText->setColor(0xffffff, 0x000000, 2.0f, true);
-    _gasText->setAnchor(1.0f, 0.0f);
-    _gasText->setVisible(false);
+    _gasText->setAnchor(0.5f, 0.5f);
+    _gasText->setPosition(X(mmX + 18.0f + (gasW - 36.0f) * 0.5f + 18.0f), infoCenterY);
     _root->addChild(_gasText);
+    _aliveIcon = _factory->createSprite("gui/player-gui.png");
+    _aliveIcon->setAnchor(0.5f, 0.5f);
+    {
+        const float source = std::max(_aliveIcon->sourceWidth(), _aliveIcon->sourceHeight());
+        const float scale = source > 0.0f ? 16.0f / source : 1.0f;
+        _aliveIcon->setScale(scale, scale);
+    }
+    _aliveIcon->setPosition(X(mmX + gasW + 6.0f + 16.0f), infoCenterY);
+    _root->addChild(_aliveIcon);
+    _aliveText = _factory->createText();
+    _aliveText->setFontSize(14.0f);
+    _aliveText->setColor(0xffffff, 0x000000, 2.0f, true);
+    _aliveText->setAnchor(0.5f, 0.5f);
+    _aliveText->setPosition(X(mmX + gasW + 6.0f + 34.0f), infoCenterY);
+    _root->addChild(_aliveText);
+    _killsText = _factory->createText();
+    _killsText->setFontSize(13.0f);
+    _killsText->setColor(0xffd060, 0x000000, 2.0f, true);
+    _killsText->setAnchor(0.5f, 0.5f);
+    _killsText->setPosition(X(mmX + gasW + countW + 14.0f + killW * 0.5f), infoCenterY);
+    _root->addChild(_killsText);
 
-    // #ui-gas-icon: GUI PNG loaded directly as a texture (no atlas frame).
-    _gasIcon = _factory->createSprite("gui/gas.png");
-    _gasIcon->setAnchor(0.0f, 0.0f);
-    _gasIcon->setVisible(false);
-    _root->addChild(_gasIcon);
+    // --- Scope strip (web #ui-top-center-scopes-wrapper, mobile layout) ---
+    for (int i = 0; i < kScopeSlotCount; ++i) {
+        ScopeSlot& slot = _scopeSlots[static_cast<size_t>(i)];
+        const float top = kScopeStripTop + static_cast<float>(i) * kScopePitch;
+        slot.rect = Rect{X(mmX), yTop(top + kScopeButtonH), kScopeButtonW, kScopeButtonH};
+        slot.bg = _factory->createGraphics();
+        slot.bg->setVisible(false);
+        _root->addChild(slot.bg);
+        slot.label = _factory->createText();
+        slot.label->setFontSize(15.0f);
+        slot.label->setColor(0xffffff, 0x000000, 1.5f, true);
+        slot.label->setAnchor(0.5f, 0.5f);
+        slot.label->setVisible(false);
+        _root->addChild(slot.label);
+        slot.label->setPosition(slot.rect.x + kScopeButtonW * 0.5f,
+                                slot.rect.y + kScopeButtonH * 0.5f);
+        // The per-update loop owns the type (owned scopes only).
+        slot.type = std::string();
+    }
 
-    // Result screen (ui.ts displayStats): dim backdrop + centred panel.
+    // --- In-game messages + announcements + the reload progress bar ---
+    _announcementText = _factory->createText();
+    _announcementText->setFontSize(18.0f);
+    _announcementText->setColor(0xffd060, 0x000000, 2.0f, true);
+    _announcementText->setAnchor(0.5f, 0.5f);
+    _announcementText->setPosition(X(vw * 0.5f), yTop(kMessageTop));
+    _announcementText->setVisible(false);
+    _root->addChild(_announcementText);
+    _waitingText = _factory->createText();
+    _waitingText->setText("Waiting for players...");
+    _waitingText->setFontSize(20.0f);
+    _waitingText->setColor(0xffffff, 0x000000, 2.0f, true);
+    _waitingText->setAnchor(0.5f, 0.5f);
+    _waitingText->setPosition(X(vw * 0.5f), yTop(kMessageTop));
+    _waitingText->setVisible(false);
+    _root->addChild(_waitingText);
+
+    // Reload/use/revive progress bar above the messages (pieTimer.ts port).
+    _actionBarBg = _factory->createGraphics();
+    _root->addChild(_actionBarBg);
+    _actionBarFill = _factory->createGraphics();
+    _root->addChild(_actionBarFill);
+    _actionBarBg->setPosition(X((vw - kActionWidth) * 0.5f), yTop(kActionTop + kActionHeight));
+    _actionBarFill->setPosition(X((vw - kActionWidth) * 0.5f), yTop(kActionTop + kActionHeight));
+    _actionBarText = _factory->createText();
+    _actionBarText->setFontSize(11.0f);
+    _actionBarText->setColor(0xffffff, 0x000000, 1.0f, false);
+    _actionBarText->setAnchor(0.5f, 0.5f);
+    _actionBarText->setPosition(X(vw * 0.5f), yTop(kActionTop + kActionHeight * 0.5f));
+    _actionBarText->setVisible(false);
+    _root->addChild(_actionBarText);
+    _pickupText = _factory->createText();
+    _pickupText->setFontSize(14.0f);
+    _pickupText->setColor(0xffc864, 0x000000, 2.0f, false);
+    _pickupText->setAnchor(0.5f, 0.0f);
+    _pickupText->setPosition(X(vw * 0.5f), yTop(162.0f));
+    _root->addChild(_pickupText);
+
+    // --- Top bag counters (bandage / medkit / soda / pills) ---
+    for (int i = 0; i < kTopLootCount; ++i) {
+        TopLootRow& row = _topLoot[static_cast<size_t>(i)];
+        const float top = 12.0f;
+        row.rect = Rect{X(614.0f + static_cast<float>(i) * kTopLootPitch),
+                        yTop(top + kTopLootH), kTopLootW, kTopLootH};
+        row.bg = _factory->createGraphics();
+        row.icon = _factory->createSprite();
+        row.icon->setAnchor(0.5f, 0.5f);
+        row.count = _factory->createText();
+        row.count->setFontSize(15.0f);
+        row.count->setColor(0xffffff, 0x000000, 1.5f, true);
+        row.count->setAnchor(0.5f, 0.5f);
+        row.type = kTopLootTypes[i];
+        row.bg->setVisible(false);
+        row.icon->setVisible(false);
+        row.count->setVisible(false);
+        _root->addChild(row.bg);
+        _root->addChild(row.icon);
+        _root->addChild(row.count);
+        row.icon->setPosition(row.rect.x + 11.0f, row.rect.y + kTopLootH * 0.5f);
+        row.count->setPosition(row.rect.x + kTopLootW - 12.0f, row.rect.y + kTopLootH * 0.5f);
+    }
+
+    // --- Interact prompt: finger-press button + loot name next to the item ---
+    _promptBox = _factory->createGraphics();
+    _root->addChild(_promptBox);
+    // Content/gui/tap.png loads without an atlas (the loadout atlas is only
+    // registered on MapMsg), so the finger-press icon never gets missed.
+    _promptIcon = _factory->createSprite("gui/tap.png");
+    _promptIcon->setAnchor(0.5f, 0.5f);
+    {
+        const float source = std::max(_promptIcon->sourceWidth(), _promptIcon->sourceHeight());
+        const float scale = source > 0.0f ? 36.0f / source : 1.0f;
+        _promptIcon->setScale(scale, scale);
+    }
+    _promptIcon->setVisible(false);
+    _root->addChild(_promptIcon);
+    _promptText = _factory->createText();
+    _promptText->setFontSize(16.0f);
+    _promptText->setColor(0xffe08a, 0x000000, 2.0f, true);
+    _promptText->setAnchor(0.0f, 0.5f);
+    _promptText->setVisible(false);
+    _root->addChild(_promptText);
+    _promptPos = Vec2(vw * 0.5f, vh * 0.5f);
+
+    // ui.ts off-screen teammate arrows.
+    for (auto*& arrow : _teamArrows) {
+        arrow = _factory->createGraphics();
+        arrow->beginFill(0xffffff, 0.9f);
+        arrow->moveTo(10.0f, 0.0f);
+        arrow->lineTo(-7.0f, -7.0f);
+        arrow->lineTo(-3.0f, 0.0f);
+        arrow->lineTo(-7.0f, 7.0f);
+        arrow->closePath();
+        arrow->endFill();
+        arrow->setVisible(false);
+        _root->addChild(arrow);
+    }
+
+    // --- Weapon cards (right column, tap-to-equip / hold-to-drop) ---
+    const float cardW = kWeaponSlotWidth;
+    const float cardH = kWeaponSlotHeight;
+    const float cardX = vw - cardW - 8.0f;
+    const float cardTop = 300.0f;
+    for (int i = 0; i < 4; ++i) {
+        const float top = cardTop + static_cast<float>(i) * kWeaponCardPitch;
+        _weaponRect[i] = Rect{X(cardX), yTop(top + cardH), cardW, cardH};
+        _weaponSlotBg[i] = _factory->createGraphics();
+        _weaponSlotBg[i]->setVisible(false);
+        _root->addChild(_weaponSlotBg[i]);
+        _weaponIcons[i] = _factory->createSprite();
+        _weaponIcons[i]->setAnchor(0.5f, 0.5f);
+        _weaponIcons[i]->setVisible(false);
+        _root->addChild(_weaponIcons[i]);
+        _weaponSlots[i] = _factory->createText();
+        _weaponSlots[i]->setFontSize(13.0f);
+        _weaponSlots[i]->setColor(0xdcdcdc, 0x000000, 1.5f, true);
+        _weaponSlots[i]->setAnchor(0.0f, 0.5f);
+        _weaponSlots[i]->setVisible(false);
+        _root->addChild(_weaponSlots[i]);
+        _weaponIcons[i]->setPosition(_weaponRect[i].x + 22.0f, _weaponRect[i].y + cardH * 0.5f);
+        _weaponSlots[i]->setPosition(_weaponRect[i].x + 44.0f, _weaponRect[i].y + cardH * 0.5f);
+    }
+
+    // Kill feed: rows drop down from above the weapon cards on the right.
+    for (int i = 0; i < 6; ++i) {
+        _killFeedRows[i] = _factory->createText();
+        _killFeedRows[i]->setFontSize(13.0f);
+        _killFeedRows[i]->setColor(0xffc896, 0x000000, 1.0f, false);
+        _killFeedRows[i]->setAnchor(1.0f, 1.0f);
+        _killFeedRows[i]->setPosition(X(cardX - 8.0f), yTop(cardTop - 10.0f + 16.0f * static_cast<float>(i)));
+        _killFeedRows[i]->setVisible(false);
+        _root->addChild(_killFeedRows[i]);
+    }
+
+    // P0.1 remaining pills: RELOAD right of the health bar, SWAP above it.
+    _reloadRect = Rect{X(hudX + hudW + 54.0f - kReloadButtonWidth * 0.5f),
+                       Y(90.0f - kReloadButtonHeight * 0.5f), kReloadButtonWidth,
+                       kReloadButtonHeight};
+    _swapRect = Rect{X(hudX + hudW + 54.0f - kPillWidth * 0.5f),
+                     Y(150.0f - kPillHeight * 0.5f), kPillWidth, kPillHeight};
+    _reloadBg = _factory->createGraphics();
+    _root->addChild(_reloadBg);
+    _reloadText = _factory->createText();
+    _reloadText->setFontSize(15.0f);
+    _reloadText->setColor(0xffffff, 0x000000, 1.5f, false);
+    _reloadText->setAnchor(0.5f, 0.5f);
+    _reloadText->setText("RELOAD");
+    _reloadText->setPosition(_reloadRect.x + _reloadRect.w * 0.5f,
+                             _reloadRect.y + _reloadRect.h * 0.5f);
+    _reloadBg->setVisible(false);
+    _reloadText->setVisible(false);
+    _root->addChild(_reloadText);
+    _swapBg = _factory->createGraphics();
+    _root->addChild(_swapBg);
+    _swapText = _factory->createText();
+    _swapText->setFontSize(13.0f);
+    _swapText->setColor(0xffffff, 0x000000, 1.5f, false);
+    _swapText->setAnchor(0.5f, 0.5f);
+    _swapText->setText("SWAP");
+    _swapText->setPosition(_swapRect.x + _swapRect.w * 0.5f, _swapRect.y + _swapRect.h * 0.5f);
+    _swapBg->setVisible(false);
+    _swapText->setVisible(false);
+    _root->addChild(_swapText);
+
+    // Gear/perk slots: item atlas frames on the left of the health bar
+    // (ui2.ts #ui-bottom-center-left). Each slot also carries a small
+    // "Lvl. N" badge (gear only) and a tap-to-drop rect.
+    for (int i = 0; i < kGearIconCount; ++i) {
+        const float slotX = hudX - 34.0f - static_cast<float>(i) * 32.0f;
+        pix::Sprite* icon = _factory->createSprite();
+        icon->setAnchor(0.5f, 0.5f);
+        icon->setPosition(X(slotX), Y(hudY + 16.0f));
+        icon->setVisible(false);
+        _root->addChild(icon);
+        _gearIcons[static_cast<size_t>(i)] = icon;
+
+        pix::Text* level = _factory->createText();
+        level->setFontSize(9.0f);
+        level->setColor(0xffffff, 0x000000, 1.0f, false);
+        level->setAnchor(0.5f, 0.0f);
+        level->setPosition(X(slotX), Y(hudY - 2.0f));
+        level->setVisible(false);
+        _root->addChild(level);
+        _gearLevelText[static_cast<size_t>(i)] = level;
+
+        // Root-space hit rect (icons are 26 px atlas art, 32 px pitch).
+        _gearRects[static_cast<size_t>(i)] =
+            Rect{X(slotX - 15.0f), Y(hudY - 4.0f), 30.0f, 30.0f};
+    }
+
+    // Squad bars: under the scope strip on the left (team modes).
+    for (int i = 0; i < 4; ++i) {
+        SquadRow& row = _squad[static_cast<size_t>(i)];
+        const float top = 460.0f + static_cast<float>(i) * 26.0f;
+        row.name = _factory->createText();
+        row.name->setFontSize(12.0f);
+        row.name->setColor(0xffffff, 0x000000, 1.0f, false);
+        row.name->setAnchor(0.0f, 1.0f);
+        row.name->setPosition(X(mmX), yTop(top));
+        row.name->setVisible(false);
+        _root->addChild(row.name);
+        row.barBg = _factory->createGraphics();
+        row.barBg->beginFill(0x000000, 0.4f);
+        row.barBg->drawRect(X(mmX), yTop(top + 20.0f), 120.0f, 8.0f);
+        row.barBg->endFill();
+        row.barBg->setVisible(false);
+        _root->addChild(row.barBg);
+        row.barFill = _factory->createGraphics();
+        row.barFill->setPosition(X(mmX), yTop(top + 20.0f));
+        row.barFill->setVisible(false);
+        _root->addChild(row.barFill);
+        row.status = _factory->createText();
+        row.status->setFontSize(11.0f);
+        row.status->setColor(0xffd060, 0x000000, 1.0f, false);
+        row.status->setAnchor(0.0f, 1.0f);
+        row.status->setPosition(X(mmX + 124.0f), yTop(top));
+        row.status->setVisible(false);
+        _root->addChild(row.status);
+        // ui-team-member-color: fixed group color for this squad slot
+        // (GameConfig.groupColors: yellow, magenta, cyan, orange).
+        row.colorDot = _factory->createGraphics();
+        row.colorDot->beginFill(kGroupColors[i], 1.0f);
+        row.colorDot->drawCircle(X(mmX + 150.0f), yTop(top + 12.0f), 6.0f);
+        row.colorDot->endFill();
+        row.colorDot->setVisible(false);
+        _root->addChild(row.colorDot);
+    }
+
+    // --- Result screen (ui.ts displayStats): dim backdrop + centred panel ---
     _overBackdrop = _factory->createGraphics();
     _overBackdrop->beginFill(0x000000, 0.55f);
     _overBackdrop->drawRect(-_design.x * 0.5f, -_design.y * 0.5f, _design.x, _design.y);
@@ -413,234 +846,6 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _specStatsText->setAnchor(0.0f, 1.0f);
     _specStatsText->setLocalZOrder(921);
     _root->addChild(_specStatsText);
-
-    // #ui-bottom-right: four weapon cards.
-    _weaponBoxBg = _factory->createGraphics();
-    _root->addChild(_weaponBoxBg);
-    for (int i = 0; i < 4; ++i) {
-        _weaponSlotBg[i] = _factory->createGraphics();
-        _root->addChild(_weaponSlotBg[i]);
-        _weaponSlots[i] = _factory->createText();
-        _weaponSlots[i]->setFontSize(13.0f);
-        _weaponSlots[i]->setColor(0xdcdcdc, 0x000000, 1.0f, false);
-        _weaponSlots[i]->setAnchor(0.0f, 0.0f);
-        _root->addChild(_weaponSlots[i]);
-    }
-
-    // P0.1 touch action controls: reload, interact, quick-use heal/boost, scope
-    // cycle and weapon-slot swap. Labels are written by updateActionButtons().
-    const auto makeButton = [this](pix::Graphics*& bg, pix::Text*& text, float fontSize) {
-        bg = _factory->createGraphics();
-        _root->addChild(bg);
-        text = _factory->createText();
-        text->setFontSize(fontSize);
-        text->setColor(0xffffff, 0x000000, 1.5f, false);
-        text->setAnchor(0.5f, 0.5f);
-        _root->addChild(text);
-    };
-    makeButton(_reloadBg, _reloadText, 15.0f);
-    makeButton(_interactBg, _interactText, 18.0f);
-    makeButton(_healBg, _healText, 13.0f);
-    makeButton(_boostBg, _boostText, 13.0f);
-    makeButton(_scopeBg, _scopeText, 13.0f);
-    makeButton(_swapBg, _swapText, 13.0f);
-    _reloadText->setText("RELOAD");
-    _interactText->setText("USE");
-    _swapText->setText("SWAP");
-
-    // P0.1 action controls follow the HUD; updateActionButtons() hides the
-    // pills whose item is not in the bag.
-    _reloadBg->setVisible(false);
-    _reloadText->setVisible(false);
-    _interactBg->setVisible(false);
-    _interactText->setVisible(false);
-    _healBg->setVisible(false);
-    _healText->setVisible(false);
-    _boostBg->setVisible(false);
-    _boostText->setVisible(false);
-    _scopeBg->setVisible(false);
-    _scopeText->setVisible(false);
-    _swapBg->setVisible(false);
-    _swapText->setVisible(false);
-
-    // #ui-bottom-center-2 pickup message and #ui-killfeed.
-    _pickupText = _factory->createText();
-    _pickupText->setFontSize(14.0f);
-    _pickupText->setColor(0xffc864, 0x000000, 2.0f, false);
-    _pickupText->setAnchor(0.5f, 0.0f);
-    _root->addChild(_pickupText);
-    _killFeedText = _factory->createText();
-    _killFeedText->setFontSize(13.0f);
-    _killFeedText->setColor(0xffc896, 0x000000, 1.0f, false);
-    _killFeedText->setAnchor(1.0f, 0.0f);
-    _root->addChild(_killFeedText);
-    // ui.ts kill feed rows are individually coloured: local kills green,
-    // deaths red, everyone else orange. One Text per row keeps a stable
-    // colour per entry (a single Text can only have one colour).
-    for (auto*& row : _killFeedRows) {
-        row = _factory->createText();
-        row->setFontSize(13.0f);
-        row->setColor(0xffc896, 0x000000, 1.0f, false);
-        row->setAnchor(1.0f, 1.0f);
-        row->setVisible(false);
-        _root->addChild(row);
-    }
-    // ui.ts interaction prompt (above the health bar).
-    _promptText = _factory->createText();
-    _promptText->setFontSize(16.0f);
-    _promptText->setColor(0xffe08a, 0x000000, 2.0f, true);
-    _promptText->setAnchor(0.5f, 0.5f);
-    _promptText->setVisible(false);
-    _root->addChild(_promptText);
-    // ui.ts role/event announcement (top centre, below the kill leader).
-    _announcementText = _factory->createText();
-    _announcementText->setFontSize(22.0f);
-    _announcementText->setColor(0xffd060, 0x000000, 2.0f, true);
-    _announcementText->setAnchor(0.5f, 1.0f);
-    _announcementText->setVisible(false);
-    _root->addChild(_announcementText);
-    _waitingText = _factory->createText();
-    _waitingText->setText("WAITING FOR PLAYERS");
-    _waitingText->setFontSize(28.0f);
-    _waitingText->setColor(0xffffff, 0x000000, 2.0f, true);
-    _waitingText->setAnchor(0.5f, 0.5f);
-    _waitingText->setVisible(false);
-    _root->addChild(_waitingText);
-    // ui.ts off-screen teammate arrows.
-    for (auto*& arrow : _teamArrows) {
-        arrow = _factory->createGraphics();
-        arrow->beginFill(0xffffff, 0.9f);
-        arrow->moveTo(10.0f, 0.0f);
-        arrow->lineTo(-7.0f, -7.0f);
-        arrow->lineTo(-3.0f, 0.0f);
-        arrow->lineTo(-7.0f, 7.0f);
-        arrow->closePath();
-        arrow->endFill();
-        arrow->setVisible(false);
-        _root->addChild(arrow);
-    }
-
-    // One static layout pass (the web CSS boxes do not move during a match).
-    // The HUD container is centred on the viewport (GameScene::resetWorld), and
-    // axmol's scene graph is y-up while the CSS boxes are y-down. Work in
-    // design-space bottom-left coordinates here and convert to the centred
-    // container: X/Y offset from the design centre.
-    const float vw = _design.x;
-    const float vh = _design.y;
-    const auto X = [vw](float x) { return x - vw * 0.5f; };
-    const auto Y = [vh](float y) { return y - vh * 0.5f; };
-
-    // #ui-bottom-center-0: 400x32 bar in a 412x44 box, 12px above the bottom.
-    const float hudW = kHealthBarWidth + kHealthBarPadding * 2.0f;
-    const float hudH = kHealthBarHeight + kHealthBarPadding * 2.0f;
-    const float hudX = (vw - hudW) * 0.5f;
-    const float hudY = 12.0f;
-
-    _healthBg->clear();
-    _healthBg->beginFill(0x000000, 0.4f);
-    _healthBg->drawRect(X(hudX), Y(hudY), hudW, hudH);
-    _healthBg->endFill();
-
-    _healthFill->setPosition(X(hudX + kHealthBarPadding), Y(hudY + kHealthBarPadding));
-    _healthDepleted->setPosition(X(hudX + kHealthBarPadding), Y(hudY + kHealthBarPadding));
-    // game.css .ui-health-flair: 64x64, left:-32/top:13 (rotated 270deg) and
-    // right:-32/top:13 (90deg); the counter is hudH tall.
-    if (_flairLeft) {
-        _flairLeft->setPosition(X(hudX), Y(hudY + hudH - 13.0f - 32.0f));
-        _flairLeft->setRotation(-3.14159265358979f * 0.5f);
-        const float source = std::max(_flairLeft->sourceWidth(), _flairLeft->sourceHeight());
-        const float scale = source > 0.0f ? 64.0f / source : 1.0f;
-        _flairLeft->setScale(scale, scale);
-    }
-    if (_flairRight) {
-        _flairRight->setPosition(X(hudX + hudW), Y(hudY + hudH - 13.0f - 32.0f));
-        _flairRight->setRotation(3.14159265358979f * 0.5f);
-        const float source = std::max(_flairRight->sourceWidth(), _flairRight->sourceHeight());
-        const float scale = source > 0.0f ? 64.0f / source : 1.0f;
-        _flairRight->setScale(scale, scale);
-    }
-    _healthText->setAnchor(0.5f, 0.5f);
-    _healthText->setPosition(X(vw * 0.5f), Y(hudY + hudH * 0.5f));
-    _ammoText->setAnchor(0.0f, 1.0f);
-    _ammoText->setPosition(X(hudX + hudW + 12.0f), Y(hudY + hudH));
-    _lootCountsText->setAnchor(0.0f, 1.0f);
-    _lootCountsText->setPosition(X(hudX + hudW + 12.0f), Y(hudY + hudH - 20.0f));
-
-    // #ui-map-wrapper: minimap frame + alive/kill counters, top right.
-    const float mm = kMinimapSize;
-    const float mmX = vw - mm - 12.0f;
-    const float mmY = vh - mm - 12.0f;
-    _minimapPos = Vec2(X(mmX), Y(mmY));
-    _mapFrame->clear();
-    _mapFrame->lineStyle(2.0f, 0xffffff, 0.6f);
-    _mapFrame->drawRect(X(mmX), Y(mmY), mm, mm);
-    _aliveText->setAnchor(1.0f, 1.0f);
-    _aliveText->setPosition(X(mmX - 8.0f), Y(vh - 12.0f));
-    _killsText->setAnchor(1.0f, 1.0f);
-    _killsText->setPosition(X(mmX - 8.0f), Y(vh - 36.0f));
-    _killLeaderText->setAnchor(0.5f, 1.0f);
-    _killLeaderText->setPosition(X(vw * 0.5f), Y(vh - 8.0f));
-    _gasText->setAnchor(1.0f, 0.0f);
-    _gasText->setPosition(X(mmX + mm), Y(mmY - 18.0f));
-    _gasIcon->setPosition(X(mmX), Y(mmY - 26.0f));
-    {
-        const float source = std::max(_gasIcon->sourceWidth(), _gasIcon->sourceHeight());
-        const float gasScale = source > 0.0f ? 20.0f / source : 1.0f;
-        _gasIcon->setScale(gasScale, gasScale);
-    }
-
-    // #ui-bottom-right: four weapon cards, bottom right.
-    const float boxW = kWeaponSlotWidth + 16.0f;
-    const float boxH = 4.0f * (kWeaponSlotHeight + 2.0f) + 12.0f;
-    const float boxX = vw - boxW - 8.0f;
-    const float boxY = 8.0f;
-    _weaponBoxBg->clear();
-    _weaponBoxBg->beginFill(0x000000, 0.25f);
-    _weaponBoxBg->drawRect(X(boxX), Y(boxY), boxW, boxH);
-    _weaponBoxBg->endFill();
-    for (int i = 0; i < 4; ++i) {
-        // CSS order is top -> bottom, so slot 0 sits highest inside the box.
-        const float y = boxY + boxH - 6.0f - static_cast<float>(i) * (kWeaponSlotHeight + 2.0f);
-        _weaponSlots[i]->setAnchor(0.0f, 1.0f);
-        _weaponSlots[i]->setPosition(X(boxX + 8.0f), Y(y));
-        // Tap/long-press target: the full card row (ui2.ts ui-weapon-id-N).
-        _weaponRect[i] = Rect{X(boxX + 2.0f),
-                              Y(y - kWeaponSlotHeight * 0.5f),
-                              boxW - 4.0f,
-                              kWeaponSlotHeight};
-    }
-
-    // P0.1 touch action controls. (cx, cy) are design-space bottom-left points.
-    const auto placeButton = [&](pix::Graphics* bg, pix::Text* text, Rect& rect,
-                                 float cx, float cy, float w, float h) {
-        rect = Rect{X(cx - w * 0.5f), Y(cy - h * 0.5f), w, h};
-        text->setPosition(X(cx), Y(cy));
-        if (bg) {
-            bg->setVisible(false);
-        }
-        if (text) {
-            text->setVisible(false);
-        }
-    };
-    // Reload sits right of the health bar (#ui-reload-button-container).
-    placeButton(_reloadBg, _reloadText, _reloadRect, hudX + hudW + 54.0f, 90.0f,
-                kReloadButtonWidth, kReloadButtonHeight);
-    // Interaction/revive/loot tap target (#ui-interaction, touch layout).
-    placeButton(_interactBg, _interactText, _interactRect, vw * 0.3125f, vh * 0.4167f,
-                kInteractButtonWidth, kInteractButtonHeight);
-    // Quick-use consumables and scope/swap pills, above the left pad and clear
-    // of the emote/ping buttons on the right.
-    placeButton(_healBg, _healText, _healRect, vw * 0.4766f, vh * 0.4528f,
-                kPillWidth, kPillHeight);
-    placeButton(_boostBg, _boostText, _boostRect, vw * 0.4766f, vh * 0.3833f,
-                kPillWidth, kPillHeight);
-    placeButton(_scopeBg, _scopeText, _scopeRect, vw * 0.6016f, vh * 0.4528f,
-                kSmallPillWidth, kPillHeight);
-    placeButton(_swapBg, _swapText, _swapRect, vw * 0.6016f, vh * 0.3833f,
-                kSmallPillWidth, kPillHeight);
-
-    // P0.4 spectating overlay: label/count top-centre and a bottom-left option
-    // stack over the (now hidden) movement pad.
     _specLabel->setPosition(X(vw * 0.5f), Y(vh - 64.0f));
     _specCountText->setPosition(X(vw * 0.5f), Y(vh - 94.0f));
     const auto placeOverlayButton = [&](pix::Graphics* bg, pix::Text* text, Rect& rect,
@@ -687,57 +892,9 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         _specStatsPanel->drawRect(0.0f, 0.0f, 250.0f, 190.0f);
     }
 
-    // #ui-bottom-center-2: pickup message just below the centre.
-    _pickupText->setAnchor(0.5f, 0.0f);
-    _pickupText->setPosition(X(vw * 0.5f), Y(vh * 0.12f));
-    // #ui-killfeed: right side, above the weapon cards.
-    _killFeedText->setAnchor(1.0f, 1.0f);
-    _killFeedText->setVisible(false);
-    _killFeedText->setPosition(X(boxX - 8.0f), Y(boxY + boxH + 8.0f));
-    for (int i = 0; i < 6; ++i) {
-        _killFeedRows[i]->setAnchor(1.0f, 1.0f);
-        _killFeedRows[i]->setPosition(X(boxX - 8.0f), Y(boxY + boxH + 8.0f - 16.0f * i));
-    }
-    _promptText->setPosition(X(vw * 0.5f), Y(vh * 0.2f));
-    // Touch target around the prompt (ui.ts interactionElems). Stored in the
-    // centred HUD container like the other rects.
-    _promptRect = Rect{X(vw * 0.5f - kPromptHitWidth * 0.5f),
-                       Y(vh * 0.2f - kPromptHitHeight * 0.5f),
-                       kPromptHitWidth,
-                       kPromptHitHeight};
-    _announcementText->setPosition(X(vw * 0.5f), Y(vh - 110.0f));
-    _waitingText->setPosition(X(vw * 0.5f), Y(vh * 0.62f));
-
-    // The boost segments sit above the health block; update() repaints width.
-    {
-        float x = hudX + kHealthBarPadding;
-        for (int i = 0; i < 4; ++i) {
-            const float span = kBoostBreakpoints[i] / kBoostBreakpointsTotal;
-            _boostSegments[i]->setAnchor(0.0f, 0.0f);
-            _boostSegments[i]->setPosition(X(x), Y(hudY + hudH + 4.0f));
-            x += kHealthBarWidth * span;
-        }
-    }
-
     // --- Minimap contents (map.ts renderMap + ui.ts map sprites) ---
     _miniMap.build(_factory, _root, _minimapPos, kMinimapSize);
     _miniMap.setZoomed(true);
-    // #ui-map-expand-mobile: small expand affordance inside the frame.
-    _expandPos = Vec2(X(mmX + mm - kMinimapExpandSize - 4.0f), Y(mmY + 4.0f));
-    _mapExpandBg = _factory->createGraphics();
-    _mapExpandBg->beginFill(0x000000, 0.45f);
-    _mapExpandBg->drawRect(0.0f, 0.0f, kMinimapExpandSize, kMinimapExpandSize);
-    _mapExpandBg->endFill();
-    _mapExpandBg->setPosition(_expandPos.x, _expandPos.y);
-    _mapExpandBg->setLocalZOrder(20);
-    _root->addChild(_mapExpandBg);
-    _mapExpandIcon = _factory->createGraphics();
-    _mapExpandIcon->lineStyle(2.0f, 0xffffff, 0.9f);
-    _mapExpandIcon->drawRect(5.0f, 5.0f, 12.0f, 12.0f);
-    _mapExpandIcon->drawRect(8.0f, 8.0f, 6.0f, 6.0f);
-    _mapExpandIcon->setPosition(_expandPos.x, _expandPos.y);
-    _mapExpandIcon->setLocalZOrder(21);
-    _root->addChild(_mapExpandIcon);
 
     // --- Full-screen big map (#big-map) ---
     _bigMapPos = Vec2(X((_design.x - kBigMapSize) * 0.5f), Y((_design.y - kBigMapSize) * 0.5f));
@@ -771,72 +928,54 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_bigMapCloseText);
     setBigMapVisible(false);
 
-    // Gear/perk slots (ui2.ts ui-armor-*/ui-perk-*): item atlas frames along
-    // the top-left, above the squad bars. Each slot also carries a small
-    // "Lvl. N" badge (gear only) and a tap-to-drop rect.
-    for (int i = 0; i < kGearIconCount; ++i) {
-        const float slotX = 12.0f + static_cast<float>(i) * 32.0f;
-        pix::Sprite* icon = _factory->createSprite();
-        icon->setAnchor(0.0f, 1.0f);
-        icon->setPosition(X(slotX), Y(vh - 12.0f));
-        icon->setVisible(false);
-        _root->addChild(icon);
-        _gearIcons[static_cast<size_t>(i)] = icon;
-
-        pix::Text* level = _factory->createText();
-        level->setFontSize(9.0f);
-        level->setColor(0xffffff, 0x000000, 1.0f, false);
-        level->setAnchor(0.0f, 1.0f);
-        level->setPosition(X(slotX), Y(vh - 40.0f));
-        level->setVisible(false);
-        _root->addChild(level);
-        _gearLevelText[static_cast<size_t>(i)] = level;
-
-        // Root-space hit rect (icons are 26 px atlas art, 32 px pitch).
-        _gearRects[static_cast<size_t>(i)] =
-            Rect{X(slotX), Y(vh - 12.0f) - 28.0f, 30.0f, 30.0f};
-    }
-
-    // Squad bars (#ui-top-left / FguiHud::buildSquadBars): name, health bar,
-    // Dead/Down/DC. Shown only when GameScene supplies team members.
-    const float squadX = 12.0f;
-    const float squadTop = vh - 54.0f;
-    for (int i = 0; i < 4; ++i) {
-        SquadRow& row = _squad[static_cast<size_t>(i)];
-        const float rowY = squadTop - static_cast<float>(i) * 32.0f;
-        row.name = _factory->createText();
-        row.name->setFontSize(12.0f);
-        row.name->setColor(0xffffff, 0x000000, 1.0f, false);
-        row.name->setAnchor(0.0f, 1.0f);
-        row.name->setPosition(X(squadX), Y(rowY));
-        _root->addChild(row.name);
-        row.barBg = _factory->createGraphics();
-        row.barBg->beginFill(0x000000, 0.4f);
-        row.barBg->drawRect(X(squadX), Y(rowY - 20.0f), 120.0f, 8.0f);
-        row.barBg->endFill();
-        _root->addChild(row.barBg);
-        row.barFill = _factory->createGraphics();
-        row.barFill->setPosition(X(squadX), Y(rowY - 20.0f));
-        _root->addChild(row.barFill);
-        row.status = _factory->createText();
-        row.status->setFontSize(11.0f);
-        row.status->setColor(0xffd060, 0x000000, 1.0f, false);
-        row.status->setAnchor(0.0f, 1.0f);
-        row.status->setPosition(X(squadX + 124.0f), Y(rowY));
-        _root->addChild(row.status);
-        // ui-team-member-color: fixed group color for this squad slot
-        // (GameConfig.groupColors: yellow, magenta, cyan, orange).
-        row.colorDot = _factory->createGraphics();
-        row.colorDot->beginFill(kGroupColors[i], 1.0f);
-        row.colorDot->drawCircle(X(squadX + 150.0f), Y(rowY - 8.0f), 6.0f);
-        row.colorDot->endFill();
-        row.colorDot->setVisible(false);
-        _root->addChild(row.colorDot);
-        row.name->setVisible(false);
-        row.barBg->setVisible(false);
-        row.barFill->setVisible(false);
-        row.status->setVisible(false);
-    }
+    // --- In-game menu (gear button) ---
+    _menuBackdrop = _factory->createGraphics();
+    _menuBackdrop->beginFill(0x000000, 0.62f);
+    _menuBackdrop->drawRect(-vw * 0.5f, -vh * 0.5f, vw, vh);
+    _menuBackdrop->setLocalZOrder(960);
+    _menuBackdrop->setVisible(false);
+    _root->addChild(_menuBackdrop);
+    const float menuW = 340.0f;
+    const float menuH = 220.0f;
+    _menuPanel = _factory->createGraphics();
+    _menuPanel->beginFill(0x1a1a1a, 0.92f);
+    _menuPanel->drawRect(-menuW * 0.5f, -menuH * 0.5f, menuW, menuH);
+    _menuPanel->lineStyle(2.0f, 0xffffff, 0.5f);
+    _menuPanel->drawRect(-menuW * 0.5f, -menuH * 0.5f, menuW, menuH);
+    _menuPanel->setLocalZOrder(961);
+    _menuPanel->setVisible(false);
+    _root->addChild(_menuPanel);
+    _menuTitle = _factory->createText();
+    _menuTitle->setFontSize(22.0f);
+    _menuTitle->setColor(0xffffff, 0x000000, 2.0f, true);
+    _menuTitle->setAnchor(0.5f, 0.5f);
+    _menuTitle->setText("GAME MENU");
+    _menuTitle->setPosition(0.0f, 62.0f);
+    _menuTitle->setLocalZOrder(962);
+    _menuTitle->setVisible(false);
+    _root->addChild(_menuTitle);
+    const auto makeMenuButton = [&](pix::Graphics*& bg, pix::Text*& text, Rect& rect,
+                                    float y) {
+        rect = Rect{X(-140.0f), Y(y - 21.0f), 280.0f, 42.0f};
+        bg = _factory->createGraphics();
+        bg->setLocalZOrder(963);
+        bg->setVisible(false);
+        _root->addChild(bg);
+        text = _factory->createText();
+        text->setFontSize(17.0f);
+        text->setColor(0xffffff, 0x000000, 1.5f, false);
+        text->setAnchor(0.5f, 0.5f);
+        text->setLocalZOrder(964);
+        text->setPosition(X(0.0f), Y(y));
+        text->setVisible(false);
+        _root->addChild(text);
+    };
+    makeMenuButton(_menuResumeBg, _menuResumeText, _menuResumeRect, 24.0f);
+    makeMenuButton(_menuLeaveBg, _menuLeaveText, _menuLeaveRect, -30.0f);
+    _menuResumeText->setText("RESUME");
+    _menuLeaveText->setText("LEAVE GAME");
+    paintOverlayButton(_menuResumeBg, _menuResumeRect, 0x50afab);
+    paintOverlayButton(_menuLeaveBg, _menuLeaveRect, 0xcc3333);
 
     // --- Perk-mode class picker (#ui-role-menu-wrapper, ui.ts) ---
     // The web panel is 1200x770 px and scales by min(1, w/1200, h/900); the
@@ -959,9 +1098,26 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     setVisible(false);
 }
 
+void Hud::paintBox(pix::Graphics* g, const Rect& rect, uint32_t fill, float alpha,
+                   float borderAlpha) const {
+    if (!g) {
+        return;
+    }
+    g->clear();
+    g->beginFill(fill, alpha);
+    g->drawRect(0.0f, 0.0f, rect.w, rect.h);
+    g->endFill();
+    if (borderAlpha > 0.0f) {
+        g->lineStyle(2.0f, 0xffffff, borderAlpha);
+        g->drawRect(0.0f, 0.0f, rect.w, rect.h);
+    }
+    g->setPosition(rect.x, rect.y);
+}
+
 void Hud::setVisible(bool visible) {
     if (_visible != visible) {
         _actionKey.clear();
+        _lastActionProgress = -1.0f;
     }
     if (!_built) {
         _visible = visible;
@@ -981,33 +1137,28 @@ void Hud::setVisible(bool visible) {
     show(_healthFill);
     show(_healthText);
     show(_ammoText);
-    show(_lootCountsText);
-    if (_mapFrame) {
-        _mapFrame->setVisible(visible && !_minimapHidden && !_bigMapVisible);
-    }
-    show(_aliveText);
-    show(_killsText);
-    show(_killLeaderText);
+    show(_mapFrame);
+    show(_mapInfoBg);
+    show(_aliveIcon);
     if (_gasText) {
         _gasText->setVisible(visible && _gas.active);
     }
     if (_gasIcon) {
         _gasIcon->setVisible(visible && _gas.active);
     }
-    show(_weaponBoxBg);
-    show(_killFeedText);
-    for (auto* row : _killFeedRows) {
-        show(row);
-    }
-    if (_promptText) {
-        _promptText->setVisible(visible && !_lastPrompt.empty());
-    }
+    show(_aliveText);
+    show(_killsText);
     if (_announcementText) {
         _announcementText->setVisible(visible && _announcementTicker > 0.0f);
     }
-    for (size_t i = 0; i < _teamArrows.size(); ++i) {
-        if (_teamArrows[i]) {
-            _teamArrows[i]->setVisible(visible && !_bigMapVisible && i < _teamArrowState.size());
+    for (size_t i = 0; i < _killFeedRows.size(); ++i) {
+        if (_killFeedRows[i]) {
+            _killFeedRows[i]->setVisible(visible && _killFeedHas[i]);
+        }
+    }
+    for (auto* arrow : _teamArrows) {
+        if (arrow) {
+            arrow->setVisible(visible && !_bigMapVisible);
         }
     }
     for (auto* seg : _boostSegments) {
@@ -1016,37 +1167,50 @@ void Hud::setVisible(bool visible) {
     for (auto* slot : _weaponSlots) {
         show(slot);
     }
+    for (auto* icon : _weaponIcons) {
+        if (icon) {
+            icon->setVisible(visible && icon->sourceWidth() > 0.0f);
+        }
+    }
     for (auto* bg : _weaponSlotBg) {
         show(bg);
     }
-    // P0.1 action controls; the item pills own their visibility in
-    // updateActionButtons() (empty bag = hidden).
-    show(_reloadBg);
-    show(_reloadText);
-    show(_interactBg);
-    show(_interactText);
-    show(_swapBg);
-    show(_swapText);
-    if (!visible) {
-        show(_pickupText);
-    }
-    const bool big = visible && _bigMapVisible;
-    _miniMap.setVisible(visible && !big && !_minimapHidden);
-    _bigMap.setVisible(big);
+    // Remaining pills + counters own their visibility in updateActionButtons()
+    // (empty bag = hidden), so nothing to do here.
+    _miniMap.setVisible(visible && !_bigMapVisible && !_minimapHidden);
+    _bigMap.setVisible(visible && _bigMapVisible);
     if (_bigMapBackdrop) {
-        _bigMapBackdrop->setVisible(big);
+        _bigMapBackdrop->setVisible(visible && _bigMapVisible);
     }
     if (_bigMapCloseBg) {
-        _bigMapCloseBg->setVisible(big);
+        _bigMapCloseBg->setVisible(visible && _bigMapVisible);
     }
     if (_bigMapCloseText) {
-        _bigMapCloseText->setVisible(big);
+        _bigMapCloseText->setVisible(visible && _bigMapVisible);
     }
-    if (_mapExpandBg) {
-        _mapExpandBg->setVisible(visible && !big && !_minimapHidden);
+    // Settings gear + top counters: hidden with the result/death overlays.
+    const bool over = _overShown || _deathShown;
+    if (_settingsBg) {
+        _settingsBg->setVisible(visible && !over);
     }
-    if (_mapExpandIcon) {
-        _mapExpandIcon->setVisible(visible && !big && !_minimapHidden);
+    if (_settingsIcon) {
+        _settingsIcon->setVisible(visible && !over);
+    }
+    for (auto* node : std::initializer_list<pix::Node*>{
+             _menuBackdrop, _menuPanel, _menuTitle, _menuResumeBg, _menuResumeText, _menuLeaveBg,
+             _menuLeaveText}) {
+        if (node) {
+            node->setVisible(false);
+        }
+    }
+    if (_menuShown) {
+        if (_menuBackdrop) _menuBackdrop->setVisible(true);
+        if (_menuPanel) _menuPanel->setVisible(true);
+        if (_menuTitle) _menuTitle->setVisible(true);
+        if (_menuResumeBg) _menuResumeBg->setVisible(true);
+        if (_menuResumeText) _menuResumeText->setVisible(true);
+        if (_menuLeaveBg) _menuLeaveBg->setVisible(true);
+        if (_menuLeaveText) _menuLeaveText->setVisible(true);
     }
     for (size_t i = 0; i < _squad.size(); ++i) {
         const bool showRow = visible && i < _squadState.size();
@@ -1076,38 +1240,37 @@ void Hud::setVisible(bool visible) {
                 visible && !_gearFrames[i].empty() && _gearSlots[i].level > 0);
         }
     }
-    const bool over = visible && (_overShown || _deathShown);
     if (_overBackdrop) {
-        _overBackdrop->setVisible(over);
+        _overBackdrop->setVisible(visible && over);
     }
     if (_overPanel) {
-        _overPanel->setVisible(over);
+        _overPanel->setVisible(visible && over);
     }
     if (_overTitle) {
-        _overTitle->setVisible(over);
+        _overTitle->setVisible(visible && over);
     }
     if (_overRank) {
         _overRank->setVisible(visible && _overShown);
     }
     if (_overStats) {
-        _overStats->setVisible(over);
+        _overStats->setVisible(visible && over);
     }
     for (size_t i = 0; i < _overStatRow.size(); ++i) {
         if (_overStatRow[i]) {
             _overStatRow[i]->setVisible(visible && _overShown && _overStatRowHas[i]);
         }
     }
-    if (_overSpectateBg) {
-        _overSpectateBg->setVisible(visible && _deathShown && !_overShown);
-    }
-    if (_overSpectateText) {
-        _overSpectateText->setVisible(visible && _deathShown && !_overShown);
+    if (_overLeaveText) {
+        _overLeaveText->setVisible(visible && over);
     }
     if (_overLeaveBg) {
-        _overLeaveBg->setVisible(over);
+        _overLeaveBg->setVisible(visible && over);
     }
-    if (_overLeaveText) {
-        _overLeaveText->setVisible(over);
+    if (_overSpectateBg) {
+        _overSpectateBg->setVisible(_deathShown && !_overShown);
+    }
+    if (_overSpectateText) {
+        _overSpectateText->setVisible(_deathShown && !_overShown);
     }
     // The final result panel has only LEAVE, centred; the death panel has
     // SPECTATE + LEAVE side by side.
@@ -1174,9 +1337,30 @@ void Hud::setVisible(bool visible) {
                 role && i < static_cast<int>(_roleOptionsState.size()));
         }
     }
-    // Item pills own their visibility (empty inventory hides them); this also
-    // runs after the big-map/result state changes so they never linger.
+    if (_promptBox) {
+        _promptBox->setVisible(_visible && !_lastPrompt.empty());
+    }
+    if (_promptIcon) {
+        _promptIcon->setVisible(_visible && !_lastPrompt.empty() &&
+                                _promptIcon->sourceWidth() > 0.0f);
+    }
+    if (_promptText) {
+        _promptText->setVisible(_visible && !_lastPrompt.empty());
+    }
+    // Action bar visibility is owned by setActionProgress().
+    if (!_lastAction.empty() && _lastActionProgress >= 0.0f) {
+        if (_actionBarBg) _actionBarBg->setVisible(_visible);
+        if (_actionBarFill) _actionBarFill->setVisible(_visible);
+        if (_actionBarText) _actionBarText->setVisible(_visible);
+    } else {
+        if (_actionBarBg) _actionBarBg->setVisible(false);
+        if (_actionBarFill) _actionBarFill->setVisible(false);
+        if (_actionBarText) _actionBarText->setVisible(false);
+    }
+    // Chip/counter rows plus action pills are repainted by
+    // updateActionButtons().
     updateActionButtons();
+    updatePrompt();
 }
 
 void Hud::setMinimap(pix::RenderTexture* texture, float mapWidth, float mapHeight) {
@@ -1239,8 +1423,7 @@ void Hud::setBigMapVisible(bool visible) {
     if (!_built) {
         return;
     }
-    // Re-run the visibility pass so the minimap/expand button swap with the
-    // big map and its backdrop.
+    // Re-run the visibility pass so the minimap and the big map swap.
     setVisible(_visible);
 }
 
@@ -1252,16 +1435,14 @@ void Hud::setMinimapHidden(bool hidden) {
     setVisible(_visible);
 }
 
-bool Hud::minimapExpandHit(float designX, float designY) const {
+bool Hud::minimapTapHit(float designX, float designY) const {
     if (!_visible || _bigMapVisible || _minimapHidden || !_miniMap.visible()) {
         return false;
     }
     // Callers pass design-space coordinates (0..design); the widget positions
     // are in the centred HUD container.
     const Vec2 p(designX - _design.x * 0.5f, designY - _design.y * 0.5f);
-    const float pad = 4.0f;
-    return p.x >= _expandPos.x - pad && p.x <= _expandPos.x + kMinimapExpandSize + pad &&
-           p.y >= _expandPos.y - pad && p.y <= _expandPos.y + kMinimapExpandSize + pad;
+    return _minimapTapRect.contains(p.x, p.y);
 }
 
 bool Hud::bigMapContains(float designX, float designY) const {
@@ -1278,6 +1459,29 @@ bool Hud::bigMapCloseHit(float designX, float designY) const {
     const float dx = p.x - c.x;
     const float dy = p.y - c.y;
     return dx * dx + dy * dy <= 24.0f * 24.0f;
+}
+
+void Hud::showGameMenu(bool visible) {
+    _menuShown = visible;
+    if (!_built) {
+        return;
+    }
+    setVisible(_visible);
+}
+
+Hud::MenuAction Hud::menuActionAt(float designX, float designY) const {
+    if (!_menuShown) {
+        return MenuAction::None;
+    }
+    const float px = designX - _design.x * 0.5f;
+    const float py = designY - _design.y * 0.5f;
+    if (_menuResumeRect.contains(px, py)) {
+        return MenuAction::Resume;
+    }
+    if (_menuLeaveRect.contains(px, py)) {
+        return MenuAction::Leave;
+    }
+    return MenuAction::None;
 }
 
 void Hud::setSquadState(const std::vector<SquadMember>& members) {
@@ -1585,15 +1789,120 @@ void Hud::setWaitingForPlayers(bool waiting) {
     }
 }
 
-void Hud::setInteractionPrompt(const std::string& text) {
-    if (text == _lastPrompt) {
+void Hud::setActionProgress(const std::string& label, float elapsed, float duration) {
+    const std::string next = duration > 0.0f && elapsed < duration ? label : std::string();
+    const float progress = duration > 0.0f && elapsed < duration
+        ? std::clamp(elapsed / duration, 0.0f, 1.0f)
+        : 0.0f;
+    if (!_built) {
+        _lastAction = next;
+        _lastActionProgress = progress;
         return;
     }
-    _lastPrompt = text;
-    if (_promptText) {
-        _promptText->setText(text);
-        _promptText->setVisible(!text.empty() && _visible);
+    if (next.empty()) {
+        if (!_lastAction.empty() || _lastActionProgress != 0.0f) {
+            _lastAction.clear();
+            _lastActionProgress = 0.0f;
+            if (_actionBarBg) _actionBarBg->setVisible(false);
+            if (_actionBarFill) _actionBarFill->setVisible(false);
+            if (_actionBarText) _actionBarText->setVisible(false);
+        }
+        return;
     }
+    // The fill repaints every frame while the action runs; Graphics relies on
+    // DrawNode buffers (not text rasterization) so this is cheap.
+    const bool bgChanged = _lastAction != next;
+    _lastAction = next;
+    _lastActionProgress = progress;
+    if (bgChanged) {
+        if (_actionBarBg) {
+            paintBox(_actionBarBg, Rect{0.0f, 0.0f, kActionWidth, kActionHeight}, 0x000000, 0.45f,
+                     0.5f);
+            _actionBarBg->setVisible(_visible);
+        }
+        if (_actionBarText) {
+            _actionBarText->setText(next);
+            _actionBarText->setVisible(_visible);
+        }
+    }
+    if (_actionBarFill) {
+        _actionBarFill->clear();
+        if (_visible && progress > 0.01f) {
+            _actionBarFill->beginFill(0xffffff, 0.85f);
+            _actionBarFill->drawRect(2.0f, 2.0f, (kActionWidth - 4.0f) * progress,
+                                     kActionHeight - 4.0f);
+            _actionBarFill->endFill();
+        }
+        _actionBarFill->setVisible(_visible);
+    }
+}
+
+void Hud::setInteractionPrompt(const std::string& text, const Vec2& designPos) {
+    if (!_built) {
+        return;
+    }
+    const auto samePos = [](const Vec2& a, const Vec2& b) {
+        return std::fabs(a.x - b.x) < 0.5f && std::fabs(a.y - b.y) < 0.5f;
+    };
+    if (text != _lastPrompt || !samePos(designPos, _promptPos)) {
+        _lastPrompt = text;
+        _promptPos = designPos;
+        updatePrompt();
+    }
+}
+
+void Hud::updatePrompt() {
+    if (!_promptBox || !_promptIcon || !_promptText || !_built) {
+        return;
+    }
+    if (_lastPrompt.empty()) {
+        _promptBox->setVisible(false);
+        _promptIcon->setVisible(false);
+        _promptText->setVisible(false);
+        _promptRect = Rect{};
+        return;
+    }
+    // Place the finger-press box right beside the loot, clamped into the
+    // design space. The item name sits on the right of the box, or flipped to
+    // the left when the loot is close to the right screen edge. The fed
+    // position is design-space (y up); nodes/rects are in the centred container.
+    const float vw = _design.x;
+    const float vh = _design.y;
+    const float cx = std::clamp(_promptPos.x - vw * 0.5f,
+                                kPromptSize * 0.5f, vw * 0.5f - kPromptSize * 0.5f);
+    const float cy =
+        std::clamp(_promptPos.y - vh * 0.5f, kPromptSize * 0.5f,
+                   vh * 0.5f - kPromptSize * 0.5f);
+    const Rect box{cx - kPromptSize * 0.5f, cy - kPromptSize * 0.5f, kPromptSize, kPromptSize};
+    const float textWidth = static_cast<float>(_lastPrompt.size()) * 9.0f;
+    const bool flipLeft = cx + kPromptSize * 0.5f + 12.0f + textWidth > vw * 0.5f - 12.0f;
+    if (flipLeft) {
+        _promptRect = Rect{cx - kPromptSize * 0.5f - 16.0f - textWidth, cy - kPromptSize * 0.5f - 4.0f,
+                           kPromptSize + 20.0f + textWidth, kPromptSize + 8.0f};
+    } else {
+        _promptRect = Rect{cx - kPromptSize * 0.5f - 4.0f, cy - kPromptSize * 0.5f - 4.0f,
+                           kPromptSize + 12.0f + textWidth, kPromptSize + 8.0f};
+    }
+    paintBox(_promptBox, box, 0x000000, 0.5f, 0.6f);
+    _promptBox->setVisible(_visible);
+    const float source = std::max(_promptIcon->sourceWidth(), _promptIcon->sourceHeight());
+    if (source > 0.0f) {
+        const float scale = 36.0f / source;
+        _promptIcon->setScale(scale, scale);
+        _promptIcon->setVisible(_visible);
+    } else {
+        _promptIcon->setVisible(false);
+    }
+    _promptIcon->setPosition(cx, cy);
+    _promptText->setText(_lastPrompt);
+    if (flipLeft) {
+        _promptText->setAnchor(1.0f, 0.5f);
+        _promptText->setPosition(box.x - 12.0f, cy);
+    } else {
+        _promptText->setAnchor(0.0f, 0.5f);
+        _promptText->setPosition(box.x + box.w + 12.0f, cy);
+    }
+    _promptText->setVisible(_visible);
 }
 
 void Hud::showAnnouncement(const std::string& text, float seconds) {
@@ -1869,64 +2178,99 @@ void Hud::updateActionButtons() {
         return;
     }
     const bool base = _visible && !_overShown && !_deathShown && !_spectating &&
-        !_bigMapVisible;
-    const auto itemLabel = [](const std::string& item) -> std::string {
-        if (item == "healthkit") return "MEDKIT";
-        if (item == "painkiller") return "PILLS";
-        std::string out = item;
-        for (char& c : out) {
-            c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
-        }
-        return out;
-    };
-    const std::string healLabel = _healItem.empty()
-        ? std::string()
-        : itemLabel(_healItem) + " x" + std::to_string(_healCount);
-    const std::string boostLabel = _boostItem.empty()
-        ? std::string()
-        : itemLabel(_boostItem) + " x" + std::to_string(_boostCount);
-    const std::string scopeText = scopeLabel(_scopeType);
+        !_bigMapVisible && !_menuShown && !_roleMenuActive;
 
+    // Repaint only when the underlying state moved (row types, counts, the
+    // equipped slot and the HUD input gating are all part of the key).
     std::string key = base ? "1" : "0";
-    key += "|" + healLabel + "|" + boostLabel + "|" + scopeText + "|" +
+    key += "|" + _healItem + "|" + _boostItem + "|" + _scopeEquipped + "|" +
         std::to_string(_equippedSlot);
-    if (key == _actionKey && base) {
+    for (const auto& row : _topLoot) {
+        key += "|" + row.type + ":" + std::to_string(row.countValue);
+    }
+    for (const auto& row : _ammoRows) {
+        key += "|" + row.type + ":" + std::to_string(row.countValue);
+    }
+    for (const auto& slot : _scopeSlots) {
+        key += "|" + slot.type;
+    }
+    if (base && key == _actionKey) {
         return;
     }
     _actionKey = key;
 
-    const auto paint = [this](pix::Graphics* bg, pix::Text* text, const Rect& rect,
-                              bool shown, uint32_t fill, float alpha,
-                              const std::string& label) {
-        if (!bg || !text) {
-            return;
-        }
-        bg->setVisible(shown);
-        text->setVisible(shown);
-        if (!shown) {
-            return;
-        }
-        bg->clear();
-        bg->beginFill(fill, alpha);
-        bg->drawRect(0.0f, 0.0f, rect.w, rect.h);
-        bg->endFill();
-        bg->lineStyle(2.0f, 0xffffff, 0.35f);
-        bg->drawRect(0.0f, 0.0f, rect.w, rect.h);
-        bg->setPosition(rect.x, rect.y);
-        text->setText(label);
-    };
+    // Remaining pills.
+    paintBox(_reloadBg, _reloadRect, 0x000000, 0.4f, 0.35f);
+    _reloadBg->setVisible(base);
+    _reloadText->setVisible(base);
+    paintBox(_swapBg, _swapRect, 0x000000, 0.4f, 0.35f);
+    _swapBg->setVisible(base);
+    _swapText->setVisible(base);
 
-    paint(_reloadBg, _reloadText, _reloadRect, base, 0x000000, 0.4f, "RELOAD");
-    paint(_interactBg, _interactText, _interactRect, base, 0x000000, 0.4f, "USE");
-    paint(_healBg, _healText, _healRect, base && !_healItem.empty(), 0x000000, 0.4f, healLabel);
-    paint(_boostBg, _boostText, _boostRect, base && !_boostItem.empty(), 0x000000, 0.4f,
-          boostLabel);
-    paint(_scopeBg, _scopeText, _scopeRect, base && !_scopeType.empty(), 0x000000, 0.4f,
-          scopeText);
-    paint(_swapBg, _swapText, _swapRect, base, 0x000000, 0.4f, "SWAP");
+    // Top bag counters: bandage / medkit / soda / pills (tap = use, hold = drop).
+    for (int i = 0; i < kTopLootCount; ++i) {
+        TopLootRow& row = _topLoot[static_cast<size_t>(i)];
+        const bool shown = base && row.countValue > 0;
+        paintBox(row.bg, row.rect, 0x000000, 0.4f, 0.35f);
+        row.bg->setVisible(shown);
+        const std::string frame = itemIconFrame(row.type);
+        if (shown && !frame.empty()) {
+            if (frame != row.lastFrame) {
+                row.lastFrame = frame;
+                row.icon->setFrame(frame);
+                const float source = std::max(row.icon->sourceWidth(), row.icon->sourceHeight());
+                const float scale = source > 0.0f ? 22.0f / source : 1.0f;
+                row.icon->setScale(scale, scale);
+            }
+            row.icon->setVisible(_visible);
+        } else {
+            row.icon->setVisible(false);
+            row.lastFrame.clear();
+        }
+        row.count->setText(std::to_string(row.countValue));
+        row.count->setVisible(shown);
+    }
+
+    // Ammo column: one row per ammo type with a count in the bag.
+    for (int i = 0; i < kAmmoRowCount; ++i) {
+        AmmoRow& row = _ammoRows[static_cast<size_t>(i)];
+        const bool shown = base && row.countValue > 0;
+        paintBox(row.bg, row.rect, 0x000000, 0.4f, 0.35f);
+        row.bg->setVisible(shown);
+        row.chip->clear();
+        row.chip->beginFill(kAmmoTypes[i].color, 0.85f);
+        row.chip->drawRect(0.0f, 0.0f, 20.0f, 20.0f);
+        row.chip->endFill();
+        row.chip->setPosition(row.rect.x + row.rect.w - 30.0f, row.rect.y + kAmmoRowH * 0.5f);
+        row.chip->setVisible(shown);
+        const float source = std::max(row.icon->sourceWidth(), row.icon->sourceHeight());
+        if (source > 0.0f) {
+            const float scale = 16.0f / source;
+            row.icon->setScale(scale, scale);
+            row.icon->setVisible(shown);
+        } else {
+            row.icon->setVisible(false);
+        }
+        row.count->setText(std::to_string(row.countValue));
+        row.count->setVisible(shown);
+    }
+
+    // Scope strip: owned scopes only; the equipped one is highlighted.
+    for (int i = 0; i < kScopeSlotCount; ++i) {
+        ScopeSlot& slot = _scopeSlots[static_cast<size_t>(i)];
+        const bool equipped = !slot.type.empty() && slot.type == _scopeEquipped;
+        const bool shown = base && !slot.type.empty();
+        if (shown) {
+            paintBox(slot.bg, slot.rect, equipped ? 0xffffff : 0x000000,
+                     equipped ? 0.3f : 0.4f, 0.35f);
+        }
+        slot.bg->setVisible(shown);
+        slot.label->setText(slot.type.empty() ? std::string() : scopeStripLabel(slot.type));
+        slot.label->setVisible(shown);
+    }
 
     // Weapon cards: dim background, brighter for the equipped slot (ui2.ts
-    // weapon-state opacity). The text itself is painted by update().
+    // weapon-state opacity). Text/icons are painted by update().
     for (int i = 0; i < 4; ++i) {
         pix::Graphics* bg = _weaponSlotBg[i];
         if (!bg) {
@@ -2098,7 +2442,11 @@ void Hud::update(float dt, const Game& game, bool visible) {
             _healthFill->drawRect(0.0f, 0.0f, kHealthBarWidth * fraction, kHealthBarHeight);
             _healthFill->endFill();
         }
-        _healthText->setText(std::to_string(static_cast<int>(std::round(health))));
+        const std::string healthText = std::to_string(static_cast<int>(std::round(health)));
+        if (healthText != _lastHealthText) {
+            _lastHealthText = healthText;
+            _healthText->setText(healthText);
+        }
     }
     if (_healthDepletedTicker < 1.0f && _healthDepleted) {
         _healthDepletedTicker = std::min(1.0f, _healthDepletedTicker + dt);
@@ -2158,16 +2506,15 @@ void Hud::update(float dt, const Game& game, bool visible) {
         }
     }
 
-    // --- Weapon cards: "N. type" per slot; ammo of the equipped gun ---
+    // --- Weapon cards: name + loot-img icon per slot; ammo of the equipped gun.
     std::string weaponKey;
     std::string ammoText;
     const int slotCount = std::min<int>(4, static_cast<int>(apd.weapons.size()));
+    _weaponTypes.fill(std::string());
     for (int i = 0; i < 4; ++i) {
         if (i < slotCount && !apd.weapons[i].type.empty()) {
-            weaponKey += std::to_string(i + 1) + ". " + apd.weapons[i].type;
-            if (i == apd.curWeapIdx && apd.weapons[i].ammo >= 0) {
-                ammoText = std::to_string(apd.weapons[i].ammo);
-            }
+            weaponKey += apd.weapons[i].type;
+            _weaponTypes[static_cast<size_t>(i)] = apd.weapons[i].type;
         }
         weaponKey += '\n';
     }
@@ -2176,73 +2523,79 @@ void Hud::update(float dt, const Game& game, bool visible) {
         size_t start = 0;
         for (int i = 0; i < 4; ++i) {
             const size_t end = weaponKey.find('\n', start);
-            _weaponSlots[i]->setText(
-                weaponKey.substr(start, end == std::string::npos ? std::string::npos : end - start));
+            const std::string type =
+                weaponKey.substr(start, end == std::string::npos ? std::string::npos : end - start);
+            if (!type.empty()) {
+                _weaponSlots[i]->setText(itemLabel(type));
+                const std::string frame = itemIconFrame(type);
+                if (!frame.empty()) {
+                    _weaponIcons[i]->setFrame(frame);
+                    const float source =
+                        std::max(_weaponIcons[i]->sourceWidth(), _weaponIcons[i]->sourceHeight());
+                    const float scale = source > 0.0f ? 30.0f / source : 1.0f;
+                    _weaponIcons[i]->setScale(scale, scale);
+                    _weaponIcons[i]->setVisible(_visible);
+                } else {
+                    _weaponIcons[i]->setVisible(false);
+                }
+                _weaponSlots[i]->setVisible(_visible);
+            } else {
+                _weaponSlots[i]->setText(std::string());
+                _weaponSlots[i]->setVisible(false);
+                _weaponIcons[i]->setVisible(false);
+            }
             start = end == std::string::npos ? weaponKey.size() : end + 1;
         }
     }
     // ui2.ts reserve ammo: equipped clip + the bag count for its ammo type.
-    std::string reserveText;
     if (apd.curWeapIdx >= 0 && apd.curWeapIdx < slotCount) {
         const auto& weap = apd.weapons[static_cast<size_t>(apd.curWeapIdx)];
         const GameObjRenderDef* def = getDefProvider() ? getDefProvider()->gameObject(weap.type) : nullptr;
-        if (def && !def->ammoType.empty()) {
-            reserveText = std::to_string(bagCount(apd.inventory, def->ammoType.c_str()));
+        if (def && !def->ammoType.empty() && weap.ammo >= 0) {
+            std::string text = std::to_string(weap.ammo);
+            text += "/" + std::to_string(bagCount(apd.inventory, def->ammoType.c_str()));
+            if (text != _lastAmmoText) {
+                _lastAmmoText = text;
+                _ammoText->setText(text);
+            }
+        } else if (!_lastAmmoText.empty()) {
+            _lastAmmoText.clear();
+            _ammoText->setText(std::string());
         }
+    } else if (!_lastAmmoText.empty()) {
+        _lastAmmoText.clear();
+        _ammoText->setText(std::string());
     }
-    if (!ammoText.empty()) {
-        ammoText += "/" + (reserveText.empty() ? std::string("0") : reserveText);
-    }
-    _ammoText->setText(ammoText);
 
-    // ui2.ts bag strip approximation: reserve ammo and consumable counts.
-    int ammoCount = 0;
-    for (const char* ammo : {"9mm", "45acp", "556mm", "762mm", "308sub", "12gauge", "9mm_cursed"}) {
-        ammoCount += bagCount(apd.inventory, ammo);
+    // --- Top bag counters + ammo column (ui2.ts loot strips) ---
+    for (int i = 0; i < kTopLootCount; ++i) {
+        TopLootRow& row = _topLoot[static_cast<size_t>(i)];
+        row.countValue = bagCount(apd.inventory, row.type.c_str());
     }
-    const int heals = bagCount(apd.inventory, "bandage") + bagCount(apd.inventory, "healthkit");
-    const int boosts = bagCount(apd.inventory, "soda") + bagCount(apd.inventory, "painkiller");
-    const int throwables = bagCount(apd.inventory, "frag") + bagCount(apd.inventory, "mirv") +
-        bagCount(apd.inventory, "smoke") + bagCount(apd.inventory, "strobe") +
-        bagCount(apd.inventory, "snowball") + bagCount(apd.inventory, "potato");
-    _lootCountsText->setText("AMMO " + std::to_string(ammoCount) + "  MED " + std::to_string(heals) +
-                             "  BOOST " + std::to_string(boosts) + "  NADE " +
-                             std::to_string(throwables));
+    for (int i = 0; i < kAmmoRowCount; ++i) {
+        AmmoRow& row = _ammoRows[static_cast<size_t>(i)];
+        row.countValue = bagCount(apd.inventory, row.type.c_str());
+    }
+    // --- Equipped scope (the strip highlights it) ---
+    _scopeEquipped = apd.scope;
+    for (int i = 0; i < kScopeSlotCount; ++i) {
+        ScopeSlot& slot = _scopeSlots[static_cast<size_t>(i)];
+        const int count = bagCount(apd.inventory, kScopeTypes[i]);
+        slot.type = count > 0 ? kScopeTypes[i] : std::string();
+    }
 
-    // --- P0.1 action controls: equipped slot, quick-use items, scopes ---
-    _weaponTypes.fill(std::string());
-    for (int i = 0; i < 4; ++i) {
-        if (i < slotCount) {
-            _weaponTypes[static_cast<size_t>(i)] = apd.weapons[static_cast<size_t>(i)].type;
-        }
-    }
-    _equippedSlot = apd.curWeapIdx;
+    // --- P0.1 action controls: quick-use items, scopes ---
     _healItem = healItemFor(apd.inventory, health);
     _boostItem = boostItemFor(apd.inventory, boost);
-    _healCount = _healItem.empty() ? 0 : bagCount(apd.inventory, _healItem.c_str());
-    _boostCount = _boostItem.empty() ? 0 : bagCount(apd.inventory, _boostItem.c_str());
-    _scopeType.clear();
-    if (!apd.scope.empty()) {
-        _scopeType = apd.scope;
-    } else {
-        for (const auto& key : defs::kBagSizeKeys) {
-            const std::string name(key);
-            if (name.size() > 5 && name.compare(name.size() - 5, 5, "scope") == 0 &&
-                bagCount(apd.inventory, name.c_str()) > 0) {
-                _scopeType = name;
-                break;
-            }
-        }
-    }
     updateActionButtons();
 
-    // --- Alive counter and kill counter (#ui-leaderboard-wrapper) ---
+    // --- Alive counter and kill counter (info bar under the minimap) ---
     const auto counts = game.aliveCounts();
     const int alive = std::accumulate(counts.begin(), counts.end(), 0);
     std::string aliveText;
     if (_factionMode && counts.size() >= 2) {
         // ui.ts faction mode: red/blue counts instead of one total.
-        aliveText = "R " + std::to_string(counts[0]) + "   B " + std::to_string(counts[1]);
+        aliveText = std::to_string(counts[0]) + ":" + std::to_string(counts[1]);
     } else {
         aliveText = std::to_string(alive);
     }
@@ -2251,8 +2604,8 @@ void Hud::update(float dt, const Game& game, bool visible) {
         _aliveText->setText(aliveText);
     }
     int kills = game.localKills();
-    if (const GameOverMsg* over = game.gameOver()) {
-        for (const auto& stats : over->playerStats) {
+    if (const GameOverMsg* overMsg = game.gameOver()) {
+        for (const auto& stats : overMsg->playerStats) {
             if (stats.playerId == game.getLocalPlayerId()) {
                 kills = stats.kills;
             }
@@ -2260,7 +2613,11 @@ void Hud::update(float dt, const Game& game, bool visible) {
     }
     if (kills != _lastKills) {
         _lastKills = kills;
-        _killsText->setText(std::to_string(kills) + " K");
+        const std::string text = std::to_string(kills) + "K";
+        if (text != _lastKillsText) {
+            _lastKillsText = text;
+            _killsText->setText(text);
+        }
     }
     // ui.ts "You killed X" feedback. Game::killFeed keeps the newest entry at
     // the back; only show a toast when the local credited kill count grows.
@@ -2278,17 +2635,6 @@ void Hud::update(float dt, const Game& game, bool visible) {
         }
     }
     _lastLocalKills = kills;
-
-    // --- Kill leader (game.ts msg.killLeaderDirty) ---
-    std::string leaderText;
-    if (const uint16_t leaderId = game.killLeaderId()) {
-        const std::string name = game.displayName(leaderId);
-        leaderText = "Kill Leader: " + name + " (" + std::to_string(game.killLeaderKills()) + ")";
-    }
-    if (leaderText != _lastKillLeader) {
-        _lastKillLeader = leaderText;
-        _killLeaderText->setText(leaderText);
-    }
 
     // --- Kill feed (#ui-killfeed): one coloured row per entry ---
     const auto& feed = game.killFeed();
@@ -2313,6 +2659,7 @@ void Hud::update(float dt, const Game& game, bool visible) {
             if (i >= static_cast<int>(feed.size())) {
                 row->setText(std::string());
                 row->setVisible(false);
+                _killFeedHas[static_cast<size_t>(i)] = false;
                 continue;
             }
             const Game::KillFeedEntry& entry = feed[static_cast<size_t>(i)];
@@ -2320,6 +2667,7 @@ void Hud::update(float dt, const Game& game, bool visible) {
                 row->setText(entry.text);
                 row->setColor(entry.color, 0x000000, 1.0f, false);
                 row->setVisible(_visible && !_bigMapVisible);
+                _killFeedHas[static_cast<size_t>(i)] = true;
                 continue;
             }
             const std::string text = entry.killerName.empty()
@@ -2334,6 +2682,7 @@ void Hud::update(float dt, const Game& game, bool visible) {
                 row->setColor(0xffc896, 0x000000, 1.0f, false);
             }
             row->setVisible(_visible && !_bigMapVisible);
+            _killFeedHas[static_cast<size_t>(i)] = true;
         }
     }
 
