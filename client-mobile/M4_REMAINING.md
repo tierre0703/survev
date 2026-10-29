@@ -3055,6 +3055,14 @@ Replaces the drag-to-select emote/ping wheel flow requested by playtesting:
    The locked centres moved to fit: landscape (160, 140) instead of
    (126, 100), portrait (120, 176) instead of (96, 160) — a little above the
    bottom edge and a little further inside.
+9. **Team arrows sit on the screen edge.** `Hud::setTeammateArrows` used to
+   place each arrow at `dir * 300` from the (centred) HUD origin, so an
+   off-screen teammate's indicator hovered next to the local player's head.
+   `GameScene` now mirrors `ui.ts 808-857`: it intersects the ray from the
+   camera centre through the teammate with the `camAabb`, clamps the hit to a
+   16px inset (the small/mobile layout) and passes the centred design-space
+   position + rotation; hidden slots can no longer be revived by a big-map
+   toggle. Covered by `hud_team_arrow_positions`.
 
 Tests updated to tap semantics (`emote_wheel_tap_selects_and_closes`,
 `ping_wheel_tap_selects_pings_and_team_emotes`, cooldown/solo gates, etc)

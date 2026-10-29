@@ -57,9 +57,12 @@ struct GasHudState {
     float secondsLeft = 0.0f;
 };
 
-// ui.ts team arrows: a teammate outside the camera view.
+// ui.ts team arrows: a teammate outside the camera view, pinned to the screen
+// edge (ui.ts clamps the camera-AABB edge hit to a 16px inset on the mobile
+// layout).
 struct TeammateArrow {
-    Vec2 dir = Vec2(1.0f, 0.0f);
+    Vec2 pos = Vec2(0.0f, 0.0f); // HUD design space (y-up, centred)
+    float rot = 0.0f;            // design-space rotation (clockwise positive)
     uint32_t tint = 0xffffff;
     bool downed = false;
 };
@@ -343,6 +346,12 @@ public:
     }
     const pix::Graphics* squadColorDot(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].colorDot : nullptr;
+    }
+    // ui.ts team arrows: off-screen teammate indicators (screen-edge position).
+    const pix::Graphics* teamArrow(int idx) const {
+        return (idx >= 0 && idx < static_cast<int>(_teamArrows.size()))
+            ? _teamArrows[static_cast<size_t>(idx)]
+            : nullptr;
     }
     const pix::Graphics* squadHealthFill(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].barFill : nullptr;

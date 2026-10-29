@@ -22,6 +22,7 @@
 #include "../game/RoleFeed.h"
 #include "../game/EmoteWheel.h"
 #include "../game/PingWheel.h"
+#include "../core/Collider.h"
 #include "../core/GameConfig.h"
 #include "../ui/PadGraphicsAxmol.h"
 #include "../ui/Layout.h"
@@ -1717,11 +1718,22 @@ void GameScene::update(float delta) {
             // red/blue patch in faction modes.
             _hud->setLocalTeamId(_game->playerTeamId(_game->getActivePlayerId()));
 
-            // ui.ts off-screen teammate arrows.
+            // ui.ts team arrows (ui.ts 808-857): teammates outside the camera
+            // view bloom at the screen edge, rotated towards them. The previous
+            // port pinned them 300px from the HUD centre, which put the arrow
+            // next to the local player's head instead of on the screen edge.
             std::vector<TeammateArrow> arrows;
-            const Vec2 screen = Vec2(_world->camera().m_screenWidth,
-                                     _world->camera().m_screenHeight);
-            const Vec2 center = Vec2(screen.x * 0.5f, screen.y * 0.5f);
+            const Camera& camera = _world->camera();
+            const Vec2 screen(camera.m_screenWidth, camera.m_screenHeight);
+            const Vec2 center(screen.x * 0.5f, screen.y * 0.5f);
+            const Vec2 designCenter = screenToDesign(center.x, center.y);
+            // camera.ts camAabb: the visible world rect at the current zoom.
+            const Vec2 halfExtent(screen.x * 0.5f / camera.m_z(), screen.y * 0.5f / camera.m_z());
+            const Vec2 camMin = v2Sub(camera.m_pos, halfExtent);
+            const Vec2 camMax = v2Add(camera.m_pos, halfExtent);
+            // ui.ts layoutSm inset (the native client is always the phone/tablet
+            // layout, so use the small-layout 16px offset).
+            const float off = 16.0f;
             for (uint16_t id : _game->getTeamPlayerIds()) {
                 if (id == _game->getActivePlayerId()) {
                     continue;
@@ -1730,13 +1742,29 @@ void GameScene::update(float delta) {
                 if (!mate || !mate->active || mate->dead) {
                     continue;
                 }
-                const Vec2 p = _world->camera().m_pointToScreen(mate->pos);
-                if (p.x >= 0.0f && p.x <= screen.x && p.y >= 0.0f && p.y <= screen.y) {
+                // ui.ts testCircleAabb: keep no arrow while any part of the
+                // teammate is still inside the camera view.
+                const Vec2 p = camera.m_pointToScreen(mate->pos);
+                const float pad = PlayerConfig::radius * camera.m_z();
+                if (p.x >= -pad && p.x <= screen.x + pad && p.y >= -pad && p.y <= screen.y + pad) {
                     continue;
                 }
-                Vec2 dir(p.x - center.x, center.y - p.y);
+                // coldet.intersectRayAabb from the camera centre through the mate.
+                const Vec2 dir = v2NormalizeSafe(v2Sub(mate->pos, camera.m_pos), Vec2(1.0f, 0.0f));
+                Vec2 edge = mate->pos;
+                intersectSegmentAabbRes(
+                    camera.m_pos, v2Add(camera.m_pos, v2Mul(dir, 1.0e6f)), camMin, camMax, &edge);
+                const Vec2 screenEdge = camera.m_pointToScreen(edge);
+                const Vec2 clamped(math::clamp(screenEdge.x, off, screen.x - off),
+                    math::clamp(screenEdge.y, off, screen.y - off));
                 TeammateArrow arrow;
-                arrow.dir = v2NormalizeSafe(dir, Vec2(1.0f, 0.0f));
+                // Hud child coordinates are centred on the design rect, so
+                // subtract the design centre from the absolute design position.
+                arrow.pos = v2Sub(screenToDesign(clamped.x, clamped.y), designCenter);
+                // The arrow art points along local +x. Axmol's positive rotation
+                // is clockwise in the y-up design space, so negate the angle.
+                const Vec2 arrowDir = v2NormalizeSafe(arrow.pos, Vec2(1.0f, 0.0f));
+                arrow.rot = -std::atan2(arrowDir.y, arrowDir.x);
                 arrow.tint = mate->downed ? 0xffaa00 : 0xffffff;
                 arrow.downed = mate->downed;
                 arrows.push_back(arrow);

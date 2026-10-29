@@ -2750,6 +2750,55 @@ TEST(hud_gear_levels_and_squad_polish) {
     CHECK(static_cast<const pix::NullGraphics*>(hud.squadColorDot(0))->alpha < 1.0f);
 }
 
+// ui.ts team arrows: Hud places each indicator at the caller-supplied
+// screen-edge position, not at a fixed radius around the HUD centre (which
+// put the arrow next to the local player's head).
+TEST(hud_team_arrow_positions) {
+    pix::NullPixiFactory factory;
+    auto* root = static_cast<pix::NullContainer*>(factory.createContainer());
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.setVisible(true);
+
+    std::vector<TeammateArrow> arrows(2);
+    // Hud child coordinates are centred on the 1280x720 design rect.
+    arrows[0].pos = Vec2(0.0f, 344.0f); // top edge, 16px inset
+    arrows[0].rot = -1.5707964f;        // arrow art +x rotated to point up
+    arrows[0].tint = 0xffffff;
+    arrows[1].pos = Vec2(624.0f, 0.0f); // right edge
+    arrows[1].rot = 0.0f;
+    arrows[1].downed = true;
+    hud.setTeammateArrows(arrows);
+
+    const auto* first = static_cast<const pix::NullGraphics*>(hud.teamArrow(0));
+    CHECK(first != nullptr);
+    CHECK(first->visible);
+    CHECK_NEAR(first->x, 0.0f, 1e-4f);
+    CHECK_NEAR(first->y, 344.0f, 1e-4f);
+    CHECK_NEAR(first->rotation, -1.5707964f, 1e-4f);
+    CHECK_NEAR(first->alpha, 0.9f, 1e-5f);
+
+    const auto* second = static_cast<const pix::NullGraphics*>(hud.teamArrow(1));
+    CHECK(second->visible);
+    CHECK_NEAR(second->x, 624.0f, 1e-4f);
+    CHECK_NEAR(second->y, 0.0f, 1e-4f);
+    // Downed teammates fade like the web's `.ui-team-indicator-down` style.
+    CHECK_NEAR(second->alpha, 0.55f, 1e-5f);
+
+    // Slots beyond the caller's list stay hidden (3 arrow nodes are built).
+    CHECK(!static_cast<const pix::NullGraphics*>(hud.teamArrow(2))->visible);
+    // The big map hides every arrow.
+    hud.setBigMapVisible(true);
+    CHECK(!first->visible);
+    CHECK(!second->visible);
+    hud.setBigMapVisible(false);
+    CHECK(first->visible);
+    CHECK(second->visible);
+
+    hud.setTeammateArrows({});
+    CHECK(!first->visible);
+}
+
 // game.ts RoleAnnouncement: promoted/dead lines go into the kill feed with the
 // role's name and colour (or the player's team colour), and the custom feed
 // lines are rendered by the HUD.

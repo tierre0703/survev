@@ -1156,9 +1156,11 @@ void Hud::setVisible(bool visible) {
             _killFeedRows[i]->setVisible(visible && _killFeedHas[i]);
         }
     }
-    for (auto* arrow : _teamArrows) {
-        if (arrow) {
-            arrow->setVisible(visible && !_bigMapVisible);
+    for (size_t i = 0; i < _teamArrows.size(); ++i) {
+        if (_teamArrows[i]) {
+            // Only slots GameScene actually populated may show; otherwise a
+            // big-map toggle would revive stale arrow nodes.
+            _teamArrows[i]->setVisible(visible && !_bigMapVisible && i < _teamArrowState.size());
         }
     }
     for (auto* seg : _boostSegments) {
@@ -1930,11 +1932,8 @@ void Hud::setTeammateArrows(const std::vector<TeammateArrow>& arrows) {
             continue;
         }
         const TeammateArrow& arrow = arrows[i];
-        Vec2 dir = v2NormalizeSafe(arrow.dir, Vec2(1.0f, 0.0f));
-        node->setPosition(dir.x * 300.0f, dir.y * 300.0f);
-        // The arrow art points along local +x; Axmol's positive rotation is
-        // clockwise in the y-up design space, so use -angle to face `dir`.
-        node->setRotation(-std::atan2(dir.y, dir.x));
+        node->setPosition(arrow.pos.x, arrow.pos.y);
+        node->setRotation(arrow.rot);
         node->setTint(arrow.tint);
         node->setAlpha(arrow.downed ? 0.55f : 0.9f);
     }
