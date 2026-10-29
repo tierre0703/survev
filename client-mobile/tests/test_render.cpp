@@ -2790,12 +2790,14 @@ TEST(hud_gear_levels_and_squad_polish) {
     CHECK_NEAR(rowBg->commands[1].d, Hud::kSquadRowHeight, 1e-4f);
     CHECK(rowBg->commands[0].alpha > 0.0f);
     const float squadX = Hud::kMinimapLeft + Hud::kMinimapSize + 8.0f;
-    CHECK_NEAR(rowBg->commands[1].a, (squadX - 4.0f) - 640.0f, 1e-4f);
+    CHECK_NEAR(rowBg->commands[1].a, squadX - 640.0f, 1e-4f);
     const auto* dot = static_cast<const pix::NullGraphics*>(hud.squadColorDot(0));
     const float dotRightEdge = dot->commands[1].a + dot->commands[1].c;
-    CHECK(dotRightEdge < (squadX + Hud::kSquadBarWidth) - 640.0f);
-    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(0))->text, std::string("Down"));
-    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(1))->text, std::string("Dead"));
+    CHECK(dotRightEdge < (squadX + Hud::kSquadRowPadding + Hud::kSquadBarWidth) - 640.0f);
+    CHECK_EQ(static_cast<const pix::NullSprite*>(hud.squadStatusIcon(0))->frame,
+             std::string("gui/down.png"));
+    CHECK_EQ(static_cast<const pix::NullSprite*>(hud.squadStatusIcon(1))->frame,
+             std::string("gui/skull-team.png"));
     // Dead/disconnected names fade to 30% (ui.ts updateTeam).
     CHECK_NEAR(static_cast<const pix::NullText*>(hud.squadNameText(1))->alpha, 0.3f, 1e-5f);
 

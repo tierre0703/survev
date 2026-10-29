@@ -1542,15 +1542,17 @@ Ported the `ui.ts` team health display (previously only in the unused
   `groupInfo.playerIds`), `groupStatus()` (health/DC) and `allPlayerStatus()`
   (dead/downed).
 - `Hud::setSquadState` draws up to four rows to the right of the minimap,
-  top-aligned with it: a translucent row backing (`128x28`, sized around the
-  120px bar), name, a 120px colour-coded bar and a `DC` > `Dead` > `Down`
-  status label. The group-colour dot sits above the bar's left end, so it
-  never covers the bar's right end. Rows are hidden in solo or while the HUD
-  is hidden, and repaint only when the name/health/status key changes. The bar
-  uses the exact `ui.ts updateHealthBar` palette (grey 100, white 75..99,
-  darkpink->lightpink below 75, red downed, 1px minimum for living members)
-  and the `<=25` black/red danger pulse; see the twenty-fifth P2 pass in
-  `REMAININGS.md`.
+  top-aligned with it: a translucent row backing (`208x40`, the 200px bar plus
+  4px padding), a 16px bold name, a 200px colour-coded bar and the web status
+  icons (`gui/close.png` offline at 50%, `gui/skull-team.png` dead at 50%,
+  `gui/down.png` downed with pulse) to the right of the block. Rows have an 8px
+  vertical gap and 6px below the bar inside the block. The group-colour dot
+  sits above the bar's left end, so it never covers the bar's right end. Rows
+  are hidden in solo or while the HUD is hidden, and repaint only when the
+  name/health/status key changes. The bar uses the exact `ui.ts
+  updateHealthBar` palette (grey 100, white 75..99, darkpink->lightpink below
+  75, red downed, 1px minimum for living members) and the `<=25` black/red
+  danger pulse; see the twenty-fifth P2 pass in `REMAININGS.md`.
 - The layout reuses the HUD's design-space `X/Y` helpers (squad rows are built
   after the static layout pass).
 

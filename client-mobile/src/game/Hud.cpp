@@ -700,54 +700,56 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     }
 
     // Squad bars: to the right of the minimap, top-aligned with it (team
-    // modes). Each row gets a translucent backing sized to the health bar,
-    // and the group-colour dot sits above the bar's left end so it never
-    // covers the bar's right end.
+    // modes). The block follows the web's `.ui-team-member` proportions
+    // (200px bar, 4px padding, 8px gap below), with room for the 16px name.
     const float squadX = kMinimapLeft + kMinimapSize + 8.0f;
+    const float barX = squadX + kSquadRowPadding;
+    const float barTop = 24.0f; // name row + gap inside the 40px block
     for (int i = 0; i < 4; ++i) {
         SquadRow& row = _squad[static_cast<size_t>(i)];
         const float top = kMinimapTop + static_cast<float>(i) * kSquadRowPitch;
         row.bg = _factory->createGraphics();
         row.bg->beginFill(0x000000, 0.35f);
-        row.bg->drawRect(X(squadX - 4.0f), yTop(top + kSquadRowHeight), kSquadRowWidth,
-                         kSquadRowHeight);
+        row.bg->drawRect(X(squadX), yTop(top + kSquadRowHeight), kSquadRowWidth, kSquadRowHeight);
         row.bg->endFill();
         row.bg->setVisible(false);
         _root->addChild(row.bg);
 
         row.name = _factory->createText();
-        row.name->setFontSize(12.0f);
-        row.name->setColor(0xffffff, 0x000000, 1.0f, false);
+        row.name->setFontSize(16.0f);
+        row.name->setColor(0xffffff, 0x000000, 1.5f, true);
         row.name->setAnchor(0.0f, 1.0f);
-        row.name->setPosition(X(squadX + 14.0f), yTop(top + 2.0f));
+        row.name->setPosition(X(squadX + kSquadRowPadding + 16.0f), yTop(top + 20.0f));
         row.name->setVisible(false);
         _root->addChild(row.name);
 
-        row.status = _factory->createText();
-        row.status->setFontSize(11.0f);
-        row.status->setColor(0xffd060, 0x000000, 1.0f, false);
-        row.status->setAnchor(1.0f, 1.0f);
-        row.status->setPosition(X(squadX + kSquadBarWidth + 2.0f), yTop(top + 2.0f));
-        row.status->setVisible(false);
-        _root->addChild(row.status);
+        // Offline/dead/downed state icons match the web's
+        // `ui-team-member-status-*` classes (close/skull/down art).
+        row.statusIcon = _factory->createSprite();
+        row.statusIcon->setAnchor(0.5f, 0.5f);
+        row.statusIcon->setPosition(X(squadX + kSquadRowWidth + 6.0f + kSquadStatusSize * 0.5f),
+                                    yTop(top + 20.0f));
+        row.statusIcon->setVisible(false);
+        _root->addChild(row.statusIcon);
 
         row.barBg = _factory->createGraphics();
         row.barBg->beginFill(0x000000, 0.5f);
-        row.barBg->drawRect(X(squadX), yTop(top + 20.0f + 8.0f), kSquadBarWidth, 8.0f);
+        row.barBg->drawRect(X(barX), yTop(top + barTop + 10.0f), kSquadBarWidth, 10.0f);
         row.barBg->endFill();
         row.barBg->setVisible(false);
         _root->addChild(row.barBg);
 
         row.barFill = _factory->createGraphics();
-        row.barFill->setPosition(X(squadX), yTop(top + 20.0f + 8.0f));
+        row.barFill->setPosition(X(barX), yTop(top + barTop + 10.0f));
         row.barFill->setVisible(false);
         _root->addChild(row.barFill);
 
         // ui-team-member-color: fixed group color for this squad slot
-        // (GameConfig.groupColors: yellow, magenta, cyan, orange).
+        // (GameConfig.groupColors: yellow, magenta, cyan, orange). It sits at
+        // the block's left, clear of the bar's right end.
         row.colorDot = _factory->createGraphics();
         row.colorDot->beginFill(kGroupColors[i], 1.0f);
-        row.colorDot->drawCircle(X(squadX + 6.0f), yTop(top + 7.0f), 4.5f);
+        row.colorDot->drawCircle(X(squadX + kSquadRowPadding + 7.0f), yTop(top + 12.0f), 7.0f);
         row.colorDot->endFill();
         row.colorDot->setVisible(false);
         _root->addChild(row.colorDot);
@@ -1267,8 +1269,8 @@ void Hud::setVisible(bool visible) {
         if (row.barFill) {
             row.barFill->setVisible(showRow && _squadState[i].health > 0.0f);
         }
-        if (row.status) {
-            row.status->setVisible(showRow);
+        if (row.statusIcon) {
+            row.statusIcon->setVisible(showRow && row.hasStatus);
         }
         if (row.colorDot) {
             row.colorDot->setVisible(showRow);
@@ -1546,7 +1548,10 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
             row.name->setVisible(false);
             row.barBg->setVisible(false);
             row.barFill->setVisible(false);
-            row.status->setVisible(false);
+            row.hasStatus = false;
+            if (row.statusIcon) {
+                row.statusIcon->setVisible(false);
+            }
             if (row.colorDot) {
                 row.colorDot->setVisible(false);
             }
@@ -1555,12 +1560,22 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
         }
         const SquadMember& m = members[i];
         std::string status;
+        std::string statusFrame;
+        float statusAlpha = 1.0f;
         if (m.disconnected) {
+            // ui-team-member-status-disconnected: close.svg at 50% opacity.
             status = "DC";
+            statusFrame = "gui/close.png";
+            statusAlpha = 0.5f;
         } else if (m.dead) {
+            // ui-team-member-status-dead: skull-team.svg at 50% opacity.
             status = "Dead";
+            statusFrame = "gui/skull-team.png";
+            statusAlpha = 0.5f;
         } else if (m.downed) {
+            // ui-team-member-status-downed: down.svg with icon-pulse.
             status = "Down";
+            statusFrame = "gui/down.png";
         }
         const int health = static_cast<int>(std::clamp(m.health, 0.0f, 100.0f));
         const std::string key = m.name + "|" + std::to_string(health) + "|" + status +
@@ -1570,11 +1585,21 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
         }
         row.key = key;
         row.name->setText(m.name.empty() ? "Player" : m.name);
-        row.status->setText(status);
         // ui.ts: disconnected/dead names fade to 30%; downed status pulses
-        // (the pulse colour itself is advanced in update()).
+        // (the pulse itself is advanced in update()).
         row.name->setAlpha(m.disconnected || m.dead ? 0.3f : 1.0f);
-        row.status->setColor(m.downed ? 0xffaa00 : 0xffd060, 0x000000, 1.0f, false);
+        row.hasStatus = !statusFrame.empty();
+        if (row.statusIcon) {
+            if (row.hasStatus) {
+                row.statusIcon->setFrame(statusFrame);
+                const float source = std::max(row.statusIcon->sourceWidth(),
+                                              row.statusIcon->sourceHeight());
+                const float scale = source > 0.0f ? kSquadStatusSize / source : 1.0f;
+                row.statusIcon->setScale(scale, scale);
+                row.statusIcon->setAlpha(statusAlpha);
+            }
+            row.statusIcon->setVisible(_visible && row.hasStatus);
+        }
         if (row.colorDot) {
             row.colorDot->setAlpha(1.0f);
             row.colorDot->setVisible(_visible);
@@ -1588,7 +1613,7 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
         row.barFill->clear();
         if (fillWidth > 0.0f) {
             row.barFill->beginFill(color, m.health <= 25.0f && !m.dead ? 0.8f : 1.0f);
-            row.barFill->drawRect(0.0f, 0.0f, fillWidth, 8.0f);
+            row.barFill->drawRect(0.0f, 0.0f, fillWidth, 10.0f);
             row.barFill->endFill();
         }
         const bool showRow = _visible;
@@ -1598,7 +1623,9 @@ void Hud::setSquadState(const std::vector<SquadMember>& members) {
         row.name->setVisible(showRow);
         row.barBg->setVisible(showRow);
         row.barFill->setVisible(showRow && fillWidth > 0.0f);
-        row.status->setVisible(showRow);
+        if (row.statusIcon) {
+            row.statusIcon->setVisible(showRow && row.hasStatus);
+        }
         if (row.colorDot) {
             row.colorDot->setVisible(showRow);
         }
@@ -2759,14 +2786,13 @@ void Hud::update(float dt, const Game& game, bool visible) {
     // ui-team-member-status-downed `icon-pulse` (2s black -> red -> black).
     _squadPulseTicker += dt;
     const float pulseT = 0.5f - 0.5f * std::cos(3.14159265358979f * _squadPulseTicker);
-    const uint32_t pulseColor = static_cast<uint32_t>(0x22 + (0xff - 0x22) * pulseT) << 16;
     const float squadDangerMix =
         0.5f - 0.5f * std::cos(2.0f * 3.14159265358979f * _squadPulseTicker);
     for (size_t i = 0; i < _squad.size(); ++i) {
         SquadRow& row = _squad[i];
         if (i < _squadState.size() && _squadState[i].downed) {
-            if (row.status) {
-                row.status->setColor(pulseColor, 0x000000, 1.0f, false);
+            if (row.statusIcon) {
+                row.statusIcon->setAlpha(0.55f + 0.45f * pulseT);
             }
             if (row.colorDot) {
                 row.colorDot->setAlpha(0.55f + 0.45f * pulseT);
@@ -2778,10 +2804,10 @@ void Hud::update(float dt, const Game& game, bool visible) {
             const SquadMember& m = _squadState[i];
             if (!m.dead && m.health <= 25.0f && row.barFill) {
                 const float fillWidth =
-                    std::max(1.0f, 120.0f * std::clamp(m.health, 0.0f, 100.0f) / 100.0f);
+                    std::max(1.0f, kSquadBarWidth * std::clamp(m.health, 0.0f, 100.0f) / 100.0f);
                 row.barFill->clear();
                 row.barFill->beginFill(healthDangerColor(squadDangerMix), 0.8f);
-                row.barFill->drawRect(0.0f, 0.0f, fillWidth, 8.0f);
+                row.barFill->drawRect(0.0f, 0.0f, fillWidth, 10.0f);
                 row.barFill->endFill();
             }
         }

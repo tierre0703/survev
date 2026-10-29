@@ -100,11 +100,16 @@ public:
     static constexpr float kSettingsSize = 44.0f;
     // Info bar under the minimap (#ui-map-info + alive/kill counters).
     static constexpr float kInfoBarTop = kMinimapTop + kMinimapSize + 4.0f;
-    // Squad rows sit to the right of the minimap, top-aligned with it.
-    static constexpr float kSquadBarWidth = 120.0f;
-    static constexpr float kSquadRowWidth = kSquadBarWidth + 8.0f;
-    static constexpr float kSquadRowHeight = 28.0f;
-    static constexpr float kSquadRowPitch = 30.0f;
+    // Squad rows sit to the right of the minimap, top-aligned with it. Sizes
+    // follow the web desktop `.ui-team-member` (200px bar, 4px padding, 8px
+    // bottom margin) with extra height for the larger 16px name.
+    static constexpr float kSquadBarWidth = 200.0f;
+    static constexpr float kSquadRowPadding = 4.0f;
+    static constexpr float kSquadRowWidth = kSquadBarWidth + kSquadRowPadding * 2.0f;
+    static constexpr float kSquadRowHeight = 40.0f;
+    static constexpr float kSquadRowGap = 8.0f;
+    static constexpr float kSquadRowPitch = kSquadRowHeight + kSquadRowGap;
+    static constexpr float kSquadStatusSize = 32.0f;
     static constexpr float kBoxHeight = 34.0f;
     static constexpr float kGasBoxWidth = 82.0f;
     static constexpr float kCountBoxWidth = 56.0f;
@@ -362,8 +367,8 @@ public:
     const pix::Text* squadNameText(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].name : nullptr;
     }
-    const pix::Text* squadStatusText(int idx) const {
-        return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].status : nullptr;
+    const pix::Sprite* squadStatusIcon(int idx) const {
+        return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].statusIcon : nullptr;
     }
     const pix::Graphics* squadColorDot(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].colorDot : nullptr;
@@ -609,8 +614,9 @@ private:
         pix::Text* name = nullptr;
         pix::Graphics* barBg = nullptr;
         pix::Graphics* barFill = nullptr;
-        pix::Text* status = nullptr;
+        pix::Sprite* statusIcon = nullptr;
         pix::Graphics* colorDot = nullptr;
+        bool hasStatus = false;
         std::string key;
     };
     std::array<SquadRow, 4> _squad{};

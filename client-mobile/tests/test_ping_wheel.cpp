@@ -851,10 +851,19 @@ TEST(hud_squad_health_bars) {
     CHECK_EQ(n3->text, std::string("Dan"));
     CHECK(n0->visible && n3->visible);
 
-    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(0))->text, std::string(""));
-    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(1))->text, std::string("Dead"));
-    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(2))->text, std::string("Down"));
-    CHECK_EQ(static_cast<const pix::NullText*>(hud.squadStatusText(3))->text, std::string("DC"));
+    // Status now uses the web's icons: close (offline), skull (dead), down.
+    const auto* s0 = static_cast<const pix::NullSprite*>(hud.squadStatusIcon(0));
+    const auto* s1 = static_cast<const pix::NullSprite*>(hud.squadStatusIcon(1));
+    const auto* s2 = static_cast<const pix::NullSprite*>(hud.squadStatusIcon(2));
+    const auto* s3 = static_cast<const pix::NullSprite*>(hud.squadStatusIcon(3));
+    CHECK(s0 && s1 && s2 && s3);
+    CHECK(!s0->visible);
+    CHECK_EQ(s1->frame, std::string("gui/skull-team.png"));
+    CHECK_EQ(s2->frame, std::string("gui/down.png"));
+    CHECK_EQ(s3->frame, std::string("gui/close.png"));
+    CHECK(s1->visible && s2->visible && s3->visible);
+    CHECK_NEAR(s1->alpha, 0.5f, 1e-5f); // web dead status opacity
+    CHECK_NEAR(s3->alpha, 0.5f, 1e-5f); // web disconnected status opacity
 
     // ui.ts updateHealthBar colours: 100 grey, 50 pink, dead no fill, downed
     // (0 health) the 1px danger fill.
