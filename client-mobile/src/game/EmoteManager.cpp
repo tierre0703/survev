@@ -417,9 +417,17 @@ void EmoteManager::update(float dt, GameWorld& ctx) {
             // scale is m_z = m_ppu * m_zoom, so divide by m_z.
             float borderScale = camera.m_pixels(kPingIconScale) / camera.m_z();
             float pingScale = camera.m_pixels(kPingIconScale) / camera.m_z();
+            // The edge icons (airdrop/airstrike art + the ping-indicator arrow)
+            // live under the same camera-transformed root. Their creation-time
+            // kPingEdgeScale is a screen-space scale; without dividing by m_z
+            // here they render at m_z times the intended size (the huge orange
+            // airdrop arc over the HUD).
+            const float edgeScale = camera.m_pixels(kPingEdgeScale) / camera.m_z();
 
             ind.borderSprite->setScale(borderScale, borderScale);
             ind.pingSprite->setScale(pingScale, pingScale);
+            ind.indSpriteInner->setScale(edgeScale, edgeScale);
+            ind.indSpriteOuter->setScale(edgeScale, edgeScale);
             ind.borderSprite->setAlpha(1.0f);
             ind.pingSprite->setAlpha(1.0f);
             ind.indSpriteInner->setAlpha(ind.fadeIn > 0 ? 0.0f : 1.0f);

@@ -233,6 +233,17 @@ TEST(ping_manager_resets_indicator_alpha_on_reuse) {    // A reused indicator sl
     CHECK_NEAR(ind->pingContainer->getAlpha(), 1.0f, 0.001f);
     CHECK_EQ(ind->playerId, ping.playerId);
 
+    // Edge art must be converted from screen scale to the world root's scale;
+    // the old creation-time scale made the airdrop arc m_z times too large.
+    manager.update(1.0f / 60.0f, world);
+    const float edgeScale =
+        world.camera().m_pixels(EmoteManager::kPingEdgeScale) / world.camera().m_z();
+    const auto* inner = static_cast<const pix::NullSprite*>(ind->indSpriteInner);
+    const auto* outer = static_cast<const pix::NullSprite*>(ind->indSpriteOuter);
+    CHECK(inner != nullptr && outer != nullptr);
+    CHECK_NEAR(inner->getScaleX(), edgeScale, 1e-5f);
+    CHECK_NEAR(outer->getScaleX(), edgeScale, 1e-5f);
+
     // Let it fade all the way out (fade in 0.5 + life 4.25 + fade out 0.1).
     for (int i = 0; i < 600; ++i) {
         manager.update(1.0f / 60.0f, world);

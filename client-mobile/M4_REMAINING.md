@@ -3001,7 +3001,11 @@ and the gear + emote/ping wheels repositioned.
     large); it now fits each sprite to `ping.scale * kPingDisplayPx (36px)`,
     matching `ui.ts createPing`. Player map pings use the web's raw 0.15 Sm
     scale. The world edge indicators (airdrop direction arrow) were shrunk
-    from 0.4/0.5 to 0.22/0.28 in `EmoteManager`.
+    from 0.4/0.5 to 0.22/0.28 in `EmoteManager`. Their scale is now also
+    converted from screen space to the camera-transformed world root each
+    frame (`camera.m_pixels(kPingEdgeScale) / camera.m_z()`); applying the raw
+    screen scale at creation made the orange arc/airdrop icon `m_z` times too
+    large (it covered the weapon cards).
 14. Gear/perk slots moved beside the health bar (web `#ui-bottom-center-left`),
     squad rows under the scope strip, pickup toast under the messages.
 
