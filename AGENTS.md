@@ -64,6 +64,21 @@ E:\work\survev-tools\windows-service\survev-windows-x64\scripts\stop.ps1     # s
 `start.ps1` is idempotent (skips processes already listening) and writes logs to
 `<bundle>\runtime\logs`. Stop the stack with `stop.ps1` before re-running it.
 
+## Offline distribution bundles (Windows + Ubuntu 22.04)
+
+`E:\work\survev_server\make-bundles.ps1` assembles self-contained offline
+packages (`survev-windows-x64.zip`, `survev-ubuntu22-x64.tar.gz`) containing the
+built server + client plus vendored Node.js, PostgreSQL, Redis and production
+`node_modules` (real dirs, no symlinks). Each bundle ships `install/start/stop/
+status` scripts (`.ps1`/`.bat` on Windows, `*.sh` on Linux; install the Postgres
+cluster once with `install`). Sources for the vendored Linux binaries are
+cached in `E:\work\survev_server\_downloads`; the production `node_modules` in
+`_staging` (refresh with `npm install --omit=dev --ignore-scripts` there). The
+bundle's redis.conf is minimal and IPv4-only — the vendored Windows Redis 5
+build rejects modern keywords/IPv6 binds. Run the bundle's own scripts to test
+it; postgres child processes misbehave under agent shell sandboxes, so launch
+the bundle scripts via WMI `Win32_Process.Create` when testing from this repo.
+
 ## Lint & formatting
 
 - Formatting is enforced with **dprint** (`dprint.json`, 4-space indent for TS,
