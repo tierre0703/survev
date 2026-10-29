@@ -2954,6 +2954,10 @@ TEST(hud_gas_icon_state) {
     const auto* icon = static_cast<const pix::NullSprite*>(hud.gasIcon());
     CHECK(icon != nullptr);
     CHECK_EQ(icon->frame, std::string("gui/gas.png"));
+    const auto* gasText = static_cast<const pix::NullText*>(hud.gasText());
+    CHECK(gasText != nullptr);
+    CHECK_EQ(gasText->text, std::string("0:00"));
+    CHECK(gasText->visible);
 
     GasHudState gas;
     gas.active = true;
@@ -2972,7 +2976,8 @@ TEST(hud_gas_icon_state) {
 
     gas.active = false;
     hud.setGasState(gas);
-    CHECK(!icon->visible);
+    CHECK(icon->visible);
+    CHECK_EQ(icon->frame, std::string("gui/gas.png"));
 }
 
 namespace {

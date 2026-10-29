@@ -775,7 +775,8 @@ TEST(hud_gas_timer_and_result_overlay) {
     CHECK(gasText->visible);
     gas.active = false;
     hud.setGasState(gas);
-    CHECK(!gasText->visible);
+    CHECK(gasText->visible);
+    CHECK_EQ(gasText->text, std::string("0:00"));
 
     // Result screen: defeat + rank + team kills + local stats.
     GameOverMsg over;

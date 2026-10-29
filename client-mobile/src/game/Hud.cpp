@@ -450,6 +450,8 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _gasText->setColor(0xffffff, 0x000000, 2.0f, true);
     _gasText->setAnchor(0.5f, 0.5f);
     _gasText->setPosition(X(mmX + 18.0f + (gasW - 36.0f) * 0.5f + 18.0f), infoCenterY);
+    // The web always renders the gas slot; before the first zone it reads 0:00.
+    _gasText->setText("0:00");
     _root->addChild(_gasText);
     _aliveIcon = _factory->createSprite("gui/player-gui.png");
     _aliveIcon->setAnchor(0.5f, 0.5f);
@@ -1181,10 +1183,10 @@ void Hud::setVisible(bool visible) {
     show(_mapInfoBg);
     show(_aliveIcon);
     if (_gasText) {
-        _gasText->setVisible(visible && _gas.active);
+        _gasText->setVisible(visible);
     }
     if (_gasIcon) {
-        _gasIcon->setVisible(visible && _gas.active);
+        _gasIcon->setVisible(visible);
     }
     show(_aliveText);
     show(_killsText);
@@ -1700,22 +1702,23 @@ void Hud::setGasState(const GasHudState& gas) {
     if (!_built || !_gasText) {
         return;
     }
-    std::string text;
+    std::string text = "0:00";
     if (gas.active) {
         const int sec = gas.secondsLeft > 0.0f ? static_cast<int>(gas.secondsLeft) : 0;
         text = formatTime(static_cast<uint16_t>(sec));
     }
+    const bool moving = gas.active && gas.moving;
     if (text != _lastGasText) {
         _lastGasText = text;
         _gasText->setText(text);
-        _gasText->setColor(gas.moving ? 0xff6060 : 0xffffff, 0x000000, 2.0f, true);
+        _gasText->setColor(moving ? 0xff6060 : 0xffffff, 0x000000, 2.0f, true);
     }
     if (_gasIcon) {
         // gas.svg while waiting, danger.svg while the red zone moves.
-        _gasIcon->setFrame(gas.moving ? "gui/danger.png" : "gui/gas.png");
-        _gasIcon->setVisible(_visible && gas.active);
+        _gasIcon->setFrame(moving ? "gui/danger.png" : "gui/gas.png");
+        _gasIcon->setVisible(_visible);
     }
-    _gasText->setVisible(_visible && gas.active);
+    _gasText->setVisible(_visible);
 }
 
 std::string Hud::formatTime(uint16_t seconds) {

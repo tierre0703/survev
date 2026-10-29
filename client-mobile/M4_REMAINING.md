@@ -2959,7 +2959,8 @@ and the gear + emote/ping wheels repositioned.
    box. The info bar follows the map (`kInfoBarTop = kMinimapTop +
    kMinimapSize + 4`).
 3. **Gas timer + alive count (+ kills) in an info bar under the minimap**
-   (mirrors `.ui-map-wrapper-mobile #ui-map-info`).
+   (mirrors `.ui-map-wrapper-mobile #ui-map-info`). The gas icon and `0:00`
+   are visible from the first frame, before the first zone starts.
 4. **Scope strip on the left side** (`#ui-top-center-scopes-wrapper` mobile):
    one pill per owned scope (1x…15x), tap equips the tapped scope via
    `InputActions::use(type)` (game.ts "use" scope), long-press drops it. The
