@@ -40,7 +40,7 @@ public:
     static constexpr float kDeadZone = 35.0f;
     static constexpr float kOpenDuration = 0.15f;
     // Touch-flow override (matches the emote wheel): the whole wheel (ring,
-    // selectors, icons, labels) draws at 1.5x and opens centred on the screen.
+    // selectors, icons) draws at 1.5x and opens centred on the screen.
     // Hit tests must use the scaled radii.
     static constexpr float kGeometryScale = 1.5f;
 
@@ -125,7 +125,6 @@ private:
         pix::Graphics* bg = nullptr;
         pix::Graphics* highlight = nullptr;
         pix::Sprite* icon = nullptr;
-        pix::Text* label = nullptr;
         bool teamOnly = false;
     };
 

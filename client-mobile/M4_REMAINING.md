@@ -3239,3 +3239,14 @@ melee hiding, ∞ reserve, box origins, reload tap geometry) and
 `gun_fire_cue_defs` (ak47 vs flare_gun `ignoreEndlessAmmo`); host tests
 4059 assertions / 242 tests, 0 failures. Verified on the x86_64 emulator (the
 boxes render centred above the health bar with the bullet icon).
+
+## 56. Session 55 - emote/ping wheel labels removed (2026-10-29)
+
+The emote wheel drew each loadout emote's name under its wedge and the ping
+wheel drew `Danger`/`Coming`/`Help`/`Medical`/`Ammo` beside its selectors.
+Both wheels are icon-based now: the `pix::Text` label nodes (and their
+`labelOffsets`/`labelAnchors`/`kLabels` data and the `shortLabel()` helper)
+are gone, so only the sprite art, coloured rings and highlight remain. Disabled
+(greyed/team-only-in-solo) selectors still dim through the icon alpha. The
+centre close selector keeps its `X` glyph. Host tests unchanged: 4059
+assertions / 242 tests, 0 failures.

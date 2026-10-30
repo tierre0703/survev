@@ -47,10 +47,6 @@ const char* const kEmoteOf[PingWheel::kSelectorCount] = {
     "", "", "", "", "emote_medical", "emote_ammo",
 };
 
-const char* const kLabels[PingWheel::kSelectorCount] = {
-    "", "Danger", "Coming", "Help", "Medical", "Ammo",
-};
-
 const uint32_t kRingColors[PingWheel::kSelectorCount] = {
     0xffffff, 0xff6644, 0xffaa33, 0x44cc66, 0x88ccff, 0xffaa33,
 };
@@ -168,16 +164,6 @@ void PingWheel::build(pix::Factory* factory, pix::Container* root, const Vec2& d
         ringCircle(item.highlight, rad + 4.0f, 4.0f, kHighlightRing, 0.95f);
         item.highlight->setVisible(false);
         holder->addChild(item.highlight);
-
-        item.label = _factory->createText();
-        item.label->setFontSize(i < 4 ? 11.0f : 10.0f);
-        item.label->setColor(0xffffff, 0x000000, 1.0f, false);
-        item.label->setAnchor(0.5f, 0.5f);
-        // Keep the label inside the backdrop, below/above the icon.
-        const Vec2 labelDir(std::cos(angle), std::sin(angle));
-        item.label->setPosition(labelDir.x * (dist + rad * 0.8f), labelDir.y * (dist + rad * 0.8f));
-        item.label->setText(kLabels[i]);
-        _wheel->addChild(item.label);
     }
 
     // Centre close selector (emote.ts middle: "close.svg").
@@ -344,7 +330,6 @@ void PingWheel::updateGrey() {
         Item& item = _items[i];
         const bool disabled = (item.teamOnly && _solo) || _greyed;
         item.icon->setAlpha(disabled ? 0.35f : 1.0f);
-        item.label->setAlpha(disabled ? 0.4f : 1.0f);
     }
 }
 

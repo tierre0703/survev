@@ -37,17 +37,6 @@ void ringCircle(pix::Graphics* g, float radius, float width, uint32_t color, flo
     g->drawCircle(0.0f, 0.0f, radius);
 }
 
-std::string shortLabel(const std::string& type, const EmoteRenderDef* def) {
-    if (def && !def->name.empty()) {
-        return def->name.size() > 14 ? def->name.substr(0, 14) : def->name;
-    }
-    std::string label = type;
-    if (label.rfind("emote_", 0) == 0) {
-        label = label.substr(6);
-    }
-    return label.size() > 14 ? label.substr(0, 14) : label;
-}
-
 } // namespace
 
 void EmoteWheel::build(pix::Factory* factory, pix::Container* root, const Vec2& design) {
@@ -94,18 +83,6 @@ void EmoteWheel::build(pix::Factory* factory, pix::Container* root, const Vec2& 
         { 0.0f, -kWedgeDistance },
         { -kWedgeDistance, 0.0f },
     };
-    static const float labelOffsets[4][2] = {
-        { 0.0f, +(kWedgeDistance + kWedgeRadius * 0.75f) },
-        { +(kWedgeDistance + kWedgeRadius * 0.75f), 0.0f },
-        { 0.0f, -(kWedgeDistance + kWedgeRadius * 0.75f) },
-        { -(kWedgeDistance + kWedgeRadius * 0.75f), 0.0f },
-    };
-    static const float labelAnchors[4][2] = {
-        { 0.5f, 0.0f },
-        { 0.0f, 0.5f },
-        { 0.5f, 1.0f },
-        { 1.0f, 0.5f },
-    };
     static const uint32_t wedgeColors[4] = { 0x4488ff, 0xff6644, 0x44cc66, 0xffaa33 };
 
     for (int i = 0; i < 4; ++i) {
@@ -131,13 +108,6 @@ void EmoteWheel::build(pix::Factory* factory, pix::Container* root, const Vec2& 
         ringCircle(w.highlight, kWedgeRadius + 4.0f, 4.0f, kHighlightRing, 0.95f);
         w.highlight->setVisible(false);
         holder->addChild(w.highlight);
-
-        w.label = _factory->createText();
-        w.label->setFontSize(11.0f);
-        w.label->setColor(0xffffff, 0x000000, 1.0f, false);
-        w.label->setAnchor(labelAnchors[i][0], labelAnchors[i][1]);
-        w.label->setPosition(labelOffsets[i][0], labelOffsets[i][1]);
-        _wheel->addChild(w.label);
     }
 
     // Centre close icon (emote.ts middle selector: "close.svg").
@@ -224,9 +194,6 @@ void EmoteWheel::refreshWedges() {
         w.teamOnly = def != nullptr && def->teamOnly;
 
         const bool disabled = type.empty() || (w.teamOnly && _solo);
-        w.label->setText(type.empty() ? std::string() : shortLabel(type, def));
-        w.label->setVisible(!type.empty());
-        w.label->setAlpha(disabled ? 0.4f : 1.0f);
 
         const bool hasIcon = def != nullptr && !def->texture.empty();
         w.icon->setVisible(hasIcon);
