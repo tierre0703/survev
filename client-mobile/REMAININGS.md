@@ -2085,3 +2085,9 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   that forever (every Java label stayed on its English fallback for the whole
   session). It now retries until a non-empty table arrives and only then caches
   it (the result screen's "Solo Rank" label exposed this).
+
+- `SettingsModal` now uses the GamePauseDialog layout: a fixed-height bordered
+  card with a fixed title/footer and one body ScrollView. Do not wrap it in a
+  full-height outer ScrollView again (the old nested-scroll bug); the card body
+  is the only scroll container. `buildUi()` re-creates the card on a language
+  change/reset, so the widget fields stay non-final.

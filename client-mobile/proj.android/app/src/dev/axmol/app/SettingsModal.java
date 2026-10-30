@@ -1,37 +1,42 @@
 /****************************************************************************
  * SettingsModal.java — Full settings screen matching web client #modal-settings.
  *
- * Enhanced settings with:
- *   - Language selector (cycle button)
- *   - Audio: real SeekBar sliders for Master/SFX/Music volume
- *   - Graphics: high-res textures, interpolation, local rotation, screen shake
- *   - Controls: touch move/aim style, aim line
- *   - Game: client theme, anonymous player names, HUD scale
- *   - Links: attributions, hall of fame, changelog
- *   - Reset to defaults functionality
- *   - Immediate config save on change
+ * Styled after the Java pause menu / result dialog so all native screens share
+ * one design language:
+ *   - Dark-green translucent card with a tan border and rounded corners
+ *   - Teal pill buttons with an inset bottom shadow and press feedback
+ *   - Thin teal sliders with a round thumb (label/value above the track)
+ *   - Cream section headers with compact vertical spacing
+ *   - Fixed title/footer; only the settings body scrolls
  *
- * Colors and layout match the web client CSS.
+ * Functionality is unchanged: language cycle, Master/SFX/Music volume,
+ * interpolation/screen shake/anonymous-names toggles, touch move/aim styles,
+ * aim line, Key Binds, links and reset-to-defaults.
  ****************************************************************************/
 package dev.axmol.app;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.net.Uri;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.SeekBar;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -40,98 +45,115 @@ import java.util.List;
 public class SettingsModal {
     private static final String TAG = "SettingsModal";
 
-    // Web client palette
-    private static final int DARK        = 0xFF7A7A7A;
-    private static final int DARK_SHADOW = 0xFF3E3E3E;
-    private static final int GREEN       = 0xFF83AF50;
-    private static final int GREEN_SHADOW = 0xFF5B7A38;
-    private static final int PANEL_BG    = 0xF0000000; // more opaque
+    // Palette shared with GamePauseDialog (web #ui-game-menu).
+    private static final int TEAL          = 0xFF50AFAB;
+    private static final int TEAL_SHADOW   = 0xFF387C79;
+    private static final int TEAL_OFF      = 0xFF4E6B65;
+    private static final int TEAL_OFF_SHD  = 0xFF344B47;
+    private static final int PANEL_BG      = 0xE6152411;
+    private static final int PANEL_BORDER  = 0xFFB9AD84;
+    private static final int TEXT_CREAM    = 0xFFF1EAD2;
+    private static final int TEXT_LABEL    = 0xFFE6EFE2;
+    private static final int TEXT_VALUE    = 0xFFA8CEC9;
+    private static final int TEXT_MUTED    = 0xFFB7C4B4;
+    private static final int TRACK_BG      = 0xFF2A4A40;
+    // Web-adjacent (attribution/HOF/changelog) links sit lower in the hierarchy.
+    private static final int LINK_BODY     = 0xFF3E4F45;
+    private static final int LINK_SHADOW   = 0xFF2A372F;
+    private static final int SCRIM         = 0x36000000;
 
     private final Activity mActivity;
     private final FrameLayout mRoot;
     private boolean mOpen = false;
     private Runnable mOnHidden = null;
+    private Runnable mOnOpenBinds = null;
 
     // --- widgets ---
-    private Button mLanguageBtn;
-    private SeekBar mMasterSlider;
-    private TextView mMasterLabel;
-    private SeekBar mSfxSlider;
-    private TextView mSfxLabel;
-    private SeekBar mMusicSlider;
-    private TextView mMusicLabel;
-    private CheckBox mInterpolation;
-    private CheckBox mScreenShake;
-    private CheckBox mAnonNames;
-    private Button mMoveStyleBtn;
-    private Button mAimStyleBtn;
-    private Button mAimLineBtn;
+    private TextView mLanguageBtn;
+    private SliderRow mMasterRow;
+    private SliderRow mSfxRow;
+    private SliderRow mMusicRow;
+    private TextView mInterpolationBtn;
+    private TextView mScreenShakeBtn;
+    private TextView mAnonNamesBtn;
+    private TextView mMoveStyleBtn;
+    private TextView mAimStyleBtn;
+    private TextView mAimLineBtn;
     private TextView mStatusText;
-    private Button mCloseBtn;
-    private Button mResetBtn;
+    private TextView mCloseBtn;
+    private TextView mResetBtn;
+    private ScrollView mScroll;
 
+    // --- state ---
     // ui::kLocales, fetched from the C++ bridge (localization.ts Locales).
     private List<Json.LocaleEntry> mLocales = new ArrayList<>();
     private int mLocaleIdx = 0;
     private boolean mMoveLocked = false;
     private boolean mAimLocked = false;
     private boolean mAimLine = true;
-    // Opens the Java Key Binds screen (JavaUiHost owns the modal).
-    private Runnable mOnOpenBinds = null;
+    private boolean mInterpolationOn = true;
+    private boolean mScreenShakeOn = true;
+    private boolean mAnonNamesOn = false;
 
     public SettingsModal(Activity activity) {
         mActivity = activity;
         mRoot = new FrameLayout(activity);
-        mRoot.setBackgroundColor(0xCC000000); // dim overlay
         buildUi();
     }
 
     /**
-     * Builds (or rebuilds) the modal views. Called again after a language
-     * change so the already-open Settings screen re-localizes in place.
+     * Builds the modal views. Called again after a language change/reset so
+     * the already-open screen re-localizes in place.
      */
     private void buildUi() {
-        // Full-height ScrollView for landscape responsiveness
-        ScrollView outerScroll = new ScrollView(mActivity);
-        outerScroll.setLayoutParams(new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        mRoot.removeAllViews();
+        mRoot.setBackgroundColor(SCRIM);
+        // Modal: taps on the dimmed area must not reach the menu behind it.
+        mRoot.setClickable(true);
+        mRoot.setFocusable(true);
 
-        // Main panel: translucent dark block, centered
-        LinearLayout panel = new LinearLayout(mActivity);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setGravity(Gravity.CENTER);
-        panel.setBackgroundColor(PANEL_BG);
-        panel.setPadding(dp(20), dp(14), dp(20), dp(14));
+        LinearLayout card = new LinearLayout(mActivity);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setGravity(Gravity.CENTER_HORIZONTAL);
+        GradientDrawable cardBg = new GradientDrawable();
+        cardBg.setColor(PANEL_BG);
+        cardBg.setCornerRadius(dp(8));
+        cardBg.setStroke(dp(2), PANEL_BORDER);
+        card.setBackground(cardBg);
+        card.setPadding(dp(12), dp(10), dp(12), dp(10));
+        FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(
+                cardWidth(), cardHeight());
+        cardParams.gravity = Gravity.CENTER;
+        card.setLayoutParams(cardParams);
 
-        // Title row with reset button
-        LinearLayout titleRow = new LinearLayout(mActivity);
-        titleRow.setOrientation(LinearLayout.HORIZONTAL);
-        
         TextView title = new TextView(mActivity);
         title.setText("\u2699 " + L10n.t("index-settings", "Settings"));
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        title.setTextColor(TEXT_CREAM);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         title.setGravity(Gravity.CENTER);
-        title.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        titleRow.addView(title);
+        title.setIncludeFontPadding(false);
+        title.setShadowLayer(dp(2), 0, dp(2), 0x55000000);
+        card.addView(title, fullParams(ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        mResetBtn = makeSmallButton(L10n.t("settings-reset", "Reset"));
-        mResetBtn.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) { resetToDefaults(); }
-        });
-        titleRow.addView(mResetBtn);
-        panel.addView(titleRow);
+        addGap(card, dp(6));
 
-        // -- Modal body (web #modal-settings body): no nested ScrollView here.
-        // The outer scroll owns the scrolling; a nested inner scroll never
-        // receives vertical flings on a device (the outer consumes them and is
-        // already at its end), which left Key Binds / Game / links unreachable.
-        LinearLayout content = new LinearLayout(mActivity);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(dp(10), 0, dp(10), 0);
+        // Only the body scrolls: the title and the Reset/Close footer stay put.
+        mScroll = new ScrollView(mActivity);
+        mScroll.setVerticalScrollBarEnabled(false);
+        mScroll.setFillViewport(true);
 
-        // === Language (web: language select dropdown) ===
-        addSectionHeader(content, L10n.t("settings-language", "Language"));
+        LinearLayout body = new LinearLayout(mActivity);
+        body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(0, 0, 0, dp(2));
+        mScroll.addView(body, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        card.addView(mScroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        // === Language ===
+        body.addView(makeSectionHeader(L10n.t("settings-language", "Language")),
+                fullParams(ViewGroup.LayoutParams.WRAP_CONTENT));
         mLocales = Json.parseLocales(SurvBridge.getLocalesJson());
         if (mLocales.isEmpty()) {
             Json.LocaleEntry en = new Json.LocaleEntry();
@@ -139,12 +161,13 @@ public class SettingsModal {
             en.name = "English";
             mLocales.add(en);
         }
-        mLanguageBtn = makeToggleButton("English");
+        mLanguageBtn = makeThemedButton(
+                mLocales.get(0).name + "  \u25BE", TEAL, TEAL_SHADOW);
         mLanguageBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 mLocaleIdx = (mLocaleIdx + 1) % mLocales.size();
                 Json.LocaleEntry locale = mLocales.get(mLocaleIdx);
-                mLanguageBtn.setText(locale.name);
+                mLanguageBtn.setText(locale.name + "  \u25BE");
                 SurvBridge.setLanguage(locale.code);
                 SurvBridge.saveConfig();
                 L10n.invalidate();
@@ -153,98 +176,52 @@ public class SettingsModal {
                 mStatusText.setText("");
             }
         });
-        content.addView(mLanguageBtn);
-        addGap(content, dp(6));
+        body.addView(mLanguageBtn, fullParams(dp(36)));
 
-        // === Audio section with real sliders ===
-        addSectionHeader(content, "\uD83C\uDFB5 " + L10n.t("settings-audio", "Audio"));
+        // === Audio ===
+        body.addView(makeSectionHeader(L10n.t("settings-audio", "Audio")),
+                fullParams(ViewGroup.LayoutParams.WRAP_CONTENT));
+        mMasterRow = makeSliderRow(L10n.t("index-master-volume", "Master Volume"), 100);
+        bindVolumeSlider(mMasterRow, "master");
+        body.addView(mMasterRow.root, fullParams(ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // Master Volume slider
-        LinearLayout masterRow = makeSliderRow(L10n.t("index-master-volume", "Master Volume"), 100);
-        mMasterLabel = (TextView) masterRow.getChildAt(1);
-        mMasterSlider = (SeekBar) masterRow.getChildAt(2);
-        mMasterSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
-                float val = progress / 100f;
-                mMasterLabel.setText(String.format("%.0f%%", val * 100));
-                if (fromUser) {
-                    SurvBridge.setAudio("master", val);
-                    SurvBridge.saveConfig();
-                }
-            }
-            @Override public void onStartTrackingTouch(SeekBar sb) {}
-            @Override public void onStopTrackingTouch(SeekBar sb) {}
-        });
-        content.addView(masterRow);
+        mSfxRow = makeSliderRow(L10n.t("index-sfx-volume", "SFX Volume"), 100);
+        bindVolumeSlider(mSfxRow, "sound");
+        body.addView(mSfxRow.root, fullParams(ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // SFX Volume slider
-        LinearLayout sfxRow = makeSliderRow(L10n.t("index-sfx-volume", "SFX Volume"), 100);
-        mSfxLabel = (TextView) sfxRow.getChildAt(1);
-        mSfxSlider = (SeekBar) sfxRow.getChildAt(2);
-        mSfxSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
-                float val = progress / 100f;
-                mSfxLabel.setText(String.format("%.0f%%", val * 100));
-                if (fromUser) {
-                    SurvBridge.setAudio("sound", val);
-                    SurvBridge.saveConfig();
-                }
-            }
-            @Override public void onStartTrackingTouch(SeekBar sb) {}
-            @Override public void onStopTrackingTouch(SeekBar sb) {}
-        });
-        content.addView(sfxRow);
+        mMusicRow = makeSliderRow(L10n.t("index-music-volume", "Music Volume"), 100);
+        bindVolumeSlider(mMusicRow, "music");
+        body.addView(mMusicRow.root, fullParams(ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        // Music Volume slider
-        LinearLayout musicRow = makeSliderRow(L10n.t("index-music-volume", "Music Volume"), 100);
-        mMusicLabel = (TextView) musicRow.getChildAt(1);
-        mMusicSlider = (SeekBar) musicRow.getChildAt(2);
-        mMusicSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
-                float val = progress / 100f;
-                mMusicLabel.setText(String.format("%.0f%%", val * 100));
-                if (fromUser) {
-                    SurvBridge.setAudio("music", val);
-                    SurvBridge.saveConfig();
-                }
-            }
-            @Override public void onStartTrackingTouch(SeekBar sb) {}
-            @Override public void onStopTrackingTouch(SeekBar sb) {}
-        });
-        content.addView(musicRow);
-
-        addGap(content, dp(6));
-
-        // === Graphics section ===
-        // `highResTex` has no native equivalent: the C++ client ships only the
-        // low-res atlases and quality is controlled by the GFX surface tier in
-        // the pause dialog (RenderScale), so the control is absent.
-        addSectionHeader(content, "\uD83D\uDCF8 " + L10n.t("settings-graphics", "Graphics"));
-
-        mInterpolation = makeCheckbox(L10n.t("index-client-side-interp", "Client side interpolation"), true);
-        mInterpolation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
-                SurvBridge.setConfigValue("interpolation", checked ? "true" : "false");
+        // === Graphics ===
+        body.addView(makeSectionHeader(L10n.t("settings-graphics", "Graphics")),
+                fullParams(ViewGroup.LayoutParams.WRAP_CONTENT));
+        mInterpolationBtn = makeThemedButton("", TEAL, TEAL_SHADOW);
+        mInterpolationBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                mInterpolationOn = !mInterpolationOn;
+                applyToggleButtons();
+                SurvBridge.setConfigValue("interpolation", mInterpolationOn ? "true" : "false");
                 SurvBridge.saveConfig();
             }
         });
-        content.addView(mInterpolation);
+        body.addView(mInterpolationBtn, fullParams(dp(36)));
 
-        mScreenShake = makeCheckbox(L10n.t("index-screen-shake", "Screen shake"), true);
-        mScreenShake.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
-                SurvBridge.setConfigValue("screenShake", checked ? "true" : "false");
+        mScreenShakeBtn = makeThemedButton("", TEAL, TEAL_SHADOW);
+        mScreenShakeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                mScreenShakeOn = !mScreenShakeOn;
+                applyToggleButtons();
+                SurvBridge.setConfigValue("screenShake", mScreenShakeOn ? "true" : "false");
                 SurvBridge.saveConfig();
             }
         });
-        content.addView(mScreenShake);
-        
-        addGap(content, dp(6));
+        body.addView(mScreenShakeBtn, fullParams(dp(36)));
 
-        // === Controls section ===
-        addSectionHeader(content, "\u270B " + L10n.t("index-controls", "Controls"));
-
-        mMoveStyleBtn = makeToggleButton("");
+        // === Controls ===
+        body.addView(makeSectionHeader(L10n.t("index-controls", "Controls")),
+                fullParams(ViewGroup.LayoutParams.WRAP_CONTENT));
+        mMoveStyleBtn = makeThemedButton("", TEAL, TEAL_SHADOW);
         mMoveStyleBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 mMoveLocked = !mMoveLocked;
@@ -253,9 +230,9 @@ public class SettingsModal {
                 SurvBridge.saveConfig();
             }
         });
-        content.addView(mMoveStyleBtn);
+        body.addView(mMoveStyleBtn, fullParams(dp(36)));
 
-        mAimStyleBtn = makeToggleButton("");
+        mAimStyleBtn = makeThemedButton("", TEAL, TEAL_SHADOW);
         mAimStyleBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 mAimLocked = !mAimLocked;
@@ -264,9 +241,9 @@ public class SettingsModal {
                 SurvBridge.saveConfig();
             }
         });
-        content.addView(mAimStyleBtn);
+        body.addView(mAimStyleBtn, fullParams(dp(36)));
 
-        mAimLineBtn = makeToggleButton("");
+        mAimLineBtn = makeThemedButton("", TEAL, TEAL_SHADOW);
         mAimLineBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 mAimLine = !mAimLine;
@@ -275,185 +252,320 @@ public class SettingsModal {
                 SurvBridge.saveConfig();
             }
         });
-        content.addView(mAimLineBtn);
+        body.addView(mAimLineBtn, fullParams(dp(36)));
 
         // Key/mouse bind editor (client/src/inputBinds.ts InputBindUi): the
         // table lives in C++ and is applied to the live hardware input.
-        Button bindsBtn = makeToggleButton("\u2328 " + L10n.t("index-keybinds", "Key Binds") + "...");
+        TextView bindsBtn = makeThemedButton(
+                L10n.t("index-keybinds", "Key Binds") + "...", TEAL, TEAL_SHADOW);
         bindsBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 if (mOnOpenBinds != null) mOnOpenBinds.run();
             }
         });
-        content.addView(bindsBtn);
+        body.addView(bindsBtn, fullParams(dp(36)));
 
-        addGap(content, dp(6));
-
-        // === Game section ===
-        addSectionHeader(content, "\uD83C\uDFAE " + L10n.t("settings-game", "Game"));
-
-        mAnonNames = makeCheckbox(L10n.t("index-anon-player-names", "Anonymize player names"), false);
-        mAnonNames.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override public void onCheckedChanged(CompoundButton b, boolean checked) {
-                SurvBridge.setConfigValue("anonPlayerNames", checked ? "true" : "false");
+        // === Game ===
+        body.addView(makeSectionHeader(L10n.t("settings-game", "Game")),
+                fullParams(ViewGroup.LayoutParams.WRAP_CONTENT));
+        mAnonNamesBtn = makeThemedButton("", TEAL, TEAL_SHADOW);
+        mAnonNamesBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                mAnonNamesOn = !mAnonNamesOn;
+                applyToggleButtons();
+                SurvBridge.setConfigValue("anonPlayerNames", mAnonNamesOn ? "true" : "false");
                 SurvBridge.saveConfig();
             }
         });
-        content.addView(mAnonNames);
+        body.addView(mAnonNamesBtn, fullParams(dp(36)));
 
-        // === Links ===
-        addGap(content, dp(10));
-        Button leaderboardBtn = makeLinkButton("\uD83C\uDFC6 " + L10n.t("index-leaderboards", "Leaderboards"));
+        // === Links === (web #settings-links; compact two-column rows)
+        addGap(body, dp(6));
+        LinearLayout linkRowA = new LinearLayout(mActivity);
+        linkRowA.setOrientation(LinearLayout.HORIZONTAL);
+        TextView leaderboardBtn = makeLinkButton(L10n.t("index-leaderboards", "Leaderboards"));
         leaderboardBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { openWebPage("/stats"); }
         });
-        content.addView(leaderboardBtn);
-
-        Button attribBtn = makeLinkButton("\u00A9 " + L10n.t("index-attributions", "attributions"));
+        TextView attribBtn = makeLinkButton(L10n.t("index-attributions", "attributions"));
         attribBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { openWebPage("/attribution.txt"); }
         });
-        content.addView(attribBtn);
+        linkRowA.addView(leaderboardBtn, halfParams(0, dp(3)));
+        linkRowA.addView(attribBtn, halfParams(dp(3), 0));
+        body.addView(linkRowA, fullParams(dp(34)));
 
-        Button hofBtn = makeLinkButton("\uD83C\uDFC6 " + L10n.t("index-hof", "Hall of Fame"));
+        addGap(body, dp(4));
+        LinearLayout linkRowB = new LinearLayout(mActivity);
+        linkRowB.setOrientation(LinearLayout.HORIZONTAL);
+        TextView hofBtn = makeLinkButton(L10n.t("index-hof", "Hall of Fame"));
         hofBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { openWebPage("/hof.html"); }
         });
-        content.addView(hofBtn);
-
-        Button changelogBtn = makeLinkButton("\uD83D\uDCDD " + L10n.t("index-original-changelog", "Changelog"));
+        TextView changelogBtn = makeLinkButton(
+                L10n.t("index-original-changelog", "Changelog"));
         changelogBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { openWebPage("/changelogRec.html"); }
         });
-        content.addView(changelogBtn);
+        linkRowB.addView(hofBtn, halfParams(0, dp(3)));
+        linkRowB.addView(changelogBtn, halfParams(dp(3), 0));
+        body.addView(linkRowB, fullParams(dp(34)));
 
-        panel.addView(content);
-
-        // === Bottom: status + close ===
+        // === Fixed footer: status + Reset/Close ===
         mStatusText = new TextView(mActivity);
-        mStatusText.setTextColor(0xFF808080);
-        mStatusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        mStatusText.setTextColor(TEXT_MUTED);
+        mStatusText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
         mStatusText.setGravity(Gravity.CENTER);
-        panel.addView(mStatusText);
+        mStatusText.setIncludeFontPadding(false);
+        card.addView(mStatusText, fullParams(ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        mCloseBtn = makeGreenButton(L10n.t("index-close", "Close") + " \u2715");
+        addGap(card, dp(5));
+
+        LinearLayout actions = new LinearLayout(mActivity);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        mResetBtn = makeThemedButton(L10n.t("settings-reset", "Reset"),
+                TEAL_OFF, TEAL_OFF_SHD);
+        mResetBtn.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { resetToDefaults(); }
+        });
+        actions.addView(mResetBtn, halfParams(0, dp(3)));
+
+        mCloseBtn = makeThemedButton(L10n.t("index-close", "Close"), TEAL, TEAL_SHADOW);
         mCloseBtn.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { hide(); }
         });
-        panel.addView(mCloseBtn);
+        actions.addView(mCloseBtn, halfParams(dp(3), 0));
+        card.addView(actions, fullParams(dp(40)));
 
-        outerScroll.addView(panel);
-
-        mRoot.addView(outerScroll);
-        // The three style toggles are built with empty labels and filled from
-        // the saved state + locale here (syncFromConfig re-applies them).
+        mRoot.addView(card);
         applyTouchStyleButtons();
+        applyToggleButtons();
     }
 
-    private void addSectionHeader(LinearLayout parent, String text) {
-        TextView h = new TextView(mActivity);
-        h.setText(text);
-        h.setTextColor(0xFFFFD700); // gold (#ffd700)
-        h.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        h.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        h.setPadding(0, dp(10), 0, dp(4));
-        parent.addView(h);
+    private TextView makeSectionHeader(String text) {
+        TextView header = new TextView(mActivity);
+        header.setText(text);
+        header.setTextColor(TEXT_CREAM);
+        header.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        header.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        header.setIncludeFontPadding(false);
+        header.setPadding(0, dp(7), 0, dp(3));
+        return header;
     }
 
     private void addGap(LinearLayout parent, int height) {
         View gap = new View(mActivity);
-        gap.setLayoutParams(new ViewGroup.LayoutParams(1, height));
-        parent.addView(gap);
+        parent.addView(gap, new LinearLayout.LayoutParams(1, height));
     }
 
-    /**
-     * Creates a slider row: Label | Percentage value | SeekBar
-     */
-    private LinearLayout makeSliderRow(String label, int defaultValue) {
-        LinearLayout row = new LinearLayout(mActivity);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(0, dp(3), 0, dp(3));
+    /** Horizontal label/value line above a full-width slider (pause dialog). */
+    private SliderRow makeSliderRow(String label, int defaultValue) {
+        SliderRow row = new SliderRow();
 
-        TextView lbl = new TextView(mActivity);
-        lbl.setText(label);
-        lbl.setTextColor(Color.WHITE);
-        lbl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        lbl.setLayoutParams(new LinearLayout.LayoutParams(dp(64), ViewGroup.LayoutParams.WRAP_CONTENT));
-        row.addView(lbl);
+        LinearLayout root = new LinearLayout(mActivity);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(0, dp(4), 0, dp(2));
 
-        TextView val = new TextView(mActivity);
-        val.setText(defaultValue + "%");
-        val.setTextColor(GREEN);
-        val.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        // Margins keep the percentage clear of the label even when the label
-        // text reaches its column edge ("SFX Volume100%" on a device).
-        LinearLayout.LayoutParams valParams = new LinearLayout.LayoutParams(
-                dp(44), ViewGroup.LayoutParams.WRAP_CONTENT);
-        valParams.setMargins(dp(2), 0, dp(4), 0);
-        val.setLayoutParams(valParams);
-        row.addView(val);
+        LinearLayout labelRow = new LinearLayout(mActivity);
+        labelRow.setOrientation(LinearLayout.HORIZONTAL);
+        labelRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView labelView = new TextView(mActivity);
+        labelView.setText(label);
+        labelView.setTextColor(TEXT_LABEL);
+        labelView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        labelView.setIncludeFontPadding(false);
+        labelView.setLayoutParams(new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        labelRow.addView(labelView);
+
+        TextView value = new TextView(mActivity);
+        value.setText(defaultValue + "%");
+        value.setTextColor(TEXT_VALUE);
+        value.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
+        value.setIncludeFontPadding(false);
+        labelRow.addView(value);
+
+        root.addView(labelRow);
 
         SeekBar slider = new SeekBar(mActivity);
         slider.setMax(100);
         slider.setProgress(defaultValue);
-        slider.setLayoutParams(new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        
-        // Removed SeekBar styling that uses unavailable API
-        
-        row.addView(slider);
+        styleSlider(slider);
+        root.addView(slider, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(34)));
 
+        row.root = root;
+        row.label = labelView;
+        row.value = value;
+        row.bar = slider;
         return row;
     }
 
-    private Button makeToggleButton(String label) {
-        Button btn = new Button(mActivity);
+    private void bindVolumeSlider(final SliderRow row, final String audioKey) {
+        row.bar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar sb, int progress, boolean fromUser) {
+                float val = progress / 100f;
+                row.value.setText(String.format("%.0f%%", val * 100));
+                if (fromUser) SurvBridge.setAudio(audioKey, val);
+            }
+            @Override public void onStartTrackingTouch(SeekBar sb) {}
+            @Override public void onStopTrackingTouch(SeekBar sb) { SurvBridge.saveConfig(); }
+        });
+    }
+
+    /** Teal progress track + round thumb, matching the web range input. */
+    private void styleSlider(SeekBar slider) {
+        slider.setProgressDrawable(new SliderTrackDrawable());
+        GradientDrawable thumb = new GradientDrawable();
+        thumb.setShape(GradientDrawable.OVAL);
+        thumb.setColor(TEAL);
+        thumb.setStroke(dp(2), TEAL_SHADOW);
+        thumb.setSize(dp(22), dp(22));
+        slider.setThumb(thumb);
+        slider.setThumbOffset(dp(1));
+        slider.setSplitTrack(false);
+        slider.setPadding(dp(10), 0, dp(10), 0);
+    }
+
+    /**
+     * Thin rounded track with a teal filled portion (same drawable as the pause
+     * menu). A plain LayerDrawable would stretch to the SeekBar height.
+     */
+    private final class SliderTrackDrawable extends Drawable {
+        private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private int mLevel = 0;
+        private int mAlpha = 255;
+        private android.graphics.ColorFilter mFilter = null;
+
+        @Override public void draw(Canvas canvas) {
+            Rect b = getBounds();
+            float h = dp(6);
+            float top = b.top + (b.height() - h) / 2f;
+            float radius = h / 2f;
+
+            mPaint.setColorFilter(mFilter);
+            mPaint.setColor(TRACK_BG);
+            mPaint.setAlpha(mAlpha);
+            canvas.drawRoundRect(new RectF(b.left, top, b.right, top + h), radius, radius, mPaint);
+
+            float right = b.left + b.width() * (mLevel / 10000f);
+            if (right > b.left) {
+                mPaint.setColor(TEAL);
+                mPaint.setAlpha(mAlpha);
+                canvas.drawRoundRect(new RectF(b.left, top, right, top + h), radius, radius, mPaint);
+            }
+        }
+
+        @Override protected boolean onLevelChange(int level) {
+            mLevel = level;
+            invalidateSelf();
+            return true;
+        }
+
+        @Override public void setAlpha(int alpha) { mAlpha = alpha; invalidateSelf(); }
+        @Override public void setColorFilter(android.graphics.ColorFilter cf) {
+            mFilter = cf;
+            invalidateSelf();
+        }
+        @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
+    }
+
+    /**
+     * Teal pill with a darker inset bottom edge (GamePauseDialog's buttonBg)
+     * and press feedback. Text-only: the pause screen's line icons are not
+     * needed for the settings labels.
+     */
+    private TextView makeThemedButton(String label, final int body, final int shadow) {
+        TextView btn = new TextView(mActivity);
         btn.setText(label);
-        btn.setBackgroundColor(DARK);
-        btn.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(36)));
         btn.setTextColor(Color.WHITE);
         btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         btn.setGravity(Gravity.CENTER);
-        btn.setPadding(dp(12), dp(6), dp(12), dp(6));
+        btn.setIncludeFontPadding(false);
+        btn.setShadowLayer(dp(1), 0, dp(1), 0x55000000);
+        btn.setPadding(dp(14), 0, dp(14), 0);
+        btn.setClickable(true);
+        btn.setBackground(buttonBg(body, shadow));
+        btn.setOnTouchListener(new View.OnTouchListener() {
+            @Override public boolean onTouch(View v, MotionEvent e) {
+                int action = e.getActionMasked();
+                if (action == MotionEvent.ACTION_DOWN) {
+                    v.setAlpha(0.72f);
+                } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                    v.setAlpha(1f);
+                }
+                return false;
+            }
+        });
         return btn;
     }
 
-    private CheckBox makeCheckbox(String label, boolean def) {
-        CheckBox cb = new CheckBox(mActivity);
-        cb.setText(label);
-        cb.setChecked(def);
-        cb.setTextColor(Color.WHITE);
-        cb.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        cb.setPadding(dp(4), dp(4), dp(4), dp(4));
-        return cb;
-    }
-
-    private Button makeGreenButton(String label) {
-        Button btn = new Button(mActivity);
-        btn.setText(label);
-        btn.setBackgroundColor(GREEN);
-        btn.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(44)));
-        btn.setGravity(Gravity.CENTER);
-        btn.setTextColor(Color.WHITE);
-        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        btn.setPadding(dp(12), dp(8), dp(12), dp(8));
+    private TextView makeLinkButton(String label) {
+        TextView btn = makeThemedButton(label, LINK_BODY, LINK_SHADOW);
+        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        btn.setPadding(dp(6), 0, dp(6), 0);
         return btn;
     }
 
-    private Button makeLinkButton(String label) {
-        Button btn = new Button(mActivity);
-        btn.setText(label);
-        btn.setBackgroundColor(DARK);
-        btn.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(34)));
-        btn.setGravity(Gravity.CENTER);
-        btn.setTextColor(0xFF1E90FF); // blue link color
-        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        btn.setPadding(dp(12), dp(6), dp(12), dp(6));
-        return btn;
+    private void setButtonTone(TextView btn, boolean on) {
+        btn.setBackground(buttonBg(on ? TEAL : TEAL_OFF, on ? TEAL_SHADOW : TEAL_OFF_SHD));
+    }
+
+    private LayerDrawable buttonBg(int body, int shadow) {
+        GradientDrawable bottom = new GradientDrawable();
+        bottom.setColor(shadow);
+        bottom.setCornerRadius(dp(6));
+        GradientDrawable top = new GradientDrawable();
+        top.setColor(body);
+        top.setCornerRadius(dp(6));
+        LayerDrawable ld = new LayerDrawable(new Drawable[] { bottom, top });
+        ld.setLayerInset(1, 0, 0, 0, dp(3));
+        return ld;
+    }
+
+    private LinearLayout.LayoutParams fullParams(int height) {
+        return new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, height);
+    }
+
+    private LinearLayout.LayoutParams halfParams(int leftMargin, int rightMargin) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+        lp.leftMargin = leftMargin;
+        lp.rightMargin = rightMargin;
+        return lp;
+    }
+
+    private void applyToggleButtons() {
+        setToggle(mInterpolationBtn,
+                L10n.t("index-client-side-interp", "Client side interpolation"),
+                mInterpolationOn);
+        setToggle(mScreenShakeBtn, L10n.t("index-screen-shake", "Screen shake"),
+                mScreenShakeOn);
+        setToggle(mAnonNamesBtn,
+                L10n.t("index-anon-player-names", "Anonymize player names"),
+                mAnonNamesOn);
+    }
+
+    /** Check/cross pill: the tone alone is not enough for color-blind users. */
+    private void setToggle(TextView btn, String label, boolean on) {
+        btn.setText((on ? "\u2713  " : "\u2715  ") + label);
+        setButtonTone(btn, on);
+    }
+
+    private void applyTouchStyleButtons() {
+        mMoveStyleBtn.setText(mMoveLocked
+                ? L10n.t("settings-move-locked", "Move Style: Locked")
+                : L10n.t("settings-move-anywhere", "Move Style: Anywhere"));
+        mAimStyleBtn.setText(mAimLocked
+                ? L10n.t("settings-aim-locked", "Aim Style: Locked")
+                : L10n.t("settings-aim-anywhere", "Aim Style: Anywhere"));
+        final String aimLineText = mAimLine
+                ? L10n.t("settings-aim-line-on", "Aim Line: On")
+                : L10n.t("settings-aim-line-off", "Aim Line: Off");
+        mAimLineBtn.setText((mAimLine ? "\u2713  " : "\u2715  ") + aimLineText);
+        setButtonTone(mAimLineBtn, mAimLine);
     }
 
     /**
@@ -470,15 +582,6 @@ public class SettingsModal {
             mStatusText.setText(L10n.t("index-error", "Error") + ": " + path);
         }
     }
-    
-    private Button makeSmallButton(String label) {
-        Button btn = new Button(mActivity);
-        btn.setText(label);
-        btn.setBackgroundColor(0xFF666666);
-        btn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        btn.setPadding(dp(8), dp(2), dp(8), dp(2));
-        return btn;
-    }
 
     // ===== Public API =====
 
@@ -488,6 +591,10 @@ public class SettingsModal {
         mOpen = true;
         mRoot.setVisibility(View.VISIBLE);
         syncFromConfig();
+        // Reopen at the top; a previous scroll should hide nothing.
+        mScroll.post(new Runnable() {
+            @Override public void run() { mScroll.scrollTo(0, 0); }
+        });
     }
 
     public void hide() {
@@ -504,19 +611,7 @@ public class SettingsModal {
     /** Opens the Java Key Binds screen (owned by JavaUiHost). */
     public void setOnOpenBinds(Runnable onOpenBinds) { mOnOpenBinds = onOpenBinds; }
 
-    private void applyTouchStyleButtons() {
-        mMoveStyleBtn.setText(mMoveLocked
-                ? L10n.t("settings-move-locked", "Move Style: Locked")
-                : L10n.t("settings-move-anywhere", "Move Style: Anywhere"));
-        mAimStyleBtn.setText(mAimLocked
-                ? L10n.t("settings-aim-locked", "Aim Style: Locked")
-                : L10n.t("settings-aim-anywhere", "Aim Style: Anywhere"));
-        mAimLineBtn.setText(mAimLine
-                ? L10n.t("settings-aim-line-on", "Aim Line: On")
-                : L10n.t("settings-aim-line-off", "Aim Line: Off"));
-    }
-
-    /** Reset all settings to default values */
+    /** Reset all settings to default values. */
     private void resetToDefaults() {
         // Language (web default is English, which is not the first Locales entry)
         mLocaleIdx = 0;
@@ -527,35 +622,30 @@ public class SettingsModal {
             }
         }
         if (!mLocales.isEmpty()) {
-            mLanguageBtn.setText(mLocales.get(mLocaleIdx).name);
+            mLanguageBtn.setText(mLocales.get(mLocaleIdx).name + "  \u25BE");
         }
         SurvBridge.setLanguage("en");
         L10n.invalidate();
 
-        // Volumes (web defaults: master 1, sound 1, music 1).
-        mMasterSlider.setProgress(100);
-        mSfxSlider.setProgress(100);
-        mMusicSlider.setProgress(100);
-        mMasterLabel.setText("100%");
-        mSfxLabel.setText("100%");
-        mMusicLabel.setText("100%");
+        // Volumes (web defaults: master 1, sound 1, music 1). setAudio()
+        // applies on the game thread, so the visible sliders are pinned after
+        // the rebuild below instead of relying on the config read.
         SurvBridge.setAudio("master", 1.0f);
         SurvBridge.setAudio("sound", 1.0f);
         SurvBridge.setAudio("music", 1.0f);
 
-        // Graphics
-        mInterpolation.setChecked(true);
-        mScreenShake.setChecked(true);
-        mAnonNames.setChecked(false);
+        // Graphics / game toggles.
+        mInterpolationOn = true;
+        mScreenShakeOn = true;
+        mAnonNamesOn = false;
         SurvBridge.setConfigValue("interpolation", "true");
         SurvBridge.setConfigValue("screenShake", "true");
         SurvBridge.setConfigValue("anonPlayerNames", "false");
 
-        // Controls (config defaults are "anywhere" + aim line on)
+        // Controls (config defaults are "anywhere" + aim line on).
         mMoveLocked = false;
         mAimLocked = false;
         mAimLine = true;
-        applyTouchStyleButtons();
         SurvBridge.setConfigValue("touchMoveStyle", "anywhere");
         SurvBridge.setConfigValue("touchAimStyle", "anywhere");
         SurvBridge.setConfigValue("touchAimLine", "true");
@@ -563,6 +653,14 @@ public class SettingsModal {
         SurvBridge.saveConfig();
         // Reset can change the language too; rebuild so every label matches.
         rebuildUi();
+        // The audio setters are marshalled to the game thread; show the reset
+        // values immediately rather than the config's previous numbers.
+        mMasterRow.bar.setProgress(100);
+        mSfxRow.bar.setProgress(100);
+        mMusicRow.bar.setProgress(100);
+        mMasterRow.value.setText("100%");
+        mSfxRow.value.setText("100%");
+        mMusicRow.value.setText("100%");
         mStatusText.setText(L10n.t("settings-reset-done", "Settings reset to defaults"));
 
         Log.i(TAG, "Settings reset to defaults");
@@ -570,7 +668,6 @@ public class SettingsModal {
 
     /** Rebuilds the view tree and re-applies the saved config. */
     private void rebuildUi() {
-        mRoot.removeAllViews();
         buildUi();
         syncFromConfig();
         applyTouchStyleButtons();
@@ -580,13 +677,13 @@ public class SettingsModal {
         String config = SurvBridge.getConfigJson();
         if (config == null || config.isEmpty()) return;
 
-        // Language (names come from ui::kLocales via the bridge)
+        // Language (names come from ui::kLocales via the bridge).
         String lang = Json.peekString(config, "language");
         if (lang != null) {
             for (int i = 0; i < mLocales.size(); i++) {
                 if (mLocales.get(i).code.equals(lang)) {
                     mLocaleIdx = i;
-                    mLanguageBtn.setText(mLocales.get(i).name);
+                    mLanguageBtn.setText(mLocales.get(i).name + "  \u25BE");
                     break;
                 }
             }
@@ -594,30 +691,53 @@ public class SettingsModal {
 
         // Volume sliders: the config stores numbers, not strings.
         float master = Json.peekFloat(config, "masterVolume", 1.0f);
-        mMasterSlider.setProgress(Math.round(master * 100));
-        mMasterLabel.setText(String.format("%.0f%%", master * 100));
+        mMasterRow.bar.setProgress(Math.round(master * 100));
+        mMasterRow.value.setText(String.format("%.0f%%", master * 100));
         float sfx = Json.peekFloat(config, "soundVolume", 1.0f);
-        mSfxSlider.setProgress(Math.round(sfx * 100));
-        mSfxLabel.setText(String.format("%.0f%%", sfx * 100));
+        mSfxRow.bar.setProgress(Math.round(sfx * 100));
+        mSfxRow.value.setText(String.format("%.0f%%", sfx * 100));
         float music = Json.peekFloat(config, "musicVolume", 1.0f);
-        mMusicSlider.setProgress(Math.round(music * 100));
-        mMusicLabel.setText(String.format("%.0f%%", music * 100));
+        mMusicRow.bar.setProgress(Math.round(music * 100));
+        mMusicRow.value.setText(String.format("%.0f%%", music * 100));
 
-        // Touch style / aim line (booleans, not strings)
+        // Graphics / game toggles.
+        mInterpolationOn = Json.peekBool(config, "interpolation", true);
+        mScreenShakeOn = Json.peekBool(config, "screenShake", true);
+        mAnonNamesOn = Json.peekBool(config, "anonPlayerNames", false);
+        applyToggleButtons();
+
+        // Touch style / aim line.
         mMoveLocked = "locked".equals(Json.peekString(config, "touchMoveStyle"));
         mAimLocked = "locked".equals(Json.peekString(config, "touchAimStyle"));
         mAimLine = Json.peekBool(config, "touchAimLine", true);
         applyTouchStyleButtons();
 
-        // Graphics checkboxes
-        mInterpolation.setChecked(Json.peekBool(config, "interpolation", true));
-        mScreenShake.setChecked(Json.peekBool(config, "screenShake", true));
-        mAnonNames.setChecked(Json.peekBool(config, "anonPlayerNames", false));
-
         mStatusText.setText("");
+    }
+
+    private int cardWidth() {
+        int screen = mActivity.getResources().getDisplayMetrics().widthPixels;
+        return Math.min(dp(360), screen - dp(24));
+    }
+
+    /**
+     * Cap the card so the border always fits while the settings body scrolls.
+     * 480dp keeps tall tablets from looking like a sidebar; short landscape
+     * screens fall back to the viewport minus a small margin.
+     */
+    private int cardHeight() {
+        int screen = mActivity.getResources().getDisplayMetrics().heightPixels;
+        return Math.max(dp(240), Math.min(dp(480), screen - dp(24)));
     }
 
     private int dp(int value) {
         return (int) (value * mActivity.getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private static final class SliderRow {
+        LinearLayout root;
+        TextView label;
+        TextView value;
+        SeekBar bar;
     }
 }

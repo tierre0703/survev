@@ -3449,3 +3449,27 @@ reference; the C++ panel nodes remain for the team-death `showTeamAd` screen.
 `L10n.table()` also stopped caching an empty table (the Java menu is built
 before axmol's asset paths are ready, so the first lookup can see `{}`); this
 is what put the result screen's rank label on its fallback.
+
+## 67. Session 66 - settings screen restyle (2026-10-30)
+
+`SettingsModal` now shares the pause/result design language instead of the old
+flat Android widgets:
+
+- Dark-green translucent card (`0xE6152411`) with the tan border and 8dp radius;
+  fixed title/status/footer with only the settings body scrolling (no nested
+  outer ScrollView).
+- Teal pill buttons with the inset bottom shadow and press feedback; toggles
+  use a check/cross glyph plus the on/off tone, so the state does not rely on
+  colour alone.
+- Sliders use the pause dialog's thin teal track + round thumb, with the label
+  and percentage on their own line above the track.
+- Compact section headers (cream, 12sp bold) and 3-6dp vertical gaps; links are
+  two half-width rows so Graphics/Controls/Game/links fit without a long list.
+- Functionality is unchanged: language cycle, volume sliders, interpolation,
+  screen shake, anonymous names, touch move/aim style, aim line, Key Binds,
+  web links and Reset.
+
+Device-verified on the x86_64 emulator: top-to-bottom scroll reaches every
+section, the sliders drag and persist, the language rebuild flips every label
+(including French), Reset restores the defaults + status text, and Close returns
+to the menu. Host tests are unaffected (Java-only change).
