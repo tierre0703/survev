@@ -145,6 +145,9 @@ public:
     static constexpr int kScopeSlotCount = 5;
     static constexpr float kScopeButtonW = 48.0f;
     static constexpr float kScopeButtonH = 34.0f;
+    // Scope labels ("1x" .. "15x") fill the 48x34 pill like the web's 24px
+    // .ui-zoom-level (scaled to the mobile strip) instead of looking undersized.
+    static constexpr float kScopeLabelFontSize = 20.0f;
     static constexpr float kScopePitch = 40.0f;
     static constexpr float kScopeStripTop = 236.0f; // from the top edge
     // #ui-top-center messages sit half a minimap down from the top, centred.

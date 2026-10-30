@@ -339,6 +339,7 @@ TEST(hud_action_bar_shows_inventory_state) {
     CHECK(scope4 && scope1);
     CHECK_EQ(scope4->text, std::string("4x"));
     CHECK(scope4->visible);
+    CHECK_NEAR(scope4->fontSize, Hud::kScopeLabelFontSize, 0.001f);
     CHECK(!scope1->visible);
     CHECK_EQ(hud.scopeSlotType(2), std::string("4xscope"));
     const Hud::TapResult scopeTap = hud.hitTest(40.0f, 386.0f);

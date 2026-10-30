@@ -3400,3 +3400,12 @@ row is now just the rounded dark pill, the 18px count on the left and the
 ammo-coloured chip on the right. `AmmoRow::icon`/`lastFrame` and their
 create/paint code are gone; the row geometry, zero-dim alpha and special-ammo
 hiding are unchanged. Host tests: 4121 assertions / 244 tests, 0 failures.
+
+## 64. Session 63 - scope strip label size (2026-10-30)
+
+The scope pills (`1x` .. `15x`) are 48x34 but their labels were 15px, leaving
+the text visually lost inside the box. They now use
+`Hud::kScopeLabelFontSize` (20px, close to the web mobile `.ui-zoom-level`
+proportion) and stay centred in the pill; `15x` at 20px is ~36px wide, so it
+still fits the 48px width. The inventory test pins the label size. Host tests:
+4122 assertions / 244 tests, 0 failures.

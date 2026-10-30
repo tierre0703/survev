@@ -544,7 +544,7 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         slot.bg->setVisible(false);
         _root->addChild(slot.bg);
         slot.label = _factory->createText();
-        slot.label->setFontSize(15.0f);
+        slot.label->setFontSize(kScopeLabelFontSize);
         slot.label->setColor(0xffffff, 0x000000, 1.5f, true);
         slot.label->setAnchor(0.5f, 0.5f);
         slot.label->setVisible(false);
