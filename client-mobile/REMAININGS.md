@@ -2038,3 +2038,9 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
 - Gamepad Start opens the pause dialog directly (`JavaUiHost.showPause()`, which
   also calls `SurvBridge.onPauseGame()`): axmol only maps the Android BACK key, so
   forwarding Start as a game key would do nothing. Its key-up is swallowed.
+- A successful join leaves the menu hidden with `MenuFragment`'s status still
+  reading "Joining game"; `show()` clears it because `JavaUiHost.returnToMenu`
+  reuses the same view and only sets a message when the match actually failed
+  (web `main.ts onQuit` clears `errorMessage` the same way).
+  `TeamFragment.onGameComplete` clears "Joining game..." too, mirroring
+  `teamMenu.onGameComplete`'s `joiningGame = false`.

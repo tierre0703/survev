@@ -409,6 +409,10 @@ public class TeamFragment {
         }
         mOpen = true;
         mRoot.setVisibility(View.VISIBLE);
+        // web teamMenu.onGameComplete(): joiningGame = false; refreshUi() then
+        // rebuilds the status from the room state. Drop the stale
+        // "Joining game..." now, before the next state message arrives.
+        setStatus("");
         render();
         Log.i(TAG, "team game complete");
     }

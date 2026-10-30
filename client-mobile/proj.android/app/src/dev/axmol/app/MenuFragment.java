@@ -1127,6 +1127,11 @@ public class MenuFragment {
         mRoot.setVisibility(View.VISIBLE);
         mFindingGame = false;
         setPlayLockout(false);
+        // A successful join leaves "Joining game" behind while the menu is
+        // hidden; the web clears `errorMessage` when the match ends (main.ts
+        // onQuit), so drop the stale status here. `returnToMenu` sets the new
+        // error/message after this call, so real failures still show.
+        setStatus("");
         refresh();
     }
 
