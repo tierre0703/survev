@@ -1487,6 +1487,25 @@ Done in the forty-second P2 pass (2026-10-29) - held-melee placement:
   (`node tools/build-atlas.mjs --res low`); the grip sits in the right hand
   and the support hand on the pump on the x86_64 emulator.
 
+Done in the forty-third P2 pass (2026-10-30) - in-game pause dialog restyle:
+- `GamePauseDialog` now follows the web `#ui-game-menu` look instead of stock
+  Android widgets: translucent dark-green card with a 2dp tan border, a light
+  scrim, teal pill rows with an inset bottom shadow and white line-art icons,
+  and thin teal sliders with round thumbs.
+- The quick toggles use the web menu's double-row layout (GFX/Show FPS and
+  Aim Line/Sound). `Aim Line` uses the existing `touchAimLine` config key, and
+  the old Mute row now reads `Sound` while active and `Muted` when off.
+- The volume/sensitivity labels sit above thin teal sliders with a small value
+  readout. The 250dp-wide card has a fixed height
+  (capped at 440dp) with an internal scroll area, so the title and the
+  Return/Quit footer stay visible; the quit confirmation is now a themed
+  in-panel dialog instead of the stock `AlertDialog`. Java-only change; the
+  host tests are unaffected.
+- Device check (x86_64 emulator, bundle server): the pause dialog opens from
+  BACK/gear, the volume sliders update their percentages/config, Aim Line and
+  Sound toggle their teal state, the list scrolls to Sensitivity/Leaderboards,
+  and Quit shows the dark themed confirmation. `logcat -b crash` empty.
+
 ### 3.5 Intentional platform differences (not TODO)
 
 - Device login instead of Google/Discord OAuth (`AccountManager`); no web account
