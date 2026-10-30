@@ -210,22 +210,6 @@ public class LoadoutFragment {
         });
         titleRow.addView(mSortBtn);
         
-        // Close button in title row (always visible at top)
-        Button titleCloseBtn = new Button(activity);
-        titleCloseBtn.setText("<");
-        titleCloseBtn.setBackgroundColor(0xFF5A5A5A);
-        titleCloseBtn.setTextColor(Color.WHITE);
-        titleCloseBtn.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        LinearLayout.LayoutParams tclp = new LinearLayout.LayoutParams(dp(36), dp(36));
-        tclp.leftMargin = dp(4);
-        titleCloseBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                hide();
-            }
-        });
-        titleRow.addView(titleCloseBtn);
-        
         panel.addView(titleRow);
 
         // Category row
@@ -520,7 +504,7 @@ public class LoadoutFragment {
         bottomRow.addView(mNextBtn);
 
         mCloseBtn = new Button(activity);
-        mCloseBtn.setText("Back \u2715");
+        mCloseBtn.setText(L10n.t("index-close", "Close") + " \u2715");
         mCloseBtn.setBackgroundColor(0xFF5A5A5A);
         mCloseBtn.setTextColor(Color.WHITE);
         mCloseBtn.setOnClickListener(new View.OnClickListener() {
@@ -706,7 +690,7 @@ public class LoadoutFragment {
         if (mSizeLabel != null) mSizeLabel.setText(L10n.t("loadout-size", "Size"));
         if (mStrokeLabel != null) mStrokeLabel.setText(L10n.t("loadout-stroked", "Stroke"));
         if (mHexLabel != null) mHexLabel.setText("#");
-        mCloseBtn.setText(L10n.t("index-back", "Back") + " \u2715");
+        mCloseBtn.setText(L10n.t("index-close", "Close") + " \u2715");
         for (int i = 0; i < mEmoteSlotButtons.length; i++) {
             if (mEmoteSlotButtons[i] != null) {
                 mEmoteSlotButtons[i].setText(emoteSlotLabel(i));

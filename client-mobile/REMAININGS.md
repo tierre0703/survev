@@ -1506,6 +1506,17 @@ Done in the forty-third P2 pass (2026-10-30) - in-game pause dialog restyle:
   Sound toggle their teal state, the list scrolls to Sensitivity/Leaderboards,
   and Quit shows the dark themed confirmation. `logcat -b crash` empty.
 
+Done in the forty-fourth P2 pass (2026-10-30) - remove the redundant back arrow:
+- `JavaUiHost`'s always-on-top `<` button in the top-left corner is gone. Every
+  sub-screen already owns a close action (`Settings`/`Help`/`Leaderboard`/
+  `Binds` Close, Loadout Close, Profile/Pass ✕, Team Leave, pause Return), so
+  the floating arrow was duplicate chrome over each dialog.
+- `LoadoutFragment`'s title-row `<` is removed; its bottom button is now
+  `Close ✕` (localized via `index-close`). The prev/next paging `<`/`>` stay.
+- Hardware BACK still closes every Java sub-screen through
+  `JavaUiHost.handleBackPressed()`; the C++ GameScene pause/back path is
+  unchanged.
+
 ### 3.5 Intentional platform differences (not TODO)
 
 - Device login instead of Google/Discord OAuth (`AccountManager`); no web account
