@@ -339,6 +339,130 @@ public final class Json {
         public boolean enabled = true;
     }
 
+    /**
+     * Parses Game::gameOverJson (the ui.ts showStats payload). Missing fields
+     * keep safe defaults so an old native lib still gets a usable dialog.
+     */
+    public static GameOverEntry parseGameOver(String json) {
+        GameOverEntry entry = new GameOverEntry();
+        if (json == null || json.isEmpty()) return entry;
+        try {
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            entry.gameOver = bool(root, "gameOver", false);
+            entry.victory = bool(root, "victory", false);
+            entry.teamId = intVal(root, "teamId", 0);
+            entry.teamMode = intVal(root, "teamMode", 0);
+            entry.teamRank = intVal(root, "teamRank", 0);
+            entry.teamKills = intVal(root, "teamKills", 0);
+            entry.winningTeamId = intVal(root, "winningTeamId", 0);
+            entry.localTeamId = intVal(root, "localTeamId", 0);
+            entry.factionMode = bool(root, "factionMode", false);
+            entry.turkeyMode = bool(root, "turkeyMode", false);
+            entry.aliveRed = intVal(root, "aliveRed", 0);
+            entry.aliveBlue = intVal(root, "aliveBlue", 0);
+            entry.canSpectate = bool(root, "canSpectate", false);
+            entry.spectating = bool(root, "spectating", false);
+            entry.spectatingAnotherTeam = bool(root, "spectatingAnotherTeam", false);
+            entry.spectatedName = string(root, "spectatedName", "");
+            JsonElement playersEl = root.get("players");
+            if (playersEl != null && playersEl.isJsonArray()) {
+                JsonArray arr = playersEl.getAsJsonArray();
+                for (int i = 0; i < arr.size(); i++) {
+                    JsonElement el = arr.get(i);
+                    if (el == null || !el.isJsonObject()) continue;
+                    JsonObject obj = el.getAsJsonObject();
+                    GameOverPlayer p = new GameOverPlayer();
+                    p.playerId = intVal(obj, "playerId", 0);
+                    p.name = string(obj, "name", "");
+                    p.teamId = intVal(obj, "teamId", 0);
+                    p.kills = intVal(obj, "kills", 0);
+                    p.damageDealt = intVal(obj, "damageDealt", 0);
+                    p.damageTaken = intVal(obj, "damageTaken", 0);
+                    p.timeAlive = intVal(obj, "timeAlive", 0);
+                    p.dead = bool(obj, "dead", false);
+                    p.local = bool(obj, "local", false);
+                    entry.players.add(p);
+                }
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "parseGameOver failed: " + e.getMessage());
+        }
+        return entry;
+    }
+
+    public static class GameOverEntry {
+        public boolean gameOver;
+        public boolean victory;
+        public int teamId;
+        public int teamMode; // GameConfig.TeamMode: Solo=1, Duo=2, Squad=4
+        public int teamRank;
+        public int teamKills;
+        public int winningTeamId;
+        public int localTeamId;
+        public boolean factionMode;
+        public boolean turkeyMode;
+        public int aliveRed;
+        public int aliveBlue;
+        public boolean canSpectate;
+        public boolean spectating;
+        public boolean spectatingAnotherTeam;
+        public String spectatedName = "";
+        public final List<GameOverPlayer> players = new ArrayList<>();
+    }
+
+    public static class GameOverPlayer {
+        public int playerId;
+        public String name = "";
+        public int teamId;
+        public int kills;
+        public int damageDealt;
+        public int damageTaken;
+        public int timeAlive;
+        public boolean dead;
+        public boolean local;
+    }
+
+    private static boolean bool(JsonObject obj, String key, boolean fallback) {
+        try {
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                JsonPrimitive p = el.getAsJsonPrimitive();
+                if (p.isBoolean()) return p.getAsBoolean();
+                if (p.isString()) return "true".equals(p.getAsString());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "bool " + key + ": " + e.getMessage());
+        }
+        return fallback;
+    }
+
+    private static int intVal(JsonObject obj, String key, int fallback) {
+        try {
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                JsonPrimitive p = el.getAsJsonPrimitive();
+                if (p.isNumber()) return p.getAsInt();
+                if (p.isString()) return Integer.parseInt(p.getAsString());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "int " + key + ": " + e.getMessage());
+        }
+        return fallback;
+    }
+
+    private static String string(JsonObject obj, String key, String fallback) {
+        try {
+            JsonElement el = obj.get(key);
+            if (el != null && el.isJsonPrimitive()) {
+                JsonPrimitive p = el.getAsJsonPrimitive();
+                if (p.isString()) return p.getAsString();
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "string " + key + ": " + e.getMessage());
+        }
+        return fallback;
+    }
+
     /** Flattens a flat string map (the l10n table) into a lookup map. */
     public static Map<String, String> parseStringMap(String json) {
         Map<String, String> out = new java.util.HashMap<>();

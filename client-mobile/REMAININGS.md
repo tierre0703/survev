@@ -2064,3 +2064,24 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   scout/... opt out); the text is `YOU'VE BEEN PROMOTED TO <ROLE>!` uppercased,
   with the faction leader names for `leader`. The killed path is kill-feed only.
   Do not reintroduce the old `ROLE ASSIGNED:`/`ROLE LOST:` text.
+
+- The final result screen (ui.ts `showStats`) is the Java `GameOverDialog`, not a
+  C++ HUD panel. `Game::gameOverJson()` carries the same inputs the web reads
+  (victory/defeat + spectating-another-team flags, team mode/rank/team kills,
+  faction counts and one card per `GameOverMsg.playerStats`), and
+  `GameScene` mirrors `Hud::gameOverShown()` to `UiHost::showGameOver` /
+  `hideGameOver` once per `gameOverSeq`. The title uses the web l10n keys
+  (`game-chicken`/`game-turkey`, `game-You` + `game-you-died`,
+  `game-team-eliminated`), the rank row uses `game-solo/duo/squad-rank`, and
+  Survived uses `ui.ts humanizeTime` (`4m 14s`, not the HUD `4:14`). PLAY NEW
+  GAME calls `JavaUiHost.quitToMenu()` (web `quitGame`); SPECTATE sends
+  `SurvBridge.spectate(1)` and lets the C++ overlay take over. The HUD keeps
+  `_overShown` only for the modal state and no longer draws the result panel;
+  the C++ panel/nodes remain for the team-death `showTeamAd` screen.
+
+- `L10n.table()` no longer caches an empty table. The Java menu is built in
+  `onCreate` before axmol's asset search paths are ready, so the first
+  `SurvBridge.getL10nJson()` can legitimately return "{}"; the old code cached
+  that forever (every Java label stayed on its English fallback for the whole
+  session). It now retries until a non-empty table arrives and only then caches
+  it (the result screen's "Solo Rank" label exposed this).

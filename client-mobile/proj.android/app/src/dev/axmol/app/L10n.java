@@ -38,7 +38,14 @@ public final class L10n {
         String locale = SurvBridge.getLanguage();
         if (sTable.isEmpty() || sLocale == null || !sLocale.equals(locale)) {
             sLocale = locale;
-            sTable = Json.parseStringMap(SurvBridge.getL10nJson());
+            Map<String, String> parsed = Json.parseStringMap(SurvBridge.getL10nJson());
+            // The Java menu is built in onCreate, before axmol's asset search
+            // paths are ready: the first call can legitimately see "{}". Do not
+            // cache that forever (the old code did, leaving every label on its
+            // English fallback for the whole session).
+            if (!parsed.isEmpty()) {
+                sTable = parsed;
+            }
         }
         return sTable;
     }

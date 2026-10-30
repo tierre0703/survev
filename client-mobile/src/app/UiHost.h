@@ -169,8 +169,14 @@ public:
     virtual void enterGame(int activePlayerId) = 0;
     // Java: the match ended or failed; `errorL10nKey` is empty on a clean exit.
     virtual void returnToMenu(const std::string& errorL10nKey) = 0;
-    // Java: the active player died (result panel / spectate prompt).
+    // Java: the active player died (pause dialog's spectate option).
     virtual void showResult() = 0;
+    // Java: final result screen (ui.ts showStats). `json` is Game::gameOverJson;
+    // the host renders the victory/defeat title, rank, the player cards and the
+    // PLAY NEW GAME / SPECTATE actions above the GL surface.
+    virtual void showGameOver(const std::string& json) { (void)json; }
+    // Java: dismiss the result screen (SPECTATE chosen, or the match is gone).
+    virtual void hideGameOver() {}
     // Java: every region probe finished; `json` is PingTest::resultsJson()
     // ({"complete","bestRegion","tests":[{"region","zone","pingMs",...}]}).
     virtual void pingResults(const std::string& json) { (void)json; }

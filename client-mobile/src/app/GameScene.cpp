@@ -1095,6 +1095,8 @@ void GameScene::leaveGame() {
     _pendingFind = false;
     _findInFlight = false;
     ++_findGeneration;
+    _gameOverUiSeq = 0;
+    uiHost()->hideGameOver();
     if (_hud) {
         _hud->setWaitingForPlayers(false);
     }
@@ -1880,6 +1882,21 @@ void GameScene::update(float delta) {
         }
         _hud->update(delta, *_game,
                      _inGame && _notifiedStarted && (_game->isPlaying() || _game->gameOver() != nullptr));
+        // ui.ts showStats: the result screen is the Java GameOverDialog. The
+        // HUD keeps the modal/spectate state (and suppresses another team's
+        // result while spectating), so only mirror a newly shown result here.
+        if (_inGame && _hud->gameOverShown()) {
+            const uint32_t seq = _game->gameOverSeq();
+            if (seq != _gameOverUiSeq) {
+                _gameOverUiSeq = seq;
+                uiHost()->showGameOver(_game->gameOverJson());
+                AXLOGI("[ui] game over result -> Java dialog");
+            }
+        } else if (_gameOverUiSeq != 0) {
+            // SPECTATE dismissed the result, or the match was left.
+            _gameOverUiSeq = 0;
+            uiHost()->hideGameOver();
+        }
         // game.ts:697-705: the picker's confirmed/timed-out class goes out on
         // the next frame and is remembered for the next perk match.
         if (_game->isPlaying()) {

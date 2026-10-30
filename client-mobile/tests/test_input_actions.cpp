@@ -9,6 +9,7 @@
 #include "../src/net/generatedDefs.inc"
 #include "../src/render/GeneratedDefs.h"
 #include "../src/render/NullPixi.h"
+#include "../src/ui/Json.h"
 
 #include <algorithm>
 #include <memory>
@@ -623,7 +624,8 @@ TEST(hud_death_panel_and_spectate_overlay) {
     CHECK(hud.gameOverShown());
     CHECK(!hud.spectating());
     CHECK(!hud.deathPanelShown());
-    CHECK(hud.overlayActionAt(640.0f, 266.0f) == Hud::OverlayAction::Leave);
+    // The final result screen is Java; the HUD routes no result taps.
+    CHECK(hud.overlayActionAt(640.0f, 266.0f) == Hud::OverlayAction::None);
     CHECK(hud.overlayActionAt(520.0f, 266.0f) == Hud::OverlayAction::None);
 }
 
@@ -646,7 +648,7 @@ TEST(hud_gameover_spectate_matches_web_client) {
     u.activePlayerIdDirty = true;
     PlayerInfo me;
     me.playerId = 42;
-    me.teamId = 0;
+    me.teamId = 1;
     me.name = "Me";
     u.playerInfos.push_back(me);
     u.ack = 1;
@@ -681,8 +683,27 @@ TEST(hud_gameover_spectate_matches_web_client) {
     hud.update(0.016f, h.game, true);
     CHECK(hud.gameOverShown());
     CHECK(hud.gameOverCanSpectate());
-    CHECK(hud.overlayActionAt(520.0f, 266.0f) == Hud::OverlayAction::SpectateBegin);
-    CHECK(hud.overlayActionAt(760.0f, 266.0f) == Hud::OverlayAction::Leave);
+    // The Java GameOverDialog owns the result buttons; nothing routes here.
+    CHECK(hud.overlayActionAt(520.0f, 266.0f) == Hud::OverlayAction::None);
+    CHECK(hud.overlayActionAt(760.0f, 266.0f) == Hud::OverlayAction::None);
+
+    // Game::gameOverJson is the payload the Java dialog renders (ui.ts
+    // showStats): victory/defeat inputs, rank, team kills and the local card.
+    std::string result = h.game.gameOverJson();
+    // The Java side parses this with Gson; keep it strictly well-formed.
+    ui::JsonValue parsed;
+    CHECK(ui::JsonParser::parse(result, parsed));
+    CHECK(parsed.isObject());
+    CHECK(result.find("\"gameOver\":false") != std::string::npos);
+    CHECK(result.find("\"victory\":false") != std::string::npos);
+    CHECK(result.find("\"teamMode\":1") != std::string::npos);
+    CHECK(result.find("\"teamRank\":5") != std::string::npos);
+    CHECK(result.find("\"canSpectate\":true") != std::string::npos);
+    CHECK(result.find("\"name\":\"Me\"") != std::string::npos);
+    CHECK(result.find("\"kills\":2") != std::string::npos);
+    CHECK(result.find("\"damageDealt\":150") != std::string::npos);
+    CHECK(result.find("\"damageTaken\":100") != std::string::npos);
+    CHECK(result.find("\"timeAlive\":60") != std::string::npos);
 
     // The server answers SpectateMsg Begin with a new active player: the
     // result panel closes and the spectating overlay takes over.
@@ -744,7 +765,15 @@ TEST(hud_gameover_spectate_matches_web_client) {
     CHECK(!hud.gameOverCanSpectate());
     CHECK(!hud.spectating());
     CHECK(hud.overlayActionAt(520.0f, 266.0f) == Hud::OverlayAction::None);
-    CHECK(hud.overlayActionAt(640.0f, 266.0f) == Hud::OverlayAction::Leave);
+    CHECK(hud.overlayActionAt(640.0f, 266.0f) == Hud::OverlayAction::None);
+
+    // Another team's final result while spectating: the title is "<name> won
+    // the game." and SPECTATE is gone.
+    result = h.game.gameOverJson();
+    CHECK(result.find("\"victory\":true") != std::string::npos);
+    CHECK(result.find("\"spectatingAnotherTeam\":true") != std::string::npos);
+    CHECK(result.find("\"spectatedName\":\"Killer\"") != std::string::npos);
+    CHECK(result.find("\"canSpectate\":false") != std::string::npos);
 }
 
 // loot.ts m_update touch branch: the pickup prompt reach is

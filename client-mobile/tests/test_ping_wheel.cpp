@@ -789,7 +789,9 @@ TEST(hud_gas_timer_and_result_overlay) {
     CHECK(gasText->visible);
     CHECK_EQ(gasText->text, std::string("0:00"));
 
-    // Result screen: defeat + rank + team kills + local stats.
+    // Final result: the HUD only latches the modal state; the visible screen is
+    // the Java GameOverDialog built from Game::gameOverJson (tested with the
+    // real Game in test_input_actions.cpp). A finished match has no SPECTATE.
     GameOverMsg over;
     over.teamId = 1;
     over.teamRank = 3;
@@ -806,29 +808,11 @@ TEST(hud_gas_timer_and_result_overlay) {
     over.playerStats = { me, mate };
     hud.showGameOver(over, 1, 42);
     CHECK(hud.gameOverShown());
-    auto* title = static_cast<const pix::NullText*>(hud.gameOverTitleText());
-    auto* rank = static_cast<const pix::NullText*>(hud.gameOverRankText());
-    auto* stats = static_cast<const pix::NullText*>(hud.gameOverStatsText());
-    CHECK(title != nullptr && rank != nullptr && stats != nullptr);
-    CHECK_EQ(title->text, std::string("DEFEAT"));
-    CHECK_EQ(rank->text, std::string("Rank #3"));
-    CHECK(stats->text.find("Team kills: 6") != std::string::npos);
-    CHECK(stats->text.find("Kills: 4") != std::string::npos);
-    CHECK(stats->text.find("Damage: 321") != std::string::npos);
-    CHECK(stats->text.find("Survived: 1:35") != std::string::npos);
-    auto* statRow0 = static_cast<const pix::NullText*>(hud.gameOverStatRow(0));
-    auto* statRow1 = static_cast<const pix::NullText*>(hud.gameOverStatRow(1));
-    CHECK(statRow0 != nullptr && statRow1 != nullptr);
-    CHECK(statRow0->text.find("Player 42") != std::string::npos);
-    CHECK(statRow0->text.find("4 K") != std::string::npos);
-    CHECK(statRow0->text.find("321 DMG") != std::string::npos);
-    CHECK(statRow0->visible);
-    CHECK(statRow1->text.find("2 K") != std::string::npos);
-    CHECK(!static_cast<const pix::NullText*>(hud.gameOverStatRow(2))->visible);
-
-    over.winningTeamId = 1;
+    CHECK(!hud.gameOverCanSpectate());
+    // A running match still offers SPECTATE (ui.ts showStats).
+    over.gameOver = false;
     hud.showGameOver(over, 1, 42);
-    CHECK_EQ(title->text, std::string("VICTORY"));
+    CHECK(hud.gameOverCanSpectate());
 }
 
 TEST(hud_squad_health_bars) {

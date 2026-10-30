@@ -820,7 +820,8 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         _root->addChild(row.colorDot);
     }
 
-    // --- Result screen (ui.ts displayStats): dim backdrop + centred panel ---
+    // --- Team-death panel (ui.ts showTeamAd): dim backdrop + centred panel.
+    // The final result (GameOverMsg) is the Java GameOverDialog instead. ---
     _overBackdrop = _factory->createGraphics();
     _overBackdrop->beginFill(0x000000, 0.55f);
     _overBackdrop->drawRect(-_design.x * 0.5f, -_design.y * 0.5f, _design.x, _design.y);
@@ -847,14 +848,6 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _overTitle->setLocalZOrder(952);
     _overTitle->setVisible(false);
     _root->addChild(_overTitle);
-    _overRank = _factory->createText();
-    _overRank->setFontSize(20.0f);
-    _overRank->setColor(0xffd060, 0x000000, 2.0f, true);
-    _overRank->setAnchor(0.5f, 1.0f);
-    _overRank->setPosition(0.0f, panelH * 0.5f - 58.0f);
-    _overRank->setLocalZOrder(952);
-    _overRank->setVisible(false);
-    _root->addChild(_overRank);
     _overStats = _factory->createText();
     _overStats->setFontSize(16.0f);
     _overStats->setColor(0xffffff, 0x000000, 1.0f, false);
@@ -864,21 +857,8 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _overStats->setVisible(false);
     _root->addChild(_overStats);
 
-    // ui.ts showStats: per-player kills/damage cards (compact list here).
-    for (int i = 0; i < kOverStatRows; ++i) {
-        pix::Text* row = _factory->createText();
-        row->setFontSize(13.0f);
-        row->setColor(0xffffff, 0x000000, 1.0f, false);
-        row->setAnchor(0.5f, 1.0f);
-        row->setPosition(0.0f, panelH * 0.5f - 145.0f - static_cast<float>(i) * 18.0f);
-        row->setLocalZOrder(952);
-        row->setVisible(false);
-        _root->addChild(row);
-        _overStatRow[static_cast<size_t>(i)] = row;
-    }
-
-    // P0.4 overlay buttons: the final result has LEAVE; the team-death panel has
-    // SPECTATE + LEAVE. Positions are panel-local (the panel is centred).
+    // P0.4 overlay buttons: the team-death panel has SPECTATE + LEAVE.
+    // Positions are panel-local (the panel is centred).
     const auto makeOverlayButton = [this](pix::Graphics*& bg, pix::Text*& text,
                                           float fontSize) {
         bg = _factory->createGraphics();
@@ -1399,49 +1379,33 @@ void Hud::setVisible(bool visible) {
                 visible && !_gearFrames[i].empty() && _gearSlots[i].level > 0);
         }
     }
+    // The C++ panel is only the team-death screen now; the final result is the
+    // Java GameOverDialog (the HUD still reports `_overShown` so GameScene can
+    // drive that dialog and the touch modal).
+    const bool deathPanel = visible && _deathShown;
     if (_overBackdrop) {
-        _overBackdrop->setVisible(visible && over);
+        _overBackdrop->setVisible(deathPanel);
     }
     if (_overPanel) {
-        _overPanel->setVisible(visible && over);
+        _overPanel->setVisible(deathPanel);
     }
     if (_overTitle) {
-        _overTitle->setVisible(visible && over);
-    }
-    if (_overRank) {
-        _overRank->setVisible(visible && _overShown);
+        _overTitle->setVisible(deathPanel);
     }
     if (_overStats) {
-        _overStats->setVisible(visible && over);
-    }
-    for (size_t i = 0; i < _overStatRow.size(); ++i) {
-        if (_overStatRow[i]) {
-            _overStatRow[i]->setVisible(visible && _overShown && _overStatRowHas[i]);
-        }
+        _overStats->setVisible(deathPanel);
     }
     if (_overLeaveText) {
-        _overLeaveText->setVisible(visible && over);
+        _overLeaveText->setVisible(deathPanel);
     }
     if (_overLeaveBg) {
-        _overLeaveBg->setVisible(visible && over);
+        _overLeaveBg->setVisible(deathPanel);
     }
-    // The final result shows SPECTATE while the match is still running, and
-    // the team-death panel always does. LEAVE is centred only when the result
-    // panel has no second button.
-    const bool resultSpectate = _overShown && _overCanSpectate;
-    const bool spectateButton = _deathShown || resultSpectate;
     if (_overSpectateBg) {
-        _overSpectateBg->setVisible(visible && spectateButton);
+        _overSpectateBg->setVisible(deathPanel);
     }
     if (_overSpectateText) {
-        _overSpectateText->setVisible(visible && spectateButton);
-    }
-    const bool centeredLeave = _overShown && !_overCanSpectate;
-    if (_overLeaveText) {
-        _overLeaveText->setPosition(centeredLeave ? 0.0f : 120.0f, -94.0f);
-    }
-    if (_overLeaveBg) {
-        _overLeaveBg->setPosition(centeredLeave ? -120.0f : 0.0f, 0.0f);
+        _overSpectateText->setVisible(deathPanel);
     }
     const bool spec = visible && _spectating && !_overShown && !_deathShown;
     if (_specLabel) {
@@ -1861,70 +1825,21 @@ std::string Hud::formatTime(uint16_t seconds) {
 
 void Hud::showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t localPlayerId,
                        const Game* game) {
+    // The text/cards are rendered by the Java GameOverDialog from
+    // Game::gameOverJson(). This keeps only the modal state the HUD and
+    // GameScene need (suppress the gameplay widgets, hide the class picker,
+    // dismiss on spectate).
+    (void)localTeamId;
+    (void)localPlayerId;
     if (!_built) {
         return;
     }
-    const bool victory = localTeamId != 0 && over.winningTeamId == localTeamId;
-    _overTitle->setText(victory ? "VICTORY" : "DEFEAT");
-    _overTitle->setColor(victory ? 0x8fff6a : 0xff6a6a, 0x000000, 2.0f, true);
-    _overRank->setText("Rank #" + std::to_string(over.teamRank));
-
-    int teamKills = 0;
-    const PlayerStatsMsg* local = nullptr;
-    for (const auto& stats : over.playerStats) {
-        teamKills += stats.kills;
-        if (stats.playerId == localPlayerId) {
-            local = &stats;
-        }
-    }
-    std::string text = "Team kills: " + std::to_string(teamKills);
-    if (local) {
-        text += "\nKills: " + std::to_string(local->kills) + "   Damage: " + std::to_string(local->damageDealt);
-        text += "\nSurvived: " + formatTime(local->timeAlive);
-    }
-    _overStats->setText(text);
-
-    // ui.ts showStats: one row per teammate (name, kills, damage), local row green.
-    std::vector<const PlayerStatsMsg*> rows;
-    rows.reserve(over.playerStats.size());
-    for (const auto& stats : over.playerStats) {
-        rows.push_back(&stats);
-    }
-    std::sort(rows.begin(), rows.end(), [](const PlayerStatsMsg* a, const PlayerStatsMsg* b) {
-        if (a->kills != b->kills) return a->kills > b->kills;
-        return a->damageDealt > b->damageDealt;
-    });
-    for (int i = 0; i < kOverStatRows; ++i) {
-        pix::Text* row = _overStatRow[static_cast<size_t>(i)];
-        if (!row) continue;
-        if (i >= static_cast<int>(rows.size())) {
-            _overStatRowHas[static_cast<size_t>(i)] = false;
-            row->setVisible(false);
-            continue;
-        }
-        const PlayerStatsMsg* stats = rows[static_cast<size_t>(i)];
-        const std::string name = game ? game->displayName(stats->playerId)
-                                      : "Player " + std::to_string(stats->playerId);
-        row->setText(name + "   " + std::to_string(stats->kills) + " K   " +
-                     std::to_string(stats->damageDealt) + " DMG");
-        uint32_t color = 0xffffff;
-        if (stats->playerId == localPlayerId) {
-            color = 0x8fff6a;
-        } else if (game) {
-            const uint8_t team = game->playerTeamId(stats->playerId);
-            if (team >= 1 && team <= 2) color = kTeamColors[team - 1];
-        }
-        row->setColor(color, 0x000000, 1.0f, false);
-        _overStatRowHas[static_cast<size_t>(i)] = true;
-        row->setVisible(true);
-    }
-
     _overShown = true;
     _deathShown = false;
     _spectating = false;
     // ui.ts showStats: the web only offers SPECTATE when the match is not over
     // and the alive counter is non-zero (dead viewers still have players to
-    // watch). The final result (gameOver) keeps the single centred LEAVE.
+    // watch). The Java result dialog reads this through gameOverCanSpectate().
     int alive = -1; // -1 = not known yet (no AliveCountsMsg), allow spectating
     if (game) {
         const auto counts = game->aliveCounts();
@@ -1936,7 +1851,6 @@ void Hud::showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t lo
         }
     }
     _overCanSpectate = !over.gameOver && (!game || alive != 0);
-    if (_overLeaveText) _overLeaveText->setText("LEAVE GAME");
     _bigMapVisible = false;
     setVisible(_visible);
 }
@@ -1954,9 +1868,6 @@ void Hud::showDeathPanel(const PlayerStatsMsg& stats) {
         _overTitle->setText("YOU DIED");
         _overTitle->setColor(0xff6a6a, 0x000000, 2.0f, true);
     }
-    if (_overRank) {
-        _overRank->setText("");
-    }
     std::string text = "Kills: " + std::to_string(stats.kills);
     text += "   Damage: " + std::to_string(stats.damageDealt);
     text += "\nDamage taken: " + std::to_string(stats.damageTaken);
@@ -1964,10 +1875,6 @@ void Hud::showDeathPanel(const PlayerStatsMsg& stats) {
     if (_overStats) {
         _overStats->setText(text);
     }
-    for (auto* row : _overStatRow) {
-        if (row) row->setVisible(false);
-    }
-    _overStatRowHas = {};
     if (_overLeaveText) _overLeaveText->setText("LEAVE GAME");
     _bigMapVisible = false;
     setVisible(_visible);
@@ -1999,14 +1906,9 @@ Hud::OverlayAction Hud::overlayActionAt(float designX, float designY) const {
     }
     const float px = designX - _design.x * 0.5f;
     const float py = designY - _design.y * 0.5f;
-    if (_overShown) {
-        if (_overCanSpectate && _overSpectateRect.contains(px, py)) {
-            return OverlayAction::SpectateBegin;
-        }
-        const Rect centeredLeave{-100.0f, -118.0f, 200.0f, 48.0f};
-        const Rect& leave = _overCanSpectate ? _overLeaveRect : centeredLeave;
-        return leave.contains(px, py) ? OverlayAction::Leave : OverlayAction::None;
-    }
+    // The final result screen (Java GameOverDialog, above the GL surface) owns
+    // its PLAY NEW GAME / SPECTATE buttons; only the C++ team-death panel and
+    // the spectating overlay route taps here.
     if (_deathShown) {
         if (_overSpectateRect.contains(px, py)) return OverlayAction::SpectateBegin;
         if (_overLeaveRect.contains(px, py)) return OverlayAction::Leave;

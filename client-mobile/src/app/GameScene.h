@@ -331,6 +331,9 @@ private:
     // P0.4: the Java pause dialog shows Spectate after the local death; notify
     // it once per match (UiHost::showResult).
     bool _deadNotified = false;
+    // Game::gameOverSeq() currently shown by the Java GameOverDialog (0 = none).
+    // The HUD owns the modal state; GameScene mirrors it to the Java overlay.
+    uint32_t _gameOverUiSeq = 0;
     // GameOverMsg victory cue (played once per match).
     bool _victoryMusicPlayed = false;
 

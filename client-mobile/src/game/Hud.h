@@ -306,8 +306,9 @@ public:
     const std::string& roleMenuDisplayed() const { return _roleDisplayed; }
     int roleMenuOptionCount() const { return static_cast<int>(_roleOptionsState.size()); }
 
-    // ui.ts displayStats: result screen (victory/defeat, rank, team kills and
-    // the local player's kills/damage/time). Called with GameOverMsg data.
+    // ui.ts showStats: latch the final result. The visible screen is the Java
+    // GameOverDialog (`Game::gameOverJson` -> `UiHost::showGameOver`); the HUD
+    // only hides its gameplay widgets and keeps the modal/spectate state.
     void showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t localPlayerId,
                       const Game* game = nullptr);
     bool gameOverShown() const { return _overShown; }
@@ -428,12 +429,6 @@ public:
     const MapView& bigMap() const { return _bigMap; }
     const pix::Text* gasText() const { return _gasText; }
     const pix::Sprite* gasIcon() const { return _gasIcon; }
-    const pix::Text* gameOverTitleText() const { return _overTitle; }
-    const pix::Text* gameOverRankText() const { return _overRank; }
-    const pix::Text* gameOverStatsText() const { return _overStats; }
-    const pix::Text* gameOverStatRow(int idx) const {
-        return (idx >= 0 && idx < kOverStatRows) ? _overStatRow[static_cast<size_t>(idx)] : nullptr;
-    }
     const pix::Text* squadNameText(int idx) const {
         return (idx >= 0 && idx < 4) ? _squad[static_cast<size_t>(idx)].name : nullptr;
     }
@@ -650,15 +645,12 @@ private:
     std::string _lastAction;
     float _lastActionProgress = -1.0f;
 
+    // C++ team-death panel (ui.ts showTeamAd). The final result screen is the
+    // Java GameOverDialog, so these nodes are only ever shown with _deathShown.
     pix::Graphics* _overBackdrop = nullptr;
     pix::Graphics* _overPanel = nullptr;
     pix::Text* _overTitle = nullptr;
-    pix::Text* _overRank = nullptr;
     pix::Text* _overStats = nullptr;
-    // ui.ts showStats player cards, reduced to one text row per teammate.
-    static constexpr int kOverStatRows = 4;
-    std::array<pix::Text*, kOverStatRows> _overStatRow{};
-    std::array<bool, kOverStatRows> _overStatRowHas{};
     pix::Graphics* _overSpectateBg = nullptr;
     pix::Text* _overSpectateText = nullptr;
     pix::Graphics* _overLeaveBg = nullptr;

@@ -532,6 +532,86 @@ std::string Game::leaderboardJson() const {
     return out;
 }
 
+std::string Game::gameOverJson() const {
+    if (!_hasGameOver) {
+        return "{}";
+    }
+    const DefProvider* provider = getDefProvider();
+    const MapRenderDef* mapDef = provider ? provider->mapRender(_map.mapName) : nullptr;
+    const bool factionMode = mapDef && mapDef->factionMode;
+    const bool turkeyMode = mapDef && mapDef->turkeyMode;
+    const std::vector<int> counts = aliveCounts();
+    const int aliveRed = counts.size() > 0 ? counts[0] : 0;
+    const int aliveBlue = counts.size() > 1 ? counts[1] : 0;
+    int alive = 0;
+    for (const int count : counts) {
+        alive += count;
+    }
+
+    const uint8_t localTeamId = teamIdForPlayer(_localPlayerId);
+    const bool spectating = isSpectating();
+    const bool spectatingAnotherTeam = spectating && _gameOver.teamId != localTeamId;
+    // ui.ts showStats: isLocalTeamWinner = localTeamId == winningTeamId ||
+    // (spectating && winningTeamId == teamId).
+    const bool victory = localTeamId != 0 &&
+        (_gameOver.winningTeamId == localTeamId ||
+         (spectating && _gameOver.winningTeamId == _gameOver.teamId));
+    int teamKills = 0;
+    for (const auto& stats : _gameOver.playerStats) {
+        teamKills += stats.kills;
+    }
+
+    std::string out = "{\"gameOver\":";
+    out += _gameOver.gameOver ? "true" : "false";
+    out += ",\"victory\":";
+    out += victory ? "true" : "false";
+    out += ",\"teamId\":" + std::to_string(_gameOver.teamId);
+    out += ",\"teamMode\":" + std::to_string(_teamMode);
+    out += ",\"teamRank\":" + std::to_string(_gameOver.teamRank);
+    out += ",\"teamKills\":" + std::to_string(teamKills);
+    out += ",\"winningTeamId\":" + std::to_string(_gameOver.winningTeamId);
+    out += ",\"localTeamId\":" + std::to_string(localTeamId);
+    out += ",\"factionMode\":";
+    out += factionMode ? "true" : "false";
+    out += ",\"turkeyMode\":";
+    out += turkeyMode ? "true" : "false";
+    out += ",\"aliveRed\":" + std::to_string(aliveRed);
+    out += ",\"aliveBlue\":" + std::to_string(aliveBlue);
+    out += ",\"canSpectate\":";
+    out += (!_gameOver.gameOver && alive != 0) ? "true" : "false";
+    out += ",\"spectating\":";
+    out += spectating ? "true" : "false";
+    out += ",\"spectatingAnotherTeam\":";
+    out += spectatingAnotherTeam ? "true" : "false";
+    out += ",\"spectatedName\":\"" + jsonEscape(spectating ? displayName(_activePlayerId) : "")
+        + "\"";
+    out += ",\"players\":[";
+    for (size_t i = 0; i < _gameOver.playerStats.size(); ++i) {
+        if (i > 0) out += ",";
+        const PlayerStatsMsg& stats = _gameOver.playerStats[i];
+        // ui.ts showStats reads playerBarn.getPlayerInfo(id).name (the real
+        // name, not the anon kill-feed alias), so use the stored PlayerInfo.
+        const auto info = _playersById.find(stats.playerId);
+        const std::string name = info != _playersById.end()
+            ? info->second.name
+            : "Player " + std::to_string(stats.playerId);
+        out += "{\"playerId\":" + std::to_string(stats.playerId);
+        out += ",\"name\":\"" + jsonEscape(name) + "\"";
+        out += ",\"teamId\":" + std::to_string(playerTeamId(stats.playerId));
+        out += ",\"kills\":" + std::to_string(stats.kills);
+        out += ",\"damageDealt\":" + std::to_string(stats.damageDealt);
+        out += ",\"damageTaken\":" + std::to_string(stats.damageTaken);
+        out += ",\"timeAlive\":" + std::to_string(stats.timeAlive);
+        out += ",\"dead\":";
+        out += stats.dead ? "true" : "false";
+        out += ",\"local\":";
+        out += stats.playerId == _localPlayerId ? "true" : "false";
+        out += "}";
+    }
+    out += "]}";
+    return out;
+}
+
 void Game::addKillFeedText(const std::string& text, uint32_t color) {
     if (text.empty()) {
         return;

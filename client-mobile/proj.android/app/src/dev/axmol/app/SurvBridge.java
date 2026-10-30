@@ -217,6 +217,32 @@ public final class SurvBridge {
         });
     }
 
+    /** Final result screen (Game::gameOverJson) -> Java GameOverDialog. */
+    static void onNativeGameOver(final String json) {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.showGameOver(json);
+                }
+            }
+        });
+    }
+
+    /** Dismiss the Java result dialog (SPECTATE chosen / match left). */
+    static void onNativeHideGameOver() {
+        post(new Runnable() {
+            @Override
+            public void run() {
+                JavaUiHost host = sHost;
+                if (host != null) {
+                    host.hideGameOver();
+                }
+            }
+        });
+    }
+
     static void onNativeShowMenu() {
         post(new Runnable() {
             @Override

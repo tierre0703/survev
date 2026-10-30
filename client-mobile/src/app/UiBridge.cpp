@@ -701,6 +701,10 @@ public:
         ax::JniHelper::callStaticVoidMethod(kBridgeClass, "onNativeMatchEnded", errorL10nKey);
     }
     void showResult() override { notify("onNativePlayerDead"); }
+    void showGameOver(const std::string& json) override {
+        ax::JniHelper::callStaticVoidMethod(kBridgeClass, "onNativeGameOver", json);
+    }
+    void hideGameOver() override { notify("onNativeHideGameOver"); }
     void pingResults(const std::string& json) override {
         ax::JniHelper::callStaticVoidMethod(kBridgeClass, "onNativePingResults", json);
     }

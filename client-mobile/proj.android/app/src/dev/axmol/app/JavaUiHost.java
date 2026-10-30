@@ -24,6 +24,7 @@ public class JavaUiHost {
     private LoadoutFragment mLoadout;
     private TeamFragment mTeam;
     private GamePauseDialog mPause;
+    private GameOverDialog mGameOver;
     private SettingsModal mSettings;
     private BindEditorModal mBinds;
     private HelpModal mHelp;
@@ -109,6 +110,7 @@ public class JavaUiHost {
         hideLoadout();
         hideTeam();
         hidePause();
+        hideGameOver();
         hideBinds();
         hideSettings();
         hideHelp();
@@ -131,6 +133,7 @@ public class JavaUiHost {
         mInGame = true;
         hideLoadout();
         hidePause();
+        hideGameOver();
         if (mPause != null) mPause.setPlayerDead(false);
         hideBinds();
         hideSettings();
@@ -187,6 +190,26 @@ public class JavaUiHost {
         Log.i(TAG, "showResult (pause spectate enabled)");
     }
 
+    /**
+     * Final result screen (ui.ts showStats via Game::gameOverJson). The Java
+     * overlay sits above the GL surface, so the C++ HUD only keeps the modal
+     * state; PLAY NEW GAME calls quitToMenu(), SPECTATE calls SurvBridge.
+     */
+    public void showGameOver(String json) {
+        if (mPause != null && mPause.isOpen()) {
+            hidePause();
+        }
+        ensureGameOver();
+        mGameOver.show(json);
+        Log.i(TAG, "showGameOver (Java result dialog)");
+    }
+
+    public void hideGameOver() {
+        if (mGameOver != null) {
+            mGameOver.hide();
+        }
+    }
+
     /** Every region probe finished (M8 pingTest): hand it to the menu. */
     public void pingResults(String json) {
         if (mMenu != null) {
@@ -199,6 +222,11 @@ public class JavaUiHost {
     // Android hardware back button: close any open modal dialog.
     // Returns true if the back was handled (modal was open and was closed).
     public boolean handleBackPressed() {
+        // The result screen is modal (web showStats): BACK must not quit the
+        // match by accident; the dialog's own button does that.
+        if (mGameOver != null && mGameOver.isOpen()) {
+            return true;
+        }
         if (mPause != null && mPause.isOpen()) {
             hidePause();
             return true;
@@ -560,6 +588,15 @@ public class JavaUiHost {
         }
     }
 
+    private void ensureGameOver() {
+        if (mGameOver == null) {
+            mGameOver = new GameOverDialog(mActivity, this);
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            mContainer.addView(mGameOver.root(), params);
+        }
+    }
+
     private int dp(int value) {
         return (int) (value * mActivity.getResources().getDisplayMetrics().density + 0.5f);
     }
@@ -573,6 +610,7 @@ public class JavaUiHost {
     public void quitToMenu() {
         mInGame = false;
         hidePause();
+        hideGameOver();
         SurvBridge.onQuitGame();
         // A team match returns to its room through returnToMenu(), which sends
         // `gameComplete` and re-shows the team screen. Do not call showMenu()

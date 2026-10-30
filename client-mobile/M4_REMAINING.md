@@ -3428,3 +3428,24 @@ Removed the UI implementations that the live app never instantiated:
 paths are unchanged: `game/Hud`, the Java `GamePauseDialog`, and
 `Hud::showGameMenu` as the no-bridge fallback. Host tests: 4122 assertions /
 244 tests, 0 failures.
+
+## 66. Session 65 - Java result screen (2026-10-30)
+
+`Hud::showGameOver` no longer draws the C++ result panel. It only latches the
+modal/spectate state, and `GameScene` mirrors `Hud::gameOverShown()` to the Java
+`GameOverDialog` once per `Game::gameOverSeq()` via
+`UiHost::showGameOver(Game::gameOverJson())`.
+
+`GameOverDialog` follows `ui.ts showStats`: gold victory/defeat title
+(`game-chicken`/`game-turkey`/`game-You` + `game-you-died`/
+`game-team-eliminated`), the underlined `Solo|Duo|Squad Rank #n` overview
+(plus Team Kills, or the faction Red/Blue counts), one 125px-style card per
+`GameOverMsg.playerStats` entry with the gold italic name and the four stat rows
+(`ui.ts humanizeTime`, e.g. `4m 14s`), and PLAY NEW GAME (purple, calls
+`JavaUiHost.quitToMenu`) plus SPECTATE while the match is still running
+(`SurvBridge.spectate(1)`). The scrim/cards/buttons match the Android result
+reference; the C++ panel nodes remain for the team-death `showTeamAd` screen.
+
+`L10n.table()` also stopped caching an empty table (the Java menu is built
+before axmol's asset paths are ready, so the first lookup can see `{}`); this
+is what put the result screen's rank label on its fallback.

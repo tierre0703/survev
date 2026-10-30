@@ -198,6 +198,10 @@ public:
     // Live in-game leaderboard (pause dialog): player names, teams, kills and
     // alive state as a JSON array + activePlayerId (UiBridge -> Java modal).
     std::string leaderboardJson() const;
+    // ui.ts showStats payload for the Java GameOverDialog: title inputs, rank,
+    // team kills, faction alive counts and one card per `GameOverMsg.playerStats`
+    // entry (name/kills/damage/time). Empty until a GameOverMsg arrived.
+    std::string gameOverJson() const;
     // EmoteMsg send (game.ts newEmotes/newPings loop). The chat/emote wheel
     // queues into EmoteManager and GameScene forwards the queue here.
     void sendEmote(const std::string& type, const Vec2& pos, bool isPing);
