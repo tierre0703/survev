@@ -32,9 +32,9 @@
 #include "../ui/Ui.h"
 #include "../ui/LoadoutMenu.h"
 #include "../ui/News.h"
+#include "../ui/StartMenu.h"
 
 #include "axmol.h"
-#include "../ui/UiOverlay.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -42,14 +42,11 @@
 
 namespace surv {
 
-// The global UI toolkit (declared in ui/Ui.h / UiOverlay.h). Aliased because
-// `ui::` inside this namespace would otherwise collide with the vestigial
-// `surv::ui` forward declarations that UiOverlay.h keeps for legacy includes.
+// The global UI toolkit (declared in ui/Ui.h). Aliased so `uikit::` reads
+// clearly next to the scene classes; the toolkit itself lives in `::ui`.
 namespace uikit = ::ui;
 
 class GameScene;
-
-class StartMenu;
 
 class MenuScene : public ax::Scene {
 public:
@@ -113,9 +110,6 @@ public:
     // Persist the config blob (Java calls this before backgrounding).
     void saveConfig();
 
-    // The overlay is owned by the menu and handed to the game scene.
-    uikit::UiOverlay* overlay() const { return _overlay.get(); }
-
 private:
     void buildTeamScreen();
     void buildMenuChrome();
@@ -142,7 +136,6 @@ private:
     std::unique_ptr<uikit::Config> _config;
     std::unique_ptr<uikit::Localization> _loc;
     std::unique_ptr<uikit::TeamMenu> _team;
-    std::unique_ptr<uikit::UiOverlay> _overlay;
 
     ax::Node* _uiRoot = nullptr;
     ax::Node* _teamRoot = nullptr;

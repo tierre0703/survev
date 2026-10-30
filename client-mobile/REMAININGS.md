@@ -151,7 +151,7 @@ touch-pad/pie-timer layout, and ports the `resources.ts` texture-res rule.
 | Player action sounds (footsteps, door, bush, weapon deploy/switch, heal, pickup, dry fire, haste) | ✅ keyed from the defs (`sound.reload/reloadAlt/deploy/use/pickup/empty`); doors/buttons/puzzles/ceiling/plane loops and victory music wired; dry fire is the exact web gate (local, not spectating, clip + reserve empty, firePressed or held-auto, no action, wheel closed, `!ammoInfinite`) |
 | UI sounds (ambient lab, pickup pings, notifications, victory) | 🔶 victory music + pickup/door/puzzle/plane cues wired; notification/team-join sounds are web focus-only (not applicable to the Android foreground) |
 | Reverb (`setReverbProperties`) | ✅ `ReverbModel` maps cathedral/cave to EAX props; applied to every active handle (web convolver is global) |
-| `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ live `game/Hud` has reserve ammo, bag strip, scopes, interaction prompt, pickup/kill messages and gear level badges + tap-to-drop (P1.4/P2); the dead `ui/FguiHud` is not built |
+| `client/src/ui/ui2.ts` (inventory v2: weapon cards, perk icons, throwable arc) | ✅ live `game/Hud` has reserve ammo, bag strip, scopes, interaction prompt, pickup/kill messages and gear level badges + tap-to-drop (P1.4/P2); the unused `ui/FguiHud` was removed |
 | `client/src/emote.ts` (emote/ping system) | ✅ see the emote row above |
 | `client/src/ui/pieTimer.ts` (action progress circle) | ✅ arc/countdown + `RELOADING`/`USING`/`REVIVING` labels from the active player action (P1.4) |
 | `client/src/ui/profileUi.ts` / `pass.ts` (account/profile/battle pass) | ✅ `ProfileFragment` + `PassFragment` (real level/XP, quest reroll); the pass screen shows the next unlock's art (outfit tint), category icon/title and the level-up pulse, and the profile `/stats/?slug=` link opens the web stats page |
@@ -174,14 +174,14 @@ the status docs. The audit found that the protocol, map/simulation, rendering
 primitives, account/pass/team, audio engine and release pipeline are close to
 1:1, but the port is **not yet a 1:1 playable client**: a small number of core
 loops are missing, and several previously "done" items are stubs or only live in
-the dead `ui/FguiHud` (Android builds only `GameScene`; `MenuScene`/`FguiHud`/
-`UiOverlay` are not created).
+the now-removed `ui/FguiHud` (Android builds only `GameScene`; `MenuScene` was
+never created in the game path).
 
 ### 3.1 Status corrections (the old checklist was too optimistic)
 
 | Claim in this file / earlier sessions | Audit result |
 |---|---|
-| `ui2.ts` inventory v2 is live in the HUD | ❌ only in the dead `FguiHud`; live `game/Hud` has no ammo reserve, loot grid, scopes, interaction prompt, pickup/kill messages |
+| `ui2.ts` inventory v2 is live in the HUD | ❌ only in the now-removed `FguiHud`; live `game/Hud` has no ammo reserve, loot grid, scopes, interaction prompt, pickup/kill messages |
 | `bullet.ts`, `explosion.ts`, `projectile.ts`, `loot.ts` are ✅ | 🔶 whiz/explosion sound only; tracers/impact FX, explosion visuals, projectile spin/trail/bounce and loot rarity borders are missing |
 | `player.ts` player rendering is ✅ incl. team patches | 🔶 poses/animations are faithful, but team patches, heal/revive/AoE emitters, bleed particles, nametag gating and action sounds are missing/wrong |
 | Player action sounds ✅ | 🔶 reload/deploy play `"<weapon>_01"` (gunshot) and pickup plays `"<item>_pickup_01"`; only some cues work |

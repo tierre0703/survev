@@ -63,7 +63,7 @@ menu; it has not yet been driven end-to-end on a device in this session.
 | `tools/build-gui-icons.mjs` | Rasterizes `client/public/img/gui/*.svg` to high-res PNGs (`Content/gui/<name>.png`, 512px @4x). Wired into `sync-content.ps1`. |
 | `tools/fetch-fonts.ps1` | Converts the web Roboto Condensed woff2 to `Content/fonts/RobotoCondensed-{Normal,Bold}.ttf` (needs Python + fontTools + brotli). Wired into `sync-content.ps1`. |
 | `src/ui/News.{h,cpp}` | Bundled news entries (the web `#news-block` list has no API); newest first. |
-| `src/ui/StartMenu.cpp` | The menu chrome helper: splash + logo, centred `#start-menu` block, news box, bottom-right cog/mute, settings/help/join modals. Declared in `UiOverlay.h`. |
+| `src/ui/StartMenu.cpp` | The menu chrome helper: splash + logo, centred `#start-menu` block, news box, bottom-right cog/mute, settings/help/join modals. Declared in `StartMenu.h`. |
 | `src/ui/LoadoutMenu.{h,cpp}` | Reworked to the web layout (category tabs, item grid, paging, selected highlight). |
 | `src/ui/Ui.{h,cpp}` | Button now draws the web `.btn-*` body + 2px shadow and supports PNG icons; `makeLabel`/`fontPath` picks the TTF; `Modal::setCloseLabel`. |
 | `src/app/MenuScene.{h,cpp}` | Thin scene wrapper: owns config/localization/team/overlay, drives `StartMenu`, team screen, matchmaking. |
@@ -163,8 +163,7 @@ $sym = Join-Path $env:ANDROID_NDK_HOME 'toolchains\llvm\prebuilt\windows-x86_64\
 | `Ui.{h,cpp}` | Widget toolkit (`§5`): `kit::fromCssY`, `Panel`, `Button` (web colours + PNG icons), `TextField`, `Slider`, `Modal`, `makeLabel`/`fontPath`, `uiRoot`, `layoutUiRoot`, `swallowTouches`. |
 | `News.{h,cpp}` | Bundled news entries for the menu's news box. |
 | `TeamMenu.{h,cpp}` | `/team_v2` JSON control channel (create/join/roster/props/playGame/keep-alive/errors). |
-| `UiOverlay.{h,cpp}` | In-game HUD + pause menu (`§5`) and the `StartMenu` declaration. |
-| `StartMenu.cpp` | Main-menu chrome builder (web `#start-menu-wrapper`). |
+| `StartMenu.{h,cpp}` | Main-menu chrome builder (web `#start-menu-wrapper`). |
 | `LoadoutMenu.{h,cpp}` | Native `#modal-customize` (category strip + item grid + paging). |
 | `Loadout.{h,cpp}` | Port of `shared/utils/loadout.ts` (selection/validation/`joinInfo`). |
 
@@ -231,7 +230,7 @@ returns to the menu. Keep screenshots few (each `screencap` is ~1 MB).
 
 ### T4. HUD completion (`client/src/ui/ui2.ts`)
 
-`UiOverlay` draws health/boost bars, health, alive count, weapon/ammo and the
+`game/Hud` draws health/boost bars, health, alive count, weapon/ammo and the
 killfeed. Still needed:
 
 - **Team/faction colours** on the alive counter (web `game-red-team`/`game-blue-team`).
@@ -300,9 +299,10 @@ The app is locked to landscape (`AndroidManifest.xml` `screenOrientation="landsc
   `src/app` files have `using namespace ax`. `GameScene.*` and `MenuScene.*`
   therefore alias the toolkit (`namespace uikit = ::ui;` / `svui` / `menuui`)
   instead of using `ui::` inside `namespace surv`. Keep that convention.
-- **`surv::ui` is not the toolkit.** `UiOverlay.h` keeps legacy
-  `namespace ui { class UiOverlay; }` forward declarations for the in-game
-  overlay; the toolkit is the global `::ui`.
+- **`surv::ui` is not the toolkit.** The toolkit is the global `::ui`
+  (`src/ui/Ui.h`); `surv::ui` only holds free helpers such as
+  `registerGuiFonts`. `GameScene.*`/`MenuScene.*` alias the toolkit instead of
+  using `ui::` inside `namespace surv`.
 - **Protocol is bit-exact** (`tests/ReferenceData.h` fixtures are generated from
   the TS server, `node tools/gen_reference.mjs`). **Do not add fields to
   `UpdateMsg` or any message** without regenerating the fixtures *and* changing
@@ -399,7 +399,7 @@ Implemented and host-verified (+ Android build):
   plus the fixed 1280×720 `NO_BORDER` design resolution.
 - **Build fixes for the axmol `ui` namespace collision**: `GameScene.*` /
   `MenuScene.*` alias `::ui` (`svui` / `menuui`); `Ui.cpp` includes `Files.h`
-  for the TTF; `StartMenu` lives in `UiOverlay.h` so `MenuScene.h` never names
+  for the TTF; `StartMenu` lives in `StartMenu.h` so `MenuScene.h` never names
   the widgets.
 
 **Verified:** `surv_tests` **1658 assertions, 0 failures, 79 tests**;

@@ -989,8 +989,7 @@ with `pix::Graphics` at the screen centre (64 px art: 32 px long, 4 px thick).
 - Minimap ping sprites (closed in §18; the minimap is now baked and displayed).
 - ~~Crosshair style/colour from the loadout (only the default style is drawn)~~ -
   closed in §32.
-- `ui/FguiHud.*` remains unused (the live HUD is `game/Hud`); its gear/perk
-  panels are not on screen yet.
+- ~~`ui/FguiHud.*` remains unused~~ — removed in §65 (the live HUD is `game/Hud`).
 
 ---
 
@@ -3409,3 +3408,23 @@ the text visually lost inside the box. They now use
 proportion) and stay centred in the pill; `15x` at 20px is ~36px wide, so it
 still fits the 48px width. The inventory test pins the label size. Host tests:
 4122 assertions / 244 tests, 0 failures.
+
+## 65. Session 64 - remove the dead C++ UI (2026-10-30)
+
+Removed the UI implementations that the live app never instantiated:
+
+- `src/ui/UiOverlay.{h,cpp}` — the old C++ HUD + pause menu (the pause menu is
+  the Java `GamePauseDialog`).
+- `src/ui/FguiHud.{h,cpp}`, `FguiEmoteWheel.{h,cpp}`, `FguiPieTimer.{h,cpp}`,
+  `FguiPadGraphics.{h,cpp}`, `FguiText.{h,cpp}`, `FguiRoot.h`,
+  `FguiOwnership.h` — the FairyGUI path, replaced by `game/Hud`,
+  `game/EmoteWheel`/`PingWheel`, `PadGraphicsAxmol` and `AxText`.
+- `GameScene::_overlay`/`setOverlay`, `MenuScene::_overlay`/`overlay()` and the
+  dead `if (_overlay)` error/quit paths, plus the unused FairyGUI `GRoot` /
+  `fguiRoot()` kept alive only for the widgets above.
+
+`StartMenu` (previously declared in `UiOverlay.h`) now has its own
+`src/ui/StartMenu.h`; the CMake source GLOB picks it up automatically. The live
+paths are unchanged: `game/Hud`, the Java `GamePauseDialog`, and
+`Hud::showGameMenu` as the no-bridge fallback. Host tests: 4122 assertions /
+244 tests, 0 failures.

@@ -28,9 +28,6 @@
 #include "../ui/Layout.h"
 #include "../../../shared/config/ui2Constants.inc"
 
-#include "fairygui/GRoot.h"
-#include "fairygui/FairyGUI.h"
-
 #if AX_TARGET_PLATFORM == AX_PLATFORM_ANDROID
 #include "platform/android/jni/JniHelper.h"
 #include <android/keycodes.h>
@@ -143,13 +140,6 @@ static void loadAtlasesForMap(const std::string& mapName) {
         AXLOGI("Loaded atlas {}", atlas);
     }
 }
-
-// S2: FairyGUI GRoot for the UI layer. Created once in init(); the in-game HUD
-// and pads now use plain pix/axmol nodes, so this is only needed if a
-// FairyGUI-based widget (e.g. FguiHud) is enabled again.
-static fairygui::GRoot* s_fguiRoot = nullptr;
-
-fairygui::GRoot* fguiRoot() { return s_fguiRoot; }
 
 // ui2.ts getPickupMessageText (PickupMsgType order).
 static const char* pickupErrorText(int type) {
@@ -411,14 +401,6 @@ bool GameScene::init() {
                ax::Configuration::getInstance()->getMaxTextureSize());
         // touch.ts resize() reads device.tablet for the pad offsets; Touch is
         // created below.
-    }
-
-    // S2: create the FairyGUI root for gameplay HUD overlay.
-    s_fguiRoot = fairygui::GRoot::create(this, 500);
-    if (!s_fguiRoot) {
-        AXLOGW("Failed to create FairyGUI root; HUD will be missing");
-    } else {
-        AXLOGI("FairyGUI GRoot created");
     }
 
     // The gameplay canvas backdrop. Before the world is built (and whenever no
@@ -1059,7 +1041,7 @@ void GameScene::leaveGame() {
     _joinRetryUrls.clear();
     _gameRoot->setVisible(false);
     // main.ts un-hides the menu on quit; the HUD is hidden until the match is
-    // playing again (FguiHud::update gates on isPlaying()).
+    // Match started: the HUD is visible again (Hud::update gates on isPlaying).
     if (_hud) {
         _hud->resetRoleMenu();
         _hud->setVisible(false);
@@ -1082,8 +1064,8 @@ void GameScene::leaveGame() {
 
 void GameScene::setError(const std::string& key, const std::string& fallback) {
     if (onError) onError(key, fallback);
-    // S6: the pause menu is now Java (GamePauseDialog); errors are routed
-    // through the bridge. The C++ overlay no longer holds the pause menu.
+    // The pause menu is Java (GamePauseDialog); errors are routed through the
+    // bridge.
 }
 
 void GameScene::clearError() {
@@ -1630,7 +1612,7 @@ void GameScene::update(float delta) {
             gasHud.secondsLeft = std::max(0.0f, gas.duration * (1.0f - gas.circleT));
             _hud->setGasState(gasHud);
         }
-        // Squad bars (ui.ts team health / FguiHud::buildSquadBars).
+        // Squad bars (ui.ts team health / Hud squad rows).
         {
             std::vector<SquadMember> squad;
             if (_game->teamMode() != 1) {
@@ -2076,8 +2058,8 @@ void GameScene::update(float delta) {
     // mark the aim, and the always-on screen-centre crosshair sat on the
     // player's position. The crosshair members/_frames stay unused.
 
-    // S6: the pause menu is now Java (GamePauseDialog).
-    // The C++ _overlay is never created; skip the isOpen check.
+    // The pause menu is the Java GamePauseDialog; there is no C++ overlay to
+    // check here.
     if (_game->isPlaying() && _game->getActivePlayerId() != 0
         && !_game->isSpectating() && !_game->isLocalDead()) {
         updateInput(delta);
@@ -2289,8 +2271,7 @@ void GameScene::updateHardwareUi() {
 }
 
 void GameScene::onTouchBegan(float x, float y, int id) {
-    // S6: _overlay is never created; the Java GamePauseDialog is the
-    // actual pause. Don't block touches because of a null overlay.
+    // The Java GamePauseDialog owns the pause; no C++ overlay to block on.
     if (!_inGame || !_notifiedStarted) return;
     // Hybrid device: a touch takes the aim back from the mouse (the pads own
     // the aim direction again until the next mouse move).

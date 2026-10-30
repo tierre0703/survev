@@ -14,13 +14,15 @@ complete:
 | **S5** | Java `TeamFragment` + `TeamSocket` WebSocket client for `/team_v2` |
 | **S6** | Java `GamePauseDialog` (sliders, toggles, quit) — C++ overlay disabled |
 | **S7** | Cleanup: `CssColor.*` extracted, `Layout.*` trimmed, dead-code comments |
+| **S8** | Removed the dead C++ HUD/pause UI: `UiOverlay`, `FguiHud`, `FguiEmoteWheel`, `FguiPieTimer`, `FguiPadGraphics`, `FguiText`, `FguiRoot`/`FguiOwnership` |
 
 ### What was deleted from C++
 | File | Status |
 |------|--------|
 | `src/ui/Ui.{h,cpp}` | **Remains for host tests** (Button/Panel/Modal needed by test_ui.cpp) |
-| `src/ui/UiOverlay.{h,cpp}` | **Remains for host tests** (StartMenu+HUD debug test) |
-| `src/ui/StartMenu.cpp` | **Remains for host tests** (needed by MenuScene) |
+| `src/ui/UiOverlay.{h,cpp}` | **Removed (S8).** Dead HUD/pause overlay; `StartMenu` moved to `StartMenu.h` |
+| `src/ui/FguiHud.*`, `FguiEmoteWheel.*`, `FguiPieTimer.*`, `FguiPadGraphics.*`, `FguiText.*`, `FguiRoot.h`, `FguiOwnership.h` | **Removed (S8).** Never instantiated by the live app |
+| `src/ui/StartMenu.{h,cpp}` | **Remains for host tests** (needed by MenuScene) |
 | `src/ui/LoadoutMenu.{h,cpp}` | **Remains for host tests** |
 | `src/ui/TeamMenu.{h,cpp}` | **Remains for host tests** (team protocol tests) |
 | `src/ui/Layout.{h,cpp}` | Trimmed to constants only; CSS parser moved to `CssColor.*` |

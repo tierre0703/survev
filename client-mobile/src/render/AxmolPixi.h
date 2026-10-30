@@ -438,9 +438,9 @@ private:
     ax::Sprite* _sprite = nullptr;
 };
 
-// PIXI.Text. axmol's Label TTF/string-texture paths fault on the Android target
-// (see FguiText.cpp), so the text is rasterised with
-// Texture2D::initWithString() and drawn as a sprite (the menu UI's approach).
+// PIXI.Text. axmol's Label TTF/string-texture paths fault on the Android target,
+// so the text is rasterised with Texture2D::initWithString() and drawn as a
+// sprite (the menu UI's approach).
 class AxText : public AxNodeImpl<Text> {
 public:
     int kind() const override { return kKindText; }

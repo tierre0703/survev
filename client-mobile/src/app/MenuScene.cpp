@@ -7,7 +7,6 @@
 #include "../ui/Files.h"
 #include "../ui/NewsJson.h"
 #include "../ui/SiteInfoJson.h"
-#include "../ui/UiOverlay.h"
 #include "../audio/AudioManager.h"
 
 #include <algorithm>
@@ -60,8 +59,7 @@ void MenuScene::bindGame(GameScene* game) {
     hooks.onMatchStarted = [game] { game->setVisible(true); };
     hooks.onReturnToMenu = [game] { game->setVisible(false); };
     setGameHooks(std::move(hooks));
-    // S6: the overlay/pause menu is now Java (GamePauseDialog).
-    // The C++ overlay is not built; game->setOverlay is not called.
+    // The pause menu is Java (GamePauseDialog); the C++ overlay was removed.
     // The UIRoot is still shared for coordinate scaling.
     game->setUiRoot(_uiRoot);
     game->onMatchStarted = [this] { onMatchStarted(); };
@@ -128,19 +126,9 @@ bool MenuScene::init() {
     _uiRoot = menuui::uiRoot(this, 10);
     menuui::layoutUiRoot(_uiRoot, ax::Vec2(visible.width, visible.height),
                          ax::Vec2(menuui::kit::designWidth(), menuui::kit::designHeight()));
-    _uiRoot->setTag(menuui::kUiRootTag); // shared with UiOverlay's HUD/pause
+    _uiRoot->setTag(menuui::kUiRootTag); // shared with the in-game HUD
     // --- main-menu chrome (web `#start-menu-wrapper`) ---------------------
     buildMenuChrome();
-
-    // --- in-game overlay (handed to the game scene) ----------------------
-    // S6: pause dialog is now Java. The C++ overlay is no longer the pause
-    // menu. We keep the _overlay stored so the reference doesn't crash old
-    // code, but it's never created — _overlay stays null.
-    // _overlay = std::make_unique<menuui::UiOverlay>();  // deleted in S6
-    // The pause/menu overlay is shared with the game scene; when the player
-    // quits out of a lobby it restores the main menu.
-    // S6: _overlay is not created (null), so skip the quit handler.
-    // _overlay->onQuit = [this] { cancelPending(); };
 
     // --- team client -----------------------------------------------------
     _team = std::make_unique<menuui::TeamMenu>();
@@ -388,9 +376,6 @@ void MenuScene::cancelPending() {
     if (GameScene* game = _hooks.scene ? _hooks.scene() : nullptr) {
         game->returnToMenu(); // leaveGame() + onMatchEnded("")
     }
-    if (_overlay) {
-        _overlay->hide();
-    }
     clearError();
     refreshUi();
 }
@@ -411,17 +396,11 @@ void MenuScene::setError(const std::string& l10nKey, const std::string& fallback
     if (_startMenu) {
         _startMenu->setError(l10nKey, fallback);
     }
-    if (_overlay) {
-        _overlay->setMenuError(l10nKey, fallback);
-    }
 }
 
 void MenuScene::clearError() {
     if (_startMenu) {
         _startMenu->clearError();
-    }
-    if (_overlay) {
-        _overlay->setMenuError("", "");
     }
 }
 

@@ -42,7 +42,7 @@ namespace surv {
 
 class Game;
 
-// ui.ts team squad bars / FguiHud::buildSquadBars input.
+// ui.ts team squad bars / Hud squad-row input.
 struct SquadMember {
     std::string name;
     float health = 100.0f;

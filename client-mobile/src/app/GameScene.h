@@ -20,25 +20,15 @@ class Node;
 namespace pix {
 class Factory;
 }
-namespace ui {
-class UiOverlay; // M7 in-game UI (HUD + pause menu)
-}
-namespace fairygui {
-class GRoot;
-}
 
 namespace surv {
 
-// The global UI toolkit (see ui/Ui.h). Aliased inside `surv` so `uikit::` reads
-// like the web `ui.ts` while staying distinct from the vestigial `surv::ui`
-// forward declarations above.
+// The global UI toolkit (see ui/Ui.h). Aliased inside `surv` so `uikit::`
+// reads like the web `ui.ts`.
 namespace uikit = ::ui;
 
 class GameWorld;
 
-fairygui::GRoot* fguiRoot();
-
-class FguiHud;
 class Hud;
 class EmoteWheel;
 class PingWheel;
@@ -132,10 +122,8 @@ public:
     bool isConnected() const { return _game && _game->isConnected(); }
     bool isPlaying() const { return _game && _game->isPlaying(); }
 
-    // UI overlay (HUD + pause menu). Not owned by the scene.
-    void setOverlay(uikit::UiOverlay* overlay) { _overlay = overlay; }
-    // The menu's scaled design-space root; the overlay adopts it so HUD and
-    // pause geometry (plus the toolkit tap mapping) match the menu.
+    // The menu's scaled design-space root; the HUD adopts it so HUD/pause
+    // geometry (plus the toolkit tap mapping) matches the menu.
     void setUiRoot(ax::Node* root) { _uiRoot = root; }
     ax::Node* getUiRoot() const { return _uiRoot; }
     surv::Touch* getTouch() { return _touch.get(); }
@@ -281,12 +269,10 @@ private:
     // `_pixiFactory`; see `_worldRoot` above.
     pix::Container* _hudRoot = nullptr;
     FindGameRequest _findGameRequest;
-    uikit::UiOverlay* _overlay = nullptr;
     ax::Node* _uiRoot = nullptr;
     Game::JoinInfo _joinInfo;
-    // S6: the pause menu is now Java (GamePauseDialog). The C++ _overlay
-    // reference is kept as nullptr so the legacy UiOverlay code paths
-    // become no-ops. The JavaUiHost owns the pause lifecycle via the bridge.
+    // Matchmaking state. The pause menu is the Java GamePauseDialog; JavaUiHost
+    // owns its lifecycle via the bridge.
     bool _pendingFind = false;
     bool _findInFlight = false;
     unsigned _findGeneration = 0;
