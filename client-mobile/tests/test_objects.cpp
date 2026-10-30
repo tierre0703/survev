@@ -656,6 +656,14 @@ TEST(gun_fire_cue_defs) {
         CHECK_EQ(ak->soundEmpty, std::string("empty_fire_02"));
         CHECK(!ak->ammoInfinite);
         CHECK_EQ(ak->ammoType, std::string("762mm"));
+        // ui2.ts:896-906 the endless_ammo perk tops up the reserve unless the
+        // gun sets gunDefs.ignoreEndlessAmmo (flare guns).
+        CHECK(!ak->ignoreEndlessAmmo);
+    }
+    const GameObjRenderDef* flare = provider->gameObject("flare_gun");
+    CHECK(flare != nullptr);
+    if (flare) {
+        CHECK(flare->ignoreEndlessAmmo);
     }
     const GameObjRenderDef* cursed = provider->gameObject("m9_cursed");
     CHECK(cursed != nullptr);

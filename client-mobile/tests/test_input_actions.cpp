@@ -196,11 +196,12 @@ TEST(hud_action_bar_hit_test) {
 
     // Hidden HUD never claims a touch.
     hud.setVisible(false);
-    CHECK(hud.hitTest(900.0f, 90.0f).kind == Hud::TapKind::None);
+    CHECK(hud.hitTest(782.5f, 96.0f).kind == Hud::TapKind::None);
     hud.setVisible(true);
 
-    // The reload pill next to the health bar and the swap pill above it stay.
-    CHECK(hud.hitTest(900.0f, 90.0f).kind == Hud::TapKind::Reload);
+    // The bullet reload button above the health bar (#ui-reload-button) and the
+    // swap pill stay tappable while the HUD is up.
+    CHECK(hud.hitTest(782.5f, 96.0f).kind == Hud::TapKind::Reload);
     CHECK(hud.hitTest(900.0f, 150.0f).kind == Hud::TapKind::SwapWeapons);
     // An empty bag hides all counters, and without a nearby prompt the
     // interact hit stays None (touch falls through to the pads).
@@ -314,8 +315,99 @@ TEST(hud_action_bar_shows_inventory_state) {
     hud.update(0.016f, h.game, true);
     CHECK(hud.gameOverShown());
     CHECK(hud.hitTest(900.0f, 90.0f).kind == Hud::TapKind::None);
-    auto* reloadText = static_cast<const pix::NullText*>(hud.reloadButtonText());
-    CHECK(reloadText != nullptr && !reloadText->visible);
+    // #ui-equipped-ammo is hidden with the result screen too.
+    auto* clipText = static_cast<const pix::NullText*>(hud.ammoClipText());
+    CHECK(clipText != nullptr && !clipText->visible);
+}
+
+// ui2.ts:896-910 / 1226-1246 (#ui-equipped-ammo): the equipped gun's clip and
+// the bag count for its ammo type above the health bar, plus the bullet reload
+// button. The web sizes come from game.css:2147-2195.
+TEST(hud_equipped_ammo_matches_web_client) {
+    installGeneratedDefs();
+    Harness h;
+    UpdateMsg u;
+    u.activePlayerId = 42;
+    u.activePlayerIdDirty = true;
+    u.activePlayerData.inventoryDirty = true;
+    u.activePlayerData.inventory.assign(defs::kBagSizeKeys.size(), 0);
+    const int ammo762 = bagIndex("762mm");
+    CHECK(ammo762 >= 0);
+    if (ammo762 >= 0) {
+        u.activePlayerData.inventory[static_cast<size_t>(ammo762)] = 90;
+    }
+    u.activePlayerData.weapsDirty = true;
+    u.activePlayerData.weapons = {{"ak47", 15}, {"", 0}, {"fists", 0}, {"", 0}};
+    u.activePlayerData.curWeapIdx = 0;
+    u.ack = 1;
+    h.push(MsgType_Update, u);
+
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.update(0.016f, h.game, true);
+
+    auto* clip = static_cast<const pix::NullText*>(hud.ammoClipText());
+    auto* reserve = static_cast<const pix::NullText*>(hud.ammoReserveText());
+    auto* icon = static_cast<const pix::NullSprite*>(hud.ammoReloadIcon());
+    auto* clipBox = static_cast<const pix::NullGraphics*>(hud.ammoClipBox());
+    auto* reserveBox = static_cast<const pix::NullGraphics*>(hud.ammoReserveBox());
+    CHECK(clip && reserve && icon && clipBox && reserveBox);
+    if (!clip || !reserve || !icon || !clipBox || !reserveBox) {
+        return;
+    }
+    CHECK_EQ(clip->text, std::string("15"));
+    CHECK(clip->visible);
+    CHECK_EQ(clip->fill, 0xffffffu);
+    CHECK(clip->fontSize > 30.0f); // #ui-current-clip is the large bold box
+    CHECK_EQ(reserve->text, std::string("90"));
+    CHECK(reserve->visible);
+    CHECK(icon->visible);
+    CHECK_EQ(icon->frame, std::string("gui/bullets.png"));
+
+    // game.css: #ui-current-clip is 100x50 centred on the screen; the reserve
+    // box is 65x32 at left 82% / top 18px. Both sit 80px above the design
+    // bottom (wrapper bottom 62 + 12 margin + 56 counter - 50 box).
+    CHECK_NEAR(clipBox->x, -50.0f, 0.001f);
+    CHECK_NEAR(clipBox->y, -280.0f, 0.001f);
+    CHECK_NEAR(reserveBox->x, 56.0f, 0.001f);
+    CHECK_NEAR(reserveBox->y, -280.0f, 0.001f);
+    // #ui-reload-button-container (36x36 at left 212px / top 16px) is the
+    // reload tap target: centred at x=782.5, y=96 from the bottom-left edge.
+    CHECK(hud.hitTest(782.5f, 96.0f).kind == Hud::TapKind::Reload);
+
+    // An empty clip still shows, in red (ui2.ts:1229).
+    u.activePlayerData.weapons = {{"ak47", 0}, {"", 0}, {"fists", 0}, {"", 0}};
+    u.activePlayerData.weapsDirty = true;
+    h.push(MsgType_Update, u);
+    hud.update(0.016f, h.game, true);
+    CHECK_EQ(clip->text, std::string("0"));
+    CHECK(clip->visible);
+    CHECK_EQ(clip->fill, 0xff0000u);
+
+    // Melee: #ui-current-clip is hidden and there is no reserve box/reload.
+    u.activePlayerData.weapons = {{"ak47", 0}, {"", 0}, {"fists", 0}, {"", 0}};
+    u.activePlayerData.curWeapIdx = 2;
+    u.activePlayerData.weapsDirty = true;
+    h.push(MsgType_Update, u);
+    hud.update(0.016f, h.game, true);
+    CHECK(!clip->visible);
+    CHECK(!reserve->visible);
+    CHECK(!icon->visible);
+
+    // ammoInfinite (m9_cursed): the reserve is Number.MAX_VALUE in ui2.ts,
+    // printed as ∞.
+    u.activePlayerData.weapons = {{"m9_cursed", 10}, {"", 0}, {"fists", 0}, {"", 0}};
+    u.activePlayerData.curWeapIdx = 0;
+    u.activePlayerData.weapsDirty = true;
+    h.push(MsgType_Update, u);
+    hud.update(0.016f, h.game, true);
+    CHECK(clip->visible);
+    CHECK_EQ(clip->text, std::string("10"));
+    CHECK(reserve->visible);
+    CHECK_EQ(reserve->text, std::string("\xE2\x88\x9E"));
+    CHECK(icon->visible);
 }
 
 TEST(hud_death_panel_and_spectate_overlay) {

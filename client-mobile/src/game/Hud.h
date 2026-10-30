@@ -18,6 +18,8 @@
 //   weapon cards       guns / melee / throwable down the right side
 //   interact prompt    finger-press button + item name shown next to the
 //                      nearby loot; tapping either picks it up
+//   ammo counter       equipped clip + bag reserve + bullet reload button,
+//                      centred above the health bar (#ui-equipped-ammo)
 //   health bar         400x32 + boost, bottom centre
 //
 // Touch controls: HitTest() so GameScene can route a touch into the
@@ -89,6 +91,31 @@ public:
     static constexpr float kHealthBarHeight = 32.0f;
     static constexpr float kHealthBarPadding = 6.0f;
     static constexpr float kBoostBarHeight = 8.0f;
+    // #ui-equipped-ammo (client/index.html + game.css): the equipped weapon's
+    // clip, the bag count for its ammo type and the bullet reload button sit
+    // centred above the health bar. Sizes are the web's CSS pixels.
+    //   #ui-equipped-ammo-wrapper: bottom 62px
+    //   #ui-equipped-ammo:         margin-bottom 12px
+    //   #ui-bullet-counter:        175x56
+    //   #ui-current-clip:          100x50, 44px bold
+    //   #ui-remaining-ammo:        65x32, left 82% (143.5px), top 18px
+    //   #ui-reload-button-container: 36x36, left 212px, top 16px
+    //   #ui-reload-button:         32px circle, 20px bullets.svg
+    static constexpr float kAmmoWrapperBottom = 62.0f;
+    static constexpr float kAmmoWrapperMargin = 12.0f;
+    static constexpr float kAmmoCounterW = 175.0f;
+    static constexpr float kAmmoCounterH = 56.0f;
+    static constexpr float kAmmoClipW = 100.0f;
+    static constexpr float kAmmoClipH = 50.0f;
+    static constexpr float kAmmoClipLeft = (kAmmoCounterW - kAmmoClipW) * 0.5f;
+    static constexpr float kAmmoReserveLeft = 143.5f; // 82% of 175px
+    static constexpr float kAmmoReserveTop = 18.0f;
+    static constexpr float kAmmoReserveW = 65.0f;
+    static constexpr float kAmmoReserveH = 32.0f;
+    static constexpr float kAmmoReloadLeft = 212.0f;
+    static constexpr float kAmmoReloadTop = 16.0f;
+    static constexpr float kAmmoReloadBox = 36.0f;
+    static constexpr float kAmmoReloadIconSize = 32.0f;
     // Web mobile #ui-map-wrapper-mobile, pinned to the very top-left corner
     // (playtest: 3px inset instead of the web's left 6/top 46). The settings
     // cog sits inside the map's top-left corner (0,0 of the minimap).
@@ -145,8 +172,6 @@ public:
     static constexpr int kGearIconCount = 7;
 
     // P0.1 action buttons still owned directly by the HUD.
-    static constexpr float kReloadButtonWidth = 108.0f;
-    static constexpr float kReloadButtonHeight = 44.0f;
     static constexpr float kPillWidth = 110.0f;
     static constexpr float kPillHeight = 42.0f;
     // Finger-press prompt next to a nearby loot.
@@ -406,7 +431,13 @@ public:
     const pix::Text* gearLevelText(int idx) const {
         return (idx >= 0 && idx < kGearIconCount) ? _gearLevelText[static_cast<size_t>(idx)] : nullptr;
     }
-    const pix::Text* reloadButtonText() const { return _reloadText; }
+    // #ui-equipped-ammo (ui2.ts state.ammo): clip box text, reserve box text
+    // and the bullet reload icon mapped to #ui-reload-button.
+    const pix::Text* ammoClipText() const { return _ammoClipText; }
+    const pix::Text* ammoReserveText() const { return _ammoReserveText; }
+    const pix::Graphics* ammoClipBox() const { return _ammoClipBg; }
+    const pix::Graphics* ammoReserveBox() const { return _ammoReserveBg; }
+    const pix::Sprite* ammoReloadIcon() const { return _ammoReloadIcon; }
     const pix::Text* swapButtonText() const { return _swapText; }
     const pix::Text* weaponSlotText(int idx) const {
         return (idx >= 0 && idx < 4) ? _weaponSlots[idx] : nullptr;
@@ -473,7 +504,25 @@ private:
     pix::Graphics* _healthFill = nullptr;
     pix::Text* _healthText = nullptr;
     pix::Graphics* _boostSegments[4] = {nullptr, nullptr, nullptr, nullptr};
-    pix::Text* _ammoText = nullptr;
+    // #ui-equipped-ammo: clip box, reserve box and the bullet reload button
+    // (ui2.ts state.ammo → #ui-current-clip / #ui-remaining-ammo /
+    // #ui-reload-button-container). Visibility and text are repainted in
+    // updateActionButtons() from the values update() samples.
+    pix::Graphics* _ammoClipBg = nullptr;
+    pix::Text* _ammoClipText = nullptr;
+    pix::Graphics* _ammoReserveBg = nullptr;
+    pix::Text* _ammoReserveText = nullptr;
+    pix::Graphics* _ammoReloadBg = nullptr;
+    pix::Sprite* _ammoReloadIcon = nullptr;
+    int _ammoClip = 0;
+    int _ammoReserve = 0;
+    bool _ammoInfinite = false;
+    bool _ammoShowClip = false;
+    bool _ammoShowReserve = false;
+    std::string _lastAmmoClipText;
+    std::string _lastAmmoReserveText;
+    uint32_t _lastAmmoClipColor = 0;
+    uint32_t _lastAmmoReserveColor = 0;
 
     pix::Graphics* _mapFrame = nullptr;
     MapView _miniMap;
@@ -642,12 +691,10 @@ private:
     pix::Sprite* _weaponIcons[4] = {nullptr, nullptr, nullptr, nullptr};
 
     // P0.1 remaining action controls.
-    pix::Graphics* _reloadBg = nullptr;
-    pix::Text* _reloadText = nullptr;
     pix::Graphics* _swapBg = nullptr;
     pix::Text* _swapText = nullptr;
     pix::Graphics* _weaponSlotBg[4] = {nullptr, nullptr, nullptr, nullptr};
-    Rect _reloadRect;
+    Rect _reloadRect; // #ui-reload-button-container tap target (design space)
     Rect _swapRect;
     Rect _weaponRect[4];
     std::array<std::string, 4> _weaponTypes{};
@@ -727,7 +774,6 @@ private:
     std::string _lastWeapon;
     std::string _lastPickup;
     std::string _lastKillsText;
-    std::string _lastAmmoText;
     std::string _lastFeed;
     std::vector<std::string> _lastPerkTypes;
     bool _perksInitialized = false;

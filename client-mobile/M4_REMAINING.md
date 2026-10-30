@@ -3209,3 +3209,33 @@ Fixed in `frameOffset()` and the atlas regenerated with
 generated, do not hand-edit). Verified on the x86_64 emulator: the M1100
 grip now sits in the right hand and the support hand lands on the pump.
 Host tests unaffected (4030 assertions / 241 tests, 0 failures).
+
+## 56. Session 55 - equipped ammo counter above the health bar (2026-10-29)
+
+The bottom-centre HUD now draws the web client's `#ui-equipped-ammo` block
+(`client/index.html:559-569`, `game.css:2147-2195`, `ui2.ts:896-910` /
+`1226-1246`) instead of the old `30/90` text to the right of the health
+bar: a `175x56` bullet counter centred above the bar, with a `100x50` clip
+box (40px bold), a `65x32` reserve box at left 82% / top 18px, and the round
+reload button (`gui/bullets.png` at 20px inside a 32px `rgba(0,0,0,.4)`
+circle) at left 212px / top 16px. The wrapper sits 62px above the bottom edge
+plus the web's 12px margin, so the boxes land 80..130px above the design
+bottom (unit-tested positions: clip `(-50,-280)`, reserve `(56,-280)`).
+
+State follows `ui2.ts`: the clip is the equipped weapon's `ammo` (the
+throwable slot counts the bag instead, `ui2.ts:863`), the reserve is
+`inventory[gunDef.ammo]`, and infinite guns (`ammoInfinite` or the
+`endless_ammo` perk unless the gun sets `ignoreEndlessAmmo`) print ∞.
+Melee hides the clip; a 0 clip is red; an empty reserve hides the reserve box
+and the reload button. The bullet icon replaces the old mobile `RELOAD`
+pill but keeps `#ui-reload-button-container` as the `TapKind::Reload` hit
+rect (`ui.ts:395` binds touchstart on it); the `SWAP` pill is unchanged.
+
+`gunDefs.ignoreEndlessAmmo` was missing from the render defs, so
+`src/render/Defs.h` and `tools/codegen_render_defs.mjs` now carry it and
+`GeneratedDefs.cpp` was regenerated. Tests:
+`hud_equipped_ammo_matches_web_client` (clip/reserve text and colours,
+melee hiding, ∞ reserve, box origins, reload tap geometry) and
+`gun_fire_cue_defs` (ak47 vs flare_gun `ignoreEndlessAmmo`); host tests
+4059 assertions / 242 tests, 0 failures. Verified on the x86_64 emulator (the
+boxes render centred above the health bar with the bullet icon).

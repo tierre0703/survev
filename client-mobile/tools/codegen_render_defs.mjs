@@ -628,11 +628,11 @@ for (const type of gameTypes) {
         def.fireMode === "single" ? 1 : 0
     },${f(def.pullDelay, 0)},${def.pullDelay !== undefined ? 1 : 0},${def.explodeOnImpact ? 1 : 0},${
         str(def.sound?.empty)
-    },${def.ammoInfinite ? 1 : 0},${str(def.sound?.bullet)},${def.reflectSurface ? 1 : 0},${
-        vec(def.reflectSurface?.equipped.p0)
-    },${vec(def.reflectSurface?.equipped.p1)},${vec(def.reflectSurface?.unequipped.p0)},${
-        vec(def.reflectSurface?.unequipped.p1)
-    }},\n`;
+    },${def.ammoInfinite ? 1 : 0},${def.ignoreEndlessAmmo ? 1 : 0},${str(def.sound?.bullet)},${
+        def.reflectSurface ? 1 : 0
+    },${vec(def.reflectSurface?.equipped.p0)},${vec(def.reflectSurface?.equipped.p1)},${
+        vec(def.reflectSurface?.unequipped.p0)
+    },${vec(def.reflectSurface?.unequipped.p1)}},\n`;
     if (
         !def.skinImg && !def.visorImg && !def.worldImg && !def.hipImg && !def.anim && def.type !== "backpack"
         && !def.frozenSprites
@@ -1208,7 +1208,7 @@ struct RawGameObj { const char* type; const char* category; RawImg img; int hasI
     const char* cycleSound; const char* pullSound;
     float soundFallOff; int ignoreDetune; int fireModeSingle;
     float pullDelay; int hasPullDelay; int explodeOnImpact;
-    const char* soundEmpty; int ammoInfinite;
+    const char* soundEmpty; int ammoInfinite; int ignoreEndlessAmmo;
     const char* soundBullet; int hasPanSurface;
     Vec2 panEquippedP0, panEquippedP1, panUnequippedP0, panUnequippedP1; };
 struct RawRange { float min; float max; int isConstant; };
@@ -1629,6 +1629,7 @@ public:
             d.explodeOnImpact = r.explodeOnImpact != 0;
             d.soundEmpty = r.soundEmpty ? r.soundEmpty : "";
             d.ammoInfinite = r.ammoInfinite != 0;
+            d.ignoreEndlessAmmo = r.ignoreEndlessAmmo != 0;
             d.soundBullet = r.soundBullet ? r.soundBullet : "";
             d.hasPanSurface = r.hasPanSurface != 0;
             d.panEquippedP0 = r.panEquippedP0;

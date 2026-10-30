@@ -556,6 +556,9 @@ struct GameObjRenderDef {
     // clip and the reserve ammo are empty.
     std::string soundEmpty;
     bool ammoInfinite = false;
+    // gunDefs.ignoreEndlessAmmo: the endless_ammo perk does not top up this
+    // gun's reserve (ui2.ts state.ammo infinite check).
+    bool ignoreEndlessAmmo = false;
     // meleeDefs sound.bullet (pan_bullet) + pan reflectSurface: bullet.ts hits a
     // worn/equipped pan on its own segment and plays the pan spark/sound.
     std::string soundBullet;

@@ -235,6 +235,9 @@ Hud::TapResult Hud::hitTest(float designX, float designY) const {
     // Rects are stored in the centred HUD container.
     const float px = designX - _design.x * 0.5f;
     const float py = designY - _design.y * 0.5f;
+    // ui.ts:395 binds touchstart on #ui-reload-button-container (and the ammo
+    // boxes) with pointer-events auto even while their opacity is 0, so the
+    // bullet icon stays the reload tap target here too.
     if (_reloadRect.contains(px, py)) {
         return TapResult{TapKind::Reload, -1};
     }
@@ -334,11 +337,74 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         _root->addChild(seg);
     }
 
-    // #ui-equipped-ammo: clip / reserve, right of the health bar.
-    _ammoText = _factory->createText();
-    _ammoText->setFontSize(20.0f);
-    _ammoText->setColor(0xffffff, 0x000000, 2.0f, true);
-    _root->addChild(_ammoText);
+    // #ui-equipped-ammo (client/index.html:559-569): the equipped weapon's
+    // clip and the bag count for its ammo type, centred above the health bar.
+    // game.css:2147-2195 lays out a 175x56 #ui-bullet-counter with a 100x50
+    // clip box, a 65x32 reserve box at left 82% / top 18px, and the 36px round
+    // reload button (#ui-reload-button, 20px bullets.svg) at left 212px /
+    // top 16px. The wrapper sits 62px above the bottom edge and #ui-equipped-
+    // ammo adds a 12px margin below the counter.
+    const float ammoTop = vh - kAmmoWrapperBottom - kAmmoWrapperMargin - kAmmoCounterH;
+    const float ammoX = (vw - kAmmoCounterW) * 0.5f;
+    const Rect ammoClipRect{X(ammoX + kAmmoClipLeft), yTop(ammoTop + kAmmoClipH), kAmmoClipW,
+                            kAmmoClipH};
+    const Rect ammoReserveRect{X(ammoX + kAmmoReserveLeft),
+                               yTop(ammoTop + kAmmoReserveTop + kAmmoReserveH), kAmmoReserveW,
+                               kAmmoReserveH};
+    const Rect ammoReloadRect{X(ammoX + kAmmoReloadLeft), yTop(ammoTop + kAmmoReloadTop + kAmmoReloadBox),
+                              kAmmoReloadBox, kAmmoReloadBox};
+
+    _ammoClipBg = _factory->createGraphics();
+    paintBox(_ammoClipBg, ammoClipRect, 0x000000, 0.4f, 0.0f);
+    _ammoClipBg->setVisible(false);
+    _root->addChild(_ammoClipBg);
+    _ammoClipText = _factory->createText();
+    _ammoClipText->setFontSize(40.0f);
+    _ammoClipText->setColor(0xffffff, 0x000000, 2.0f, true);
+    _ammoClipText->setAnchor(0.5f, 0.5f);
+    _ammoClipText->setText("0");
+    _ammoClipText->setPosition(ammoClipRect.x + ammoClipRect.w * 0.5f,
+                               ammoClipRect.y + ammoClipRect.h * 0.5f);
+    _ammoClipText->setVisible(false);
+    _root->addChild(_ammoClipText);
+
+    _ammoReserveBg = _factory->createGraphics();
+    paintBox(_ammoReserveBg, ammoReserveRect, 0x000000, 0.4f, 0.0f);
+    _ammoReserveBg->setVisible(false);
+    _root->addChild(_ammoReserveBg);
+    _ammoReserveText = _factory->createText();
+    _ammoReserveText->setFontSize(22.0f);
+    _ammoReserveText->setColor(0xffffff, 0x000000, 2.0f, true);
+    _ammoReserveText->setAnchor(0.5f, 0.5f);
+    _ammoReserveText->setText("0");
+    _ammoReserveText->setPosition(ammoReserveRect.x + ammoReserveRect.w * 0.5f,
+                                  ammoReserveRect.y + ammoReserveRect.h * 0.5f);
+    _ammoReserveText->setVisible(false);
+    _root->addChild(_ammoReserveText);
+
+    // #ui-reload-button-container: the 20px bullets.svg icon inside the 32px
+    // #ui-reload-button circle, and the mobile reload tap target (ui.ts:395
+    // binds touchstart on the container).
+    _reloadRect = ammoReloadRect;
+    _ammoReloadBg = _factory->createGraphics();
+    _ammoReloadBg->beginFill(0x000000, 0.4f);
+    _ammoReloadBg->drawCircle(ammoReloadRect.x + ammoReloadRect.w * 0.5f,
+                              ammoReloadRect.y + ammoReloadRect.h * 0.5f,
+                              kAmmoReloadIconSize * 0.5f);
+    _ammoReloadBg->endFill();
+    _ammoReloadBg->setVisible(false);
+    _root->addChild(_ammoReloadBg);
+    _ammoReloadIcon = _factory->createSprite("gui/bullets.png");
+    _ammoReloadIcon->setAnchor(0.5f, 0.5f);
+    {
+        const float source = std::max(_ammoReloadIcon->sourceWidth(), _ammoReloadIcon->sourceHeight());
+        const float scale = source > 0.0f ? 20.0f / source : 1.0f;
+        _ammoReloadIcon->setScale(scale, scale);
+    }
+    _ammoReloadIcon->setPosition(ammoReloadRect.x + ammoReloadRect.w * 0.5f,
+                                 ammoReloadRect.y + ammoReloadRect.h * 0.5f);
+    _ammoReloadIcon->setVisible(false);
+    _root->addChild(_ammoReloadIcon);
 
     _healthBg->clear();
     _healthBg->beginFill(0x000000, 0.4f);
@@ -373,8 +439,6 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
             x += kHealthBarWidth * span;
         }
     }
-    _ammoText->setAnchor(0.0f, 1.0f);
-    _ammoText->setPosition(X(hudX + hudW + 12.0f), Y(hudY + hudH));
 
     // #ui-approxominator top-right (ui2.ts #ui-ammo-interactive): one row per
     // owned ammo type.
@@ -654,24 +718,11 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         _root->addChild(_killFeedRows[i]);
     }
 
-    // P0.1 remaining pills: RELOAD right of the health bar, SWAP above it.
-    _reloadRect = Rect{X(hudX + hudW + 54.0f - kReloadButtonWidth * 0.5f),
-                       Y(90.0f - kReloadButtonHeight * 0.5f), kReloadButtonWidth,
-                       kReloadButtonHeight};
+    // P0.1 remaining pill: SWAP above the health bar. The web's reload button
+    // is the bullet icon in #ui-equipped-ammo (built above), which keeps
+    // #ui-reload-button-container's touch-to-reload binding.
     _swapRect = Rect{X(hudX + hudW + 54.0f - kPillWidth * 0.5f),
                      Y(150.0f - kPillHeight * 0.5f), kPillWidth, kPillHeight};
-    _reloadBg = _factory->createGraphics();
-    _root->addChild(_reloadBg);
-    _reloadText = _factory->createText();
-    _reloadText->setFontSize(15.0f);
-    _reloadText->setColor(0xffffff, 0x000000, 1.5f, false);
-    _reloadText->setAnchor(0.5f, 0.5f);
-    _reloadText->setText("RELOAD");
-    _reloadText->setPosition(_reloadRect.x + _reloadRect.w * 0.5f,
-                             _reloadRect.y + _reloadRect.h * 0.5f);
-    _reloadBg->setVisible(false);
-    _reloadText->setVisible(false);
-    _root->addChild(_reloadText);
     _swapBg = _factory->createGraphics();
     _root->addChild(_swapBg);
     _swapText = _factory->createText();
@@ -1187,7 +1238,17 @@ void Hud::setVisible(bool visible) {
     show(_healthDepleted);
     show(_healthFill);
     show(_healthText);
-    show(_ammoText);
+    // #ui-equipped-ammo: updateActionButtons() owns the per-weapon visibility
+    // (melee / empty reserve), but a hidden HUD must not leave the clip boxes
+    // on screen.
+    if (!visible) {
+        show(_ammoClipBg);
+        show(_ammoClipText);
+        show(_ammoReserveBg);
+        show(_ammoReserveText);
+        show(_ammoReloadBg);
+        show(_ammoReloadIcon);
+    }
     show(_mapFrame);
     show(_mapInfoBg);
     show(_aliveIcon);
@@ -2303,6 +2364,11 @@ void Hud::updateActionButtons() {
     std::string key = base ? "1" : "0";
     key += "|" + _healItem + "|" + _boostItem + "|" + _scopeEquipped + "|" +
         std::to_string(_equippedSlot);
+    // #ui-equipped-ammo state is part of the key so the clip/reserve boxes and
+    // the reload icon repaint when the weapon or its ammo changes.
+    key += "|" + std::to_string(_ammoClip) + ":" + std::to_string(_ammoReserve) +
+        (_ammoInfinite ? "i" : "") + (_ammoShowClip ? "c" : "") +
+        (_ammoShowReserve ? "r" : "");
     for (const auto& row : _topLoot) {
         key += "|" + row.type + ":" + std::to_string(row.countValue);
     }
@@ -2317,13 +2383,52 @@ void Hud::updateActionButtons() {
     }
     _actionKey = key;
 
-    // Remaining pills.
-    paintBox(_reloadBg, _reloadRect, 0x000000, 0.4f, 0.35f);
-    _reloadBg->setVisible(base);
-    _reloadText->setVisible(base);
+    // Remaining pill.
     paintBox(_swapBg, _swapRect, 0x000000, 0.4f, 0.35f);
     _swapBg->setVisible(base);
     _swapText->setVisible(base);
+
+    // #ui-equipped-ammo (ui2.ts:1226-1246): clip + reserve boxes and the
+    // bullet reload button. ui2.ts hides the clip on melee weapons, the
+    // reserve box while there is no reserve ammo (which also hides the reload
+    // button), and paints a 0 clip in red.
+    const bool showClip = base && _ammoShowClip;
+    const bool showReserve = base && _ammoShowReserve;
+    if (_ammoClipBg) _ammoClipBg->setVisible(showClip);
+    if (_ammoClipText) {
+        _ammoClipText->setVisible(showClip);
+        if (showClip) {
+            const std::string text = std::to_string(_ammoClip);
+            if (text != _lastAmmoClipText) {
+                _lastAmmoClipText = text;
+                _ammoClipText->setText(text);
+            }
+            const uint32_t color = _ammoClip > 0 ? 0xffffff : 0xff0000;
+            if (color != _lastAmmoClipColor) {
+                _lastAmmoClipColor = color;
+                _ammoClipText->setColor(color, 0x000000, 2.0f, true);
+            }
+        }
+    }
+    if (_ammoReserveBg) _ammoReserveBg->setVisible(showReserve);
+    if (_ammoReserveText) {
+        _ammoReserveText->setVisible(showReserve);
+        if (showReserve) {
+            // ui2.ts: Number.MAX_VALUE (infinite ammo) prints as ∞.
+            const std::string text = _ammoInfinite ? "\xE2\x88\x9E" : std::to_string(_ammoReserve);
+            if (text != _lastAmmoReserveText) {
+                _lastAmmoReserveText = text;
+                _ammoReserveText->setText(text);
+            }
+            const uint32_t color = (_ammoInfinite || _ammoReserve != 0) ? 0xffffff : 0xff0000;
+            if (color != _lastAmmoReserveColor) {
+                _lastAmmoReserveColor = color;
+                _ammoReserveText->setColor(color, 0x000000, 2.0f, true);
+            }
+        }
+    }
+    if (_ammoReloadBg) _ammoReloadBg->setVisible(showReserve);
+    if (_ammoReloadIcon) _ammoReloadIcon->setVisible(showReserve);
 
     // Top bag counters: bandage / medkit / soda / pills (tap = use, hold = drop).
     for (int i = 0; i < kTopLootCount; ++i) {
@@ -2665,24 +2770,43 @@ void Hud::update(float dt, const Game& game, bool visible) {
             start = end == std::string::npos ? weaponKey.size() : end + 1;
         }
     }
-    // ui2.ts reserve ammo: equipped clip + the bag count for its ammo type.
+    // ui2.ts:896-910 / 1226-1246 (#ui-equipped-ammo): the equipped weapon's
+    // clip, the bag count for its ammo type, and the reload button. Melee
+    // hides the clip; a gun shows the clip (red at 0) and the reserve box only
+    // while it has ammo left (infinite guns print ∞).
+    _ammoClip = 0;
+    _ammoReserve = 0;
+    _ammoInfinite = false;
+    _ammoShowClip = false;
+    _ammoShowReserve = false;
     if (apd.curWeapIdx >= 0 && apd.curWeapIdx < slotCount) {
         const auto& weap = apd.weapons[static_cast<size_t>(apd.curWeapIdx)];
-        const GameObjRenderDef* def = getDefProvider() ? getDefProvider()->gameObject(weap.type) : nullptr;
-        if (def && !def->ammoType.empty() && weap.ammo >= 0) {
-            std::string text = std::to_string(weap.ammo);
-            text += "/" + std::to_string(bagCount(apd.inventory, def->ammoType.c_str()));
-            if (text != _lastAmmoText) {
-                _lastAmmoText = text;
-                _ammoText->setText(text);
-            }
-        } else if (!_lastAmmoText.empty()) {
-            _lastAmmoText.clear();
-            _ammoText->setText(std::string());
+        const DefProvider* provider = getDefProvider();
+        const GameObjRenderDef* def = (!weap.type.empty() && provider)
+            ? provider->gameObject(weap.type)
+            : nullptr;
+        if (def && def->category != "melee") {
+            // ui2.ts:863: the throwable slot counts the bag instead of the
+            // (always 0) weapon ammo field.
+            _ammoClip = apd.curWeapIdx == WeaponSlot_Throwable
+                ? bagCount(apd.inventory, weap.type.c_str())
+                : static_cast<int>(weap.ammo);
+            _ammoShowClip = true;
         }
-    } else if (!_lastAmmoText.empty()) {
-        _lastAmmoText.clear();
-        _ammoText->setText(std::string());
+        if (def && def->category == "gun") {
+            // ui2.ts:901-906: ammoInfinite or the endless_ammo perk (unless
+            // the gun ignores it) makes the reserve infinite.
+            bool endlessAmmo = false;
+            for (const auto& perk : apd.perks) {
+                if (perk.type == "endless_ammo") {
+                    endlessAmmo = true;
+                    break;
+                }
+            }
+            _ammoInfinite = def->ammoInfinite || (endlessAmmo && !def->ignoreEndlessAmmo);
+            _ammoReserve = _ammoInfinite ? 0 : bagCount(apd.inventory, def->ammoType.c_str());
+            _ammoShowReserve = _ammoInfinite || _ammoReserve > 0;
+        }
     }
 
     // --- Top bag counters + ammo column (ui2.ts loot strips) ---
