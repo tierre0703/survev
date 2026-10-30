@@ -160,6 +160,10 @@ struct PlayerConfig {
     static constexpr float radius = 1.0f;
     // player.ts melee collision (GameConfig.player.meleeHeight).
     static constexpr float meleeHeight = 0.25f;
+    // loot.ts touch reach: mobile pickup range is player.rad +
+    // loot.rad * touchLootRadMult (shared/gameConfig.ts, server
+    // Player.getClosestLoot uses the same formula for isMobile).
+    static constexpr float touchLootRadMult = 1.4f;
     // player.ts aura (medic heal/revive circle) radii.
     static constexpr float medicHealRange = 8.0f;
     static constexpr float medicReviveRange = 6.0f;
@@ -170,6 +174,13 @@ struct PlayerConfig {
     static constexpr float emoteHardCooldown = 6.0f;
     static constexpr int emoteThreshold = 6;
 };
+
+// loot.ts m_update touch branch / server Player.getClosestLoot: the distance
+// under which a touch player can pick a loot up (and therefore sees the
+// "PICK UP" prompt).
+inline float touchLootReach(float playerRad, float lootRad) {
+    return playerRad + lootRad * PlayerConfig::touchLootRadMult;
+}
 
 // Port of GameConfig.map (terrain generation + grid).
 struct MapConfig {

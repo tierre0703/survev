@@ -155,19 +155,53 @@ public:
     static constexpr float kActionTop = 88.0f; // from the top edge
     // ui2.ts heal/boost bag strip reduced to the four counters the mockup
     // shows: bandage, med kit, soda, painkillers (tap = use, hold = drop).
+    // Mobile #ui-medical-interactive pills scaled to the 32px HUD row: a
+    // rounded capsule with the count on the left and the loot icon on the
+    // right. Empty pills stay on screen as light "ghost" capsules, so all four
+    // slots keep their place.
     static constexpr int kTopLootCount = 4;
-    static constexpr float kTopLootW = 44.0f;
+    static constexpr float kTopLootW = 80.0f;
     static constexpr float kTopLootH = 32.0f;
-    static constexpr float kTopLootPitch = 58.0f;
+    static constexpr float kTopLootGap = 6.0f;
+    static constexpr float kTopLootPitch = kTopLootW + kTopLootGap;
+    static constexpr float kTopLootRadius = 7.0f;
+    static constexpr float kTopLootIconSize = 26.0f;
+    static constexpr float kTopLootFontSize = 18.0f;
+    // The strip's left edge sits on the local player's left edge (the
+    // default-zoom body half-width) and grows to the right, instead of being
+    // centred on the screen.
+    static constexpr float kTopLootPlayerInset = 26.0f;
+    // Spectate MATCH STATS panel: 250x190 box with 14px padding and 18px rows
+    // (five lines: YOUR RESULTS + kills/damage/taken/survived), so the text
+    // fits inside the box instead of clipping or looking undersized.
+    static constexpr float kSpecStatsPanelW = 250.0f;
+    static constexpr float kSpecStatsPanelH = 190.0f;
+    static constexpr float kSpecStatsPad = 14.0f;
+    static constexpr float kSpecStatsFontSize = 18.0f;
+    // ui2.ts:1269-1277 dims empty loot rows; the ghost capsule keeps the
+    // inventory at a glance without competing with the filled pills.
+    static constexpr float kTopLootZeroFillAlpha = 0.16f;
+    static constexpr float kTopLootZeroTextAlpha = 0.6f;
     // ui2.tsmm #ui-ammo-interactive: one row per ammo type in the bag.
     static constexpr int kAmmoRowCount = 8;
     static constexpr float kAmmoRowW = 64.0f;
     static constexpr float kAmmoRowH = 26.0f;
     static constexpr float kAmmoRowPitch = 30.0f;
+    // game.css .ui-ammo: 5px border-radius in a 32px row, 11px overlay chip
+    // (right 2px), 24px count. Scaled to the native 26px row.
+    static constexpr float kAmmoRowRadius = 6.0f;
+    static constexpr float kAmmoChipSize = 16.0f;
+    static constexpr float kAmmoCountFontSize = 18.0f;
+    // ui2.ts:1269-1277: a zero count dims the row to 0.25 (special ammo hides).
+    static constexpr float kAmmoZeroAlpha = 0.25f;
     // Weapon cards (#ui-weapon-id-N): tap = equip, hold = drop / drag-swap.
     static constexpr float kWeaponSlotWidth = 150.0f;
     static constexpr float kWeaponSlotHeight = 42.0f;
     static constexpr float kWeaponCardPitch = 46.0f;
+    // Card art/name sized to the card height (the web's .ui-weapon-image box
+    // fills the row too; 18px matches .ui-weapon-name).
+    static constexpr float kWeaponCardIconSize = 40.0f;
+    static constexpr float kWeaponCardFontSize = 18.0f;
     // Gear (helmet/chest/backpack) + up to 4 perk icons.
     static constexpr int kGearIconCount = 7;
 
@@ -176,6 +210,9 @@ public:
     static constexpr float kPillHeight = 42.0f;
     // Finger-press prompt next to a nearby loot.
     static constexpr float kPromptSize = 52.0f;
+    // ui2.ts #ui-interaction-description: 24px on the web, sized to fill the
+    // 52px prompt box (the item name box uses the same height).
+    static constexpr float kPromptFontSize = 24.0f;
     // Long-press a counter/pill/weapon card to drop instead of use/equip (the
     // web's touch UI only binds tap-to-use; drop is the mouse right-click
     // action in ui2.ts itemActions).
@@ -271,6 +308,9 @@ public:
     void showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t localPlayerId,
                       const Game* game = nullptr);
     bool gameOverShown() const { return _overShown; }
+    // ui.ts displayStats: the result screen offers SPECTATE while the match is
+    // still running (GameOverMsg.gameOver == false and players remain alive).
+    bool gameOverCanSpectate() const { return _overCanSpectate; }
     static std::string formatTime(uint16_t seconds);
 
     // P0.4 death/spectate. PlayerStatsMsg arrives when the local player dies in
@@ -295,7 +335,6 @@ public:
     // Spectate stats panel toggle (ui.ts toggleLocalStats / View Match Stats).
     void toggleSpectateStats();
     bool spectateStatsShown() const { return _specStatsShown; }
-
     // map.ts renderMap(): show the baked minimap texture under the frame.
     void setMinimap(pix::RenderTexture* texture, float mapWidth, float mapHeight);
     // ui.ts createPing / mapSprite.ts: draw the active minimap ping sprites.
@@ -323,6 +362,9 @@ public:
     void toggleMinimapHidden() { setMinimapHidden(!_minimapHidden); }
     // Tapping the minimap opens the big map. Pass design-space coordinates.
     bool minimapTapHit(float designX, float designY) const;
+    // Settings gear (#ui-menu-display). Stays tappable while dead/spectating
+    // and while the HUD fallback menu is open (ui.ts #ui-menu-display).
+    bool settingsTapHit(float designX, float designY) const;
     bool bigMapContains(float designX, float designY) const;
     bool bigMapCloseHit(float designX, float designY) const;
 
@@ -442,12 +484,25 @@ public:
     const pix::Text* weaponSlotText(int idx) const {
         return (idx >= 0 && idx < 4) ? _weaponSlots[idx] : nullptr;
     }
+    // Weapon card background: paint() draws the equipped slot's highlight.
+    const pix::Graphics* weaponSlotBg(int idx) const {
+        return (idx >= 0 && idx < 4) ? _weaponSlotBg[idx] : nullptr;
+    }
     // The four top bag counters ("1x" .. "15x" scope strip) / ammo rows.
     const pix::Text* topLootCountText(int idx) const {
         return (idx >= 0 && idx < kTopLootCount) ? _topLoot[static_cast<size_t>(idx)].count : nullptr;
     }
+    const pix::Graphics* topLootBackground(int idx) const {
+        return (idx >= 0 && idx < kTopLootCount) ? _topLoot[static_cast<size_t>(idx)].bg : nullptr;
+    }
+    const pix::Sprite* topLootIcon(int idx) const {
+        return (idx >= 0 && idx < kTopLootCount) ? _topLoot[static_cast<size_t>(idx)].icon : nullptr;
+    }
     const pix::Text* ammoRowCountText(int idx) const {
         return (idx >= 0 && idx < kAmmoRowCount) ? _ammoRows[static_cast<size_t>(idx)].count : nullptr;
+    }
+    const pix::Graphics* ammoRowBackground(int idx) const {
+        return (idx >= 0 && idx < kAmmoRowCount) ? _ammoRows[static_cast<size_t>(idx)].bg : nullptr;
     }
     const pix::Text* scopeSlotLabel(int idx) const {
         return (idx >= 0 && idx < kScopeSlotCount) ? _scopeSlots[static_cast<size_t>(idx)].label : nullptr;
@@ -478,6 +533,11 @@ private:
     struct Rect;
     void paintBox(pix::Graphics* g, const Rect& rect, uint32_t fill, float alpha,
                   float borderAlpha) const;
+    // Filled rounded rectangle (border-radius), built as one convex polygon.
+    void paintRoundedBox(pix::Graphics* g, const Rect& rect, float radius,
+                         uint32_t fill, float alpha) const;
+    // Writes the "YOUR RESULTS" rows into the spectate stats panel.
+    void refreshSpectateStats();
 
     struct Rect {
         float x = 0.0f;
@@ -603,6 +663,15 @@ private:
     Rect _overSpectateRect;
     Rect _overLeaveRect;
     bool _overShown = false;
+    bool _overCanSpectate = false;
+    // Game::gameOverSeq() of the result currently shown; a newer message
+    // re-opens the panel after it was dismissed to spectate.
+    uint32_t _lastGameOverSeq = 0;
+    // game.ts m_spectating edge: ui.ts setSpectating(true) hides the stats
+    // screen, so the HUD dismisses the panel on the false -> true transition
+    // and whenever the server switches the observed player.
+    bool _wasSpectating = false;
+    uint16_t _lastActivePlayerId = 0;
     bool _deathShown = false;
     bool _spectating = false;
     PlayerStatsMsg _localStats;
@@ -656,10 +725,8 @@ private:
     struct AmmoRow {
         pix::Graphics* bg = nullptr;
         pix::Graphics* chip = nullptr;
-        pix::Sprite* icon = nullptr;
         pix::Text* count = nullptr;
         std::string type;
-        std::string lastFrame;
         int countValue = 0;
         Rect rect;
     };

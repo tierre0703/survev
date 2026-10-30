@@ -164,6 +164,9 @@ public:
     // App lifecycle hooks (AppDelegate).
     void pauseGame();
     void resumeGame();
+    // Settings gear: opens the Java GamePauseDialog, or the HUD menu when the
+    // host has no bridge. Shared by the normal HUD and the dead/spectating path.
+    void openGameMenu();
 
     // P1.6: BT-keyboard key state from the Java bridge (Android KeyEvent codes),
     // marshalled onto the game thread by UiBridge. No-op off Android.

@@ -203,8 +203,8 @@ TEST(hud_action_bar_hit_test) {
     // swap pill stay tappable while the HUD is up.
     CHECK(hud.hitTest(782.5f, 96.0f).kind == Hud::TapKind::Reload);
     CHECK(hud.hitTest(900.0f, 150.0f).kind == Hud::TapKind::SwapWeapons);
-    // An empty bag hides all counters, and without a nearby prompt the
-    // interact hit stays None (touch falls through to the pads).
+    // An empty bag leaves only inert ghost pills, and without a nearby prompt
+    // the interact hit stays None (touch falls through to the pads).
     CHECK(hud.hitTest(400.0f, 300.0f).kind == Hud::TapKind::None);
     CHECK(hud.hitTest(640.0f, 692.0f).kind == Hud::TapKind::None);
     CHECK(hud.hitTest(40.0f, 466.0f).kind == Hud::TapKind::None);
@@ -271,20 +271,67 @@ TEST(hud_action_bar_shows_inventory_state) {
     hud.update(0.016f, h.game, true);
 
     // Top bag counters: bandage=3, healthkit/soda/painkiller per inventory
-    // (painkiller=1 behind the LOADOUT tap-to-use rows).
+    // (painkiller=1 behind the LOADOUT tap-to-use rows). Every pill stays on
+    // screen: empty ones are light ghosts with a dimmed, centred "0".
     auto* bandage = static_cast<const pix::NullText*>(hud.topLootCountText(0));
     auto* pills = static_cast<const pix::NullText*>(hud.topLootCountText(3));
     auto* medkit = static_cast<const pix::NullText*>(hud.topLootCountText(1));
     CHECK(bandage && pills && medkit);
     CHECK_EQ(bandage->text, std::string("3"));
     CHECK(bandage->visible);
+    CHECK_NEAR(bandage->alpha, 1.0f, 0.001f);
+    CHECK_NEAR(bandage->fontSize, Hud::kTopLootFontSize, 0.001f);
     CHECK_EQ(hud.topLootType(0), std::string("bandage"));
     CHECK_EQ(pills->text, std::string("1"));
     CHECK(pills->visible);
-    // healthkit/soda are 0 in the bag -> hidden counters.
-    CHECK(!medkit->visible);
-    CHECK(hud.hitTest(640.0f, 692.0f).kind == Hud::TapKind::LootUse);
-    CHECK_EQ(hud.hitTest(640.0f, 692.0f).slot, 0);
+    // healthkit/soda are 0 in the bag -> ghost pills, not hidden counters.
+    CHECK(medkit->visible);
+    CHECK_EQ(medkit->text, std::string("0"));
+    CHECK_NEAR(medkit->alpha, Hud::kTopLootZeroTextAlpha, 0.001f);
+    // The filled pill shows its loot icon (the host defs carry no atlas frame,
+    // so only the empty pill's hidden icon is asserted here); the empty pill
+    // has none.
+    auto* bandageIcon = static_cast<const pix::NullSprite*>(hud.topLootIcon(0));
+    auto* medkitIcon = static_cast<const pix::NullSprite*>(hud.topLootIcon(1));
+    CHECK(bandageIcon != nullptr);
+    CHECK(medkitIcon && !medkitIcon->visible);
+
+    // Capsule backgrounds: a dark fill for the filled pill and a light ghost
+    // fill for the empty one, both rounded (corner-arc polygon, no square).
+    auto hasFill = [](const pix::Graphics* g, uint32_t color) {
+        if (!g) {
+            return false;
+        }
+        const auto* nullG = static_cast<const pix::NullGraphics*>(g);
+        return std::any_of(nullG->commands.begin(), nullG->commands.end(),
+            [color](const pix::DrawCommand& cmd) {
+                return cmd.kind == pix::DrawCommand::BeginFill && cmd.color == color;
+            });
+    };
+    CHECK(hasFill(hud.topLootBackground(0), 0x000000));
+    CHECK(hasFill(hud.topLootBackground(1), 0xffffff));
+    const auto* pillBg = static_cast<const pix::NullGraphics*>(hud.topLootBackground(0));
+    CHECK(pillBg != nullptr);
+    if (pillBg) {
+        bool rounded = false;
+        bool square = false;
+        for (const auto& cmd : pillBg->commands) {
+            if (cmd.kind == pix::DrawCommand::Polygon) {
+                rounded = true;
+            }
+            if (cmd.kind == pix::DrawCommand::Rect) {
+                square = true;
+            }
+        }
+        CHECK(rounded);
+        CHECK(!square);
+    }
+
+    // Only the filled bandage pill is tappable; the ghost pills are inert.
+    // Slot 0 starts at the player's left edge (640 - 26) and is 80px wide.
+    CHECK(hud.hitTest(654.0f, 692.0f).kind == Hud::TapKind::LootUse);
+    CHECK_EQ(hud.hitTest(654.0f, 692.0f).slot, 0);
+    CHECK(hud.hitTest(740.0f, 692.0f).kind == Hud::TapKind::None);
 
     // Scope strip: only owned scopes show; "4xscope" is owned and equipped.
     auto* scope4 = static_cast<const pix::NullText*>(hud.scopeSlotLabel(2));
@@ -304,6 +351,9 @@ TEST(hud_action_bar_shows_inventory_state) {
     CHECK_EQ(hud.weaponType(2), std::string("fists"));
     auto* slot0 = static_cast<const pix::NullText*>(hud.weaponSlotText(0));
     CHECK(slot0 && slot0->text == std::string("AK47"));
+    // Card name/art are sized to the card height (18px in the 42px row).
+    CHECK_NEAR(slot0->fontSize, Hud::kWeaponCardFontSize, 0.001f);
+    CHECK(Hud::kWeaponCardIconSize <= Hud::kWeaponSlotHeight);
 
     // The action bar disappears with the result screen.
     GameOverMsg over;
@@ -365,6 +415,73 @@ TEST(hud_equipped_ammo_matches_web_client) {
     CHECK(reserve->visible);
     CHECK(icon->visible);
     CHECK_EQ(icon->frame, std::string("gui/bullets.png"));
+
+    // ui2.ts:867-868: the equipped weapon card is highlighted. Slot 0 holds the
+    // equipped ak47; the other cards keep the dim fill and no border.
+    auto hasBorder = [](const pix::Graphics* g) {
+        if (!g) {
+            return false;
+        }
+        const auto* nullG = static_cast<const pix::NullGraphics*>(g);
+        return std::any_of(nullG->commands.begin(), nullG->commands.end(),
+            [](const pix::DrawCommand& cmd) { return cmd.kind == pix::DrawCommand::LineStyle; });
+    };
+    auto hasFill = [](const pix::Graphics* g, uint32_t color) {
+        if (!g) {
+            return false;
+        }
+        const auto* nullG = static_cast<const pix::NullGraphics*>(g);
+        return std::any_of(nullG->commands.begin(), nullG->commands.end(),
+            [color](const pix::DrawCommand& cmd) {
+                return cmd.kind == pix::DrawCommand::BeginFill && cmd.color == color;
+            });
+    };
+    CHECK(hasBorder(hud.weaponSlotBg(0)));
+    CHECK(hasFill(hud.weaponSlotBg(0), 0xffffff));
+    CHECK(!hasBorder(hud.weaponSlotBg(1)));
+    CHECK(hasFill(hud.weaponSlotBg(2), 0x000000));
+
+    // Swapping to the melee slot moves the highlight with curWeapIdx.
+    u.activePlayerData.curWeapIdx = 2;
+    h.push(MsgType_Update, u);
+    hud.update(0.016f, h.game, true);
+    CHECK(!hasBorder(hud.weaponSlotBg(0)));
+    CHECK(hasBorder(hud.weaponSlotBg(2)));
+    // Restore the gun for the ammo assertions below.
+    u.activePlayerData.curWeapIdx = 0;
+
+    // #ui-ammo-interactive pills (ui2.ts:1269-1277): 762mm has 90 rounds, the
+    // 9mm row sits dimmed at 0, and the special 45acp row hides while empty.
+    auto* row762 = static_cast<const pix::NullText*>(hud.ammoRowCountText(2));
+    auto* row9mm = static_cast<const pix::NullText*>(hud.ammoRowCountText(1));
+    auto* row45acp = static_cast<const pix::NullText*>(hud.ammoRowCountText(4));
+    CHECK(row762 && row9mm && row45acp);
+    if (row762 && row9mm && row45acp) {
+        CHECK_EQ(row762->text, std::string("90"));
+        CHECK(row762->visible);
+        CHECK_NEAR(row762->alpha, 1.0f, 0.001f);
+        CHECK_NEAR(row762->fontSize, Hud::kAmmoCountFontSize, 0.001f);
+        CHECK_EQ(row9mm->text, std::string("0"));
+        CHECK(row9mm->visible);
+        CHECK_NEAR(row9mm->alpha, Hud::kAmmoZeroAlpha, 0.001f);
+        CHECK(!row45acp->visible);
+    }
+    const auto* ammoBg = static_cast<const pix::NullGraphics*>(hud.ammoRowBackground(2));
+    CHECK(ammoBg != nullptr);
+    if (ammoBg) {
+        bool rounded = false;
+        bool square = false;
+        for (const auto& cmd : ammoBg->commands) {
+            if (cmd.kind == pix::DrawCommand::Polygon) {
+                rounded = true;
+            }
+            if (cmd.kind == pix::DrawCommand::Rect) {
+                square = true;
+            }
+        }
+        CHECK(rounded);  // corner arcs
+        CHECK(!square);  // no square panel
+    }
 
     // game.css: #ui-current-clip is 100x50 centred on the screen; the reserve
     // box is 65x32 at left 82% / top 18px. Both sit 80px above the design
@@ -489,6 +606,7 @@ TEST(hud_death_panel_and_spectate_overlay) {
     CHECK(hud.spectateStatsShown());
     auto* specStats = static_cast<const pix::NullText*>(hud.spectateStatsText());
     CHECK(specStats != nullptr);
+    CHECK(specStats->text.find("YOUR RESULTS") != std::string::npos);
     CHECK(specStats->text.find("KILLS  4") != std::string::npos);
     CHECK(specStats->text.find("DAMAGE  321") != std::string::npos);
 
@@ -508,6 +626,139 @@ TEST(hud_death_panel_and_spectate_overlay) {
     CHECK(hud.overlayActionAt(520.0f, 266.0f) == Hud::OverlayAction::None);
 }
 
+// ui.ts showStats: a GameOverMsg while the match is still running (solo death
+// or a wiped team) shows SPECTATE beside LEAVE. beginSpectating just queues
+// SpectateAction.Begin (game.ts sends SpectateMsg); once the server moves
+// activePlayerId the stats panel gives way to the spectating overlay
+// (setSpectating -> hideStats). A running match's other-team result does not
+// reopen the panel.
+TEST(hud_gameover_spectate_matches_web_client) {
+    Harness h;
+    JoinedMsg joined;
+    joined.teamMode = 1; // solo
+    joined.playerId = 42;
+    joined.started = true;
+    h.push(MsgType_Joined, joined);
+
+    UpdateMsg u;
+    u.activePlayerId = 42;
+    u.activePlayerIdDirty = true;
+    PlayerInfo me;
+    me.playerId = 42;
+    me.teamId = 0;
+    me.name = "Me";
+    u.playerInfos.push_back(me);
+    u.ack = 1;
+    h.push(MsgType_Update, u);
+
+    AliveCountsMsg alive;
+    alive.teamAliveCounts = {4}; // other players still in the match
+    h.push(MsgType_AliveCounts, alive);
+
+    pix::NullPixiFactory factory;
+    pix::Container* root = factory.createContainer();
+    Hud hud;
+    hud.build(&factory, root, Vec2(1280.0f, 720.0f));
+    hud.update(0.016f, h.game, true);
+
+    PlayerStatsMsg stats;
+    stats.playerId = 42;
+    stats.dead = true;
+    stats.kills = 2;
+    stats.damageDealt = 150;
+    stats.damageTaken = 100;
+    stats.timeAlive = 60;
+
+    // Solo death before the match ends: the result panel keeps SPECTATE.
+    GameOverMsg over;
+    over.teamId = 0;
+    over.teamRank = 5;
+    over.gameOver = false;
+    over.winningTeamId = 0;
+    over.playerStats = {stats};
+    h.push(MsgType_GameOver, over);
+    hud.update(0.016f, h.game, true);
+    CHECK(hud.gameOverShown());
+    CHECK(hud.gameOverCanSpectate());
+    CHECK(hud.overlayActionAt(520.0f, 266.0f) == Hud::OverlayAction::SpectateBegin);
+    CHECK(hud.overlayActionAt(760.0f, 266.0f) == Hud::OverlayAction::Leave);
+
+    // The server answers SpectateMsg Begin with a new active player: the
+    // result panel closes and the spectating overlay takes over.
+    UpdateMsg spec;
+    spec.activePlayerId = 77;
+    spec.activePlayerIdDirty = true;
+    spec.activePlayerData.spectatorCountDirty = true;
+    spec.activePlayerData.spectatorCount = 1;
+    PlayerInfo other;
+    other.playerId = 77;
+    other.teamId = 2;
+    other.name = "Killer";
+    spec.playerInfos.push_back(other);
+    spec.ack = 2;
+    h.push(MsgType_Update, spec);
+    hud.update(0.016f, h.game, true);
+    CHECK(!hud.gameOverShown());
+    CHECK(hud.spectating());
+    auto* specLabel = static_cast<const pix::NullText*>(hud.spectateLabelText());
+    CHECK(specLabel != nullptr);
+    CHECK_EQ(specLabel->text, std::string("SPECTATING Killer"));
+
+    // The settings gear stays tappable while spectating (hitTest is disabled).
+    // Design space is y-up: the gear sits at CSS top 3 (design y 720 - 25).
+    CHECK(hud.settingsTapHit(25.0f, 695.0f));
+    CHECK(hud.hitTest(25.0f, 695.0f).kind == Hud::TapKind::None);
+
+    // MATCH STATS shows the local result even though the panel is opened after
+    // a GameOverMsg (the solo death path never enters the PlayerStats branch).
+    hud.toggleSpectateStats();
+    auto* specStats = static_cast<const pix::NullText*>(hud.spectateStatsText());
+    CHECK(specStats != nullptr);
+    CHECK_NEAR(specStats->fontSize, Hud::kSpecStatsFontSize, 0.001f);
+    CHECK(specStats->text.find("YOUR RESULTS") != std::string::npos);
+    CHECK(specStats->text.find("KILLS  2") != std::string::npos);
+    CHECK(specStats->text.find("DAMAGE  150") != std::string::npos);
+    CHECK(specStats->text.find("TAKEN  100") != std::string::npos);
+    hud.toggleSpectateStats();
+
+    // Spectated player's team dies while we keep watching: ui.ts showStats
+    // suppresses another team's result in a running match.
+    GameOverMsg otherOver;
+    otherOver.teamId = 2;
+    otherOver.teamRank = 3;
+    otherOver.gameOver = false;
+    otherOver.playerStats = {stats};
+    h.push(MsgType_GameOver, otherOver);
+    hud.update(0.016f, h.game, true);
+    CHECK(!hud.gameOverShown());
+    CHECK(hud.spectating());
+
+    // Final result: SPECTATE is gone and LEAVE is centred again.
+    otherOver.gameOver = true;
+    otherOver.winningTeamId = 2;
+    otherOver.teamRank = 3;
+    h.push(MsgType_GameOver, otherOver);
+    hud.update(0.016f, h.game, true);
+    CHECK(hud.gameOverShown());
+    CHECK(!hud.gameOverCanSpectate());
+    CHECK(!hud.spectating());
+    CHECK(hud.overlayActionAt(520.0f, 266.0f) == Hud::OverlayAction::None);
+    CHECK(hud.overlayActionAt(640.0f, 266.0f) == Hud::OverlayAction::Leave);
+}
+
+// loot.ts m_update touch branch: the pickup prompt reach is
+// player.rad + loot.rad * touchLootRadMult, the same radius the server's
+// Player.getClosestLoot uses for mobile players. The old prompt check
+// (loot.rad + 2.5) showed the prompt out of pickup range.
+TEST(touch_loot_reach_matches_web_and_server) {
+    CHECK_NEAR(PlayerConfig::touchLootRadMult, 1.4f, 1e-6f);
+    CHECK_NEAR(touchLootReach(1.0f, 1.0f), 2.4f, 1e-5f);
+    CHECK_NEAR(touchLootReach(1.5f, 2.0f), 4.3f, 1e-5f);
+    // 2.45 units away: out of reach now, but inside the old loot.rad + 2.5.
+    CHECK(2.45f >= touchLootReach(1.0f, 1.0f));
+    CHECK(2.45f < 1.0f + 2.5f);
+}
+
 TEST(hud_prompt_announcement_and_faction_counts) {
     Harness h;
     pix::NullPixiFactory factory;
@@ -522,6 +773,8 @@ TEST(hud_prompt_announcement_and_faction_counts) {
     CHECK(prompt->visible);
     CHECK_EQ(prompt->text, std::string("PICK UP FRAG"));
     CHECK_EQ(prompt->fill, 0xffffffu); // white name text on the dark box
+    // 24px fills the 52px prompt box (web #ui-interaction-description).
+    CHECK_NEAR(prompt->fontSize, Hud::kPromptFontSize, 0.001f);
     // The item name gets its own box, right of the finger-press button and
     // vertically centred on it (ui2.ts #ui-interaction-outer).
     auto* nameBox = static_cast<const pix::NullGraphics*>(hud.interactionPromptTextBox());
@@ -529,12 +782,13 @@ TEST(hud_prompt_announcement_and_faction_counts) {
     if (nameBox) {
         CHECK(nameBox->visible);
         CHECK_NEAR(nameBox->x, 34.0f, 0.001f);  // 26 (half icon) + 8 gap
-        CHECK_NEAR(nameBox->y, 263.0f, 0.001f); // cy 280 - 34/2
+        CHECK_NEAR(nameBox->y, 254.0f, 0.001f); // cy 280 - 52/2 (same as icon)
         bool sawRect = false;
         for (const auto& cmd : nameBox->commands) {
             if (cmd.kind == pix::DrawCommand::Rect) {
                 sawRect = true;
-                CHECK_NEAR(cmd.d, 34.0f, 0.001f);
+                // Same height as the finger-press box (Hud::kPromptSize).
+                CHECK_NEAR(cmd.d, Hud::kPromptSize, 0.001f);
                 CHECK(cmd.c > 100.0f);
             }
         }

@@ -3250,3 +3250,153 @@ are gone, so only the sprite art, coloured rings and highlight remain. Disabled
 (greyed/team-only-in-solo) selectors still dim through the icon alpha. The
 centre close selector keeps its `X` glyph. Host tests unchanged: 4059
 assertions / 242 tests, 0 failures.
+
+## 57. Session 56 - equipped weapon card highlight (2026-10-29)
+
+The HUD already painted a brighter fill + 2px border for the selected weapon
+card (`Hud::updateActionButtons`, keyed on `_equippedSlot`), but the
+`9a85af1e` HUD rework dropped the `_equippedSlot = apd.curWeapIdx;`
+assignment that fed it, so no card ever highlighted. `Hud::update()` sets it
+again from `activePlayerData.curWeapIdx` (clamped to the live slot count;
+-1 = no highlight), matching `ui2.ts:867-868 weaponState.equipped`. An unused
+`ammoText` local from the same rework is gone. `hud_equipped_ammo_matches_web_client`
+now asserts the equipped card's white fill/border and that a weapon swap moves
+the highlight. Host tests: 4065 assertions / 242 tests, 0 failures.
+
+## 58. Session 57 - pickup prompt follows the touch pickup range (2026-10-29)
+
+The "PICK UP" prompt used `loot.rad + 2.5` as its reach, while the server's
+`Player.getClosestLoot` accepts a touch player within
+`player.rad + loot.rad * GameConfig.player.touchLootRadMult` (1.4). The prompt
+therefore appeared up to ~1 unit beyond the pickup range (e.g. a 1.0-radius
+loot: prompt at 3.5, pickup at 2.4), so tapping it did nothing. `GameScene`
+now mirrors `client/src/objects/loot.ts m_update` and the server: the reach is
+`PlayerConfig::touchLootRadMult` (new) through the shared helper
+`touchLootReach`, plus the same owner filter (`ownerId == 0` or the local
+player). Host test
+`touch_loot_reach_matches_web_and_server` pins the radius.
+
+The prompt's anchor also moved: it used to sit on the loot's own screen
+position, now it follows the player, two body widths (`4 * rad`) to the right
+of the player centre (same y), so the icon + "PICK UP ..." box sit beside the
+body. `Hud::updatePrompt()` still clamps the icon into the design space and
+flips the name box to the left near the right edge.
+
+The prompt's name box is now the same height as the finger-press box
+(`kPromptSize`, 52) and its text uses `Hud::kPromptFontSize` (24px, the web's
+`#ui-interaction-description` size) so it fills the box; the box width is
+estimated from that font size (0.6 x size per glyph). Verified on the x86_64
+emulator. Host tests: 4071 assertions / 243 tests, 0 failures.
+
+### 58.1 Weapon card art/name fill the card
+
+The weapon cards kept 13px names and 30px icons in a 42px row. They now use
+`Hud::kWeaponCardFontSize` (18px, the web's `.ui-weapon-name`) and
+`Hud::kWeaponCardIconSize` (40px, just inside the 42px card). The HUD action
+test asserts the 18px name font and that the icon size fits the row. Host
+tests: 4073 assertions / 243 tests, 0 failures.
+
+## 59. Session 58 - ammo column pill styling (2026-10-29)
+
+`#ui-ammo-interactive` now matches the game.css `.ui-ammo` look: each row is a
+rounded dark pill (`Hud::paintRoundedBox`, a convex corner-arc polygon; 6px
+radius, no white border) with an 18px bold count on the left and a 16px
+ammo-coloured chip on the right (web overlay colours, 0.75 alpha). Rows follow
+ui2.ts:1269-1277 instead of hiding zero counts: non-special ammo stays visible
+dimmed to 25% (`kAmmoZeroAlpha`) while its count is 0, `AmmoDef.special` rows
+(`45acp`, `308sub`, `50AE`, `flare`) stay hidden until picked up. The hardcoded
+overlay colours gained the web's 308sub/50AE values. Covered by
+`hud_equipped_ammo_matches_web_client` (row text/alpha/visibility, 762mm vs
+9mm/45acp, rounded polygon instead of a square rect, 18px count). Host tests:
+4085 assertions / 243 tests, 0 failures.
+
+## 60. Session 59 - top bag counter capsules (2026-10-29)
+
+The four top bag counters (bandage / med kit / soda / pills) were 44x32 square
+dark boxes that disappeared entirely at count 0. They are now 80x32 capsule
+pills whose left edge starts at the local player's left edge (design centre
+minus `kTopLootPlayerInset`, 26px) and grow to the right, matching the
+reference art:
+
+- Filled pill: rounded dark capsule (`rgba(0,0,0,0.4)`, 7px radius) with an
+  18px count on the left and the 26px loot icon on the right.
+- Empty pill: still on screen as a light ghost capsule (white at
+  `kTopLootZeroFillAlpha` 0.16) with a dimmed, centred `0`
+  (`kTopLootZeroTextAlpha` 0.6) and no icon, so the strip keeps its layout.
+- Only filled pills are tap/hold targets (`LootUse`); ghost pills fall through.
+
+`Hud::paintRoundedBox` now also draws the counter background (the old square
+`paintBox` had a white outline). Covered by `hud_action_bar_shows_inventory_state`
+(empty pill visible + dimmed, icon hidden, dark vs light fill colours, rounded
+polygon, 18px font, ghost pill not tappable). Host tests: 4097 assertions /
+243 tests, 0 failures.
+
+## 61. Session 60 - SPECTATE on the game-over screen (2026-10-30)
+
+The web client's result button is `ui.ts beginSpectating()`: it only sets
+`specAction = SpectateAction.Begin`, and `game.ts` sends `SpectateMsg` with that
+action (the server then picks the killer or the next alive player). The button
+is added in `showStats` when the match is not over and players remain alive
+(`gameOver || alive === 0` hides it). The native result panel had only LEAVE,
+so a solo death (GameOverMsg with `gameOver == false`) could not spectate.
+
+`Hud::showGameOver` now mirrors that condition (`_overCanSpectate`:
+`!over.gameOver` and the live `aliveCounts()` sum non-zero) and paints
+SPECTATE beside LEAVE; the touch path already routes
+`OverlayAction::SpectateBegin` to `Game::sendSpectate(1)`. After the server
+moves `activePlayerId`, the result panel is dismissed and the spectating
+overlay (label / count / PREV / NEXT / MATCH STATS / LEAVE) takes over,
+matching `ui.ts setSpectating -> hideStats`. New `Game::gameOverSeq()` lets the
+HUD tell a fresh GameOverMsg from the latched one, so the dismissed panel does
+not immediately reappear; a new message still reopens it, except for another
+team's death while spectating a running match (`ui.ts showStats` line 1388
+suppression). Final results (`gameOver == true`) keep the single centred LEAVE.
+
+Covered by `hud_gameover_spectate_matches_web_client` (solo result buttons,
+Begin -> spectating overlay + label, other-team result suppression, final
+result back to centred LEAVE). Host tests: 4112 assertions / 244 tests,
+0 failures.
+
+## 62. Session 61 - spectate settings gear + match stats rows (2026-10-30)
+
+Two spectate-mode regressions:
+
+- **Settings gear.** `GameScene::onTouchBegan` returned early for
+  `isSpectating() || isLocalDead()` before running `Hud::hitTest`, which also
+  disables itself while spectating, so the top-left gear did nothing. The gear
+  now has its own `Hud::settingsTapHit` (usable while spectating and while the
+  HUD fallback menu is open, but not under the big map / result panels) and
+  `GameScene` routes it before the dead/spectating early return through the new
+  `openGameMenu()` helper (Java `GamePauseDialog`, or the HUD menu without a
+  bridge). The same helper replaces the dead `Settings` case in the HUD-menu
+  block, so tapping the gear again closes the fallback menu.
+
+- **MATCH STATS blank panel.** The HUD's own `_localStats` copy was only filled
+  in the no-GameOverMsg branch, so a solo death (where the result arrives as
+  GameOverMsg) opened an empty panel. `Hud::update` now syncs
+  `game.localStats()` into the HUD before the result/death state machine, and
+  `refreshSpectateStats()` (re)writes the web-style `YOUR RESULTS` rows
+  (KILLS / DAMAGE / TAKEN / SURVIVED) on toggle or when late stats arrive.
+
+Covered by `hud_gameover_spectate_matches_web_client` (gear hit while
+spectating, MATCH STATS text, title row) and the team death-panel test. Host
+tests: 4120 assertions / 244 tests, 0 failures.
+
+### 62.1 MATCH STATS text fits its panel
+
+The panel's rows used a 15px font anchored to the panel's top-left, which read
+undersized and could clip as the title/row count grew. The panel now exposes
+`kSpecStatsPanelW/H` (250x190), `kSpecStatsPad` (14) and
+`kSpecStatsFontSize` (18, the same size as the rest of the HUD's body text);
+the text is left-padded and vertically centred (`anchor 0, 0.5`), so the five
+`YOUR RESULTS` rows sit inside the box regardless of line count. The action
+test pins the 18px font. Host tests: 4121 assertions / 244 tests, 0 failures.
+
+## 63. Session 62 - ammo column drops the bullets icon (2026-10-30)
+
+`#ui-ammo-interactive` rows no longer draw the shared `bullets.img` sprite
+(it overlapped the right-hand ammo-colour chip and added noise at 26px). Each
+row is now just the rounded dark pill, the 18px count on the left and the
+ammo-coloured chip on the right. `AmmoRow::icon`/`lastFrame` and their
+create/paint code are gone; the row geometry, zero-dim alpha and special-ammo
+hiding are unchanged. Host tests: 4121 assertions / 244 tests, 0 failures.

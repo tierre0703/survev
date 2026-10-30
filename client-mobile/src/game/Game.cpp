@@ -58,6 +58,7 @@ void Game::free() {
     _localStats = PlayerStatsMsg{};
     _hasLocalStats = false;
     _hasGameOver = false;
+    _gameOverSeq = 0;
     _lastUrl.clear();
     _lastToken.clear();
     _objectsById.clear();
@@ -580,6 +581,7 @@ void Game::handleGameOver(NetBitStream& s) {
     }
     _gameOver = std::move(m);
     _hasGameOver = true;
+    ++_gameOverSeq;
 }
 
 void Game::handlePickup(NetBitStream& s) {

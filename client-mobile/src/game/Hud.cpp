@@ -36,20 +36,22 @@ const uint32_t kBoostColors[4] = {0xff901a, 0xff751a, 0xff6616, 0xff5600};
 // Top bag counters (#ui-medical-interactive + #ui-loot-soda/#ui-loot-painkiller).
 const char* kTopLootTypes[Hud::kTopLootCount] = {"bandage", "healthkit", "soda", "painkiller"};
 
-// #ui-ammo-interactive rows, game.css overlay colours per ammo type.
+// #ui-ammo-interactive rows, game.css overlay colours per ammo type. `special`
+// is AmmoDef.special (ui2.ts hides those rows while the count is 0).
 struct AmmoTypeStyle {
     const char* type;
     uint32_t color;
+    bool special;
 };
 const AmmoTypeStyle kAmmoTypes[Hud::kAmmoRowCount] = {
-    {"12gauge", 0xff0000},
-    {"9mm", 0xff9900},
-    {"762mm", 0x0066ff},
-    {"556mm", 0x037b00},
-    {"45acp", 0x7900ff},
-    {"308sub", 0x8e8e00},
-    {"50AE", 0x606060},
-    {"flare", 0xff5500},
+    {"12gauge", 0xff0000, false},
+    {"9mm", 0xff9900, false},
+    {"762mm", 0x0066ff, false},
+    {"556mm", 0x037b00, false},
+    {"45acp", 0x7900ff, true},
+    {"308sub", 0x313800, true},
+    {"50AE", 0x1e1e1e, true},
+    {"flare", 0xff5500, true},
 };
 
 // Scope strip (#ui-top-center-scopes-wrapper): one pill per scope level.
@@ -449,25 +451,19 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
                         kAmmoRowH};
         row.bg = _factory->createGraphics();
         row.chip = _factory->createGraphics();
-        row.icon = _factory->createSprite("bullets.img");
-        row.icon->setAnchor(0.5f, 0.5f);
         row.count = _factory->createText();
-        row.count->setFontSize(14.0f);
+        row.count->setFontSize(kAmmoCountFontSize);
         row.count->setColor(0xffffff, 0x000000, 1.5f, true);
         row.count->setAnchor(0.0f, 0.5f);
         row.type = kAmmoTypes[i].type;
         row.bg->setVisible(false);
         row.chip->setVisible(false);
-        row.icon->setVisible(false);
         row.count->setVisible(false);
         _root->addChild(row.bg);
         _root->addChild(row.chip);
-        _root->addChild(row.icon);
         _root->addChild(row.count);
         row.count->setPosition(X(vw - kAmmoRowW - 12.0f + 8.0f),
                                yTop(top + kAmmoRowH * 0.5f));
-        row.icon->setPosition(X(vw - 12.0f - kAmmoRowW * 0.5f + 20.0f),
-                              yTop(top + kAmmoRowH * 0.5f));
     }
 
     // --- Minimap + settings + info row (web mobile hud top-left) ---
@@ -603,16 +599,20 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _root->addChild(_pickupText);
 
     // --- Top bag counters (bandage / medkit / soda / pills) ---
+    // The first pill starts at the local player's left edge and the row grows
+    // to the right; each capsule has the count on the left and the icon on the
+    // right.
+    const float topLootLeft = vw * 0.5f - kTopLootPlayerInset;
     for (int i = 0; i < kTopLootCount; ++i) {
         TopLootRow& row = _topLoot[static_cast<size_t>(i)];
         const float top = 12.0f;
-        row.rect = Rect{X(614.0f + static_cast<float>(i) * kTopLootPitch),
+        row.rect = Rect{X(topLootLeft + static_cast<float>(i) * kTopLootPitch),
                         yTop(top + kTopLootH), kTopLootW, kTopLootH};
         row.bg = _factory->createGraphics();
         row.icon = _factory->createSprite();
         row.icon->setAnchor(0.5f, 0.5f);
         row.count = _factory->createText();
-        row.count->setFontSize(15.0f);
+        row.count->setFontSize(kTopLootFontSize);
         row.count->setColor(0xffffff, 0x000000, 1.5f, true);
         row.count->setAnchor(0.5f, 0.5f);
         row.type = kTopLootTypes[i];
@@ -622,8 +622,9 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         _root->addChild(row.bg);
         _root->addChild(row.icon);
         _root->addChild(row.count);
-        row.icon->setPosition(row.rect.x + 11.0f, row.rect.y + kTopLootH * 0.5f);
-        row.count->setPosition(row.rect.x + kTopLootW - 12.0f, row.rect.y + kTopLootH * 0.5f);
+        row.icon->setPosition(row.rect.x + kTopLootW - 4.0f - kTopLootIconSize * 0.5f,
+                              row.rect.y + kTopLootH * 0.5f);
+        row.count->setPosition(row.rect.x + 20.0f, row.rect.y + kTopLootH * 0.5f);
     }
 
     // --- Interact prompt: finger-press button + loot name next to the item ---
@@ -645,7 +646,7 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _promptIcon->setVisible(false);
     _root->addChild(_promptIcon);
     _promptText = _factory->createText();
-    _promptText->setFontSize(16.0f);
+    _promptText->setFontSize(kPromptFontSize);
     _promptText->setColor(0xffffff, 0x000000, 2.0f, true);
     _promptText->setAnchor(0.0f, 0.5f);
     _promptText->setVisible(false);
@@ -698,7 +699,7 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
         _weaponIcons[i]->setVisible(false);
         _root->addChild(_weaponIcons[i]);
         _weaponSlots[i] = _factory->createText();
-        _weaponSlots[i]->setFontSize(13.0f);
+        _weaponSlots[i]->setFontSize(kWeaponCardFontSize);
         _weaponSlots[i]->setColor(0xdcdcdc, 0x000000, 1.5f, true);
         _weaponSlots[i]->setAnchor(0.0f, 0.5f);
         _weaponSlots[i]->setVisible(false);
@@ -925,9 +926,10 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _specStatsPanel->setLocalZOrder(920);
     _root->addChild(_specStatsPanel);
     _specStatsText = _factory->createText();
-    _specStatsText->setFontSize(15.0f);
+    _specStatsText->setFontSize(kSpecStatsFontSize);
     _specStatsText->setColor(0xffffff, 0x000000, 1.0f, false);
-    _specStatsText->setAnchor(0.0f, 1.0f);
+    // Vertically centred in the panel, left-aligned with the padding.
+    _specStatsText->setAnchor(0.0f, 0.5f);
     _specStatsText->setLocalZOrder(921);
     _root->addChild(_specStatsText);
     _specLabel->setPosition(X(vw * 0.5f), Y(vh - 64.0f));
@@ -948,7 +950,9 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     _specStatsPanel->setVisible(false);
     _specStatsPanel->setPosition(X(185.0f), Y(70.0f));
     _specStatsText->setVisible(false);
-    _specStatsText->setPosition(X(195.0f), Y(258.0f));
+    // Left padding inside the panel, vertically centred (anchor 0, 0.5).
+    _specStatsText->setPosition(X(185.0f + kSpecStatsPad),
+                                Y(70.0f + kSpecStatsPanelH * 0.5f));
 
     const auto paintOverlayButton = [](pix::Graphics* bg, const Rect& rect, uint32_t color) {
         if (!bg) return;
@@ -970,10 +974,10 @@ void Hud::build(pix::Factory* factory, pix::Container* root, const Vec2& design)
     if (_specStatsPanel) {
         _specStatsPanel->clear();
         _specStatsPanel->beginFill(0x000000, 0.7f);
-        _specStatsPanel->drawRect(0.0f, 0.0f, 250.0f, 190.0f);
+        _specStatsPanel->drawRect(0.0f, 0.0f, kSpecStatsPanelW, kSpecStatsPanelH);
         _specStatsPanel->endFill();
         _specStatsPanel->lineStyle(2.0f, 0xffffff, 0.4f);
-        _specStatsPanel->drawRect(0.0f, 0.0f, 250.0f, 190.0f);
+        _specStatsPanel->drawRect(0.0f, 0.0f, kSpecStatsPanelW, kSpecStatsPanelH);
     }
 
     // --- Minimap contents (map.ts renderMap + ui.ts map sprites) ---
@@ -1216,6 +1220,42 @@ void Hud::paintBox(pix::Graphics* g, const Rect& rect, uint32_t fill, float alph
     g->setPosition(rect.x, rect.y);
 }
 
+void Hud::paintRoundedBox(pix::Graphics* g, const Rect& rect, float radius,
+                          uint32_t fill, float alpha) const {
+    if (!g || rect.w <= 0.0f || rect.h <= 0.0f) {
+        return;
+    }
+    g->clear();
+    const float r = std::clamp(radius, 0.0f, std::min(rect.w, rect.h) * 0.5f);
+    if (r <= 0.0f) {
+        g->beginFill(fill, alpha);
+        g->drawRect(0.0f, 0.0f, rect.w, rect.h);
+        g->endFill();
+        g->setPosition(rect.x, rect.y);
+        return;
+    }
+    // Convex outline: a short arc at each corner (y-up, counter-clockwise).
+    constexpr int kSegments = 5;
+    constexpr float kPi = 3.14159265358979f;
+    Vec2 points[4 * (kSegments + 1)];
+    int count = 0;
+    const Vec2 centers[4] = {
+        Vec2(r, r), Vec2(rect.w - r, r), Vec2(rect.w - r, rect.h - r), Vec2(r, rect.h - r)};
+    const float starts[4] = {180.0f, 270.0f, 0.0f, 90.0f};
+    for (int corner = 0; corner < 4; ++corner) {
+        for (int step = 0; step <= kSegments; ++step) {
+            const float degrees = starts[corner] + 90.0f * static_cast<float>(step) / kSegments;
+            const float angle = degrees * kPi / 180.0f;
+            points[count++] = Vec2(centers[corner].x + std::cos(angle) * r,
+                                   centers[corner].y + std::sin(angle) * r);
+        }
+    }
+    g->beginFill(fill, alpha);
+    g->drawPolygon(points, count);
+    g->endFill();
+    g->setPosition(rect.x, rect.y);
+}
+
 void Hud::setVisible(bool visible) {
     if (_visible != visible) {
         _actionKey.clear();
@@ -1385,19 +1425,23 @@ void Hud::setVisible(bool visible) {
     if (_overLeaveBg) {
         _overLeaveBg->setVisible(visible && over);
     }
+    // The final result shows SPECTATE while the match is still running, and
+    // the team-death panel always does. LEAVE is centred only when the result
+    // panel has no second button.
+    const bool resultSpectate = _overShown && _overCanSpectate;
+    const bool spectateButton = _deathShown || resultSpectate;
     if (_overSpectateBg) {
-        _overSpectateBg->setVisible(_deathShown && !_overShown);
+        _overSpectateBg->setVisible(visible && spectateButton);
     }
     if (_overSpectateText) {
-        _overSpectateText->setVisible(_deathShown && !_overShown);
+        _overSpectateText->setVisible(visible && spectateButton);
     }
-    // The final result panel has only LEAVE, centred; the death panel has
-    // SPECTATE + LEAVE side by side.
+    const bool centeredLeave = _overShown && !_overCanSpectate;
     if (_overLeaveText) {
-        _overLeaveText->setPosition(_overShown ? 0.0f : 120.0f, -94.0f);
+        _overLeaveText->setPosition(centeredLeave ? 0.0f : 120.0f, -94.0f);
     }
     if (_overLeaveBg) {
-        _overLeaveBg->setPosition(_overShown ? -120.0f : 0.0f, 0.0f);
+        _overLeaveBg->setPosition(centeredLeave ? -120.0f : 0.0f, 0.0f);
     }
     const bool spec = visible && _spectating && !_overShown && !_deathShown;
     if (_specLabel) {
@@ -1570,6 +1614,16 @@ bool Hud::minimapTapHit(float designX, float designY) const {
         return false;
     }
     return _minimapTapRect.contains(p.x, p.y);
+}
+
+bool Hud::settingsTapHit(float designX, float designY) const {
+    if (!_built || !_visible || _bigMapVisible || _overShown || _deathShown) {
+        return false;
+    }
+    // Unlike hitTest(), the gear stays live while spectating and while the
+    // HUD fallback menu is open, so players can still reach settings.
+    const Vec2 p(designX - _design.x * 0.5f, designY - _design.y * 0.5f);
+    return _settingsRect.contains(p.x, p.y);
 }
 
 bool Hud::bigMapContains(float designX, float designY) const {
@@ -1868,6 +1922,20 @@ void Hud::showGameOver(const GameOverMsg& over, uint8_t localTeamId, uint16_t lo
     _overShown = true;
     _deathShown = false;
     _spectating = false;
+    // ui.ts showStats: the web only offers SPECTATE when the match is not over
+    // and the alive counter is non-zero (dead viewers still have players to
+    // watch). The final result (gameOver) keeps the single centred LEAVE.
+    int alive = -1; // -1 = not known yet (no AliveCountsMsg), allow spectating
+    if (game) {
+        const auto counts = game->aliveCounts();
+        if (!counts.empty()) {
+            alive = 0;
+            for (const int count : counts) {
+                alive += count;
+            }
+        }
+    }
+    _overCanSpectate = !over.gameOver && (!game || alive != 0);
     if (_overLeaveText) _overLeaveText->setText("LEAVE GAME");
     _bigMapVisible = false;
     setVisible(_visible);
@@ -1905,14 +1973,22 @@ void Hud::showDeathPanel(const PlayerStatsMsg& stats) {
     setVisible(_visible);
 }
 
+void Hud::refreshSpectateStats() {
+    if (!_specStatsText || !_hasLocalStats) {
+        return;
+    }
+    std::string text = "YOUR RESULTS\n";
+    text += "KILLS  " + std::to_string(_localStats.kills);
+    text += "\nDAMAGE  " + std::to_string(_localStats.damageDealt);
+    text += "\nTAKEN  " + std::to_string(_localStats.damageTaken);
+    text += "\nSURVIVED  " + formatTime(_localStats.timeAlive);
+    _specStatsText->setText(text);
+}
+
 void Hud::toggleSpectateStats() {
     _specStatsShown = !_specStatsShown;
-    if (_specStatsText && _hasLocalStats) {
-        std::string text = "KILLS  " + std::to_string(_localStats.kills);
-        text += "\nDAMAGE  " + std::to_string(_localStats.damageDealt);
-        text += "\nTAKEN  " + std::to_string(_localStats.damageTaken);
-        text += "\nSURVIVED  " + formatTime(_localStats.timeAlive);
-        _specStatsText->setText(text);
+    if (_specStatsShown) {
+        refreshSpectateStats();
     }
     setVisible(_visible);
 }
@@ -1924,7 +2000,11 @@ Hud::OverlayAction Hud::overlayActionAt(float designX, float designY) const {
     const float px = designX - _design.x * 0.5f;
     const float py = designY - _design.y * 0.5f;
     if (_overShown) {
-        const Rect leave{-100.0f, -118.0f, 200.0f, 48.0f};
+        if (_overCanSpectate && _overSpectateRect.contains(px, py)) {
+            return OverlayAction::SpectateBegin;
+        }
+        const Rect centeredLeave{-100.0f, -118.0f, 200.0f, 48.0f};
+        const Rect& leave = _overCanSpectate ? _overLeaveRect : centeredLeave;
         return leave.contains(px, py) ? OverlayAction::Leave : OverlayAction::None;
     }
     if (_deathShown) {
@@ -2040,8 +2120,12 @@ void Hud::updatePrompt() {
     // the same border as the finger-press button (white text inside).
     constexpr float kTextPad = 10.0f;
     constexpr float kTextGap = 8.0f;
-    constexpr float kTextBoxHeight = 34.0f;
-    const float textWidth = static_cast<float>(_lastPrompt.size()) * 9.5f;
+    // Same height as the finger-press box (ui2.ts #ui-interaction-outer and
+    // #ui-interaction-press share the 48px row height on the web).
+    constexpr float kTextBoxHeight = kPromptSize;
+    // 0.6 * font size is a slightly generous per-glyph width for the HUD's
+    // condensed font, so the name box never clips the text.
+    const float textWidth = static_cast<float>(_lastPrompt.size()) * kPromptFontSize * 0.6f;
     const float textBoxWidth = textWidth + kTextPad * 2.0f;
     const bool flipLeft =
         cx + kPromptSize * 0.5f + kTextGap + textBoxWidth > vw * 0.5f - 8.0f;
@@ -2431,18 +2515,25 @@ void Hud::updateActionButtons() {
     if (_ammoReloadIcon) _ammoReloadIcon->setVisible(showReserve);
 
     // Top bag counters: bandage / medkit / soda / pills (tap = use, hold = drop).
+    // Filled pills are dark capsules (count left, icon right); empty ones stay
+    // visible as light ghost capsules with a dimmed, centred "0".
     for (int i = 0; i < kTopLootCount; ++i) {
         TopLootRow& row = _topLoot[static_cast<size_t>(i)];
-        const bool shown = base && row.countValue > 0;
-        paintBox(row.bg, row.rect, 0x000000, 0.4f, 0.35f);
+        const bool shown = base;
+        const bool filled = row.countValue > 0;
+        if (filled) {
+            paintRoundedBox(row.bg, row.rect, kTopLootRadius, 0x000000, 0.4f);
+        } else {
+            paintRoundedBox(row.bg, row.rect, kTopLootRadius, 0xffffff, kTopLootZeroFillAlpha);
+        }
         row.bg->setVisible(shown);
         const std::string frame = itemIconFrame(row.type);
-        if (shown && !frame.empty()) {
+        if (shown && filled && !frame.empty()) {
             if (frame != row.lastFrame) {
                 row.lastFrame = frame;
                 row.icon->setFrame(frame);
                 const float source = std::max(row.icon->sourceWidth(), row.icon->sourceHeight());
-                const float scale = source > 0.0f ? 22.0f / source : 1.0f;
+                const float scale = source > 0.0f ? kTopLootIconSize / source : 1.0f;
                 row.icon->setScale(scale, scale);
             }
             row.icon->setVisible(_visible);
@@ -2451,30 +2542,34 @@ void Hud::updateActionButtons() {
             row.lastFrame.clear();
         }
         row.count->setText(std::to_string(row.countValue));
+        row.count->setAlpha(filled ? 1.0f : kTopLootZeroTextAlpha);
+        // The empty pill has no icon, so its "0" reads better centred.
+        row.count->setPosition(row.rect.x + 20.0f,
+                               row.rect.y + kTopLootH * 0.5f);
         row.count->setVisible(shown);
     }
 
-    // Ammo column: one row per ammo type with a count in the bag.
+    // Ammo column (#ui-ammo-interactive, game.css .ui-ammo): rounded dark
+    // pills with the count on the left and an ammo-coloured chip on the right.
+    // A zero count dims the row to 25% (ui2.ts:1269-1277); special ammo rows
+    // stay hidden until they are picked up.
     for (int i = 0; i < kAmmoRowCount; ++i) {
         AmmoRow& row = _ammoRows[static_cast<size_t>(i)];
-        const bool shown = base && row.countValue > 0;
-        paintBox(row.bg, row.rect, 0x000000, 0.4f, 0.35f);
+        const bool shown = base && !(kAmmoTypes[i].special && row.countValue == 0);
+        const float alpha = row.countValue > 0 ? 1.0f : kAmmoZeroAlpha;
+        paintRoundedBox(row.bg, row.rect, kAmmoRowRadius, 0x000000, 0.4f);
+        row.bg->setAlpha(alpha);
         row.bg->setVisible(shown);
         row.chip->clear();
-        row.chip->beginFill(kAmmoTypes[i].color, 0.85f);
-        row.chip->drawRect(0.0f, 0.0f, 20.0f, 20.0f);
+        row.chip->beginFill(kAmmoTypes[i].color, 0.75f);
+        row.chip->drawRect(0.0f, 0.0f, kAmmoChipSize, kAmmoChipSize);
         row.chip->endFill();
-        row.chip->setPosition(row.rect.x + row.rect.w - 30.0f, row.rect.y + kAmmoRowH * 0.5f);
+        row.chip->setPosition(row.rect.x + row.rect.w - kAmmoChipSize - 6.0f,
+                              row.rect.y + (kAmmoRowH - kAmmoChipSize) * 0.5f);
+        row.chip->setAlpha(alpha);
         row.chip->setVisible(shown);
-        const float source = std::max(row.icon->sourceWidth(), row.icon->sourceHeight());
-        if (source > 0.0f) {
-            const float scale = 16.0f / source;
-            row.icon->setScale(scale, scale);
-            row.icon->setVisible(shown);
-        } else {
-            row.icon->setVisible(false);
-        }
         row.count->setText(std::to_string(row.countValue));
+        row.count->setAlpha(alpha);
         row.count->setVisible(shown);
     }
 
@@ -2535,55 +2630,80 @@ void Hud::update(float dt, const Game& game, bool visible) {
     // Result / death / spectate state (ui.ts displayStats, showTeamAd and
     // setSpectating). GameOverMsg latches until the next match resets the HUD.
     const GameOverMsg* over = game.gameOver();
+    // Keep the HUD's copy of the local stats for the spectate MATCH STATS panel.
+    // The GameOverMsg path never enters the no-result branch below, so this has
+    // to run for both flows (solo death and team death).
+    if (const PlayerStatsMsg* localStats = game.localStats();
+        localStats && localStats->dead) {
+        const bool statsChanged = !_hasLocalStats ||
+            _localStats.kills != localStats->kills ||
+            _localStats.damageDealt != localStats->damageDealt ||
+            _localStats.damageTaken != localStats->damageTaken ||
+            _localStats.timeAlive != localStats->timeAlive;
+        _localStats = *localStats;
+        _hasLocalStats = true;
+        // A late PlayerStatsMsg fills a panel that was opened while empty.
+        if (statsChanged && _specStatsShown) {
+            refreshSpectateStats();
+        }
+    }
+    const bool spectatingNow = game.isSpectating();
+    const uint16_t activePlayerId = game.getActivePlayerId();
+    // game.ts m_spectating / ui.ts setSpectating: entering spectate (or the
+    // server switching the observed player) hides the stats panel, so a
+    // SPECTATE tap on the result/death screen takes effect on the next update.
+    const bool spectateStarted = spectatingNow && !_wasSpectating;
+    const bool spectateTargetChanged = spectatingNow && activePlayerId != _lastActivePlayerId;
+    _wasSpectating = spectatingNow;
+    _lastActivePlayerId = activePlayerId;
+    if (spectateStarted || spectateTargetChanged) {
+        _overShown = false;
+        _deathShown = false;
+        _overCanSpectate = false;
+    }
+    if (spectateStarted) {
+        _specStatsShown = false;
+    }
+
+    const uint16_t localPlayerId = game.getLocalPlayerId();
+    const uint8_t localTeamId = game.teamIdForPlayer(localPlayerId);
+
     if (over) {
         // The result panel outranks the class picker; never leave the picker
         // covering the final screen.
         if (_roleMenuActive) {
             setRoleMenuActive(false);
         }
-        if (!_overShown) {
-            showGameOver(*over, game.teamIdForPlayer(game.getLocalPlayerId()),
-                         game.getLocalPlayerId(), &game);
+        // Only a fresh GameOverMsg opens the panel. After SPECTATE dismisses
+        // it, the latched message must not pop it back up (the web calls
+        // showStats once per message).
+        const uint32_t seq = game.gameOverSeq();
+        const bool newResult = seq != _lastGameOverSeq;
+        _lastGameOverSeq = seq;
+        // ui.ts showStats: while spectating another team in a running match,
+        // that player's GameOver message does not reopen the stats screen.
+        const bool suppress = spectatingNow && !over->gameOver &&
+            over->teamId != localTeamId;
+        if (newResult && !suppress) {
+            showGameOver(*over, localTeamId, localPlayerId, &game);
+        } else if (newResult) {
+            _overShown = false;
+            _overCanSpectate = false;
         }
         _deathShown = false;
-        _spectating = false;
+        // The result panel wins over the spectate overlay (ui.ts showStats
+        // calls setSpectating(false)); it is only hidden by the next tap.
+        _spectating = spectatingNow && !_overShown;
     } else {
         if (_overShown) {
             _overShown = false;
         }
+        _overCanSpectate = false;
+        _lastGameOverSeq = 0;
         const PlayerStatsMsg* stats = game.localStats();
-        if (stats && stats->dead) {
-            _localStats = *stats;
-            _hasLocalStats = true;
-        }
-        const bool wasSpectating = _spectating;
-        const bool spectating = game.isSpectating();
-        if (spectating) {
+        if (spectatingNow) {
             _spectating = true;
             _deathShown = false;
-            if (!wasSpectating) {
-                _specStatsShown = false;
-            }
-            std::string name = game.displayName(game.getActivePlayerId());
-            if (name.empty()) {
-                name = "Player";
-            }
-            if (name != _specName) {
-                _specName = name;
-                if (_specLabel) {
-                    _specLabel->setText("SPECTATING " + name);
-                }
-            }
-            const uint8_t count = game.activePlayerData().spectatorCount;
-            if (count != _specCount) {
-                _specCount = count;
-                if (_specCountText) {
-                    _specCountText->setText(count > 0
-                            ? std::to_string(count) + " SPECTATING"
-                            : std::string());
-                }
-            }
-            _specCanCycle = game.teamMode() != 1;
         } else {
             _spectating = false;
             if (stats && stats->dead) {
@@ -2594,6 +2714,30 @@ void Hud::update(float dt, const Game& game, bool visible) {
                 _deathShown = false;
             }
         }
+    }
+
+    // ui.ts setSpectateTarget: the overlay label follows the observed player.
+    if (spectatingNow) {
+        std::string name = game.displayName(activePlayerId);
+        if (name.empty()) {
+            name = "Player";
+        }
+        if (name != _specName) {
+            _specName = name;
+            if (_specLabel) {
+                _specLabel->setText("SPECTATING " + name);
+            }
+        }
+        const uint8_t count = game.activePlayerData().spectatorCount;
+        if (count != _specCount) {
+            _specCount = count;
+            if (_specCountText) {
+                _specCountText->setText(count > 0
+                        ? std::to_string(count) + " SPECTATING"
+                        : std::string());
+            }
+        }
+        _specCanCycle = game.teamMode() != 1;
     }
     setVisible(_visible);
 
@@ -2731,7 +2875,6 @@ void Hud::update(float dt, const Game& game, bool visible) {
 
     // --- Weapon cards: name + loot-img icon per slot; ammo of the equipped gun.
     std::string weaponKey;
-    std::string ammoText;
     const int slotCount = std::min<int>(4, static_cast<int>(apd.weapons.size()));
     _weaponTypes.fill(std::string());
     for (int i = 0; i < 4; ++i) {
@@ -2741,6 +2884,11 @@ void Hud::update(float dt, const Game& game, bool visible) {
         }
         weaponKey += '\n';
     }
+    // ui2.ts:867-868 weaponState.equipped: paint() highlights the selected
+    // card. -1 (no active weapon / out-of-range index) highlights none.
+    _equippedSlot = (apd.curWeapIdx >= 0 && apd.curWeapIdx < slotCount)
+        ? apd.curWeapIdx
+        : -1;
     if (weaponKey != _lastWeapon) {
         _lastWeapon = weaponKey;
         size_t start = 0;
@@ -2755,7 +2903,7 @@ void Hud::update(float dt, const Game& game, bool visible) {
                     _weaponIcons[i]->setFrame(frame);
                     const float source =
                         std::max(_weaponIcons[i]->sourceWidth(), _weaponIcons[i]->sourceHeight());
-                    const float scale = source > 0.0f ? 30.0f / source : 1.0f;
+                    const float scale = source > 0.0f ? kWeaponCardIconSize / source : 1.0f;
                     _weaponIcons[i]->setScale(scale, scale);
                     _weaponIcons[i]->setVisible(_visible);
                 } else {

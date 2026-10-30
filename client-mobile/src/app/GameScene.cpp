@@ -1167,6 +1167,23 @@ void GameScene::pauseGame() {
     stopPingTest();
 }
 
+void GameScene::openGameMenu() {
+    if (!_hud) {
+        return;
+    }
+    // The in-game settings UI is the Java GamePauseDialog; hosts without the
+    // bridge fall back to the Hud panel.
+    if (!uiHost()->togglePause()) {
+        const bool open = !_hud->gameMenuVisible();
+        _hud->showGameMenu(open);
+        if (open) {
+            pauseGame();
+        } else {
+            resumeGame();
+        }
+    }
+}
+
 void GameScene::onPickupSound(const std::string& item) {
     if (!_audio) {
         return;
@@ -1680,8 +1697,10 @@ void GameScene::update(float delta) {
         _hud->setWaitingForPlayers(_inGame && _game->hasJoined() && !_game->hasStarted() &&
                                    !_game->gameOver());
         // ui.ts interaction prompt: nearest loot on the active layer, shown as
-        // the finger-press button + item name next to the loot's own screen
-        // position. The server performs the actual pickup; this is the hint.
+        // the finger-press button + item name two player widths to the right of
+        // the player (the web keeps #ui-interaction in the fixed lower-centre
+        // HUD; the touch flow keeps the hint beside the body it belongs to).
+        // The server performs the actual pickup; this is the hint.
         if (_world && !deadOrSpectating) {
             const Player* me = _world->activePlayer();
             std::string prompt;
@@ -1694,8 +1713,15 @@ void GameScene::update(float delta) {
                     if (!loot->active || !math::sameAudioLayer(loot->layer, me->layer)) {
                         continue;
                     }
+                    // loot.ts m_update / server Player.getClosestLoot: the
+                    // touch client picks up within player.rad +
+                    // loot.rad * touchLootRadMult, and only loot it owns.
+                    if (loot->ownerId != 0 && loot->ownerId != me->__id) {
+                        continue;
+                    }
+                    const float reach = touchLootReach(me->rad, loot->rad);
                     const float dist = v2Length(v2Sub(loot->pos, me->pos));
-                    if (dist <= loot->rad + 2.5f && (!best || dist < bestDist)) {
+                    if (dist < reach && (!best || dist < bestDist)) {
                         best = loot;
                         bestDist = dist;
                     }
@@ -1707,8 +1733,11 @@ void GameScene::update(float delta) {
                         c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
                     }
                     prompt = "PICK UP " + name;
-                    // World -> screen (y down) -> HUD design space (y up).
-                    const Vec2 screenPos = _world->camera().m_pointToScreen(best->pos);
+                    // Follow the player: two body widths (4 * rad) to the right
+                    // of the player's centre. World -> screen (y down) -> HUD
+                    // design space (y up).
+                    const Vec2 anchor(me->pos.x + me->rad * 4.0f, me->pos.y);
+                    const Vec2 screenPos = _world->camera().m_pointToScreen(anchor);
                     promptPos = screenToDesign(screenPos.x, screenPos.y);
                 }
             }
@@ -2347,8 +2376,7 @@ void GameScene::onTouchBegan(float x, float y, int id) {
     // respond (and the gear itself closes it), everything else is swallowed.
     if (_hud && _hud->gameMenuVisible()) {
         const Vec2 design = screenToDesign(x, y);
-        const Hud::TapResult tap = _hud->hitTest(design.x, design.y);
-        if (tap.kind == Hud::TapKind::Settings) {
+        if (_hud->settingsTapHit(design.x, design.y)) {
             _hud->showGameMenu(false);
             resumeGame();
             return;
@@ -2519,6 +2547,15 @@ void GameScene::onTouchBegan(float x, float y, int id) {
             return;
         }
     }
+    // The settings gear stays live while dead/spectating (the Java pause
+    // dialog is the in-game menu); hitTest() is disabled in those states.
+    if (_hud) {
+        const Vec2 design = screenToDesign(x, y);
+        if (_hud->settingsTapHit(design.x, design.y)) {
+            openGameMenu();
+            return;
+        }
+    }
     // Dead or spectating: the gameplay pads/action bar are hidden and the
     // overlay buttons were handled above. The minimap/big map stay usable.
     if (_game->isSpectating() || _game->isLocalDead()) {
@@ -2545,17 +2582,7 @@ void GameScene::onTouchBegan(float x, float y, int id) {
                 _pendingInputs.press(Input_Cancel);
                 return;
             case Hud::TapKind::Settings:
-                // The in-game settings UI is the Java GamePauseDialog; hosts
-                // without the bridge fall back to the Hud panel.
-                if (!uiHost()->togglePause()) {
-                    const bool open = !_hud->gameMenuVisible();
-                    _hud->showGameMenu(open);
-                    if (open) {
-                        pauseGame();
-                    } else {
-                        resumeGame();
-                    }
-                }
+                openGameMenu();
                 return;
             case Hud::TapKind::SwapWeapons:
                 _pendingInputs.press(Input_SwapWeapSlots);

@@ -203,6 +203,10 @@ public:
     void sendEmote(const std::string& type, const Vec2& pos, bool isPing);
     std::vector<int> aliveCounts() const;
     const GameOverMsg* gameOver() const { return _hasGameOver ? &_gameOver : nullptr; }
+    // Increments on every GameOverMsg. The HUD uses it to tell a new result
+    // message from the latched one (e.g. after dismissing the panel to
+    // spectate), mirroring the web client's event-driven showStats call.
+    uint32_t gameOverSeq() const { return _gameOverSeq; }
 
     // game.ts RoleAnnouncement: role assigned/dead sounds + kill-leader UI.
     struct RoleAnnouncement {
@@ -298,6 +302,7 @@ private:
     std::vector<uint8_t> _aliveCounts;
     std::vector<KillFeedEntry> _killFeed;
     GameOverMsg _gameOver;
+    uint32_t _gameOverSeq = 0;
     bool _hasGameOver = false;
     std::vector<RoleAnnouncement> _roleAnnouncements;
     uint16_t _killLeaderId = 0;
