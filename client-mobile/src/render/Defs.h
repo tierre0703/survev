@@ -365,6 +365,9 @@ struct RoleRenderDef {
     uint32_t color = 0;
     std::vector<std::string> perks;
     std::vector<std::string> perkNames;
+    // roleDef.announce: game.ts shows the local "promoted" announcement only
+    // for roles that opt in (kill_leader/healer/tank/... opt out).
+    bool announce = false;
 };
 
 struct BiomeColors {

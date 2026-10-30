@@ -433,7 +433,9 @@ These make the game unplayable or visibly wrong in normal play. Do them first.
       - Faction modes show `R n   B n`; off-screen teammate arrows use the web's
         `indicator.svg` art (group-colour dot) and sit on the camera-view edge;
         role announcements appear under the kill leader; `WAITING FOR PLAYERS`
-        is shown until `JoinedMsg.started`; the pie timer now gets
+        is shown until the gas starts (`gas.ts` hides it on the first
+        non-`Inactive` GasData, because `JoinedMsg.started` is only a join-time
+        snapshot and stays false for a lobby join); the pie timer now gets
         `RELOADING`/`USING`/`REVIVING` labels from the active player action.
       - Perk-mode role picker landed in the fourteenth P2 pass (roles list,
         selection/confirm, 20 s countdown); exact CDN role art beyond the
@@ -649,8 +651,9 @@ Done in the sixth P2 pass (2026-10-26):
   `killFeed.color`; `game/RoleFeed.h` builds the line/colour (role colour or
   team colour), GameScene appends it via `Game::addKillFeedText`, and the HUD
   renders custom rows.
-- Role announcements now use the def's display name (`ROLE ASSIGNED: Commander`)
-  instead of the raw role id.
+- Role announcements now use the def's display name and follow `game.ts`
+  (`roleDef.announce` + `YOU'VE BEEN PROMOTED TO <ROLE>!`); see the note at the
+  end of §4 for the later parity correction.
 - Host test: `role_killfeed_lines`.
 
 Done in the seventh P2 pass (2026-10-26):
@@ -2044,3 +2047,20 @@ node --experimental-transform-types tools/codegen_regions.mjs --production
   (web `main.ts onQuit` clears `errorMessage` the same way).
   `TeamFragment.onGameComplete` clears "Joining game..." too, mirroring
   `teamMenu.onGameComplete`'s `joiningGame = false`.
+- "Waiting for players..." is gated on the gas being `Inactive`, not on
+  `Game::hasStarted()`: the server sends `JoinedMsg.started` only once at join,
+  so a lobby join keeps it false for the whole match. `GameScene` hides the text
+  when `_world->gas().mode != GasMode_Inactive`, mirroring `gas.ts`
+  `Gas.setFullState()`'s `ui.setWaitingForPlayers(false)`. A solo lobby that
+  never starts keeps the text, exactly like the web.
+- Gas announcements run from the same gas-mode change (`gas.ts` `setFullState`),
+  not from the HUD timer: `GameScene` compares `Gas.mode` before/after
+  `GameWorld::applyUpdate` and calls `Hud::showAnnouncement` with
+  `ui.ts displayGasAnnouncement` text ("Red zone advances in ..." while waiting,
+  "Red zone advancing! Move to the safe zone" while moving), localized through
+  the bridge's flattened l10n table.
+- Role announcements follow `game.ts`: only the local player's *assignment* is
+  announced, and only for `roleDef.announce` roles (kill_leader/healer/tank/
+  scout/... opt out); the text is `YOU'VE BEEN PROMOTED TO <ROLE>!` uppercased,
+  with the faction leader names for `leader`. The killed path is kill-feed only.
+  Do not reintroduce the old `ROLE ASSIGNED:`/`ROLE LOST:` text.

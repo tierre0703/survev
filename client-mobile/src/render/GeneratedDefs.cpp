@@ -131,6 +131,7 @@ struct RawRole {
     int killFeedAssign, killFeedDead, hasKillFeedColor; unsigned killFeedColor;
     const char* guiImg; int hasColor; unsigned color;
     const char* const* perks; int perkCount; const char* const* perkNames;
+    int announce;
 };
 
 static PlaneDef toPlane(const RawPlane& r) {
@@ -5458,25 +5459,25 @@ static const char* const kRolePerkNames_16[] = {"Hyperfragmentation","Flak Jacke
 static const char* const kRolePerks_17[] = {"firepower","bonus_assault"};
 static const char* const kRolePerkNames_17[] = {"Firepower","Hollow-Points"};
 static const RawRole kRoles[] = {
-    {"leader","player-star.img","skull-leader.img","leader_assigned_01","leader_dead_01","Commander","Red Commander","Blue Commander",1,1,0,0,"",0,0,kRolePerks_0,1,kRolePerkNames_0},
-    {"captain","player-captain.img","","captain_assigned_01","","Captain","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_1,2,kRolePerkNames_1},
-    {"lieutenant","","","lt_assigned_01","","Lieutenant","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_2,1,kRolePerkNames_2},
-    {"medic","player-medic.img","skull-leader.img","medic_assigned_01","","Medic","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_3,2,kRolePerkNames_3},
-    {"marksman","","","marksman_assigned_01","","Marksman","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_4,1,kRolePerkNames_4},
-    {"recon","","","recon_assigned_01","","Recon","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_5,1,kRolePerkNames_5},
-    {"grenadier","","","grenadier_assigned_01","","Grenadier","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_6,1,kRolePerkNames_6},
-    {"bugler","","","bugler_assigned_01","","Bugler","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_7,2,kRolePerkNames_7},
-    {"last_man","player-last-man.img","","last_man_assigned_01","","Lone Survivr","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_8,4,kRolePerkNames_8},
-    {"woods_king","","","","leader_dead_01","The Woods King","Red Commander","Blue Commander",0,1,1,1244928,"",0,0,kRolePerks_9,2,kRolePerkNames_9},
-    {"kill_leader","","","leader_assigned_01","leader_dead_01","Kill Leader","Red Commander","Blue Commander",1,1,1,16745472,"",0,0,nullptr,0,nullptr},
-    {"the_hunted","","","leader_assigned_01","leader_dead_01","The Hunted","Red Commander","Blue Commander",1,1,1,16745472,"",0,0,kRolePerks_11,1,kRolePerkNames_11},
-    {"healer","","","spawn_01","","Medic","Red Commander","Blue Commander",0,0,0,0,"gui/role-healer.png",1,11468975,kRolePerks_12,2,kRolePerkNames_12},
-    {"tank","","","spawn_01","","Tank","Red Commander","Blue Commander",0,0,0,0,"gui/role-tank.png",1,13862400,kRolePerks_13,2,kRolePerkNames_13},
-    {"sniper","","","spawn_01","","Sniper","Red Commander","Blue Commander",0,0,0,0,"gui/role-sniper.png",1,30696,kRolePerks_14,2,kRolePerkNames_14},
-    {"scout","","","spawn_01","","Scout","Red Commander","Blue Commander",0,0,0,0,"gui/role-scout.png",1,6725632,kRolePerks_15,2,kRolePerkNames_15},
-    {"demo","","","spawn_01","","Demo","Red Commander","Blue Commander",0,0,0,0,"gui/role-demo.png",1,6750976,kRolePerks_16,2,kRolePerkNames_16},
-    {"assault","","","spawn_01","","Assault","Red Commander","Blue Commander",0,0,0,0,"gui/role-assault.png",1,16772119,kRolePerks_17,2,kRolePerkNames_17},
-    {"classless","","","spawn_01","","classless","Red Commander","Blue Commander",0,0,0,0,"",0,0,nullptr,0,nullptr},
+    {"leader","player-star.img","skull-leader.img","leader_assigned_01","leader_dead_01","Commander","Red Commander","Blue Commander",1,1,0,0,"",0,0,kRolePerks_0,1,kRolePerkNames_0,1},
+    {"captain","player-captain.img","","captain_assigned_01","","Captain","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_1,2,kRolePerkNames_1,1},
+    {"lieutenant","","","lt_assigned_01","","Lieutenant","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_2,1,kRolePerkNames_2,1},
+    {"medic","player-medic.img","skull-leader.img","medic_assigned_01","","Medic","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_3,2,kRolePerkNames_3,1},
+    {"marksman","","","marksman_assigned_01","","Marksman","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_4,1,kRolePerkNames_4,1},
+    {"recon","","","recon_assigned_01","","Recon","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_5,1,kRolePerkNames_5,1},
+    {"grenadier","","","grenadier_assigned_01","","Grenadier","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_6,1,kRolePerkNames_6,1},
+    {"bugler","","","bugler_assigned_01","","Bugler","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_7,2,kRolePerkNames_7,1},
+    {"last_man","player-last-man.img","","last_man_assigned_01","","Lone Survivr","Red Commander","Blue Commander",1,0,0,0,"",0,0,kRolePerks_8,4,kRolePerkNames_8,1},
+    {"woods_king","","","","leader_dead_01","The Woods King","Red Commander","Blue Commander",0,1,1,1244928,"",0,0,kRolePerks_9,2,kRolePerkNames_9,0},
+    {"kill_leader","","","leader_assigned_01","leader_dead_01","Kill Leader","Red Commander","Blue Commander",1,1,1,16745472,"",0,0,nullptr,0,nullptr,0},
+    {"the_hunted","","","leader_assigned_01","leader_dead_01","The Hunted","Red Commander","Blue Commander",1,1,1,16745472,"",0,0,kRolePerks_11,1,kRolePerkNames_11,1},
+    {"healer","","","spawn_01","","Medic","Red Commander","Blue Commander",0,0,0,0,"gui/role-healer.png",1,11468975,kRolePerks_12,2,kRolePerkNames_12,0},
+    {"tank","","","spawn_01","","Tank","Red Commander","Blue Commander",0,0,0,0,"gui/role-tank.png",1,13862400,kRolePerks_13,2,kRolePerkNames_13,0},
+    {"sniper","","","spawn_01","","Sniper","Red Commander","Blue Commander",0,0,0,0,"gui/role-sniper.png",1,30696,kRolePerks_14,2,kRolePerkNames_14,0},
+    {"scout","","","spawn_01","","Scout","Red Commander","Blue Commander",0,0,0,0,"gui/role-scout.png",1,6725632,kRolePerks_15,2,kRolePerkNames_15,0},
+    {"demo","","","spawn_01","","Demo","Red Commander","Blue Commander",0,0,0,0,"gui/role-demo.png",1,6750976,kRolePerks_16,2,kRolePerkNames_16,0},
+    {"assault","","","spawn_01","","Assault","Red Commander","Blue Commander",0,0,0,0,"gui/role-assault.png",1,16772119,kRolePerks_17,2,kRolePerkNames_17,0},
+    {"classless","","","spawn_01","","classless","Red Commander","Blue Commander",0,0,0,0,"",0,0,nullptr,0,nullptr,0},
 };
 static const RawGameObj kGameObjs[] = {
     {"bullet_mp5","bullet",{"",1,1,16777215,0,0,0,0},0,"","",16711935,0,0,0,0,0,0,"","",0,"",0.0f,"",16777215,0,16777215,"","","","","","",0,0.8,0,0,"",0,0,0,1,16777215,20,0,1,0,0,1,"",0,1,1,0.375,0,0,0,"","","","","","","",0,0,0,0,0,0,"",0,0,"",0,Vec2(0.0f,0.0f),Vec2(0.0f,0.0f),Vec2(0.0f,0.0f),Vec2(0.0f,0.0f)},
@@ -13958,6 +13959,7 @@ d.handImgs[2][1].sprite="none"; d.handImgs[2][1].pos=Vec2(0.0f,0.0f);
                 d.perks.push_back(r.perks[i] ? r.perks[i] : "");
                 d.perkNames.push_back(r.perkNames[i] ? r.perkNames[i] : "");
             }
+            d.announce = r.announce != 0;
             _roles[r.type] = std::move(d);
         }
         _loadoutItems.reserve(sizeof(kLoadoutItems) / sizeof(kLoadoutItems[0]));

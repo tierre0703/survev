@@ -1019,7 +1019,7 @@ for (const type of Object.keys(RoleDefs)) {
         str(roleName("game-blue-leader", "Blue Commander"))
     },${kf.assign ? 1 : 0},${kf.dead ? 1 : 0},${kf.color ? 1 : 0},${n(hexColor(kf.color), 0)},${str(guiImg)},${
         d.color !== undefined ? 1 : 0
-    },${n(d.color, 0)},${perksPtr},${perkTypes.length},${perkNamesPtr}},\n`;
+    },${n(d.color, 0)},${perksPtr},${perkTypes.length},${perkNamesPtr},${d.announce ? 1 : 0}},\n`;
     roleIndex++;
 }
 
@@ -1252,6 +1252,7 @@ struct RawRole {
     int killFeedAssign, killFeedDead, hasKillFeedColor; unsigned killFeedColor;
     const char* guiImg; int hasColor; unsigned color;
     const char* const* perks; int perkCount; const char* const* perkNames;
+    int announce;
 };
 
 static PlaneDef toPlane(const RawPlane& r) {
@@ -1739,6 +1740,7 @@ ${
                 d.perks.push_back(r.perks[i] ? r.perks[i] : "");
                 d.perkNames.push_back(r.perkNames[i] ? r.perkNames[i] : "");
             }
+            d.announce = r.announce != 0;
             _roles[r.type] = std::move(d);
         }
         _loadoutItems.reserve(sizeof(kLoadoutItems) / sizeof(kLoadoutItems[0]));

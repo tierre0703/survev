@@ -2933,6 +2933,8 @@ TEST(role_killfeed_lines) {
     CHECK(leader && leader->nameBlue == "Blue Commander");
     CHECK(leader && leader->killFeedAssign);
     CHECK(leader && leader->killFeedDead);
+    // roleDef.announce: only opted-in roles show the local promotion banner.
+    CHECK(leader && leader->announce);
 
     RoleFeedLine promoted = roleFeedLine(*leader, "leader", true, false, 1, "Alice", "");
     CHECK(promoted.show);
@@ -2953,6 +2955,7 @@ TEST(role_killfeed_lines) {
     CHECK(killLeader != nullptr);
     CHECK(killLeader && killLeader->hasKillFeedColor);
     CHECK(killLeader && killLeader->killFeedColor == 0xff8400u);
+    CHECK(killLeader && !killLeader->announce);
     RoleFeedLine leaderLine = roleFeedLine(*killLeader, "kill_leader", true, false, 1, "Alice", "");
     CHECK_EQ(leaderLine.color, 0xff8400u);
     CHECK_EQ(leaderLine.text, std::string("Alice promoted to Kill Leader!"));
@@ -2962,7 +2965,13 @@ TEST(role_killfeed_lines) {
     CHECK(captain != nullptr);
     CHECK(captain && captain->killFeedAssign);
     CHECK(captain && !captain->killFeedDead);
+    CHECK(captain && captain->announce);
     CHECK(!roleFeedLine(*captain, "captain", false, true, 1, "", "Bob").show);
+
+    // Class roles (healer/tank/...) opt out of the top-centre promotion banner.
+    const RoleRenderDef* healer = defs->role("healer");
+    CHECK(healer != nullptr);
+    CHECK(healer && !healer->announce);
 
     // HUD renders custom role lines (Game::addKillFeedText).
     pix::NullPixiFactory factory;

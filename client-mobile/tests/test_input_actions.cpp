@@ -805,11 +805,11 @@ TEST(hud_prompt_announcement_and_faction_counts) {
     }
     CHECK(hud.hitTest(640.0f, 640.0f).kind == Hud::TapKind::None);
 
-    hud.showAnnouncement("ROLE ASSIGNED: LEADER");
+    hud.showAnnouncement("YOU'VE BEEN PROMOTED TO COMMANDER!");
     auto* announcement = static_cast<const pix::NullText*>(hud.announcementText());
     CHECK(announcement != nullptr);
     CHECK(announcement->visible);
-    CHECK_EQ(announcement->text, std::string("ROLE ASSIGNED: LEADER"));
+    CHECK_EQ(announcement->text, std::string("YOU'VE BEEN PROMOTED TO COMMANDER!"));
     hud.update(4.0f, h.game, true);
     CHECK(!announcement->visible);
 

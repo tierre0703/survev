@@ -24,6 +24,7 @@
 #include "../game/PingWheel.h"
 #include "../core/Collider.h"
 #include "../core/GameConfig.h"
+#include "../ui/Json.h"
 #include "../ui/PadGraphicsAxmol.h"
 #include "../ui/Layout.h"
 #include "../../../shared/config/ui2Constants.inc"
@@ -139,6 +140,68 @@ static void loadAtlasesForMap(const std::string& mapName) {
         s_loadedAtlasSheets[atlas] = std::move(sheets);
         AXLOGI("Loaded atlas {}", atlas);
     }
+}
+
+// ui.ts localization.translate() for C++-owned HUD text (gas/role
+// announcements). The flattened table comes from the bridge: on Android the
+// Java UI owns the same table, while desktop/host bridges return "{}" and the
+// English fallback is used. Cache the parsed table until the locale changes.
+static std::string tr(const std::string& key, const std::string& fallback) {
+    static std::string cachedJson;
+    static svui::JsonValue cachedTable;
+    const std::string json = uiBridge()->l10nJson();
+    if (json != cachedJson) {
+        cachedJson = json;
+        cachedTable = svui::JsonValue{};
+        if (!json.empty()) {
+            svui::JsonParser::parse(json, cachedTable);
+        }
+    }
+    const std::string text = cachedTable.getString(key);
+    return text.empty() ? fallback : text;
+}
+
+static std::string uppercase(std::string text) {
+    for (char& c : text) {
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+    }
+    return text;
+}
+
+// ui2.ts getRoleTranslation(): faction leaders use their team-specific name.
+static std::string roleTranslation(const std::string& role, uint8_t teamId,
+                                   const RoleRenderDef& def) {
+    if (role == "leader") {
+        const bool red = teamId == FactionTeam_Red;
+        return tr(red ? "game-red-leader" : "game-blue-leader",
+                  red ? (def.nameRed.empty() ? "Red Commander" : def.nameRed)
+                      : (def.nameBlue.empty() ? "Blue Commander" : def.nameBlue));
+    }
+    return tr("game-" + role, def.name.empty() ? role : def.name);
+}
+
+// ui.ts displayGasAnnouncement(): gas.ts calls it when the gas mode changes.
+static std::string gasAnnouncementText(uint8_t mode, float duration, float gasT) {
+    if (mode == GasMode_Waiting) {
+        const int timeLeft = static_cast<int>(std::ceil(duration * (1.0f - gasT)));
+        const int minutes = timeLeft / 60;
+        const int seconds = timeLeft - minutes * 60;
+        std::string message = tr("game-red-zone-advances", "Red zone advances in");
+        if (minutes > 1) {
+            message += " " + std::to_string(minutes) + " " + tr("game-minutes", "minutes");
+        }
+        if (minutes == 1) {
+            message += " " + std::to_string(minutes) + " " + tr("game-minute", "minute");
+        }
+        if (seconds > 0) {
+            message += " " + std::to_string(seconds) + " " + tr("game-seconds", "seconds");
+        }
+        return message;
+    }
+    if (mode == GasMode_Moving) {
+        return tr("game-red-zone-advancing", "Red zone advancing! Move to the safe zone");
+    }
+    return {};
 }
 
 // ui2.ts getPickupMessageText (PickupMsgType order).
@@ -554,7 +617,21 @@ bool GameScene::init() {
         // A Map/Update arriving while no world exists (the world is built in
         // enterWithJoin()) must not dereference a null world.
         if (_world) {
+            // gas.ts Gas.setFullState(): a mode change is the match-start / new
+            // stage signal; ui.ts displayGasAnnouncement() runs from there.
+            const uint8_t gasModeBefore = _world->gas().mode;
             _world->applyUpdate(msg);
+            if (_hud && msg.gasDirty && msg.gasData.mode != gasModeBefore) {
+                const std::string announcement =
+                    gasAnnouncementText(msg.gasData.mode, msg.gasData.duration, msg.gasT);
+                if (!announcement.empty()) {
+                    _hud->showAnnouncement(announcement);
+                    if (isDevLogEnabled()) {
+                        AXLOGI("[hud] gas {} -> {}: {}", gasModeBefore, msg.gasData.mode,
+                               announcement);
+                    }
+                }
+            }
             // shot.ts cycle/pull: the local gun's clip ammo from the active
             // player snapshot (the native client has no predicted clip).
             // player.ts dry fire also needs the equipped gun's reserve ammo
@@ -1524,13 +1601,15 @@ void GameScene::update(float delta) {
                 _hud->roleMenuActive()) {
                 _hud->setRoleMenuActive(false);
             }
-            // kill_leader has its own top-centre HUD line; announcing it here
-            // would duplicate/spam every leader change.
-            if (_hud && ann.role != "kill_leader" &&
+            // game.ts: only the local player's *assignment* is announced, and
+            // only for roles whose def opts in (`roleDef.announce`). The killed
+            // path is kill-feed only.
+            if (_hud && ann.assigned && roleDef->announce &&
                 ann.playerId == _game->getLocalPlayerId()) {
-                const std::string roleName = roleDef->name.empty() ? ann.role : roleDef->name;
-                _hud->showAnnouncement(ann.assigned ? "ROLE ASSIGNED: " + roleName
-                                                    : "ROLE LOST: " + roleName);
+                const std::string text = tr("game-youve-been-promoted-to",
+                                            "You've been promoted to")
+                    + " " + roleTranslation(ann.role, teamId, *roleDef) + "!";
+                _hud->showAnnouncement(uppercase(text));
             }
         }
     }
@@ -1676,8 +1755,13 @@ void GameScene::update(float delta) {
         if (deadOrSpectating && _touch) {
             _touch->hideAll();
         }
+        // ui.ts #ui-waiting-text: gas.ts Gas.setFullState() hides it as soon as
+        // the gas mode first changes. The server sends JoinedMsg.started only
+        // once (on join), so a lobby join leaves `hasStarted()` false for the
+        // whole match and cannot hide the text by itself.
+        const bool gasStarted = _world && _world->gas().mode != GasMode_Inactive;
         _hud->setWaitingForPlayers(_inGame && _game->hasJoined() && !_game->hasStarted() &&
-                                   !_game->gameOver());
+                                   !gasStarted && !_game->gameOver());
         // ui.ts interaction prompt: nearest loot on the active layer, shown as
         // the finger-press button + item name two player widths to the right of
         // the player (the web keeps #ui-interaction in the fixed lower-centre
